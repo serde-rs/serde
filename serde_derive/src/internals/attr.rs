@@ -115,13 +115,18 @@ impl Name {
     }
 }
 
+pub struct RenameAllRules {
+    serialize: RenameRule,
+    deserialize: RenameRule,
+}
+
 /// Represents struct or enum attribute information.
 pub struct Container {
     name: Name,
     transparent: bool,
     deny_unknown_fields: bool,
     default: Default,
-    rename_all: RenameRule,
+    rename_all_rules: RenameAllRules,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     tag: EnumTag,
@@ -198,7 +203,8 @@ impl Container {
         let mut transparent = BoolAttr::none(cx, "transparent");
         let mut deny_unknown_fields = BoolAttr::none(cx, "deny_unknown_fields");
         let mut default = Attr::none(cx, "default");
-        let mut rename_all = Attr::none(cx, "rename_all");
+        let mut rename_all_ser_rule = Attr::none(cx, "rename_all");
+        let mut rename_all_de_rule = Attr::none(cx, "rename_all");
         let mut ser_bound = Attr::none(cx, "bound");
         let mut de_bound = Attr::none(cx, "bound");
         let mut untagged = BoolAttr::none(cx, "untagged");
@@ -233,7 +239,10 @@ impl Container {
                     Meta(NameValue(ref m)) if m.ident == "rename_all" => {
                         if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
                             match RenameRule::from_str(&s.value()) {
-                                Ok(rename_rule) => rename_all.set(&m.ident, rename_rule),
+                                Ok(rename_rule) => {
+                                    rename_all_ser_rule.set(&m.ident, rename_rule);
+                                    rename_all_de_rule.set(&m.ident, rename_rule);
+                                },
                                 Err(()) => cx.error_spanned_by(
                                     s,
                                     format!(
@@ -242,6 +251,38 @@ impl Container {
                                         s.value(),
                                     ),
                                 ),
+                            }
+                        }
+                    }
+
+                    // Parse `#[serde(rename_all(serialize = "foo", deserialize = "bar"))]`
+                    Meta(List(ref m)) if m.ident == "rename_all" => {
+                        if let Ok((ser, de)) = get_renames(cx, &m.nested) {
+                            if let Some(ser) = ser {
+                                match RenameRule::from_str(&ser.value()) {
+                                    Ok(rename_rule) => rename_all_ser_rule.set(&m.ident, rename_rule),
+                                    Err(()) => cx.error_spanned_by(
+                                        ser,
+                                        format!(
+                                            "unknown rename rule for #[serde(rename_all \
+                                            = {:?})]",
+                                            ser.value(),
+                                        ),
+                                    ),
+                                }
+                            }
+                            if let Some(de) = de {
+                                match RenameRule::from_str(&de.value()) {
+                                    Ok(rename_rule) => rename_all_de_rule.set(&m.ident, rename_rule),
+                                    Err(()) => cx.error_spanned_by(
+                                        de,
+                                        format!(
+                                            "unknown rename rule for #[serde(rename_all \
+                                            = {:?})]",
+                                            de.value(),
+                                        ),
+                                    ),
+                                }
                             }
                         }
                     }
@@ -469,7 +510,10 @@ impl Container {
             transparent: transparent.get(),
             deny_unknown_fields: deny_unknown_fields.get(),
             default: default.get().unwrap_or(Default::None),
-            rename_all: rename_all.get().unwrap_or(RenameRule::None),
+            rename_all_rules: RenameAllRules {
+                serialize: rename_all_ser_rule.get().unwrap_or(RenameRule::None),
+                deserialize: rename_all_de_rule.get().unwrap_or(RenameRule::None),
+            },
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
             tag: decide_tag(cx, item, untagged, internal_tag, content),
@@ -485,8 +529,8 @@ impl Container {
         &self.name
     }
 
-    pub fn rename_all(&self) -> &RenameRule {
-        &self.rename_all
+    pub fn rename_all_rules(&self) -> &RenameAllRules {
+        &self.rename_all_rules
     }
 
     pub fn transparent(&self) -> bool {
@@ -709,7 +753,7 @@ pub struct Variant {
     name: Name,
     ser_renamed: bool,
     de_renamed: bool,
-    rename_all: RenameRule,
+    rename_all_rules: RenameAllRules,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     skip_deserializing: bool,
@@ -726,7 +770,8 @@ impl Variant {
         let mut de_name = Attr::none(cx, "rename");
         let mut skip_deserializing = BoolAttr::none(cx, "skip_deserializing");
         let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
-        let mut rename_all = Attr::none(cx, "rename_all");
+        let mut rename_all_ser_rule = Attr::none(cx, "rename_all");
+        let mut rename_all_de_rule = Attr::none(cx, "rename_all");
         let mut ser_bound = Attr::none(cx, "bound");
         let mut de_bound = Attr::none(cx, "bound");
         let mut other = BoolAttr::none(cx, "other");
@@ -757,7 +802,10 @@ impl Variant {
                     Meta(NameValue(ref m)) if m.ident == "rename_all" => {
                         if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
                             match RenameRule::from_str(&s.value()) {
-                                Ok(rename_rule) => rename_all.set(&m.ident, rename_rule),
+                                Ok(rename_rule) => {
+                                    rename_all_ser_rule.set(&m.ident, rename_rule);
+                                    rename_all_de_rule.set(&m.ident, rename_rule);
+                                },
                                 Err(()) => cx.error_spanned_by(
                                     s,
                                     format!(
@@ -766,6 +814,38 @@ impl Variant {
                                         s.value()
                                     ),
                                 ),
+                            }
+                        }
+                    }
+
+                    // Parse `#[serde(rename_all(serialize = "foo", deserialize = "bar"))]`
+                    Meta(List(ref m)) if m.ident == "rename_all" => {
+                        if let Ok((ser, de)) = get_renames(cx, &m.nested) {
+                            if let Some(ser) = ser {
+                                match RenameRule::from_str(&ser.value()) {
+                                    Ok(rename_rule) => rename_all_ser_rule.set(&m.ident, rename_rule),
+                                    Err(()) => cx.error_spanned_by(
+                                        ser,
+                                        format!(
+                                            "unknown rename rule for #[serde(rename_all \
+                                            = {:?})]",
+                                            ser.value(),
+                                        ),
+                                    ),
+                                }
+                            }
+                            if let Some(de) = de {
+                                match RenameRule::from_str(&de.value()) {
+                                    Ok(rename_rule) => rename_all_de_rule.set(&m.ident, rename_rule),
+                                    Err(()) => cx.error_spanned_by(
+                                        de,
+                                        format!(
+                                            "unknown rename rule for #[serde(rename_all \
+                                            = {:?})]",
+                                            de.value(),
+                                        ),
+                                    ),
+                                }
                             }
                         }
                     }
@@ -879,7 +959,10 @@ impl Variant {
             },
             ser_renamed: ser_renamed,
             de_renamed: de_renamed,
-            rename_all: rename_all.get().unwrap_or(RenameRule::None),
+            rename_all_rules: RenameAllRules {
+                serialize: rename_all_ser_rule.get().unwrap_or(RenameRule::None),
+                deserialize: rename_all_de_rule.get().unwrap_or(RenameRule::None),
+            },
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
             skip_deserializing: skip_deserializing.get(),
@@ -895,17 +978,17 @@ impl Variant {
         &self.name
     }
 
-    pub fn rename_by_rule(&mut self, rule: &RenameRule) {
+    pub fn rename_by_rules(&mut self, rules: &RenameAllRules) {
         if !self.ser_renamed {
-            self.name.serialize = rule.apply_to_variant(&self.name.serialize);
+            self.name.serialize = rules.serialize.apply_to_variant(&self.name.serialize);
         }
         if !self.de_renamed {
-            self.name.deserialize = rule.apply_to_variant(&self.name.deserialize);
+            self.name.deserialize = rules.deserialize.apply_to_variant(&self.name.deserialize);
         }
     }
 
-    pub fn rename_all(&self) -> &RenameRule {
-        &self.rename_all
+    pub fn rename_all_rules(&self) -> &RenameAllRules {
+        &self.rename_all_rules
     }
 
     pub fn ser_bound(&self) -> Option<&[syn::WherePredicate]> {
@@ -1264,12 +1347,12 @@ impl Field {
         &self.name
     }
 
-    pub fn rename_by_rule(&mut self, rule: &RenameRule) {
+    pub fn rename_by_rules(&mut self, rules: &RenameAllRules) {
         if !self.ser_renamed {
-            self.name.serialize = rule.apply_to_field(&self.name.serialize);
+            self.name.serialize = rules.serialize.apply_to_field(&self.name.serialize);
         }
         if !self.de_renamed {
-            self.name.deserialize = rule.apply_to_field(&self.name.deserialize);
+            self.name.deserialize = rules.deserialize.apply_to_field(&self.name.deserialize);
         }
     }
 
