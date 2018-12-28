@@ -129,7 +129,7 @@ pub struct Container {
     rename_all_rules: RenameAllRules,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
-    tag: EnumTag,
+    tag: TagType,
     type_from: Option<syn::Type>,
     type_into: Option<syn::Type>,
     remote: Option<syn::Path>,
@@ -138,7 +138,7 @@ pub struct Container {
 }
 
 /// Styles of representing an enum.
-pub enum EnumTag {
+pub enum TagType {
     /// The default.
     ///
     /// ```json
@@ -410,20 +410,27 @@ impl Container {
                                 syn::Data::Enum(_) => {
                                     internal_tag.set(&m.ident, s.value());
                                 }
-                                syn::Data::Struct(syn::DataStruct {
-                                    ref struct_token, ..
-                                }) => {
-                                    cx.error_spanned_by(
-                                        struct_token,
-                                        "#[serde(tag = \"...\")] can only be used on enums",
-                                    );
+                                syn::Data::Struct(syn::DataStruct{ref fields, ..}) => {
+                                    match *fields {
+                                        syn::Fields::Named(_) => {
+                                            internal_tag.set(&m.ident, s.value());
+                                        },
+                                        syn::Fields::Unnamed(_) | syn::Fields::Unit => {
+                                            cx.error_spanned_by(
+                                                fields,
+                                                "#[serde(tag = \"...\")] can only be used on enums \
+                                                and structs with named fields",
+                                            );
+                                        }
+                                    }
                                 }
                                 syn::Data::Union(syn::DataUnion {
                                     ref union_token, ..
                                 }) => {
                                     cx.error_spanned_by(
                                         union_token,
-                                        "#[serde(tag = \"...\")] can only be used on enums",
+                                        "#[serde(tag = \"...\")] can only be used on enums \
+                                        and structs with named fields",
                                     );
                                 }
                             }
@@ -557,7 +564,7 @@ impl Container {
         self.de_bound.as_ref().map(|vec| &vec[..])
     }
 
-    pub fn tag(&self) -> &EnumTag {
+    pub fn tag(&self) -> &TagType {
         &self.tag
     }
 
@@ -592,14 +599,14 @@ fn decide_tag(
     untagged: BoolAttr,
     internal_tag: Attr<String>,
     content: Attr<String>,
-) -> EnumTag {
+) -> TagType {
     match (
         untagged.0.get_with_tokens(),
         internal_tag.get_with_tokens(),
         content.get_with_tokens(),
     ) {
-        (None, None, None) => EnumTag::External,
-        (Some(_), None, None) => EnumTag::None,
+        (None, None, None) => TagType::External,
+        (Some(_), None, None) => TagType::None,
         (None, Some((_, tag)), None) => {
             // Check that there are no tuple variants.
             if let syn::Data::Enum(ref data) = item.data {
@@ -619,7 +626,7 @@ fn decide_tag(
                     }
                 }
             }
-            EnumTag::Internal { tag: tag }
+            TagType::Internal { tag: tag }
         }
         (Some((untagged_tokens, _)), Some((tag_tokens, _)), None) => {
             cx.error_spanned_by(
@@ -630,14 +637,14 @@ fn decide_tag(
                 tag_tokens,
                 "enum cannot be both untagged and internally tagged",
             );
-            EnumTag::External // doesn't matter, will error
+            TagType::External // doesn't matter, will error
         }
         (None, None, Some((content_tokens, _))) => {
             cx.error_spanned_by(
                 content_tokens,
                 "#[serde(tag = \"...\", content = \"...\")] must be used together",
             );
-            EnumTag::External
+            TagType::External
         }
         (Some((untagged_tokens, _)), None, Some((content_tokens, _))) => {
             cx.error_spanned_by(
@@ -648,9 +655,9 @@ fn decide_tag(
                 content_tokens,
                 "untagged enum cannot have #[serde(content = \"...\")]",
             );
-            EnumTag::External
+            TagType::External
         }
-        (None, Some((_, tag)), Some((_, content))) => EnumTag::Adjacent {
+        (None, Some((_, tag)), Some((_, content))) => TagType::Adjacent {
             tag: tag,
             content: content,
         },
@@ -667,7 +674,7 @@ fn decide_tag(
                 content_tokens,
                 "untagged enum cannot have #[serde(tag = \"...\", content = \"...\")]",
             );
-            EnumTag::External
+            TagType::External
         }
     }
 }

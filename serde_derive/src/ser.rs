@@ -294,10 +294,22 @@ fn serialize_struct_as_struct(
     fields: &[Field],
     cattrs: &attr::Container,
 ) -> Fragment {
-    let serialize_fields =
+    let mut serialize_fields =
         serialize_struct_visitor(fields, params, false, &StructTrait::SerializeStruct);
 
     let type_name = cattrs.name().serialize_name();
+
+    let additional_field_count: usize = match cattrs.tag() {
+        &attr::TagType::Internal{ref tag} => {
+            let func = StructTrait::SerializeStruct.serialize_field(Span::call_site());
+            serialize_fields.insert(0, quote! {
+                try!(#func(&mut __serde_state, #tag, #type_name));
+            });
+
+            1
+        }
+        _ => 0
+    };
 
     let mut serialized_fields = fields
         .iter()
@@ -314,7 +326,7 @@ fn serialize_struct_as_struct(
                 quote!(if #path(#field_expr) { 0 } else { 1 })
             }
         })
-        .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
+        .fold(quote!(#additional_field_count), |sum, expr| quote!(#sum + #expr));
 
     quote_block! {
         let #let_mut __serde_state = try!(_serde::Serializer::serialize_struct(__serializer, #type_name, #len));
@@ -435,17 +447,17 @@ fn serialize_variant(
         };
 
         let body = Match(match *cattrs.tag() {
-            attr::EnumTag::External => {
+            attr::TagType::External => {
                 serialize_externally_tagged_variant(params, variant, variant_index, cattrs)
             }
-            attr::EnumTag::Internal { ref tag } => {
+            attr::TagType::Internal { ref tag } => {
                 serialize_internally_tagged_variant(params, variant, cattrs, tag)
             }
-            attr::EnumTag::Adjacent {
+            attr::TagType::Adjacent {
                 ref tag,
                 ref content,
             } => serialize_adjacently_tagged_variant(params, variant, cattrs, tag, content),
-            attr::EnumTag::None => serialize_untagged_variant(params, variant, cattrs),
+            attr::TagType::None => serialize_untagged_variant(params, variant, cattrs),
         });
 
         quote! {
