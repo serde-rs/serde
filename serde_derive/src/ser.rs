@@ -319,8 +319,7 @@ fn serialize_struct_as_struct(
         .filter(|&field| !field.attrs.skip_serializing())
         .peekable();
 
-    let let_mut = mut_if(serialized_fields.peek().is_some() ||
-                         additional_field_count > 0);
+    let let_mut = mut_if(serialized_fields.peek().is_some() || additional_field_count > 0);
 
     let len = serialized_fields
         .map(|field| match field.attrs.skip_serializing_if() {
