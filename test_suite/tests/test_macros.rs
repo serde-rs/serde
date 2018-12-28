@@ -1414,6 +1414,26 @@ fn test_internally_tagged_struct() {
 }
 
 #[test]
+fn test_internally_tagged_braced_struct_with_zero_fields() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "type")]
+    struct S {}
+
+    assert_tokens(
+        &S{ },
+        &[
+            Token::Struct {
+                name: "S",
+                len: 1,
+            },
+            Token::Str("type"),
+            Token::Str("S"),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_enum_in_untagged_enum() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(untagged)]
