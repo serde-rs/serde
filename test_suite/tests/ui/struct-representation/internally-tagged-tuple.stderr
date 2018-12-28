@@ -1,5 +1,5 @@
 error: #[serde(tag = "...")] can only be used on enums and structs with named fields
- --> $DIR/internally-taged-tuple.rs:6:10
+ --> $DIR/internally-tagged-tuple.rs:6:10
   |
 6 |   struct S (
   |  __________^
