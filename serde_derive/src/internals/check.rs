@@ -1,5 +1,5 @@
 use internals::ast::{Container, Data, Field, Style};
-use internals::attr::{TagType, Identifier};
+use internals::attr::{Identifier, TagType};
 use internals::{Ctxt, Derive};
 use syn::{Member, Type};
 

@@ -410,11 +410,11 @@ impl Container {
                                 syn::Data::Enum(_) => {
                                     internal_tag.set(&m.ident, s.value());
                                 }
-                                syn::Data::Struct(syn::DataStruct{ref fields, ..}) => {
+                                syn::Data::Struct(syn::DataStruct { ref fields, .. }) => {
                                     match *fields {
                                         syn::Fields::Named(_) => {
                                             internal_tag.set(&m.ident, s.value());
-                                        },
+                                        }
                                         syn::Fields::Unnamed(_) | syn::Fields::Unit => {
                                             cx.error_spanned_by(
                                                 fields,
@@ -430,7 +430,7 @@ impl Container {
                                     cx.error_spanned_by(
                                         union_token,
                                         "#[serde(tag = \"...\")] can only be used on enums \
-                                        and structs with named fields",
+                                         and structs with named fields",
                                     );
                                 }
                             }

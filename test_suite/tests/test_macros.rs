@@ -1379,13 +1379,13 @@ fn test_enum_in_internally_tagged_enum() {
 #[test]
 fn test_internally_tagged_struct() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(tag="type")]
+    #[serde(tag = "type")]
     pub struct Struct {
         a: u8,
     }
 
     assert_tokens(
-        &Struct{ a: 1 },
+        &Struct { a: 1 },
         &[
             Token::Struct {
                 name: "Struct",
