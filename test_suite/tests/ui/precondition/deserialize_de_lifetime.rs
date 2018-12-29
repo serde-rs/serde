@@ -5,3 +5,5 @@ extern crate serde_derive;
 struct S<'de> {
     s: &'de str,
 }
+
+fn main() {}

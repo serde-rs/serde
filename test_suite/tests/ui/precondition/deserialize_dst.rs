@@ -6,3 +6,5 @@ struct S {
     string: String,
     slice: [u8],
 }
+
+fn main() {}

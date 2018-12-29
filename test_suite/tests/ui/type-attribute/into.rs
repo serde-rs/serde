@@ -9,3 +9,5 @@ enum TestOne {
     Two,
     Three,
 }
+
+fn main() {}

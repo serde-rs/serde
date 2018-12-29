@@ -6,3 +6,5 @@ extern crate serde_derive;
 enum E {
     S { f: u8 },
 }
+
+fn main() {}
