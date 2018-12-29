@@ -1,7 +1,7 @@
 error: #[serde(flatten)] cannot be used on newtype structs
- --> $DIR/flatten-newtype-struct.rs:5:12
+ --> $DIR/flatten-newtype-struct.rs:7:12
   |
-5 | struct Foo(#[serde(flatten)] HashMap<String, String>);
+7 | struct Foo(#[serde(flatten)] HashMap<String, String>);
   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error: aborting due to previous error

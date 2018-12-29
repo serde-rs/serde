@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate serde_derive;
 
+use std::collections::HashMap;
+
 #[derive(Serialize)]
 struct Foo(#[serde(flatten)] HashMap<String, String>);
 

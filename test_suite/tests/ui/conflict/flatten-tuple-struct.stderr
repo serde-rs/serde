@@ -1,7 +1,7 @@
 error: #[serde(flatten)] cannot be used on tuple structs
- --> $DIR/flatten-tuple-struct.rs:5:17
+ --> $DIR/flatten-tuple-struct.rs:7:17
   |
-5 | struct Foo(u32, #[serde(flatten)] HashMap<String, String>);
+7 | struct Foo(u32, #[serde(flatten)] HashMap<String, String>);
   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error: aborting due to previous error
