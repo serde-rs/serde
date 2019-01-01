@@ -68,7 +68,7 @@ impl DeserializeWith for i32 {
     where
         D: Deserializer<'de>,
     {
-        if try!(Deserialize::deserialize(de)) {
+        if Deserialize::deserialize(de)? {
             Ok(123)
         } else {
             Ok(2)
