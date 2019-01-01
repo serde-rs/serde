@@ -41,9 +41,9 @@
         indexing_slicing,
         items_after_statements,
         match_same_arms,
+        module_name_repetitions,
         similar_names,
         single_match_else,
-        stutter,
         unseparated_literal_suffix,
         use_self,
     )
