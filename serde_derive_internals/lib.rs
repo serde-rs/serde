@@ -4,9 +4,8 @@
     feature = "cargo-clippy",
     allow(
         cyclomatic_complexity,
-        doc_markdown,
-        match_same_arms,
-        redundant_field_names
+        redundant_field_names,
+        trivially_copy_pass_by_ref
     )
 )]
 
