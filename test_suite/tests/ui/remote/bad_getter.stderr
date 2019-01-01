@@ -1,7 +1,7 @@
 error: failed to parse path: "~~~"
-  --> $DIR/bad_getter.rs:13:22
+  --> $DIR/bad_getter.rs:12:22
    |
-13 |     #[serde(getter = "~~~")]
+12 |     #[serde(getter = "~~~")]
    |                      ^^^^^
 
 error: aborting due to previous error

@@ -1,7 +1,7 @@
 error: cannot deserialize when there is a lifetime parameter called 'de
- --> $DIR/deserialize_de_lifetime.rs:5:10
+ --> $DIR/deserialize_de_lifetime.rs:4:10
   |
-5 | struct S<'de> {
+4 | struct S<'de> {
   |          ^^^
 
 error: aborting due to previous error

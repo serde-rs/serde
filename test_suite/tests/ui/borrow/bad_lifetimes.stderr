@@ -1,7 +1,7 @@
 error: failed to parse borrowed lifetimes: "zzz"
- --> $DIR/bad_lifetimes.rs:6:22
+ --> $DIR/bad_lifetimes.rs:5:22
   |
-6 |     #[serde(borrow = "zzz")]
+5 |     #[serde(borrow = "zzz")]
   |                      ^^^^^
 
 error: aborting due to previous error

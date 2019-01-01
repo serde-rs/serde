@@ -1,8 +1,8 @@
 error: field `s` does not have lifetime 'b
- --> $DIR/wrong_lifetime.rs:6:5
+ --> $DIR/wrong_lifetime.rs:5:5
   |
-6 | /     #[serde(borrow = "'b")]
-7 | |     s: &'a str,
+5 | /     #[serde(borrow = "'b")]
+6 | |     s: &'a str,
   | |______________^
 
 error: aborting due to previous error

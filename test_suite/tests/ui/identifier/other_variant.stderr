@@ -1,8 +1,8 @@
 error: #[serde(other)] may not be used on a variant identifier
- --> $DIR/other_variant.rs:7:5
+ --> $DIR/other_variant.rs:6:5
   |
-7 | /     #[serde(other)]
-8 | |     Other,
+6 | /     #[serde(other)]
+7 | |     Other,
   | |_________^
 
 error: aborting due to previous error

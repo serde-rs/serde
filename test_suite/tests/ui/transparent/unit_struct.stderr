@@ -1,8 +1,8 @@
 error: #[serde(transparent)] is not allowed on a unit struct
- --> $DIR/unit_struct.rs:5:1
+ --> $DIR/unit_struct.rs:4:1
   |
-5 | / #[serde(transparent)]
-6 | | struct S;
+4 | / #[serde(transparent)]
+5 | | struct S;
   | |_________^
 
 error: aborting due to previous error

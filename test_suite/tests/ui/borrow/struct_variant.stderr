@@ -1,9 +1,9 @@
 error: #[serde(borrow)] may only be used on newtype variants
-  --> $DIR/struct_variant.rs:9:5
-   |
-9  | /     #[serde(borrow)]
-10 | |     S { s: Str<'a> },
-   | |____________________^
+ --> $DIR/struct_variant.rs:8:5
+  |
+8 | /     #[serde(borrow)]
+9 | |     S { s: Str<'a> },
+  | |____________________^
 
 error: aborting due to previous error
 

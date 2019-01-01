@@ -1,7 +1,7 @@
 error: expected serde rename attribute to be a string: `rename = "..."`
- --> $DIR/byte_string.rs:6:22
+ --> $DIR/byte_string.rs:5:22
   |
-6 |     #[serde(rename = b"byte string")]
+5 |     #[serde(rename = b"byte string")]
   |                      ^^^^^^^^^^^^^^
 
 error: aborting due to previous error

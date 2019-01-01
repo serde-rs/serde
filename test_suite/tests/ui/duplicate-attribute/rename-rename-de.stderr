@@ -1,7 +1,7 @@
 error: duplicate serde attribute `rename`
- --> $DIR/rename-rename-de.rs:7:13
+ --> $DIR/rename-rename-de.rs:6:13
   |
-7 |     #[serde(rename(deserialize = "y"))]
+6 |     #[serde(rename(deserialize = "y"))]
   |             ^^^^^^
 
 error: aborting due to previous error

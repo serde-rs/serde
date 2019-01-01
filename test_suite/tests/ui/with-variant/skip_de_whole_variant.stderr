@@ -1,9 +1,9 @@
 error: variant `Unit` cannot have both #[serde(deserialize_with)] and #[serde(skip_deserializing)]
- --> $DIR/skip_de_whole_variant.rs:6:5
+ --> $DIR/skip_de_whole_variant.rs:5:5
   |
-6 | /     #[serde(deserialize_with = "deserialize_some_unit_variant")]
-7 | |     #[serde(skip_deserializing)]
-8 | |     Unit,
+5 | /     #[serde(deserialize_with = "deserialize_some_unit_variant")]
+6 | |     #[serde(skip_deserializing)]
+7 | |     Unit,
   | |________^
 
 error: aborting due to previous error

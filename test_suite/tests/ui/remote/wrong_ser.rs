@@ -1,5 +1,4 @@
-#[macro_use]
-extern crate serde_derive;
+use serde_derive::Serialize;
 
 mod remote {
     pub struct S {

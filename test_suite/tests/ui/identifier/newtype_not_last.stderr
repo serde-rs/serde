@@ -1,7 +1,7 @@
 error: `Other` must be the last variant
- --> $DIR/newtype_not_last.rs:8:5
+ --> $DIR/newtype_not_last.rs:7:5
   |
-8 |     Other(String),
+7 |     Other(String),
   |     ^^^^^^^^^^^^^
 
 error: aborting due to previous error

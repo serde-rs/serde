@@ -1,7 +1,7 @@
 error: duplicate serde attribute `borrow`
- --> $DIR/duplicate_variant.rs:9:13
+ --> $DIR/duplicate_variant.rs:8:13
   |
-9 |     #[serde(borrow)]
+8 |     #[serde(borrow)]
   |             ^^^^^^
 
 error: aborting due to previous error

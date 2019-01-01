@@ -1,11 +1,11 @@
 error: #[serde(transparent)] requires at least one field that is not skipped
- --> $DIR/ser_at_least_one.rs:5:1
+ --> $DIR/ser_at_least_one.rs:4:1
   |
-5 | / #[serde(transparent)]
-6 | | struct S {
-7 | |     #[serde(skip)]
-8 | |     a: u8,
-9 | | }
+4 | / #[serde(transparent)]
+5 | | struct S {
+6 | |     #[serde(skip)]
+7 | |     a: u8,
+8 | | }
   | |_^
 
 error: aborting due to previous error

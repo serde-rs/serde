@@ -1,11 +1,11 @@
 error: enum tags `conflict` for type and content conflict with each other
- --> $DIR/adjacent-tag.rs:5:1
+ --> $DIR/adjacent-tag.rs:4:1
   |
-5 | / #[serde(tag = "conflict", content = "conflict")]
-6 | | enum E {
-7 | |     A,
-8 | |     B,
-9 | | }
+4 | / #[serde(tag = "conflict", content = "conflict")]
+5 | | enum E {
+6 | |     A,
+7 | |     B,
+8 | | }
   | |_^
 
 error: aborting due to previous error

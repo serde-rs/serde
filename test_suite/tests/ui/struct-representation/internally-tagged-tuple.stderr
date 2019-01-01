@@ -1,7 +1,7 @@
 error: #[serde(tag = "...")] can only be used on enums and structs with named fields
- --> $DIR/internally-tagged-tuple.rs:6:9
+ --> $DIR/internally-tagged-tuple.rs:5:9
   |
-6 | struct S(u8, u8);
+5 | struct S(u8, u8);
   |         ^^^^^^^^
 
 error: aborting due to previous error

@@ -1,5 +1,4 @@
-#[macro_use]
-extern crate serde_derive;
+use serde_derive::Deserialize;
 
 #[derive(Deserialize)]
 struct Test<'a> {

@@ -1,7 +1,7 @@
 error: malformed bound attribute, expected `bound(serialize = ..., deserialize = ...)`
- --> $DIR/bound.rs:6:19
+ --> $DIR/bound.rs:5:19
   |
-6 |     #[serde(bound(unknown))]
+5 |     #[serde(bound(unknown))]
   |                   ^^^^^^^
 
 error: aborting due to previous error

@@ -1,7 +1,7 @@
 error: unknown serde field attribute `abc`
- --> $DIR/field.rs:6:13
+ --> $DIR/field.rs:5:13
   |
-6 |     #[serde(abc = "xyz")]
+5 |     #[serde(abc = "xyz")]
   |             ^^^
 
 error: aborting due to previous error

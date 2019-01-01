@@ -1,7 +1,7 @@
 error: duplicate serde attribute `serialize_with`
- --> $DIR/with-and-serialize-with.rs:6:25
+ --> $DIR/with-and-serialize-with.rs:5:25
   |
-6 |     #[serde(with = "w", serialize_with = "s")]
+5 |     #[serde(with = "w", serialize_with = "s")]
   |                         ^^^^^^^^^^^^^^
 
 error: aborting due to previous error

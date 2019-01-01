@@ -1,10 +1,10 @@
 error: #[serde(getter = "...")] can only be used in structs that have #[serde(remote = "...")]
- --> $DIR/nonremote_getter.rs:5:1
+ --> $DIR/nonremote_getter.rs:4:1
   |
-5 | / struct S {
-6 | |     #[serde(getter = "S::get")]
-7 | |     a: u8,
-8 | | }
+4 | / struct S {
+5 | |     #[serde(getter = "S::get")]
+6 | |     a: u8,
+7 | | }
   | |_^
 
 error: aborting due to previous error

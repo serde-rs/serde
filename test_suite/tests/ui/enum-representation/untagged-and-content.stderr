@@ -1,13 +1,13 @@
 error: untagged enum cannot have #[serde(content = "...")]
- --> $DIR/untagged-and-content.rs:5:9
+ --> $DIR/untagged-and-content.rs:4:9
   |
-5 | #[serde(untagged)]
+4 | #[serde(untagged)]
   |         ^^^^^^^^
 
 error: untagged enum cannot have #[serde(content = "...")]
- --> $DIR/untagged-and-content.rs:6:9
+ --> $DIR/untagged-and-content.rs:5:9
   |
-6 | #[serde(content = "c")]
+5 | #[serde(content = "c")]
   |         ^^^^^^^
 
 error: aborting due to 2 previous errors

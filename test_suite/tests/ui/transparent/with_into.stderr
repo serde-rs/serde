@@ -1,10 +1,10 @@
 error: #[serde(transparent)] is not allowed with #[serde(into = "...")]
- --> $DIR/with_into.rs:5:1
+ --> $DIR/with_into.rs:4:1
   |
-5 | / #[serde(transparent, into = "u64")]
-6 | | struct S {
-7 | |     a: u8,
-8 | | }
+4 | / #[serde(transparent, into = "u64")]
+5 | | struct S {
+6 | |     a: u8,
+7 | | }
   | |_^
 
 error: aborting due to previous error

@@ -1,13 +1,13 @@
 error: enum cannot be both untagged and internally tagged
- --> $DIR/untagged-and-internal.rs:5:9
+ --> $DIR/untagged-and-internal.rs:4:9
   |
-5 | #[serde(untagged)]
+4 | #[serde(untagged)]
   |         ^^^^^^^^
 
 error: enum cannot be both untagged and internally tagged
- --> $DIR/untagged-and-internal.rs:6:9
+ --> $DIR/untagged-and-internal.rs:5:9
   |
-6 | #[serde(tag = "type")]
+5 | #[serde(tag = "type")]
   |         ^^^
 
 error: aborting due to 2 previous errors

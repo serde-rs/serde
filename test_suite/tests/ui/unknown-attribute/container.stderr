@@ -1,7 +1,7 @@
 error: unknown serde container attribute `abc`
- --> $DIR/container.rs:5:9
+ --> $DIR/container.rs:4:9
   |
-5 | #[serde(abc = "xyz")]
+4 | #[serde(abc = "xyz")]
   |         ^^^
 
 error: aborting due to previous error

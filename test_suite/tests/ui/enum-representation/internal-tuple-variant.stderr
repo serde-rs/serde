@@ -1,7 +1,7 @@
 error: #[serde(tag = "...")] cannot be used with tuple variants
- --> $DIR/internal-tuple-variant.rs:7:5
+ --> $DIR/internal-tuple-variant.rs:6:5
   |
-7 |     Tuple(u8, u8),
+6 |     Tuple(u8, u8),
   |     ^^^^^^^^^^^^^
 
 error: aborting due to previous error

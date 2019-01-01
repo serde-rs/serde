@@ -1,7 +1,7 @@
 error: duplicate borrowed lifetime `'a`
- --> $DIR/duplicate_lifetime.rs:6:22
+ --> $DIR/duplicate_lifetime.rs:5:22
   |
-6 |     #[serde(borrow = "'a + 'a")]
+5 |     #[serde(borrow = "'a + 'a")]
   |                      ^^^^^^^^^
 
 error: aborting due to previous error

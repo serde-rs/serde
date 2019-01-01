@@ -1,7 +1,7 @@
 error: malformed rename attribute, expected `rename(serialize = ..., deserialize = ...)`
- --> $DIR/rename.rs:6:20
+ --> $DIR/rename.rs:5:20
   |
-6 |     #[serde(rename(unknown))]
+5 |     #[serde(rename(unknown))]
   |                    ^^^^^^^
 
 error: aborting due to previous error

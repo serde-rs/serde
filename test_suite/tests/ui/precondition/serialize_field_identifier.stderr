@@ -1,11 +1,11 @@
 error: field identifiers cannot be serialized
- --> $DIR/serialize_field_identifier.rs:5:1
+ --> $DIR/serialize_field_identifier.rs:4:1
   |
-5 | / #[serde(field_identifier)]
-6 | | enum F {
-7 | |     A,
-8 | |     B,
-9 | | }
+4 | / #[serde(field_identifier)]
+5 | | enum F {
+6 | |     A,
+7 | |     B,
+8 | | }
   | |_^
 
 error: aborting due to previous error

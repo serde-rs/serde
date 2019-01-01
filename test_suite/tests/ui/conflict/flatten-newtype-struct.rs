@@ -1,5 +1,4 @@
-#[macro_use]
-extern crate serde_derive;
+use serde_derive::Serialize;
 
 use std::collections::HashMap;
 

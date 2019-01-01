@@ -1,8 +1,8 @@
 error: variant `Tuple` cannot have both #[serde(deserialize_with)] and a field #0 marked with #[serde(skip_deserializing)]
- --> $DIR/skip_de_tuple_field.rs:6:5
+ --> $DIR/skip_de_tuple_field.rs:5:5
   |
-6 | /     #[serde(deserialize_with = "deserialize_some_other_variant")]
-7 | |     Tuple(#[serde(skip_deserializing)] String, u8),
+5 | /     #[serde(deserialize_with = "deserialize_some_other_variant")]
+6 | |     Tuple(#[serde(skip_deserializing)] String, u8),
   | |__________________________________________________^
 
 error: aborting due to previous error

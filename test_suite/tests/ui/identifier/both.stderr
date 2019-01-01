@@ -1,13 +1,13 @@
 error: #[serde(field_identifier)] and #[serde(variant_identifier)] cannot both be set
- --> $DIR/both.rs:5:9
+ --> $DIR/both.rs:4:9
   |
-5 | #[serde(field_identifier, variant_identifier)]
+4 | #[serde(field_identifier, variant_identifier)]
   |         ^^^^^^^^^^^^^^^^
 
 error: #[serde(field_identifier)] and #[serde(variant_identifier)] cannot both be set
- --> $DIR/both.rs:5:27
+ --> $DIR/both.rs:4:27
   |
-5 | #[serde(field_identifier, variant_identifier)]
+4 | #[serde(field_identifier, variant_identifier)]
   |                           ^^^^^^^^^^^^^^^^^^
 
 error: aborting due to 2 previous errors

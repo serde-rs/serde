@@ -1,7 +1,7 @@
 error: #[serde(field_identifier)] may only contain unit variants
- --> $DIR/field_tuple.rs:8:5
+ --> $DIR/field_tuple.rs:7:5
   |
-8 |     B(u8, u8),
+7 |     B(u8, u8),
   |     ^^^^^^^^^
 
 error: aborting due to previous error
