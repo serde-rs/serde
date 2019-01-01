@@ -112,11 +112,11 @@
     invalid_upcast_comparisons,
 // things are often more readable this way
     decimal_literal_representation,
+    module_name_repetitions,
     option_unwrap_used,
     result_unwrap_used,
     shadow_reuse,
     single_match_else,
-    stutter,
     use_self,
 // not practical
     indexing_slicing,
