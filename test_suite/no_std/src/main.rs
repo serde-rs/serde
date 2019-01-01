@@ -1,8 +1,6 @@
 #![feature(lang_items, start)]
 #![no_std]
 
-extern crate libc;
-
 #[start]
 fn start(_argc: isize, _argv: *const *const u8) -> isize {
     0
@@ -21,8 +19,7 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
 
 //////////////////////////////////////////////////////////////////////////////
 
-#[macro_use]
-extern crate serde_derive;
+use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize)]
 struct Unit;

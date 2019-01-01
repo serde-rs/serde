@@ -1,11 +1,11 @@
 [package]
 name = "serde_derive_tests_no_std"
 version = "0.0.0"
+edition = "2018"
 publish = false
 
 [dependencies]
 libc = { version = "0.2", default-features = false }
-serde = { path = "../../serde", default-features = false }
-serde_derive = { path = "../../serde_derive" }
+serde = { path = "../../serde", default-features = false, features = ["derive"] }
 
 [workspace]
