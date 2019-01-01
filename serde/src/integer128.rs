@@ -45,8 +45,6 @@
 /// #         tuple tuple_struct tuple_variant map struct struct_variant
 /// #     }
 /// }
-/// #
-/// # fn main() {}
 /// ```
 ///
 /// When Serde is built with support for 128-bit integers, this macro expands

@@ -41,8 +41,6 @@
 /// #         tuple_struct map struct enum identifier ignored_any
 /// #     }
 /// # }
-/// #
-/// # fn main() {}
 /// ```
 ///
 /// The `forward_to_deserialize_any!` macro implements these simple forwarding
@@ -73,8 +71,6 @@
 ///         tuple_struct map struct enum identifier ignored_any
 ///     }
 /// }
-/// #
-/// # fn main() {}
 /// ```
 ///
 /// The macro assumes the convention that your `Deserializer` lifetime parameter
@@ -107,8 +103,6 @@
 ///     tuple_struct map struct enum identifier ignored_any
 /// }
 /// # }
-/// #
-/// # fn main() {}
 /// ```
 ///
 /// [`Deserializer`]: trait.Deserializer.html

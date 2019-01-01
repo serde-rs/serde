@@ -19,8 +19,6 @@
 //!         Self::deserialize(s.into_deserializer())
 //!     }
 //! }
-//! #
-//! # fn main() {}
 //! ```
 
 use lib::*;

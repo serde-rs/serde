@@ -47,8 +47,6 @@ use ser::{
 /// #         tuple tuple_struct tuple_variant map struct struct_variant
 /// #     }
 /// }
-/// #
-/// # fn main() {}
 /// ```
 ///
 /// [`Serializer`]: trait.Serializer.html

@@ -390,8 +390,6 @@ pub trait Serializer: Sized {
     ///         serializer.serialize_bool(*self)
     ///     }
     /// }
-    /// #
-    /// # fn main() {}
     /// ```
     fn serialize_bool(self, v: bool) -> Result<Self::Ok, Self::Error>;
 
@@ -414,8 +412,6 @@ pub trait Serializer: Sized {
     ///         serializer.serialize_i8(*self)
     ///     }
     /// }
-    /// #
-    /// # fn main() {}
     /// ```
     fn serialize_i8(self, v: i8) -> Result<Self::Ok, Self::Error>;
 
@@ -438,8 +434,6 @@ pub trait Serializer: Sized {
     ///         serializer.serialize_i16(*self)
     ///     }
     /// }
-    /// #
-    /// # fn main() {}
     /// ```
     fn serialize_i16(self, v: i16) -> Result<Self::Ok, Self::Error>;
 
@@ -462,8 +456,6 @@ pub trait Serializer: Sized {
     ///         serializer.serialize_i32(*self)
     ///     }
     /// }
-    /// #
-    /// # fn main() {}
     /// ```
     fn serialize_i32(self, v: i32) -> Result<Self::Ok, Self::Error>;
 
@@ -482,8 +474,6 @@ pub trait Serializer: Sized {
     ///         serializer.serialize_i64(*self)
     ///     }
     /// }
-    /// #
-    /// # fn main() {}
     /// ```
     fn serialize_i64(self, v: i64) -> Result<Self::Ok, Self::Error>;
 
@@ -503,8 +493,6 @@ pub trait Serializer: Sized {
         ///         serializer.serialize_i128(*self)
         ///     }
         /// }
-        /// #
-        /// # fn main() {}
         /// ```
         ///
         /// This method is available only on Rust compiler versions >=1.26. The
@@ -534,8 +522,6 @@ pub trait Serializer: Sized {
     ///         serializer.serialize_u8(*self)
     ///     }
     /// }
-    /// #
-    /// # fn main() {}
     /// ```
     fn serialize_u8(self, v: u8) -> Result<Self::Ok, Self::Error>;
 
@@ -558,8 +544,6 @@ pub trait Serializer: Sized {
     ///         serializer.serialize_u16(*self)
     ///     }
     /// }
-    /// #
-    /// # fn main() {}
     /// ```
     fn serialize_u16(self, v: u16) -> Result<Self::Ok, Self::Error>;
 
@@ -582,8 +566,6 @@ pub trait Serializer: Sized {
     ///         serializer.serialize_u32(*self)
     ///     }
     /// }
-    /// #
-    /// # fn main() {}
     /// ```
     fn serialize_u32(self, v: u32) -> Result<Self::Ok, Self::Error>;
 
@@ -602,8 +584,6 @@ pub trait Serializer: Sized {
     ///         serializer.serialize_u64(*self)
     ///     }
     /// }
-    /// #
-    /// # fn main() {}
     /// ```
     fn serialize_u64(self, v: u64) -> Result<Self::Ok, Self::Error>;
 
@@ -623,8 +603,6 @@ pub trait Serializer: Sized {
         ///         serializer.serialize_u128(*self)
         ///     }
         /// }
-        /// #
-        /// # fn main() {}
         /// ```
         ///
         /// This method is available only on Rust compiler versions >=1.26. The
@@ -654,8 +632,6 @@ pub trait Serializer: Sized {
     ///         serializer.serialize_f32(*self)
     ///     }
     /// }
-    /// #
-    /// # fn main() {}
     /// ```
     fn serialize_f32(self, v: f32) -> Result<Self::Ok, Self::Error>;
 
@@ -674,8 +650,6 @@ pub trait Serializer: Sized {
     ///         serializer.serialize_f64(*self)
     ///     }
     /// }
-    /// #
-    /// # fn main() {}
     /// ```
     fn serialize_f64(self, v: f64) -> Result<Self::Ok, Self::Error>;
 
@@ -697,8 +671,6 @@ pub trait Serializer: Sized {
     ///         serializer.serialize_char(*self)
     ///     }
     /// }
-    /// #
-    /// # fn main() {}
     /// ```
     fn serialize_char(self, v: char) -> Result<Self::Ok, Self::Error>;
 
@@ -717,8 +689,6 @@ pub trait Serializer: Sized {
     ///         serializer.serialize_str(self)
     ///     }
     /// }
-    /// #
-    /// # fn main() {}
     /// ```
     fn serialize_str(self, v: &str) -> Result<Self::Ok, Self::Error>;
 
@@ -754,8 +724,6 @@ pub trait Serializer: Sized {
     /// #         seq tuple tuple_struct tuple_variant map struct struct_variant
     /// #     }
     /// # }
-    /// #
-    /// # fn main() {}
     /// ```
     fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok, Self::Error>;
 
@@ -842,8 +810,6 @@ pub trait Serializer: Sized {
     ///         serializer.serialize_unit()
     ///     }
     /// }
-    /// #
-    /// # fn main() {}
     /// ```
     fn serialize_unit(self) -> Result<Self::Ok, Self::Error>;
 

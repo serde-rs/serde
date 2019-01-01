@@ -2225,8 +2225,6 @@ pub trait VariantAccess<'de>: Sized {
 ///         Self::deserialize(s.into_deserializer())
 ///     }
 /// }
-/// #
-/// # fn main() {}
 /// ```
 pub trait IntoDeserializer<'de, E: Error = value::Error> {
     /// The type of the deserializer being converted into.
