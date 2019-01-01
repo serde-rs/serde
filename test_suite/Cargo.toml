@@ -5,7 +5,8 @@ authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay
 publish = false
 
 [features]
-unstable = ["serde/unstable", "compiletest_rs"]
+unstable = ["serde/unstable"]
+compiletest = ["compiletest_rs"]
 
 [dev-dependencies]
 fnv = "1.0"
