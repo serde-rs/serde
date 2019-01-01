@@ -1,5 +1,4 @@
-#![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
-#![cfg_attr(feature = "cargo-clippy", allow(decimal_literal_representation))]
+#![allow(clippy::decimal_literal_representation)]
 #![cfg_attr(feature = "unstable", feature(never_type))]
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};

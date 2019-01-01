@@ -1,6 +1,5 @@
 #![deny(trivial_numeric_casts)]
-#![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
-#![cfg_attr(feature = "cargo-clippy", allow(redundant_field_names))]
+#![allow(clippy::redundant_field_names)]
 
 mod bytes;
 
