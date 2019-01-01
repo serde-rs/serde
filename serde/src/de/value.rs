@@ -2,13 +2,9 @@
 //! trait.
 //!
 //! ```rust
-//! #[macro_use]
-//! extern crate serde_derive;
-//!
-//! extern crate serde;
-//!
 //! use std::str::FromStr;
-//! use serde::de::{value, Deserialize, IntoDeserializer};
+//! use serde::Deserialize;
+//! use serde::de::{value, IntoDeserializer};
 //!
 //! #[derive(Deserialize)]
 //! enum Setting {

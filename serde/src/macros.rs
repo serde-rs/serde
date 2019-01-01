@@ -12,9 +12,7 @@
 /// trait methods.
 ///
 /// ```rust
-/// # #[macro_use]
-/// # extern crate serde;
-/// #
+/// # use serde::forward_to_deserialize_any;
 /// # use serde::de::{value, Deserializer, Visitor};
 /// #
 /// # struct MyDeserializer;
@@ -52,9 +50,7 @@
 /// You can choose which methods to forward.
 ///
 /// ```rust
-/// # #[macro_use]
-/// # extern crate serde;
-/// #
+/// # use serde::forward_to_deserialize_any;
 /// # use serde::de::{value, Deserializer, Visitor};
 /// #
 /// # struct MyDeserializer;
@@ -87,11 +83,9 @@
 /// specified explicitly if necessary.
 ///
 /// ```rust
-/// # #[macro_use]
-/// # extern crate serde;
-/// #
 /// # use std::marker::PhantomData;
 /// #
+/// # use serde::forward_to_deserialize_any;
 /// # use serde::de::{value, Deserializer, Visitor};
 /// #
 /// # struct MyDeserializer<V>(PhantomData<V>);

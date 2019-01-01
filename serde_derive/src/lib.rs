@@ -1,8 +1,7 @@
 //! This crate provides Serde's two derive macros.
 //!
 //! ```rust
-//! # #[macro_use]
-//! # extern crate serde_derive;
+//! # use serde_derive::{Serialize, Deserialize};
 //! #
 //! #[derive(Serialize, Deserialize)]
 //! # struct S;

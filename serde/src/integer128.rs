@@ -10,13 +10,11 @@
 /// integers.
 ///
 /// ```rust
-/// #[macro_use]
-/// extern crate serde;
-///
-/// use serde::Serializer;
 /// # use serde::private::ser::Error;
 /// #
 /// # struct MySerializer;
+/// #
+/// use serde::{serde_if_integer128, Serializer};
 ///
 /// impl Serializer for MySerializer {
 ///     type Ok = ();
@@ -41,7 +39,7 @@
 ///         }
 ///     }
 /// #
-/// #     __serialize_unimplemented! {
+/// #     serde::__serialize_unimplemented! {
 /// #         bool i8 i16 i32 u8 u16 u32 u64 f32 f64 char str bytes none some
 /// #         unit unit_struct unit_variant newtype_struct newtype_variant seq
 /// #         tuple tuple_struct tuple_variant map struct struct_variant

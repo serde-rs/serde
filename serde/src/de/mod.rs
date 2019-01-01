@@ -173,7 +173,7 @@ macro_rules! declare_error_trait {
             ///     where
             ///         D: Deserializer<'de>,
             ///     {
-            ///         let s = try!(String::deserialize(deserializer));
+            ///         let s = String::deserialize(deserializer)?;
             ///         s.parse().map_err(de::Error::custom)
             ///     }
             /// }
@@ -2208,13 +2208,9 @@ pub trait VariantAccess<'de>: Sized {
 /// # Example
 ///
 /// ```rust
-/// #[macro_use]
-/// extern crate serde_derive;
-///
-/// extern crate serde;
-///
 /// use std::str::FromStr;
-/// use serde::de::{value, Deserialize, IntoDeserializer};
+/// use serde::Deserialize;
+/// use serde::de::{value, IntoDeserializer};
 ///
 /// #[derive(Deserialize)]
 /// enum Setting {

@@ -378,12 +378,9 @@ pub trait Serializer: Sized {
     /// Serialize a `bool` value.
     ///
     /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde;
-    /// #
     /// # use serde::Serializer;
     /// #
-    /// # __private_serialize!();
+    /// # serde::__private_serialize!();
     /// #
     /// impl Serialize for bool {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -405,12 +402,9 @@ pub trait Serializer: Sized {
     /// forward to `serialize_i64`.
     ///
     /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde;
-    /// #
     /// # use serde::Serializer;
     /// #
-    /// # __private_serialize!();
+    /// # serde::__private_serialize!();
     /// #
     /// impl Serialize for i8 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -432,12 +426,9 @@ pub trait Serializer: Sized {
     /// forward to `serialize_i64`.
     ///
     /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde;
-    /// #
     /// # use serde::Serializer;
     /// #
-    /// # __private_serialize!();
+    /// # serde::__private_serialize!();
     /// #
     /// impl Serialize for i16 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -459,12 +450,9 @@ pub trait Serializer: Sized {
     /// forward to `serialize_i64`.
     ///
     /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde;
-    /// #
     /// # use serde::Serializer;
     /// #
-    /// # __private_serialize!();
+    /// # serde::__private_serialize!();
     /// #
     /// impl Serialize for i32 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -482,12 +470,9 @@ pub trait Serializer: Sized {
     /// Serialize an `i64` value.
     ///
     /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde;
-    /// #
     /// # use serde::Serializer;
     /// #
-    /// # __private_serialize!();
+    /// # serde::__private_serialize!();
     /// #
     /// impl Serialize for i64 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -506,12 +491,9 @@ pub trait Serializer: Sized {
         /// Serialize an `i128` value.
         ///
         /// ```rust
-        /// # #[macro_use]
-        /// # extern crate serde;
-        /// #
         /// # use serde::Serializer;
         /// #
-        /// # __private_serialize!();
+        /// # serde::__private_serialize!();
         /// #
         /// impl Serialize for i128 {
         ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -540,12 +522,9 @@ pub trait Serializer: Sized {
     /// forward to `serialize_u64`.
     ///
     /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde;
-    /// #
     /// # use serde::Serializer;
     /// #
-    /// # __private_serialize!();
+    /// # serde::__private_serialize!();
     /// #
     /// impl Serialize for u8 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -567,12 +546,9 @@ pub trait Serializer: Sized {
     /// forward to `serialize_u64`.
     ///
     /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde;
-    /// #
     /// # use serde::Serializer;
     /// #
-    /// # __private_serialize!();
+    /// # serde::__private_serialize!();
     /// #
     /// impl Serialize for u16 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -594,12 +570,9 @@ pub trait Serializer: Sized {
     /// forward to `serialize_u64`.
     ///
     /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde;
-    /// #
     /// # use serde::Serializer;
     /// #
-    /// # __private_serialize!();
+    /// # serde::__private_serialize!();
     /// #
     /// impl Serialize for u32 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -617,12 +590,9 @@ pub trait Serializer: Sized {
     /// Serialize a `u64` value.
     ///
     /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde;
-    /// #
     /// # use serde::Serializer;
     /// #
-    /// # __private_serialize!();
+    /// # serde::__private_serialize!();
     /// #
     /// impl Serialize for u64 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -641,12 +611,9 @@ pub trait Serializer: Sized {
         /// Serialize a `u128` value.
         ///
         /// ```rust
-        /// # #[macro_use]
-        /// # extern crate serde;
-        /// #
         /// # use serde::Serializer;
         /// #
-        /// # __private_serialize!();
+        /// # serde::__private_serialize!();
         /// #
         /// impl Serialize for u128 {
         ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -675,12 +642,9 @@ pub trait Serializer: Sized {
     /// forward to `serialize_f64`.
     ///
     /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde;
-    /// #
     /// # use serde::Serializer;
     /// #
-    /// # __private_serialize!();
+    /// # serde::__private_serialize!();
     /// #
     /// impl Serialize for f32 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -698,12 +662,9 @@ pub trait Serializer: Sized {
     /// Serialize an `f64` value.
     ///
     /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde;
-    /// #
     /// # use serde::Serializer;
     /// #
-    /// # __private_serialize!();
+    /// # serde::__private_serialize!();
     /// #
     /// impl Serialize for f64 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -724,12 +685,9 @@ pub trait Serializer: Sized {
     /// it as a single element `str` or a `u32`.
     ///
     /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde;
-    /// #
     /// # use serde::Serializer;
     /// #
-    /// # __private_serialize!();
+    /// # serde::__private_serialize!();
     /// #
     /// impl Serialize for char {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -747,12 +705,9 @@ pub trait Serializer: Sized {
     /// Serialize a `&str`.
     ///
     /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde;
-    /// #
     /// # use serde::Serializer;
     /// #
-    /// # __private_serialize!();
+    /// # serde::__private_serialize!();
     /// #
     /// impl Serialize for str {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -776,9 +731,6 @@ pub trait Serializer: Sized {
     /// like this:
     ///
     /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde;
-    /// #
     /// # use serde::ser::{Serializer, SerializeSeq};
     /// # use serde::private::ser::Error;
     /// #
@@ -796,7 +748,7 @@ pub trait Serializer: Sized {
     ///     seq.end()
     /// }
     /// #
-    /// #     __serialize_unimplemented! {
+    /// #     serde::__serialize_unimplemented! {
     /// #         bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str none some
     /// #         unit unit_struct unit_variant newtype_struct newtype_variant
     /// #         seq tuple tuple_struct tuple_variant map struct struct_variant
@@ -810,8 +762,6 @@ pub trait Serializer: Sized {
     /// Serialize a [`None`] value.
     ///
     /// ```rust
-    /// # extern crate serde;
-    /// #
     /// # use serde::{Serialize, Serializer};
     /// #
     /// # enum Option<T> {
@@ -819,7 +769,7 @@ pub trait Serializer: Sized {
     /// #     None,
     /// # }
     /// #
-    /// # use Option::{Some, None};
+    /// # use self::Option::{Some, None};
     /// #
     /// impl<T> Serialize for Option<T>
     /// where
@@ -845,8 +795,6 @@ pub trait Serializer: Sized {
     /// Serialize a [`Some(T)`] value.
     ///
     /// ```rust
-    /// # extern crate serde;
-    /// #
     /// # use serde::{Serialize, Serializer};
     /// #
     /// # enum Option<T> {
@@ -854,7 +802,7 @@ pub trait Serializer: Sized {
     /// #     None,
     /// # }
     /// #
-    /// # use Option::{Some, None};
+    /// # use self::Option::{Some, None};
     /// #
     /// impl<T> Serialize for Option<T>
     /// where
@@ -882,12 +830,9 @@ pub trait Serializer: Sized {
     /// Serialize a `()` value.
     ///
     /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde;
-    /// #
     /// # use serde::Serializer;
     /// #
-    /// # __private_serialize!();
+    /// # serde::__private_serialize!();
     /// #
     /// impl Serialize for () {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
