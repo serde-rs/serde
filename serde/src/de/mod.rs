@@ -153,7 +153,7 @@ macro_rules! declare_error_trait {
             ///
             /// The message should not be capitalized and should not end with a period.
             ///
-            /// ```rust
+            /// ```edition2018
             /// # use std::str::FromStr;
             /// #
             /// # struct IpAddr;
@@ -298,7 +298,7 @@ declare_error_trait!(Error: Sized + Debug + Display);
 /// This is used as an argument to the `invalid_type`, `invalid_value`, and
 /// `invalid_length` methods of the `Error` trait to build error messages.
 ///
-/// ```rust
+/// ```edition2018
 /// # use std::fmt;
 /// #
 /// # use serde::de::{self, Unexpected, Visitor};
@@ -423,7 +423,7 @@ impl<'a> fmt::Display for Unexpected<'a> {
 /// Within the context of a `Visitor` implementation, the `Visitor` itself
 /// (`&self`) is an implementation of this trait.
 ///
-/// ```rust
+/// ```edition2018
 /// # use std::fmt;
 /// #
 /// # use serde::de::{self, Unexpected, Visitor};
@@ -448,7 +448,7 @@ impl<'a> fmt::Display for Unexpected<'a> {
 ///
 /// Outside of a `Visitor`, `&"..."` can be used.
 ///
-/// ```rust
+/// ```edition2018
 /// # use serde::de::{self, Unexpected};
 /// #
 /// # fn example<E>() -> Result<(), E>
@@ -569,7 +569,7 @@ pub trait Deserialize<'de>: Sized {
 /// from the input string, but a `from_reader` function may only deserialize
 /// owned data.
 ///
-/// ```rust
+/// ```edition2018
 /// # use serde::de::{Deserialize, DeserializeOwned};
 /// # use std::io::{Read, Result};
 /// #
@@ -608,7 +608,7 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 ///
 /// The canonical API for stateless deserialization looks like this:
 ///
-/// ```rust
+/// ```edition2018
 /// # use serde::Deserialize;
 /// #
 /// # enum Error {}
@@ -622,7 +622,7 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 /// Adjusting an API like this to support stateful deserialization is a matter
 /// of accepting a seed as input:
 ///
-/// ```rust
+/// ```edition2018
 /// # use serde::de::DeserializeSeed;
 /// #
 /// # enum Error {}
@@ -655,7 +655,7 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 /// into it. This requires stateful deserialization using the `DeserializeSeed`
 /// trait.
 ///
-/// ```rust
+/// ```edition2018
 /// use std::fmt;
 /// use std::marker::PhantomData;
 ///
@@ -1145,7 +1145,7 @@ pub trait Deserializer<'de>: Sized {
     /// human-readable one and binary formats like Bincode will prefer the
     /// compact one.
     ///
-    /// ```
+    /// ```edition2018
     /// # use std::ops::Add;
     /// # use std::str::FromStr;
     /// #
@@ -1222,7 +1222,7 @@ pub trait Deserializer<'de>: Sized {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```edition2018
 /// # use std::fmt;
 /// #
 /// # use serde::de::{self, Unexpected, Visitor};
@@ -1263,7 +1263,7 @@ pub trait Visitor<'de>: Sized {
     /// "an integer between 0 and 64". The message should not be capitalized and
     /// should not end with a period.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use std::fmt;
     /// #
     /// # struct S {
@@ -2004,7 +2004,7 @@ pub trait VariantAccess<'de>: Sized {
     /// If the data contains a different type of variant, the following
     /// `invalid_type` error should be constructed:
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, Unexpected};
     /// #
     /// # struct X;
@@ -2044,7 +2044,7 @@ pub trait VariantAccess<'de>: Sized {
     /// If the data contains a different type of variant, the following
     /// `invalid_type` error should be constructed:
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, Unexpected};
     /// #
     /// # struct X;
@@ -2100,7 +2100,7 @@ pub trait VariantAccess<'de>: Sized {
     /// If the data contains a different type of variant, the following
     /// `invalid_type` error should be constructed:
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, Unexpected};
     /// #
     /// # struct X;
@@ -2147,7 +2147,7 @@ pub trait VariantAccess<'de>: Sized {
     /// If the data contains a different type of variant, the following
     /// `invalid_type` error should be constructed:
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, Unexpected};
     /// #
     /// # struct X;
@@ -2207,7 +2207,7 @@ pub trait VariantAccess<'de>: Sized {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```edition2018
 /// use std::str::FromStr;
 /// use serde::Deserialize;
 /// use serde::de::{value, IntoDeserializer};

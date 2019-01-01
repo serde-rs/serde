@@ -1,6 +1,6 @@
 //! This crate provides Serde's two derive macros.
 //!
-//! ```rust
+//! ```edition2018
 //! # use serde_derive::{Serialize, Deserialize};
 //! #
 //! #[derive(Serialize, Deserialize)]

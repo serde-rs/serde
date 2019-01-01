@@ -8,7 +8,7 @@ use de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
 /// any type, except that it does not store any information about the data that
 /// gets deserialized.
 ///
-/// ```rust
+/// ```edition2018
 /// use std::fmt;
 /// use std::marker::PhantomData;
 ///
@@ -21,7 +21,7 @@ use de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
 /// ///
 /// /// For example to deserialize only the element at index 3:
 /// ///
-/// /// ```rust
+/// /// ```
 /// /// NthElement::new(3).deserialize(deserializer)
 /// /// ```
 /// pub struct NthElement<T> {

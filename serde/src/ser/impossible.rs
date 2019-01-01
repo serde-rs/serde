@@ -15,7 +15,7 @@ use ser::{
 /// [`SerializeTuple`], [`SerializeTupleStruct`], [`SerializeTupleVariant`],
 /// [`SerializeMap`], [`SerializeStruct`], and [`SerializeStructVariant`].
 ///
-/// ```rust
+/// ```edition2018
 /// # use serde::ser::{Serializer, Impossible};
 /// # use serde::private::ser::Error;
 /// #

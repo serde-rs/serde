@@ -11,7 +11,7 @@
 /// input. This requires repetitive implementations of all the [`Deserializer`]
 /// trait methods.
 ///
-/// ```rust
+/// ```edition2018
 /// # use serde::forward_to_deserialize_any;
 /// # use serde::de::{value, Deserializer, Visitor};
 /// #
@@ -47,7 +47,7 @@
 /// methods so that they forward directly to [`Deserializer::deserialize_any`].
 /// You can choose which methods to forward.
 ///
-/// ```rust
+/// ```edition2018
 /// # use serde::forward_to_deserialize_any;
 /// # use serde::de::{value, Deserializer, Visitor};
 /// #
@@ -78,7 +78,7 @@
 /// called `V`. A different type parameter and a different lifetime can be
 /// specified explicitly if necessary.
 ///
-/// ```rust
+/// ```edition2018
 /// # use std::marker::PhantomData;
 /// #
 /// # use serde::forward_to_deserialize_any;

@@ -1,7 +1,7 @@
 //! Building blocks for deserializing basic values using the `IntoDeserializer`
 //! trait.
 //!
-//! ```rust
+//! ```edition2018
 //! use std::str::FromStr;
 //! use serde::Deserialize;
 //! use serde::de::{value, IntoDeserializer};
