@@ -8,7 +8,7 @@ error[E0560]: struct `remote::S` has no field named `b`
   --> $DIR/unknown_field.rs:12:5
    |
 12 |     b: u8,
-   |     ^ field does not exist - did you mean `a`?
+   |     ^ help: a field with a similar name exists: `a`
 
 error: aborting due to 2 previous errors
 
