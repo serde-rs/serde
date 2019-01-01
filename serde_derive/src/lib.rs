@@ -26,6 +26,7 @@
         needless_pass_by_value,
         redundant_field_names,
         too_many_arguments,
+        trivially_copy_pass_by_ref,
         used_underscore_binding,
     )
 )]
