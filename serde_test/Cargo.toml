@@ -15,7 +15,7 @@ include = ["Cargo.toml", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-AP
 serde = { version = "1.0.60", path = "../serde" }
 
 [dev-dependencies]
-serde = { version = "1.0", path = "../serde", features = ["rc"] }
+serde = { version = "1.0", path = "../serde", features = ["rc", "derive"] }
 serde_derive = { version = "1.0", path = "../serde_derive" }
 
 [badges]

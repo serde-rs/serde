@@ -24,19 +24,10 @@
 //!
 //! [`linked-hash-map`]: https://github.com/contain-rs/linked-hash-map
 //!
-//! ```rust
-//! # extern crate serde;
-//! #
-//! # macro_rules! ignore {
-//! #     ($($tt:tt)+) => {}
-//! # }
-//! #
-//! # ignore! {
-//! extern crate linked_hash_map;
+//! ```edition2018
+//! # const IGNORE: &str = stringify! {
 //! use linked_hash_map::LinkedHashMap;
-//! # }
-//!
-//! extern crate serde_test;
+//! # };
 //! use serde_test::{Token, assert_tokens};
 //!
 //! # use std::fmt;

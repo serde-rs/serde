@@ -8,13 +8,8 @@ use std::fmt::Debug;
 
 /// Runs both `assert_ser_tokens` and `assert_de_tokens`.
 ///
-/// ```rust
-/// # #[macro_use]
-/// # extern crate serde_derive;
-/// #
-/// # extern crate serde;
-/// # extern crate serde_test;
-/// #
+/// ```edition2018
+/// # use serde::{Serialize, Deserialize};
 /// # use serde_test::{assert_tokens, Token};
 /// #
 /// # fn main() {
@@ -45,13 +40,8 @@ where
 
 /// Asserts that `value` serializes to the given `tokens`.
 ///
-/// ```rust
-/// # #[macro_use]
-/// # extern crate serde_derive;
-/// #
-/// # extern crate serde;
-/// # extern crate serde_test;
-/// #
+/// ```edition2018
+/// # use serde::{Serialize, Deserialize};
 /// # use serde_test::{assert_ser_tokens, Token};
 /// #
 /// # fn main() {
@@ -90,16 +80,11 @@ where
 /// Asserts that `value` serializes to the given `tokens`, and then yields
 /// `error`.
 ///
-/// ```rust
-/// # #[macro_use]
-/// # extern crate serde_derive;
-/// #
-/// # extern crate serde_test;
-/// #
-/// # fn main() {
+/// ```edition2018
 /// use std::sync::{Arc, Mutex};
 /// use std::thread;
 ///
+/// use serde::Serialize;
 /// use serde_test::{assert_ser_tokens_error, Token};
 ///
 /// #[derive(Serialize)]
@@ -107,26 +92,27 @@ where
 ///     lock: Arc<Mutex<u32>>,
 /// }
 ///
-/// let example = Example { lock: Arc::new(Mutex::new(0)) };
-/// let lock = example.lock.clone();
+/// fn main() {
+///     let example = Example { lock: Arc::new(Mutex::new(0)) };
+///     let lock = example.lock.clone();
 ///
-/// let _ = thread::spawn(move || {
-///     // This thread will acquire the mutex first, unwrapping the result
-///     // of `lock` because the lock has not been poisoned.
-///     let _guard = lock.lock().unwrap();
+///     let _ = thread::spawn(move || {
+///         // This thread will acquire the mutex first, unwrapping the result
+///         // of `lock` because the lock has not been poisoned.
+///         let _guard = lock.lock().unwrap();
 ///
-///     // This panic while holding the lock (`_guard` is in scope) will
-///     // poison the mutex.
-///     panic!()
-/// }).join();
+///         // This panic while holding the lock (`_guard` is in scope) will
+///         // poison the mutex.
+///         panic!()
+///     }).join();
 ///
-/// let expected = &[
-///     Token::Struct { name: "Example", len: 1 },
-///     Token::Str("lock"),
-/// ];
-/// let error = "lock poison error while serializing";
-/// assert_ser_tokens_error(&example, expected, error);
-/// # }
+///     let expected = &[
+///         Token::Struct { name: "Example", len: 1 },
+///         Token::Str("lock"),
+///     ];
+///     let error = "lock poison error while serializing";
+///     assert_ser_tokens_error(&example, expected, error);
+/// }
 /// ```
 pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token], error: &str)
 where
@@ -145,13 +131,8 @@ where
 
 /// Asserts that the given `tokens` deserialize into `value`.
 ///
-/// ```rust
-/// # #[macro_use]
-/// # extern crate serde_derive;
-/// #
-/// # extern crate serde;
-/// # extern crate serde_test;
-/// #
+/// ```edition2018
+/// # use serde::{Serialize, Deserialize};
 /// # use serde_test::{assert_de_tokens, Token};
 /// #
 /// # fn main() {
@@ -205,13 +186,8 @@ where
 
 /// Asserts that the given `tokens` yield `error` when deserializing.
 ///
-/// ```rust
-/// # #[macro_use]
-/// # extern crate serde_derive;
-/// #
-/// # extern crate serde;
-/// # extern crate serde_test;
-/// #
+/// ```edition2018
+/// # use serde::{Serialize, Deserialize};
 /// # use serde_test::{assert_de_tokens_error, Token};
 /// #
 /// # fn main() {
