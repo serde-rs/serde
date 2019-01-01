@@ -86,7 +86,7 @@
 #![cfg_attr(feature = "alloc", feature(alloc))]
 #![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
-// Whitelisted clippy lints
+// Ignored clippy lints
 #![cfg_attr(
     feature = "cargo-clippy",
     allow(
@@ -101,7 +101,7 @@
         zero_prefixed_literal
     )
 )]
-// Whitelisted clippy_pedantic lints
+// Ignored clippy_pedantic lints
 #![cfg_attr(feature = "cargo-clippy", allow(
 // integer and float ser/de requires these sorts of casts
     cast_possible_truncation,

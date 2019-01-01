@@ -147,9 +147,9 @@
 #![doc(html_root_url = "https://docs.rs/serde_test/1.0.83")]
 #![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
-// Whitelisted clippy lints
+// Ignored clippy lints
 #![cfg_attr(feature = "cargo-clippy", allow(float_cmp))]
-// Whitelisted clippy_pedantic lints
+// Ignored clippy_pedantic lints
 #![cfg_attr(
     feature = "cargo-clippy",
     allow(
