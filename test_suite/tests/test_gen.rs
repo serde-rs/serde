@@ -5,12 +5,8 @@
 #![deny(warnings)]
 #![cfg_attr(feature = "unstable", feature(non_ascii_idents))]
 
-#[macro_use]
-extern crate serde_derive;
-
-extern crate serde;
-use self::serde::de::{DeserializeOwned, Deserializer};
-use self::serde::ser::{Serialize, Serializer};
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::borrow::Cow;
 use std::marker::PhantomData;
@@ -384,6 +380,8 @@ fn test_gen() {
     }
 
     mod vis {
+        use serde::{Deserialize, Serialize};
+
         pub struct S;
 
         #[derive(Serialize, Deserialize)]
@@ -607,6 +605,8 @@ fn test_gen() {
 
     mod restricted {
         mod inner {
+            use serde::{Deserialize, Serialize};
+
             #[derive(Serialize, Deserialize)]
             struct Restricted {
                 pub(super) a: usize,

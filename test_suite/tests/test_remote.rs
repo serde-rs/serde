@@ -1,8 +1,7 @@
 #![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
 #![cfg_attr(feature = "cargo-clippy", allow(redundant_field_names))]
 
-#[macro_use]
-extern crate serde_derive;
+use serde::{Deserialize, Serialize};
 
 mod remote {
     pub struct Unit;

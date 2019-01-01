@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use serde_test::{assert_tokens, Token};
 
 #[test]

@@ -2,6 +2,7 @@
 name = "serde_test_suite"
 version = "0.0.0"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
+edition = "2018"
 publish = false
 
 [features]
@@ -11,7 +12,7 @@ compiletest = ["compiletest_rs"]
 [dev-dependencies]
 fnv = "1.0"
 rustc-serialize = "0.3.16"
-serde = { path = "../serde", features = ["rc"] }
+serde = { path = "../serde", features = ["rc", "derive"] }
 serde_derive = { path = "../serde_derive", features = ["deserialize_in_place"] }
 serde_test = { path = "../serde_test" }
 

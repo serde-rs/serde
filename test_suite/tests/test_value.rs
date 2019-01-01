@@ -1,7 +1,3 @@
-#[macro_use]
-extern crate serde_derive;
-
-extern crate serde;
 use serde::de::{value, IntoDeserializer};
 use serde::Deserialize;
 

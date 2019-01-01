@@ -1,10 +1,4 @@
-#[macro_use]
-extern crate serde_derive;
-
-extern crate serde;
 use serde::{Deserialize, Deserializer};
-
-extern crate serde_test;
 use serde_test::{assert_de_tokens, assert_de_tokens_error, Token};
 
 use std::borrow::Cow;

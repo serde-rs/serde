@@ -2,15 +2,10 @@
 #![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
 #![cfg_attr(feature = "cargo-clippy", allow(redundant_field_names))]
 
-#[macro_use]
-extern crate serde_derive;
-
-extern crate serde;
-extern crate serde_test;
-
 mod bytes;
 
-use self::serde_test::{
+use serde::{Deserialize, Serialize};
+use serde_test::{
     assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_tokens, Token,
 };
 

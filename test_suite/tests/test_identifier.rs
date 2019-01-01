@@ -1,7 +1,4 @@
-#[macro_use]
-extern crate serde_derive;
-
-extern crate serde_test;
+use serde::Deserialize;
 use serde_test::{assert_de_tokens, Token};
 
 #[test]

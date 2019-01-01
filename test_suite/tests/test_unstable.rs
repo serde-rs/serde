@@ -1,14 +1,5 @@
 #![deny(warnings)]
 
-#[cfg(feature = "unstable")]
-#[macro_use]
-extern crate serde_derive;
-
-#[cfg(feature = "unstable")]
-extern crate serde;
-#[cfg(feature = "unstable")]
-extern crate serde_test;
-
 // This test target is convoluted with the actual #[test] in a separate file to
 // get it so that the stable compiler does not need to parse the code of the
 // test. If the test were written with #[cfg(feature = "unstable")] #[test]

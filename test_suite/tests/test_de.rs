@@ -2,9 +2,6 @@
 #![cfg_attr(feature = "cargo-clippy", allow(decimal_literal_representation))]
 #![cfg_attr(feature = "unstable", feature(never_type))]
 
-#[macro_use]
-extern crate serde_derive;
-
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::default::Default;
 use std::ffi::{CStr, CString, OsString};
@@ -15,14 +12,9 @@ use std::rc::{Rc, Weak as RcWeak};
 use std::sync::{Arc, Weak as ArcWeak};
 use std::time::{Duration, UNIX_EPOCH};
 
-extern crate serde;
+use fnv::FnvHasher;
 use serde::{Deserialize, Deserializer};
-
-extern crate fnv;
-use self::fnv::FnvHasher;
-
-extern crate serde_test;
-use self::serde_test::{assert_de_tokens, assert_de_tokens_error, Configure, Token};
+use serde_test::{assert_de_tokens, assert_de_tokens_error, Configure, Token};
 
 #[macro_use]
 mod macros;

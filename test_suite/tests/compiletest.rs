@@ -1,6 +1,6 @@
 #![cfg(feature = "compiletest")]
 
-extern crate compiletest_rs as compiletest;
+use compiletest_rs as compiletest;
 
 #[test]
 fn ui() {

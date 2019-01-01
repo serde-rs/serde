@@ -1,19 +1,14 @@
 #![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
 #![cfg_attr(feature = "cargo-clippy", allow(cast_lossless))]
 
-#[macro_use]
-extern crate serde_derive;
-
-extern crate serde;
-use self::serde::de::{self, MapAccess, Unexpected, Visitor};
-use self::serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::de::{self, MapAccess, Unexpected, Visitor};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::marker::PhantomData;
 
-extern crate serde_test;
-use self::serde_test::{
+use serde_test::{
     assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_ser_tokens_error,
     assert_tokens, Token,
 };

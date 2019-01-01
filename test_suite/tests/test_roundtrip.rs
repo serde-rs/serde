@@ -1,5 +1,4 @@
-extern crate serde_test;
-use self::serde_test::{assert_tokens, Configure, Token};
+use serde_test::{assert_tokens, Configure, Token};
 
 use std::net;
 
