@@ -63,7 +63,7 @@ matrix:
         - cd "${TRAVIS_BUILD_DIR}/serde_test"
         - cargo clippy -- -Dclippy
         - cd "${TRAVIS_BUILD_DIR}/test_suite"
-        - cargo clippy --features unstable -- -Dclippy
+        - cargo clippy --tests --features unstable -- -Dclippy
         - cd "${TRAVIS_BUILD_DIR}/test_suite/no_std"
         - cargo clippy -- -Dclippy
 
