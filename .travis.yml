@@ -9,7 +9,7 @@ matrix:
         - cargo build --no-default-features
         - cd "${TRAVIS_BUILD_DIR}/serde_test"
         - cargo build
-        - cargo test
+        - cargo test --features serde/derive,serde/rc
 
     - rust: beta
       script:
