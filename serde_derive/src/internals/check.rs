@@ -295,11 +295,17 @@ fn check_internal_tag_field_name_conflict(cx: &Ctxt, cont: &Container) {
                     let check_de = !field.attrs.skip_deserializing();
                     let name = field.attrs.name();
                     let ser_name = name.serialize_name();
-                    let de_name = name.deserialize_name();
 
-                    if check_ser && ser_name == tag || check_de && de_name == tag {
+                    if check_ser && ser_name == tag {
                         diagnose_conflict();
                         return;
+                    }
+
+                    for de_name in field.attrs.aliases() {
+                        if check_de && de_name == tag {
+                            diagnose_conflict();
+                            return;
+                        }
                     }
                 }
             }
