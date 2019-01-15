@@ -1143,7 +1143,7 @@ fn deserialize_enum(
 fn prepare_enum_variant_enum(
     variants: &[Variant],
     cattrs: &attr::Container,
-) -> (proc_macro2::TokenStream, Stmts) {
+) -> (TokenStream, Stmts) {
     let variant_names_idents: Vec<_> = variants
         .iter()
         .enumerate()
