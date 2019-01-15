@@ -2004,7 +2004,7 @@ fn deserialize_identifier(
 ) -> Fragment {
     let mut flat_fields = Vec::new();
     for &(_, ref ident, ref aliases) in fields {
-        flat_fields.extend(aliases.into_iter().map(|alias| (alias, ident)))
+        flat_fields.extend(aliases.iter().map(|alias| (alias, ident)))
     }
 
     let field_strs = flat_fields.iter().map(|&(ref name, _)| name);
