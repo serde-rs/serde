@@ -76,6 +76,14 @@ fn main() {
     println!("deserialized = {:?}", deserialized);
 }
 ```
+### Rust 2018
+
+If you use Rust 2018 (by setting `edition = 2018` in your `Cargo.toml`), you don't need to `extern crate` and can instead just `use` directly:
+
+```rust
+use serde_derive::{Deserialize, Serialize};
+use serde_json;
+```
 
 ## Getting help
 
