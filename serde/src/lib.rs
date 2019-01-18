@@ -252,40 +252,6 @@ pub mod private;
 
 // Re-export #[derive(Serialize, Deserialize)].
 //
-// This is a workaround for https://github.com/rust-lang/cargo/issues/1286.
-// Without this re-export, crates that put Serde derives behind a cfg_attr would
-// need to use some silly feature name that depends on both serde and
-// serde_derive.
-//
-//     [features]
-//     serde-impls = ["serde", "serde_derive"]
-//
-//     [dependencies]
-//     serde = { version = "1.0", optional = true }
-//     serde_derive = { version = "1.0", optional = true }
-//
-//     # Used like this:
-//     # #[cfg(feature = "serde-impls")]
-//     # #[macro_use]
-//     # extern crate serde_derive;
-//     #
-//     # #[cfg_attr(feature = "serde-impls", derive(Serialize, Deserialize))]
-//     # struct S { /* ... */ }
-//
-// The re-exported derives allow crates to use "serde" as the name of their
-// Serde feature which is more intuitive.
-//
-//     [dependencies]
-//     serde = { version = "1.0", optional = true, features = ["derive"] }
-//
-//     # Used like this:
-//     # #[cfg(feature = "serde")]
-//     # #[macro_use]
-//     # extern crate serde;
-//     #
-//     # #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-//     # struct S { /* ... */ }
-//
 // The reason re-exporting is not enabled by default is that disabling it would
 // be annoying for crates that provide handwritten impls or data formats. They
 // would need to disable default features and then explicitly re-enable std.
