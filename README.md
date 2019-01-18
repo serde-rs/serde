@@ -25,19 +25,17 @@ You may be looking for:
 <details>
 <summary>
 Click to show Cargo.toml.
-<a href="https://play.rust-lang.org/?gist=9003c5b88c1f4989941925d7190c6eec" target="_blank">Run this code in the playground.</a>
+<a href="https://play.rust-lang.org/?edition=2018&gist=72755f28f99afc95e01d63174b28c1f5" target="_blank">Run this code in the playground.</a>
 </summary>
 
 ```toml
 [dependencies]
 
 # The core APIs, including the Serialize and Deserialize traits. Always
-# required when using Serde.
-serde = "1.0"
-
-# Support for #[derive(Serialize, Deserialize)]. Required if you want Serde
-# to work for structs and enums defined in your crate.
-serde_derive = "1.0"
+# required when using Serde. The "derive" feature is only required when
+# using #[derive(Serialize, Deserialize)] to make Serde work with structs
+# and enums defined in your crate.
+serde = { version = "1.0", features = ["derive"] }
 
 # Each data format lives in its own crate; the sample code below uses JSON
 # but you may be using a different one.
@@ -48,11 +46,7 @@ serde_json = "1.0"
 <p></p>
 
 ```rust
-#[macro_use]
-extern crate serde_derive;
-
-extern crate serde;
-extern crate serde_json;
+use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Point {
