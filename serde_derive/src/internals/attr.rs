@@ -855,7 +855,7 @@ impl Variant {
     pub fn from_ast(cx: &Ctxt, variant: &syn::Variant) -> Self {
         let mut ser_name = Attr::none(cx, "rename");
         let mut de_name = Attr::none(cx, "rename");
-        let mut de_alises = VecAttr::none(cx, "rename");
+        let mut de_aliases = VecAttr::none(cx, "rename");
         let mut skip_deserializing = BoolAttr::none(cx, "skip_deserializing");
         let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
         let mut rename_all_ser_rule = Attr::none(cx, "rename_all");
@@ -875,7 +875,7 @@ impl Variant {
                         if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
                             ser_name.set(&m.ident, s.value());
                             de_name.set_if_none(s.value());
-                            de_alises.insert(&m.ident, s.value());
+                            de_aliases.insert(&m.ident, s.value());
                         }
                     }
 
@@ -885,7 +885,7 @@ impl Variant {
                             ser_name.set_opt(&m.ident, ser.map(syn::LitStr::value));
                             for de_value in de {
                                 de_name.set_if_none(de_value.value());
-                                de_alises.insert(&m.ident, de_value.value());
+                                de_aliases.insert(&m.ident, de_value.value());
                             }
                         }
                     }
@@ -893,7 +893,7 @@ impl Variant {
                     // Parse `#[serde(alias = "foo")]`
                     Meta(NameValue(ref m)) if m.ident == "alias" => {
                         if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
-                            de_alises.insert(&m.ident, s.value());
+                            de_aliases.insert(&m.ident, s.value());
                         }
                     }
 
@@ -1052,7 +1052,7 @@ impl Variant {
         }
 
         Variant {
-            name: Name::from_attrs(unraw(&variant.ident), ser_name, de_name, Some(de_alises)),
+            name: Name::from_attrs(unraw(&variant.ident), ser_name, de_name, Some(de_aliases)),
             rename_all_rules: RenameAllRules {
                 serialize: rename_all_ser_rule.get().unwrap_or(RenameRule::None),
                 deserialize: rename_all_de_rule.get().unwrap_or(RenameRule::None),
@@ -1165,7 +1165,7 @@ impl Field {
     ) -> Self {
         let mut ser_name = Attr::none(cx, "rename");
         let mut de_name = Attr::none(cx, "rename");
-        let mut de_alises = VecAttr::none(cx, "rename");
+        let mut de_aliases = VecAttr::none(cx, "rename");
         let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
         let mut skip_deserializing = BoolAttr::none(cx, "skip_deserializing");
         let mut skip_serializing_if = Attr::none(cx, "skip_serializing_if");
@@ -1200,7 +1200,7 @@ impl Field {
                         if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
                             ser_name.set(&m.ident, s.value());
                             de_name.set_if_none(s.value());
-                            de_alises.insert(&m.ident, s.value());
+                            de_aliases.insert(&m.ident, s.value());
                         }
                     }
 
@@ -1210,7 +1210,7 @@ impl Field {
                             ser_name.set_opt(&m.ident, ser.map(syn::LitStr::value));
                             for de_value in de {
                                 de_name.set_if_none(de_value.value());
-                                de_alises.insert(&m.ident, de_value.value());
+                                de_aliases.insert(&m.ident, de_value.value());
                             }
                         }
                     }
@@ -1218,7 +1218,7 @@ impl Field {
                     // Parse `#[serde(alias = "foo")]`
                     Meta(NameValue(ref m)) if m.ident == "alias" => {
                         if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
-                            de_alises.insert(&m.ident, s.value());
+                            de_aliases.insert(&m.ident, s.value());
                         }
                     }
 
@@ -1426,7 +1426,7 @@ impl Field {
         }
 
         Field {
-            name: Name::from_attrs(ident, ser_name, de_name, Some(de_alises)),
+            name: Name::from_attrs(ident, ser_name, de_name, Some(de_aliases)),
             skip_serializing: skip_serializing.get(),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing_if: skip_serializing_if.get(),
