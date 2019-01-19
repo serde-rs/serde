@@ -516,6 +516,16 @@ struct RenameStructSerializeDeserialize {
     a2: i32,
 }
 
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct AliasStruct {
+    a1: i32,
+    #[serde(alias = "a3")]
+    a2: i32,
+    #[serde(alias = "a5", rename = "a6")]
+    a4: i32,
+}
+
 #[test]
 fn test_rename_struct() {
     assert_tokens(
@@ -562,6 +572,59 @@ fn test_rename_struct() {
             Token::StructEnd,
         ],
     );
+
+    assert_de_tokens(
+        &AliasStruct { a1: 1, a2: 2, a4: 3 },
+        &[
+            Token::Struct {
+                name: "AliasStruct",
+                len: 3,
+            },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::Str("a2"),
+            Token::I32(2),
+            Token::Str("a5"),
+            Token::I32(3),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &AliasStruct { a1: 1, a2: 2, a4: 3 },
+        &[
+            Token::Struct {
+                name: "AliasStruct",
+                len: 3,
+            },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::Str("a3"),
+            Token::I32(2),
+            Token::Str("a6"),
+            Token::I32(3),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_unknown_field_rename_struct() {
+    assert_de_tokens_error::<AliasStruct>(
+        &[
+            Token::Struct {
+                name: "AliasStruct",
+                len: 3,
+            },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::Str("a3"),
+            Token::I32(2),
+            Token::Str("a4"),
+            Token::I32(3),
+        ],
+        "unknown field `a4`, expected one of `a1`, `a2`, `a6`",
+    );
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -590,6 +653,19 @@ enum RenameEnumSerializeDeserialize<A> {
         #[serde(rename(deserialize = "d"))]
         b: A,
     },
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+enum AliasEnum {
+    #[serde(rename = "sailor_moon", alias = "usagi_tsukino")]
+    SailorMoon {
+        a: i8,
+        #[serde(alias = "c")]
+        b: i8,
+        #[serde(alias = "e", rename = "f")]
+        d: i8,
+    }
 }
 
 #[test]
@@ -677,6 +753,81 @@ fn test_rename_enum() {
             Token::Str(""),
             Token::StructVariantEnd,
         ],
+    );
+
+    assert_de_tokens(
+        &AliasEnum::SailorMoon {
+            a: 0,
+            b: 1,
+            d: 2,
+        },
+        &[
+            Token::StructVariant {
+                name: "AliasEnum",
+                variant: "sailor_moon",
+                len: 3,
+            },
+            Token::Str("a"),
+            Token::I8(0),
+            Token::Str("b"),
+            Token::I8(1),
+            Token::Str("e"),
+            Token::I8(2),
+            Token::StructVariantEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &AliasEnum::SailorMoon {
+            a: 0,
+            b: 1,
+            d: 2,
+        },
+        &[
+            Token::StructVariant {
+                name: "AliasEnum",
+                variant: "usagi_tsukino",
+                len: 3,
+            },
+            Token::Str("a"),
+            Token::I8(0),
+            Token::Str("c"),
+            Token::I8(1),
+            Token::Str("f"),
+            Token::I8(2),
+            Token::StructVariantEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_unknown_field_rename_enum() {
+    assert_de_tokens_error::<AliasEnum>(
+        &[
+            Token::StructVariant {
+                name: "AliasEnum",
+                variant: "SailorMoon",
+                len: 3,
+            },
+        ],
+        "unknown variant `SailorMoon`, expected `sailor_moon`",
+    );
+
+    assert_de_tokens_error::<AliasEnum>(
+        &[
+            Token::StructVariant {
+                name: "AliasEnum",
+                variant: "usagi_tsukino",
+                len: 3,
+            },
+            Token::Str("a"),
+            Token::I8(0),
+            Token::Str("c"),
+            Token::I8(1),
+            Token::Str("d"),
+            Token::I8(2),
+        ],
+        "unknown field `d`, expected one of `a`, `b`, `f`",
     );
 }
 
