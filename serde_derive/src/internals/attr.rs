@@ -120,7 +120,7 @@ impl<'c, T> VecAttr<'c, T> {
                 .error_spanned_by(dup_token, format!("duplicate serde attribute `{}`", self.name));
             Err(())
         } else {
-            Ok(self.values.drain(..).next())
+            Ok(self.values.pop())
         }
     }
 
