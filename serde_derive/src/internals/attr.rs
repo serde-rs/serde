@@ -20,7 +20,6 @@ use syn::NestedMeta::{Literal, Meta};
 
 pub use internals::case::RenameRule;
 
-#[derive(Clone)]
 struct Attr<'c, T> {
     cx: &'c Ctxt,
     name: &'static str,
