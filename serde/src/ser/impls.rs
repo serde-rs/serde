@@ -289,7 +289,7 @@ where
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-
+#[cfg(range_to_inclusive)]
 impl<Idx> Serialize for RangeToInclusive<Idx>
 where
     Idx: Serialize,
@@ -307,6 +307,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#[cfg(any(ops_bound, collections_bound))]
 impl<T> Serialize for Bound<T>
 where
     T: Serialize,

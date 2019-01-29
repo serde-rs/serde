@@ -2153,7 +2153,7 @@ where
             range::UnboundedRangeVisitor {
                 expecting: "struct RangeFrom",
                 phantom: PhantomData,
-                field,
+                field: field,
             },
         )?;
         Ok(start..)
@@ -2175,13 +2175,14 @@ where
             range::UnboundedRangeVisitor {
                 expecting: "struct RangeTo",
                 phantom: PhantomData,
-                field,
+                field: field,
             },
         )?;
         Ok(..end)
     }
 }
 
+#[cfg(range_to_inclusive)]
 impl<'de, Idx> Deserialize<'de> for RangeToInclusive<Idx>
 where
     Idx: Deserialize<'de>,
@@ -2197,10 +2198,10 @@ where
             range::UnboundedRangeVisitor {
                 expecting: "struct RangeToInclusive",
                 phantom: PhantomData,
-                field,
+                field: field,
             },
         )?;
-        Ok(..=end)
+        Ok(RangeToInclusive { end: end })
     }
 }
 
@@ -2226,14 +2227,14 @@ mod range {
 
     impl Field {
         fn name(&self) -> &'static str {
-            match self {
+            match *self {
                 Field::Start => "start",
                 Field::End => "end",
             }
         }
 
         pub fn name_slice(&self) -> &'static [&'static str] {
-            match self {
+            match *self {
                 Field::Start => FIELDS_START_ONLY,
                 Field::End => FIELD_END_ONLY,
             }
@@ -2411,6 +2412,7 @@ mod range {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#[cfg(any(ops_bound, collections_bound))]
 impl<'de, T> Deserialize<'de> for Bound<T>
 where
     T: Deserialize<'de>
