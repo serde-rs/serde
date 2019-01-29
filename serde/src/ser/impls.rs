@@ -256,6 +256,57 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
+impl<Idx> Serialize for RangeFrom<Idx>
+where
+    Idx: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use super::SerializeStruct;
+        let mut state = try!(serializer.serialize_struct("RangeFrom", 1));
+        try!(state.serialize_field("start", &self.start));
+        state.end()
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+impl<Idx> Serialize for RangeTo<Idx>
+where
+    Idx: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use super::SerializeStruct;
+        let mut state = try!(serializer.serialize_struct("RangeTo", 1));
+        try!(state.serialize_field("end", &self.end));
+        state.end()
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+impl<Idx> Serialize for RangeToInclusive<Idx>
+where
+    Idx: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use super::SerializeStruct;
+        let mut state = try!(serializer.serialize_struct("RangeToInclusive", 1));
+        try!(state.serialize_field("end", &self.end));
+        state.end()
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 impl<T> Serialize for Bound<T>
 where
     T: Serialize,

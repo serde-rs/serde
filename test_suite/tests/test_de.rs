@@ -837,6 +837,30 @@ declare_tests! {
             Token::SeqEnd,
         ],
     }
+    test_range_from {
+        0u8.. => &[
+            Token::Struct { name: "RangeFrom", len: 1 },
+                Token::Str("start"),
+                Token::U8(0),
+            Token::StructEnd,
+        ],
+    }
+    test_range_to {
+        ..2u8 => &[
+            Token::Struct { name: "RangeTo", len: 1 },
+                Token::Str("end"),
+                Token::U8(2),
+            Token::StructEnd,
+        ],
+    }
+    test_range_to_inclusive {
+        ..=2u8 => &[
+            Token::Struct { name: "RangeToInclusive", len: 1 },
+                Token::Str("end"),
+                Token::U8(2),
+            Token::StructEnd,
+        ],
+    }
     test_bound {
         Bound::Unbounded::<()> => &[
             Token::Enum { name: "Bound" },
