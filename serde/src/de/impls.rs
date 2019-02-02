@@ -2138,73 +2138,6 @@ where
     }
 }
 
-impl<'de, Idx> Deserialize<'de> for RangeFrom<Idx>
-where
-    Idx: Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let field = range::Field::Start;
-        let start = deserializer.deserialize_struct(
-            "RangeFrom",
-            field.name_slice(),
-            range::UnboundedRangeVisitor {
-                expecting: "struct RangeFrom",
-                phantom: PhantomData,
-                field: field,
-            },
-        )?;
-        Ok(start..)
-    }
-}
-
-impl<'de, Idx> Deserialize<'de> for RangeTo<Idx>
-where
-    Idx: Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let field = range::Field::End;
-        let end = deserializer.deserialize_struct(
-            "RangeTo",
-            field.name_slice(),
-            range::UnboundedRangeVisitor {
-                expecting: "struct RangeTo",
-                phantom: PhantomData,
-                field: field,
-            },
-        )?;
-        Ok(..end)
-    }
-}
-
-#[cfg(range_to_inclusive)]
-impl<'de, Idx> Deserialize<'de> for RangeToInclusive<Idx>
-where
-    Idx: Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let field = range::Field::End;
-        let end = deserializer.deserialize_struct(
-            "RangeToInclusive",
-            field.name_slice(),
-            range::UnboundedRangeVisitor {
-                expecting: "struct RangeToInclusive",
-                phantom: PhantomData,
-                field: field,
-            },
-        )?;
-        Ok(RangeToInclusive { end: end })
-    }
-}
-
 mod range {
     use lib::*;
 
@@ -2216,29 +2149,9 @@ mod range {
     //
     //    #[derive(Deserialize)]
     //    #[serde(field_identifier, rename_all = "lowercase")]
-    #[derive(PartialEq)]
-    pub enum Field {
+    enum Field {
         Start,
         End,
-    }
-
-    const FIELDS_START_ONLY: &'static [&'static str] = &["start"];
-    const FIELD_END_ONLY: &'static [&'static str] = &["end"];
-
-    impl Field {
-        fn name(&self) -> &'static str {
-            match *self {
-                Field::Start => "start",
-                Field::End => "end",
-            }
-        }
-
-        pub fn name_slice(&self) -> &'static [&'static str] {
-            match *self {
-                Field::Start => FIELDS_START_ONLY,
-                Field::End => FIELD_END_ONLY,
-            }
-        }
     }
 
     impl<'de> Deserialize<'de> for Field {
@@ -2350,62 +2263,6 @@ mod range {
                 None => return Err(<A::Error as Error>::missing_field("end")),
             };
             Ok((start, end))
-        }
-    }
-
-    pub struct UnboundedRangeVisitor<Idx> {
-        pub expecting: &'static str,
-        pub phantom: PhantomData<Idx>,
-        pub field: Field,
-    }
-
-    impl<'de, Idx> Visitor<'de> for UnboundedRangeVisitor<Idx>
-    where
-        Idx: Deserialize<'de>,
-    {
-        type Value = Idx;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str(self.expecting)
-        }
-
-        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-        where
-            A: SeqAccess<'de>,
-        {
-            let value: Idx = match try!(seq.next_element()) {
-                Some(value) => value,
-                None => {
-                    return Err(Error::invalid_length(0, &self));
-                }
-            };
-            Ok(value)
-        }
-
-        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-        where
-            A: MapAccess<'de>,
-        {
-            let mut value: Option<Idx> = None;
-            while let Some(key) = try!(map.next_key()) {
-                let key: Field = key;
-                match key {
-                    ref key if *key == self.field => {
-                        if value.is_some() {
-                            return Err(<A::Error as Error>::duplicate_field(key.name()));
-                        }
-                        value = Some(try!(map.next_value()));
-                    }
-                    key => {
-                        return Err(<A::Error as Error>::unknown_field(key.name(), self.field.name_slice()));
-                    }
-                }
-            }
-            let value = match value {
-                Some(value) => value,
-                None => return Err(<A::Error as Error>::missing_field(self.field.name())),
-            };
-            Ok(value)
         }
     }
 }

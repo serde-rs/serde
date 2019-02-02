@@ -51,12 +51,6 @@ fn main() {
         println!("cargo:rustc-cfg=integer128");
     }
 
-    // RangeToInclusive was stabilized in Rust 1.26:
-    // https://doc.rust-lang.org/std/ops/struct.RangeToInclusive.html
-    if minor >= 26 {
-        println!("cargo:rustc-cfg=range_to_inclusive");
-    }
-
     // Inclusive ranges methods stabilized in Rust 1.27:
     // https://github.com/rust-lang/rust/pull/50758
     if minor >= 27 {
