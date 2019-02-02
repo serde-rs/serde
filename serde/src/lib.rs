@@ -93,11 +93,9 @@
         cast_lossless,
         const_static_lifetime,
         doc_markdown,
-        linkedlist,
         needless_pass_by_value,
         redundant_field_names,
         type_complexity,
-        unreadable_literal,
         zero_prefixed_literal
     )
 )]
@@ -110,24 +108,14 @@
         cast_possible_wrap,
         cast_precision_loss,
         cast_sign_loss,
-        // simplifies some macros
-        invalid_upcast_comparisons,
         // things are often more readable this way
-        decimal_literal_representation,
         module_name_repetitions,
-        option_unwrap_used,
-        result_unwrap_used,
-        shadow_reuse,
         single_match_else,
         use_self,
         // not practical
-        indexing_slicing,
-        many_single_char_names,
-        missing_docs_in_private_items,
         similar_names,
         // alternative is not stable
         empty_enum,
-        use_debug,
     )
 )]
 // Blacklisted Rust lints.
