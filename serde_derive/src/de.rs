@@ -1149,7 +1149,11 @@ fn prepare_enum_variant_enum(
         .enumerate()
         .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
         .map(|(i, variant)| {
-            (variant.attrs.name().deserialize_name(), field_i(i), variant.attrs.aliases())
+            (
+                variant.attrs.name().deserialize_name(),
+                field_i(i),
+                variant.attrs.aliases(),
+            )
         })
         .collect();
 
@@ -2275,7 +2279,11 @@ fn deserialize_struct_as_struct_visitor(
         .enumerate()
         .filter(|&(_, field)| !field.attrs.skip_deserializing())
         .map(|(i, field)| {
-            (field.attrs.name().deserialize_name(), field_i(i), field.attrs.aliases())
+            (
+                field.attrs.name().deserialize_name(),
+                field_i(i),
+                field.attrs.aliases(),
+            )
         })
         .collect();
 
@@ -2304,7 +2312,11 @@ fn deserialize_struct_as_map_visitor(
         .enumerate()
         .filter(|&(_, field)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
         .map(|(i, field)| {
-            (field.attrs.name().deserialize_name(), field_i(i), field.attrs.aliases())
+            (
+                field.attrs.name().deserialize_name(),
+                field_i(i),
+                field.attrs.aliases(),
+            )
         })
         .collect();
 
@@ -2537,7 +2549,11 @@ fn deserialize_struct_as_struct_in_place_visitor(
         .enumerate()
         .filter(|&(_, field)| !field.attrs.skip_deserializing())
         .map(|(i, field)| {
-            (field.attrs.name().deserialize_name(), field_i(i), field.attrs.aliases())
+            (
+                field.attrs.name().deserialize_name(),
+                field_i(i),
+                field.attrs.aliases(),
+            )
         })
         .collect();
 

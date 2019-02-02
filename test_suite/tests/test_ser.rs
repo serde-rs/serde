@@ -6,11 +6,11 @@ use std::ffi::CString;
 use std::mem;
 use std::net;
 use std::num::Wrapping;
+use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak as RcWeak};
 use std::sync::{Arc, Weak as ArcWeak};
 use std::time::{Duration, UNIX_EPOCH};
-use std::ops::Bound;
 
 #[cfg(unix)]
 use std::str;

@@ -2272,7 +2272,7 @@ mod range {
 #[cfg(any(ops_bound, collections_bound))]
 impl<'de, T> Deserialize<'de> for Bound<T>
 where
-    T: Deserialize<'de>
+    T: Deserialize<'de>,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

@@ -574,7 +574,11 @@ fn test_rename_struct() {
     );
 
     assert_de_tokens(
-        &AliasStruct { a1: 1, a2: 2, a4: 3 },
+        &AliasStruct {
+            a1: 1,
+            a2: 2,
+            a4: 3,
+        },
         &[
             Token::Struct {
                 name: "AliasStruct",
@@ -591,7 +595,11 @@ fn test_rename_struct() {
     );
 
     assert_de_tokens(
-        &AliasStruct { a1: 1, a2: 2, a4: 3 },
+        &AliasStruct {
+            a1: 1,
+            a2: 2,
+            a4: 3,
+        },
         &[
             Token::Struct {
                 name: "AliasStruct",
@@ -665,7 +673,7 @@ enum AliasEnum {
         b: i8,
         #[serde(alias = "e", rename = "f")]
         d: i8,
-    }
+    },
 }
 
 #[test]
@@ -756,11 +764,7 @@ fn test_rename_enum() {
     );
 
     assert_de_tokens(
-        &AliasEnum::SailorMoon {
-            a: 0,
-            b: 1,
-            d: 2,
-        },
+        &AliasEnum::SailorMoon { a: 0, b: 1, d: 2 },
         &[
             Token::StructVariant {
                 name: "AliasEnum",
@@ -778,11 +782,7 @@ fn test_rename_enum() {
     );
 
     assert_de_tokens(
-        &AliasEnum::SailorMoon {
-            a: 0,
-            b: 1,
-            d: 2,
-        },
+        &AliasEnum::SailorMoon { a: 0, b: 1, d: 2 },
         &[
             Token::StructVariant {
                 name: "AliasEnum",
@@ -803,13 +803,11 @@ fn test_rename_enum() {
 #[test]
 fn test_unknown_field_rename_enum() {
     assert_de_tokens_error::<AliasEnum>(
-        &[
-            Token::StructVariant {
-                name: "AliasEnum",
-                variant: "SailorMoon",
-                len: 3,
-            },
-        ],
+        &[Token::StructVariant {
+            name: "AliasEnum",
+            variant: "SailorMoon",
+            len: 3,
+        }],
         "unknown variant `SailorMoon`, expected `sailor_moon`",
     );
 

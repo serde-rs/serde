@@ -116,8 +116,10 @@ impl<'c, T> VecAttr<'c, T> {
     fn at_most_one(mut self) -> Result<Option<T>, ()> {
         if self.values.len() > 1 {
             let dup_token = self.first_dup_tokens;
-            self.cx
-                .error_spanned_by(dup_token, format!("duplicate serde attribute `{}`", self.name));
+            self.cx.error_spanned_by(
+                dup_token,
+                format!("duplicate serde attribute `{}`", self.name),
+            );
             Err(())
         } else {
             Ok(self.values.pop())
