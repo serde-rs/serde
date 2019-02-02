@@ -89,6 +89,7 @@
 //!    - PathBuf
 //!    - Range\<T\>
 //!    - RangeInclusive\<T\>
+//!    - Bound\<T\>
 //!    - num::NonZero*
 //!    - `!` *(unstable)*
 //!  - **Net types**:
