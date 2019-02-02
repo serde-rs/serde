@@ -2365,7 +2365,7 @@ where
                 A: EnumAccess<'de>,
             {
                 match try!(data.variant()) {
-                    (Field::Unbounded, v) => v.newtype_variant().map(|_: T| Bound::Unbounded),
+                    (Field::Unbounded, v) => v.unit_variant().map(|()| Bound::Unbounded),
                     (Field::Included, v) => v.newtype_variant().map(Bound::Included),
                     (Field::Excluded, v) => v.newtype_variant().map(Bound::Excluded),
                 }
