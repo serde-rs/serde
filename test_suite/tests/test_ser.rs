@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak as RcWeak};
 use std::sync::{Arc, Weak as ArcWeak};
 use std::time::{Duration, UNIX_EPOCH};
+use std::ops::Bound;
 
 #[cfg(unix)]
 use std::str;
@@ -373,6 +374,47 @@ declare_tests! {
                 Token::Str("end"),
                 Token::U32(2),
             Token::StructEnd,
+        ],
+    }
+    test_range_from {
+        0u8.. => &[
+            Token::Struct { name: "RangeFrom", len: 1 },
+                Token::Str("start"),
+                Token::U8(0),
+            Token::StructEnd,
+        ],
+    }
+    test_range_to {
+        ..2u8 => &[
+            Token::Struct { name: "RangeTo", len: 1 },
+                Token::Str("end"),
+                Token::U8(2),
+            Token::StructEnd,
+        ],
+    }
+    test_range_to_inclusive {
+        ..=2u8 => &[
+            Token::Struct { name: "RangeToInclusive", len: 1 },
+                Token::Str("end"),
+                Token::U8(2),
+            Token::StructEnd,
+        ],
+    }
+    test_bound {
+        Bound::Unbounded::<()> => &[
+            Token::Enum { name: "Bound" },
+            Token::Str("Unbounded"),
+            Token::Unit,
+        ],
+        Bound::Included(0u8) => &[
+            Token::Enum { name: "Bound" },
+            Token::Str("Included"),
+            Token::U8(0),
+        ],
+        Bound::Excluded(0u8) => &[
+            Token::Enum { name: "Bound" },
+            Token::Str("Excluded"),
+            Token::U8(0),
         ],
     }
     test_path {

@@ -143,7 +143,7 @@ mod lib {
     pub use self::core::default::{self, Default};
     pub use self::core::fmt::{self, Debug, Display};
     pub use self::core::marker::{self, PhantomData};
-    pub use self::core::ops::Range;
+    pub use self::core::ops::{Range, RangeFrom, RangeTo};
     pub use self::core::option::{self, Option};
     pub use self::core::result::{self, Result};
 
@@ -207,6 +207,15 @@ mod lib {
 
     #[cfg(range_inclusive)]
     pub use self::core::ops::RangeInclusive;
+
+    #[cfg(all(feature = "std", collections_bound))]
+    pub use std::collections::Bound;
+
+    #[cfg(ops_bound)]
+    pub use self::core::ops::Bound;
+
+    #[cfg(range_to_inclusive)]
+    pub use self::core::ops::RangeToInclusive;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -2138,6 +2138,73 @@ where
     }
 }
 
+impl<'de, Idx> Deserialize<'de> for RangeFrom<Idx>
+where
+    Idx: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let field = range::Field::Start;
+        let start = deserializer.deserialize_struct(
+            "RangeFrom",
+            field.name_slice(),
+            range::UnboundedRangeVisitor {
+                expecting: "struct RangeFrom",
+                phantom: PhantomData,
+                field: field,
+            },
+        )?;
+        Ok(start..)
+    }
+}
+
+impl<'de, Idx> Deserialize<'de> for RangeTo<Idx>
+where
+    Idx: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let field = range::Field::End;
+        let end = deserializer.deserialize_struct(
+            "RangeTo",
+            field.name_slice(),
+            range::UnboundedRangeVisitor {
+                expecting: "struct RangeTo",
+                phantom: PhantomData,
+                field: field,
+            },
+        )?;
+        Ok(..end)
+    }
+}
+
+#[cfg(range_to_inclusive)]
+impl<'de, Idx> Deserialize<'de> for RangeToInclusive<Idx>
+where
+    Idx: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let field = range::Field::End;
+        let end = deserializer.deserialize_struct(
+            "RangeToInclusive",
+            field.name_slice(),
+            range::UnboundedRangeVisitor {
+                expecting: "struct RangeToInclusive",
+                phantom: PhantomData,
+                field: field,
+            },
+        )?;
+        Ok(RangeToInclusive { end: end })
+    }
+}
+
 mod range {
     use lib::*;
 
@@ -2149,9 +2216,29 @@ mod range {
     //
     //    #[derive(Deserialize)]
     //    #[serde(field_identifier, rename_all = "lowercase")]
-    enum Field {
+    #[derive(PartialEq)]
+    pub enum Field {
         Start,
         End,
+    }
+
+    const FIELDS_START_ONLY: &'static [&'static str] = &["start"];
+    const FIELD_END_ONLY: &'static [&'static str] = &["end"];
+
+    impl Field {
+        fn name(&self) -> &'static str {
+            match *self {
+                Field::Start => "start",
+                Field::End => "end",
+            }
+        }
+
+        pub fn name_slice(&self) -> &'static [&'static str] {
+            match *self {
+                Field::Start => FIELDS_START_ONLY,
+                Field::End => FIELD_END_ONLY,
+            }
+        }
     }
 
     impl<'de> Deserialize<'de> for Field {
@@ -2264,6 +2351,173 @@ mod range {
             };
             Ok((start, end))
         }
+    }
+
+    pub struct UnboundedRangeVisitor<Idx> {
+        pub expecting: &'static str,
+        pub phantom: PhantomData<Idx>,
+        pub field: Field,
+    }
+
+    impl<'de, Idx> Visitor<'de> for UnboundedRangeVisitor<Idx>
+    where
+        Idx: Deserialize<'de>,
+    {
+        type Value = Idx;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str(self.expecting)
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let value: Idx = match try!(seq.next_element()) {
+                Some(value) => value,
+                None => {
+                    return Err(Error::invalid_length(0, &self));
+                }
+            };
+            Ok(value)
+        }
+
+        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+        where
+            A: MapAccess<'de>,
+        {
+            let mut value: Option<Idx> = None;
+            while let Some(key) = try!(map.next_key()) {
+                let key: Field = key;
+                match key {
+                    ref key if *key == self.field => {
+                        if value.is_some() {
+                            return Err(<A::Error as Error>::duplicate_field(key.name()));
+                        }
+                        value = Some(try!(map.next_value()));
+                    }
+                    key => {
+                        return Err(<A::Error as Error>::unknown_field(key.name(), self.field.name_slice()));
+                    }
+                }
+            }
+            let value = match value {
+                Some(value) => value,
+                None => return Err(<A::Error as Error>::missing_field(self.field.name())),
+            };
+            Ok(value)
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(any(ops_bound, collections_bound))]
+impl<'de, T> Deserialize<'de> for Bound<T>
+where
+    T: Deserialize<'de>
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        enum Field {
+            Unbounded,
+            Included,
+            Excluded,
+        }
+
+        impl<'de> Deserialize<'de> for Field {
+            #[inline]
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                struct FieldVisitor;
+
+                impl<'de> Visitor<'de> for FieldVisitor {
+                    type Value = Field;
+
+                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                        formatter.write_str("`Unbounded`, `Included` or `Excluded`")
+                    }
+
+                    fn visit_u32<E>(self, value: u32) -> Result<Self::Value, E>
+                    where
+                        E: Error,
+                    {
+                        match value {
+                            0 => Ok(Field::Unbounded),
+                            1 => Ok(Field::Included),
+                            2 => Ok(Field::Excluded),
+                            _ => Err(Error::invalid_value(
+                                Unexpected::Unsigned(value as u64),
+                                &self,
+                            )),
+                        }
+                    }
+
+                    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+                    where
+                        E: Error,
+                    {
+                        match value {
+                            "Unbounded" => Ok(Field::Unbounded),
+                            "Included" => Ok(Field::Included),
+                            "Excluded" => Ok(Field::Excluded),
+                            _ => Err(Error::unknown_variant(value, VARIANTS)),
+                        }
+                    }
+
+                    fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
+                    where
+                        E: Error,
+                    {
+                        match value {
+                            b"Unbounded" => Ok(Field::Unbounded),
+                            b"Included" => Ok(Field::Included),
+                            b"Excluded" => Ok(Field::Excluded),
+                            _ => match str::from_utf8(value) {
+                                Ok(value) => Err(Error::unknown_variant(value, VARIANTS)),
+                                Err(_) => {
+                                    Err(Error::invalid_value(Unexpected::Bytes(value), &self))
+                                }
+                            },
+                        }
+                    }
+                }
+
+                deserializer.deserialize_identifier(FieldVisitor)
+            }
+        }
+
+        struct BoundVisitor<T>(PhantomData<Bound<T>>);
+
+        impl<'de, T> Visitor<'de> for BoundVisitor<T>
+        where
+            T: Deserialize<'de>,
+        {
+            type Value = Bound<T>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("enum Bound")
+            }
+
+            fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
+            where
+                A: EnumAccess<'de>,
+            {
+                match try!(data.variant()) {
+                    (Field::Unbounded, v) => v.newtype_variant().map(|_: T| Bound::Unbounded),
+                    (Field::Included, v) => v.newtype_variant().map(Bound::Included),
+                    (Field::Excluded, v) => v.newtype_variant().map(Bound::Excluded),
+                }
+            }
+        }
+
+        const VARIANTS: &'static [&'static str] = &["Unbounded", "Included", "Excluded"];
+
+        deserializer.deserialize_enum("Bound", VARIANTS, BoundVisitor(PhantomData))
     }
 }
 
