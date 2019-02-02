@@ -102,31 +102,34 @@
     )
 )]
 // Ignored clippy_pedantic lints
-#![cfg_attr(feature = "cargo-clippy", allow(
-// integer and float ser/de requires these sorts of casts
-    cast_possible_truncation,
-    cast_possible_wrap,
-    cast_precision_loss,
-    cast_sign_loss,
-// simplifies some macros
-    invalid_upcast_comparisons,
-// things are often more readable this way
-    decimal_literal_representation,
-    module_name_repetitions,
-    option_unwrap_used,
-    result_unwrap_used,
-    shadow_reuse,
-    single_match_else,
-    use_self,
-// not practical
-    indexing_slicing,
-    many_single_char_names,
-    missing_docs_in_private_items,
-    similar_names,
-// alternative is not stable
-    empty_enum,
-    use_debug,
-))]
+#![cfg_attr(
+    feature = "cargo-clippy",
+    allow(
+        // integer and float ser/de requires these sorts of casts
+        cast_possible_truncation,
+        cast_possible_wrap,
+        cast_precision_loss,
+        cast_sign_loss,
+        // simplifies some macros
+        invalid_upcast_comparisons,
+        // things are often more readable this way
+        decimal_literal_representation,
+        module_name_repetitions,
+        option_unwrap_used,
+        result_unwrap_used,
+        shadow_reuse,
+        single_match_else,
+        use_self,
+        // not practical
+        indexing_slicing,
+        many_single_char_names,
+        missing_docs_in_private_items,
+        similar_names,
+        // alternative is not stable
+        empty_enum,
+        use_debug,
+    )
+)]
 // Blacklisted Rust lints.
 //
 // Compiler bug involving unused_imports:
