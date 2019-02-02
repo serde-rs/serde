@@ -86,36 +86,31 @@
 #![cfg_attr(feature = "alloc", feature(alloc))]
 #![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
-// Ignored clippy lints
+// Ignored clippy and clippy_pedantic lints
 #![cfg_attr(
     feature = "cargo-clippy",
     allow(
-        cast_lossless,
+        // not available in our oldest supported compiler
         const_static_lifetime,
-        doc_markdown,
-        needless_pass_by_value,
+        empty_enum,
         redundant_field_names,
-        type_complexity,
-        zero_prefixed_literal
-    )
-)]
-// Ignored clippy_pedantic lints
-#![cfg_attr(
-    feature = "cargo-clippy",
-    allow(
         // integer and float ser/de requires these sorts of casts
         cast_possible_truncation,
         cast_possible_wrap,
         cast_precision_loss,
         cast_sign_loss,
         // things are often more readable this way
+        cast_lossless,
         module_name_repetitions,
         single_match_else,
+        type_complexity,
         use_self,
+        zero_prefixed_literal,
         // not practical
+        needless_pass_by_value,
         similar_names,
-        // alternative is not stable
-        empty_enum,
+        // preference
+        doc_markdown,
     )
 )]
 // Blacklisted Rust lints.
