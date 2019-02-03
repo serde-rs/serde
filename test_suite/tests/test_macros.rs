@@ -1425,6 +1425,48 @@ fn test_internally_tagged_braced_struct_with_zero_fields() {
 }
 
 #[test]
+fn test_internally_tagged_struct_with_flattened_field() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag="tag_struct")]
+    pub struct Struct {
+        #[serde(flatten)]
+        pub flat: Enum
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag="tag_enum", content="content")]
+    pub enum Enum {
+        A(u64),
+    }
+
+    assert_tokens(
+        &Struct{flat: Enum::A(0)},
+        &[
+            Token::Map { len: None },
+            Token::Str("tag_struct"),
+            Token::Str("Struct"),
+            Token::Str("tag_enum"),
+            Token::Str("A"),
+            Token::Str("content"),
+            Token::U64(0),
+            Token::MapEnd
+        ]
+    );
+
+    assert_de_tokens(
+        &Struct{flat: Enum::A(0)},
+        &[
+            Token::Map { len: None },
+            Token::Str("tag_enum"),
+            Token::Str("A"),
+            Token::Str("content"),
+            Token::U64(0),
+            Token::MapEnd
+        ]
+    );
+}
+
+#[test]
 fn test_enum_in_untagged_enum() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(untagged)]
