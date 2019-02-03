@@ -289,10 +289,7 @@ fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Contai
     }
 }
 
-fn serialize_struct_tag_field(
-    cattrs: &attr::Container,
-    struct_trait: &StructTrait,
-) -> TokenStream {
+fn serialize_struct_tag_field(cattrs: &attr::Container, struct_trait: &StructTrait) -> TokenStream {
     match *cattrs.tag() {
         attr::TagType::Internal { ref tag } => {
             let type_name = cattrs.name().serialize_name();
@@ -301,7 +298,7 @@ fn serialize_struct_tag_field(
                 try!(#func(&mut __serde_state, #tag, #type_name));
             }
         }
-        _ => quote!{}
+        _ => quote! {},
     }
 }
 
@@ -377,7 +374,7 @@ fn serialize_struct_as_map(
             })
             .fold(
                 quote!(#tag_field_exists as usize),
-                |sum, expr| quote!(#sum + #expr)
+                |sum, expr| quote!(#sum + #expr),
             );
         quote!(_serde::export::Some(#len))
     };
