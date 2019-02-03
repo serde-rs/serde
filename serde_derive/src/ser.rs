@@ -289,37 +289,41 @@ fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Contai
     }
 }
 
+fn serialize_struct_tag_field(
+    cattrs: &attr::Container,
+    struct_trait: &StructTrait,
+) -> TokenStream {
+    match *cattrs.tag() {
+        attr::TagType::Internal { ref tag } => {
+            let type_name = cattrs.name().serialize_name();
+            let func = struct_trait.serialize_field(Span::call_site());
+            quote! {
+                try!(#func(&mut __serde_state, #tag, #type_name));
+            }
+        }
+        _ => quote!{}
+    }
+}
+
 fn serialize_struct_as_struct(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
 ) -> Fragment {
-    let mut serialize_fields =
+    let serialize_fields =
         serialize_struct_visitor(fields, params, false, &StructTrait::SerializeStruct);
 
     let type_name = cattrs.name().serialize_name();
 
-    let additional_field_count: usize = match *cattrs.tag() {
-        attr::TagType::Internal { ref tag } => {
-            let func = StructTrait::SerializeStruct.serialize_field(Span::call_site());
-            serialize_fields.insert(
-                0,
-                quote! {
-                    try!(#func(&mut __serde_state, #tag, #type_name));
-                },
-            );
-
-            1
-        }
-        _ => 0,
-    };
+    let tag_field = serialize_struct_tag_field(cattrs, &StructTrait::SerializeStruct);
+    let tag_field_exists = !tag_field.is_empty();
 
     let mut serialized_fields = fields
         .iter()
         .filter(|&field| !field.attrs.skip_serializing())
         .peekable();
 
-    let let_mut = mut_if(serialized_fields.peek().is_some() || additional_field_count > 0);
+    let let_mut = mut_if(serialized_fields.peek().is_some() || tag_field_exists);
 
     let len = serialized_fields
         .map(|field| match field.attrs.skip_serializing_if() {
@@ -330,12 +334,13 @@ fn serialize_struct_as_struct(
             }
         })
         .fold(
-            quote!(#additional_field_count),
+            quote!(#tag_field_exists as usize),
             |sum, expr| quote!(#sum + #expr),
         );
 
     quote_block! {
         let #let_mut __serde_state = try!(_serde::Serializer::serialize_struct(__serializer, #type_name, #len));
+        #tag_field
         #(#serialize_fields)*
         _serde::ser::SerializeStruct::end(__serde_state)
     }
@@ -349,12 +354,15 @@ fn serialize_struct_as_map(
     let serialize_fields =
         serialize_struct_visitor(fields, params, false, &StructTrait::SerializeMap);
 
+    let tag_field = serialize_struct_tag_field(cattrs, &StructTrait::SerializeMap);
+    let tag_field_exists = !tag_field.is_empty();
+
     let mut serialized_fields = fields
         .iter()
         .filter(|&field| !field.attrs.skip_serializing())
         .peekable();
 
-    let let_mut = mut_if(serialized_fields.peek().is_some());
+    let let_mut = mut_if(serialized_fields.peek().is_some() || tag_field_exists);
 
     let len = if cattrs.has_flatten() {
         quote!(_serde::export::None)
@@ -367,12 +375,16 @@ fn serialize_struct_as_map(
                     quote!(if #path(#field_expr) { 0 } else { 1 })
                 }
             })
-            .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
+            .fold(
+                quote!(#tag_field_exists as usize),
+                |sum, expr| quote!(#sum + #expr)
+            );
         quote!(_serde::export::Some(#len))
     };
 
     quote_block! {
         let #let_mut __serde_state = try!(_serde::Serializer::serialize_map(__serializer, #len));
+        #tag_field
         #(#serialize_fields)*
         _serde::ser::SerializeMap::end(__serde_state)
     }
