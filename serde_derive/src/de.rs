@@ -2384,7 +2384,12 @@ fn deserialize_map(
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
                     quote!({
                         #wrapper
-                        try!(_serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map)).value
+                        match _serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map) {
+                            _serde::export::Ok(__wrapper) => __wrapper.value,
+                            _serde::export::Err(__err) => {
+                                return _serde::export::Err(__err);
+                            }
+                        }
                     })
                 }
             };
@@ -2615,7 +2620,12 @@ fn deserialize_map_in_place(
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
                     quote!({
                         #wrapper
-                        self.place.#member = try!(_serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map)).value
+                        self.place.#member = match _serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map) {
+                            _serde::export::Ok(__wrapper) => __wrapper.value,
+                            _serde::export::Err(__err) => {
+                                return _serde::export::Err(__err);
+                            }
+                        };
                     })
                 }
             };
