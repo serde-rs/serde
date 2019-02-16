@@ -4,6 +4,9 @@ use de::{
     Deserialize, Deserializer, EnumAccess, Error, SeqAccess, Unexpected, VariantAccess, Visitor,
 };
 
+#[cfg(manually_drop)]
+use backport::MaybeUninit;
+
 #[cfg(any(core_duration, feature = "std", feature = "alloc"))]
 use de::MapAccess;
 
@@ -961,9 +964,67 @@ impl<'de, T> Deserialize<'de> for [T; 0] {
     }
 }
 
+#[cfg(manually_drop)]
+struct UnsafeArrayVisitor<T> {
+    mem: *mut T,
+    len: usize,
+}
+
+#[cfg(manually_drop)]
+impl<'de, T> Visitor<'de> for UnsafeArrayVisitor<T>
+where
+    T: Deserialize<'de>,
+{
+    type Value = ();
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "an array of length {}", self.len)
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut guard = PartialArrayDrop {
+            mem: self.mem,
+            initialized_count: 0,
+        };
+        while guard.initialized_count < self.len {
+            match try!(seq.next_element()) {
+                Some(element) => {
+                    unsafe {
+                        ptr::write(self.mem.offset(guard.initialized_count as isize), element);
+                    }
+                    guard.initialized_count += 1;
+                }
+                None => return Err(Error::invalid_length(guard.initialized_count, &self)),
+            };
+        }
+        Ok(())
+    }
+}
+
+#[cfg(manually_drop)]
+struct PartialArrayDrop<T> {
+    mem: *mut T,
+    initialized_count: usize,
+}
+
+#[cfg(manually_drop)]
+impl<T> Drop for PartialArrayDrop<T> {
+    fn drop(&mut self) {
+        for i in (0..self.initialized_count).rev() {
+            unsafe {
+                ptr::drop_in_place(self.mem.offset(i as isize));
+            }
+        }
+    }
+}
+
 macro_rules! array_impls {
     ($($len:expr => ($($n:tt $name:ident)+))+) => {
         $(
+            #[cfg(not(manually_drop))]
             impl<'de, T> Visitor<'de> for ArrayVisitor<[T; $len]>
             where
                 T: Deserialize<'de>,
@@ -1023,11 +1084,27 @@ macro_rules! array_impls {
             where
                 T: Deserialize<'de>,
             {
+                #[cfg(not(manually_drop))]
                 fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
                 where
                     D: Deserializer<'de>,
                 {
                     deserializer.deserialize_tuple($len, ArrayVisitor::<[T; $len]>::new())
+                }
+
+                #[cfg(manually_drop)]
+                fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+                where
+                    D: Deserializer<'de>,
+                {
+                    let mut mem = MaybeUninit::<[T; $len]>::uninitialized();
+                    let ptr = &mut mem as *mut MaybeUninit<[T; $len]> as *mut T;
+                    let visitor = UnsafeArrayVisitor::<T> {
+                        mem: ptr,
+                        len: $len,
+                    };
+                    deserializer.deserialize_tuple($len, visitor)?;
+                    Ok(unsafe { ptr::read(ptr as *mut [T; $len]) })
                 }
 
                 fn deserialize_in_place<D>(deserializer: D, place: &mut Self) -> Result<(), D::Error>

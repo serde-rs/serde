@@ -25,8 +25,12 @@ fn main() {
 
     // CString::into_boxed_c_str stabilized in Rust 1.20:
     // https://doc.rust-lang.org/std/ffi/struct.CString.html#method.into_boxed_c_str
+    //
+    // Also ManuallyDrop
+    // https://doc.rust-lang.org/std/mem/struct.ManuallyDrop.html
     if minor >= 20 {
         println!("cargo:rustc-cfg=de_boxed_c_str");
+        println!("cargo:rustc-cfg=manually_drop");
     }
 
     // From<Box<T>> for Rc<T> / Arc<T> stabilized in Rust 1.21:
