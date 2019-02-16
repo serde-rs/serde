@@ -2709,7 +2709,7 @@ where
         }
 
         Err(Error::custom(format_args!(
-            "no variant of enum {} not found in flattened data",
+            "no variant of enum {} found in flattened data",
             name
         )))
     }
