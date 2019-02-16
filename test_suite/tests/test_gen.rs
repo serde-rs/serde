@@ -665,6 +665,25 @@ fn test_gen() {
         ty: &'a str,
         id: String,
     }
+
+    #[derive(Serialize, Deserialize)]
+    struct FlattenSkipSerializing<T> {
+        #[serde(flatten, skip_serializing)]
+        #[allow(dead_code)]
+        flat: T,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    struct FlattenSkipSerializingIf<T> {
+        #[serde(flatten, skip_serializing_if = "StdOption::is_none")]
+        flat: StdOption<T>,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    struct FlattenSkipDeserializing<T> {
+        #[serde(flatten, skip_deserializing)]
+        flat: T,
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////

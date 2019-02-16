@@ -1,9 +1,0 @@
-error: #[serde(flatten)] can not be combined with #[serde(skip_deserializing)]
- --> $DIR/flatten-skip-deserializing.rs:5:5
-  |
-5 | /     #[serde(flatten, skip_deserializing)]
-6 | |     other: Other,
-  | |________________^
-
-error: aborting due to previous error
-

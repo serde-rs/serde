@@ -2456,7 +2456,7 @@ fn deserialize_map(
 
     let extract_collected = fields_names
         .iter()
-        .filter(|&&(field, _)| field.attrs.flatten())
+        .filter(|&&(field, _)| field.attrs.flatten() && !field.attrs.skip_deserializing())
         .map(|&(field, ref name)| {
             let field_ty = field.ty;
             let func = match field.attrs.deserialize_with() {

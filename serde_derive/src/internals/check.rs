@@ -76,25 +76,6 @@ fn check_flatten_field(cx: &Ctxt, style: Style, field: &Field) {
         }
         _ => {}
     }
-    if field.attrs.skip_serializing() {
-        cx.error_spanned_by(
-            field.original,
-            "#[serde(flatten)] can not be combined with \
-             #[serde(skip_serializing)]",
-        );
-    } else if field.attrs.skip_serializing_if().is_some() {
-        cx.error_spanned_by(
-            field.original,
-            "#[serde(flatten)] can not be combined with \
-             #[serde(skip_serializing_if = \"...\")]",
-        );
-    } else if field.attrs.skip_deserializing() {
-        cx.error_spanned_by(
-            field.original,
-            "#[serde(flatten)] can not be combined with \
-             #[serde(skip_deserializing)]",
-        );
-    }
 }
 
 /// The `other` attribute must be used at most once and it must be the last

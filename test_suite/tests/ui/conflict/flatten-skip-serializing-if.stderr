@@ -1,9 +1,0 @@
-error: #[serde(flatten)] can not be combined with #[serde(skip_serializing_if = "...")]
- --> $DIR/flatten-skip-serializing-if.rs:5:5
-  |
-5 | /     #[serde(flatten, skip_serializing_if = "Option::is_none")]
-6 | |     other: Option<Other>,
-  | |________________________^
-
-error: aborting due to previous error
-
