@@ -1,0 +1,16 @@
+error: enums represented as integers cannot have #[serde(serialize_with)]
+ --> $DIR/integer-de-serialize-with.rs:6:5
+  |
+6 | /     #[serde(serialize_with = "serialize_some_variant")]
+7 | |     A,
+  | |_____^
+
+error: enums represented as integers cannot have #[serde(deserialize_with)]
+  --> $DIR/integer-de-serialize-with.rs:15:5
+   |
+15 | /     #[serde(deserialize_with = "deserialize_some_variant")]
+16 | |     B
+   | |_____^
+
+error: aborting due to 2 previous errors
+

@@ -1,0 +1,14 @@
+error: enums represented as integers cannot have variants with fields
+ --> $DIR/integer-with-field.rs:6:5
+  |
+6 |     A(u8),
+  |     ^^^^^
+
+error: enums represented as integers cannot have variants with fields
+ --> $DIR/integer-with-field.rs:7:5
+  |
+7 |     B(String),
+  |     ^^^^^^^^^
+
+error: aborting due to 2 previous errors
+

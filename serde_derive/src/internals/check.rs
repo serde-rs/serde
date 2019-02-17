@@ -12,6 +12,7 @@ pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     check_variant_skip_attrs(cx, cont);
     check_internal_tag_field_name_conflict(cx, cont);
     check_adjacent_tag_conflict(cx, cont);
+    check_integer_enum(cx, cont);
     check_transparent(cx, cont, derive);
 }
 
@@ -314,6 +315,40 @@ fn check_adjacent_tag_conflict(cx: &Ctxt, cont: &Container) {
                 type_tag
             ),
         );
+    }
+}
+
+/// Integer-represented enums must have no fields and no (de)serialize_with
+fn check_integer_enum(cx: &Ctxt, cont: &Container) {
+    let variants = match cont.data {
+        Data::Enum(ref variants) => variants,
+        Data::Struct(_, _) => return,
+    };
+
+    match *cont.attrs.tag() {
+        TagType::Integer => {}
+        _ => return,
+    }
+
+    for variant in variants {
+        if variant.attrs.serialize_with().is_some() {
+            cx.error_spanned_by(
+                variant.original,
+                format!("enums represented as integers cannot have #[serde(serialize_with)]"),
+            )
+        }
+        if variant.attrs.deserialize_with().is_some() {
+            cx.error_spanned_by(
+                variant.original,
+                format!("enums represented as integers cannot have #[serde(deserialize_with)]"),
+            )
+        }
+        if !variant.fields.is_empty() {
+            cx.error_spanned_by(
+                variant.original,
+                format!("enums represented as integers cannot have variants with fields"),
+            )
+        }
     }
 }
 

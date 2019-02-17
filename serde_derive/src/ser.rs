@@ -780,6 +780,7 @@ fn serialize_integer_variant(
     variant: &Variant,
     _cattrs: &attr::Container,
 ) -> Fragment {
+    assert!(variant.attrs.serialize_with().is_none());
     let this = &params.this;
     let variant_ident = &variant.ident;
     quote_expr! {

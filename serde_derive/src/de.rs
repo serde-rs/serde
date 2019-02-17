@@ -1675,6 +1675,7 @@ fn deserialize_integer_enum(
         .filter(|variant| !variant.attrs.skip_deserializing())
         .enumerate()
     {
+        assert!(variant.attrs.deserialize_with().is_none());
         let variant_ident = &variant.ident;
         let const_name = Ident::new(&format!("__variant{}", idx), Span::call_site());
         consts.push(quote!{
