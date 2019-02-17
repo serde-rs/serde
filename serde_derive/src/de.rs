@@ -1137,6 +1137,7 @@ fn deserialize_enum(
             ref content,
         } => deserialize_adjacently_tagged_enum(params, variants, cattrs, tag, content),
         attr::TagType::None => deserialize_untagged_enum(params, variants, cattrs),
+        attr::TagType::Integer => deserialize_integer_enum(params, variants, cattrs),
     }
 }
 
@@ -1644,6 +1645,81 @@ fn deserialize_untagged_enum(
         )*
 
         _serde::export::Err(_serde::de::Error::custom(#fallthrough_msg))
+    }
+}
+
+fn deserialize_integer_enum(
+    params: &Parameters,
+    variants: &[Variant],
+    _cattrs: &attr::Container,
+) -> Fragment {
+    let this = &params.this;
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
+        split_with_de_lifetime(params);
+    let delife = params.borrowed.de_lifetime();
+
+    // We want to generate code like
+    // ```
+    // const __variant0: i32 = Foo::A as i32;
+    // ...
+    // match x {
+    //    __variant0 => Foo::A,
+    //    ...
+    // }
+    // ```
+    // Here, we collect the list of const declarations and of match arms
+    let mut consts = Vec::new();
+    let mut arms = Vec::new();
+    for (idx, variant) in variants
+        .iter()
+        .filter(|variant| !variant.attrs.skip_deserializing())
+        .enumerate()
+    {
+        let variant_ident = &variant.ident;
+        let const_name = Ident::new(&format!("__variant{}", idx), Span::call_site());
+        consts.push(quote!{
+            const #const_name: u64 = #this::#variant_ident as u64;
+        });
+        arms.push(quote!{
+            #const_name => _serde::export::Ok(#this::#variant_ident),
+        });
+    }
+    let fallthrough_msg = format!("unknown {} value", params.type_name());
+
+    quote_block! {
+        struct __Visitor #de_impl_generics #where_clause {
+            marker: _serde::export::PhantomData<#this #ty_generics>,
+            lifetime: _serde::export::PhantomData<&#delife ()>,
+        }
+
+        impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
+            type Value = #this #ty_generics;
+
+            fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
+                _serde::export::Formatter::write_str(__formatter, "positive integer")
+            }
+
+            fn visit_u64<__E>(self, __value: u64) -> _serde::export::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                #(#consts)*
+                match __value {
+                    #(#arms)*
+                    _ => _serde::export::Err(__E::custom(
+                            format!("{}: {}", #fallthrough_msg, __value)
+                        )),
+                }
+            }
+        }
+
+        _serde::Deserializer::deserialize_u64(
+            __deserializer,
+            __Visitor {
+                marker: _serde::export::PhantomData::<#this #ty_generics>,
+                lifetime: _serde::export::PhantomData,
+            },
+        )
     }
 }
 

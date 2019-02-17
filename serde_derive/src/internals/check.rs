@@ -258,7 +258,7 @@ fn check_internal_tag_field_name_conflict(cx: &Ctxt, cont: &Container) {
 
     let tag = match *cont.attrs.tag() {
         TagType::Internal { ref tag } => tag.as_str(),
-        TagType::External | TagType::Adjacent { .. } | TagType::None => return,
+        TagType::External | TagType::Adjacent { .. } | TagType::None | TagType::Integer => return,
     };
 
     let diagnose_conflict = || {
@@ -303,7 +303,7 @@ fn check_adjacent_tag_conflict(cx: &Ctxt, cont: &Container) {
             ref tag,
             ref content,
         } => (tag, content),
-        TagType::Internal { .. } | TagType::External | TagType::None => return,
+        TagType::Internal { .. } | TagType::External | TagType::None | TagType::Integer => return,
     };
 
     if type_tag == content_tag {

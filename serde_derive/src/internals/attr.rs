@@ -249,6 +249,13 @@ pub enum TagType {
     /// {"key1": "value1", "key2": "value2"}
     /// ```
     None,
+
+    /// `#[serde(integer)]`
+    ///
+    /// ```json
+    /// 4
+    /// ```
+    Integer,
 }
 
 /// Whether this enum represents the fields of a struct or the variants of an
@@ -291,6 +298,7 @@ impl Container {
         let mut ser_bound = Attr::none(cx, "bound");
         let mut de_bound = Attr::none(cx, "bound");
         let mut untagged = BoolAttr::none(cx, "untagged");
+        let mut integer = BoolAttr::none(cx, "integer");
         let mut internal_tag = Attr::none(cx, "tag");
         let mut content = Attr::none(cx, "content");
         let mut type_from = Attr::none(cx, "from");
@@ -486,6 +494,29 @@ impl Container {
                         }
                     },
 
+                    // Parse `#[serde(integer)]`
+                    Meta(Word(ref word)) if word == "integer" => match item.data {
+                        syn::Data::Enum(_) => {
+                            integer.set_true(word);
+                        }
+                        syn::Data::Struct(syn::DataStruct {
+                            ref struct_token, ..
+                        }) => {
+                            cx.error_spanned_by(
+                                struct_token,
+                                "#[serde(integer)] can only be used on enums",
+                            );
+                        }
+                        syn::Data::Union(syn::DataUnion {
+                            ref union_token, ..
+                        }) => {
+                            cx.error_spanned_by(
+                                union_token,
+                                "#[serde(integer)] can only be used on enums",
+                            );
+                        }
+                    },
+
                     // Parse `#[serde(tag = "type")]`
                     Meta(NameValue(ref m)) if m.ident == "tag" => {
                         if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
@@ -607,7 +638,7 @@ impl Container {
             },
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
-            tag: decide_tag(cx, item, untagged, internal_tag, content),
+            tag: decide_tag(cx, item, untagged, integer, internal_tag, content),
             type_from: type_from.get(),
             type_into: type_into.get(),
             remote: remote.get(),
@@ -677,17 +708,20 @@ fn decide_tag(
     cx: &Ctxt,
     item: &syn::DeriveInput,
     untagged: BoolAttr,
+    integer: BoolAttr,
     internal_tag: Attr<String>,
     content: Attr<String>,
 ) -> TagType {
     match (
         untagged.0.get_with_tokens(),
+        integer.0.get_with_tokens(),
         internal_tag.get_with_tokens(),
         content.get_with_tokens(),
     ) {
-        (None, None, None) => TagType::External,
-        (Some(_), None, None) => TagType::None,
-        (None, Some((_, tag)), None) => {
+        (None, None, None, None) => TagType::External,
+        (Some(_), None, None, None) => TagType::None,
+        (None, Some(_), None, None) => TagType::Integer,
+        (None, None, Some((_, tag)), None) => {
             // Check that there are no tuple variants.
             if let syn::Data::Enum(ref data) = item.data {
                 for variant in &data.variants {
@@ -708,7 +742,12 @@ fn decide_tag(
             }
             TagType::Internal { tag: tag }
         }
-        (Some((untagged_tokens, _)), Some((tag_tokens, _)), None) => {
+        (None, None, Some((_, tag)), Some((_, content))) => TagType::Adjacent {
+            tag: tag,
+            content: content,
+        },
+        // Error cases
+        (Some((untagged_tokens, _)), _, Some((tag_tokens, _)), None) => {
             cx.error_spanned_by(
                 untagged_tokens,
                 "enum cannot be both untagged and internally tagged",
@@ -719,14 +758,36 @@ fn decide_tag(
             );
             TagType::External // doesn't matter, will error
         }
-        (None, None, Some((content_tokens, _))) => {
+        (None, _, None, Some((content_tokens, _))) => {
             cx.error_spanned_by(
                 content_tokens,
                 "#[serde(tag = \"...\", content = \"...\")] must be used together",
             );
             TagType::External
         }
-        (Some((untagged_tokens, _)), None, Some((content_tokens, _))) => {
+        (_, Some((integer_tokens, _)), Some((tag_tokens, _)), _) => {
+            cx.error_spanned_by(
+                integer_tokens,
+                "enum cannot be both represented as integer and carry a tag",
+            );
+            cx.error_spanned_by(
+                tag_tokens,
+                "enum cannot be both represented as integer and carry a tag",
+            );
+            TagType::External
+        }
+        (Some((untagged_tokens, _)), Some((integer_tokens, _)), _, _) => {
+            cx.error_spanned_by(
+                untagged_tokens,
+                "enum cannot be both untagged and represented as integer",
+            );
+            cx.error_spanned_by(
+                integer_tokens,
+                "enum cannot be both untagged and represented as integer",
+            );
+            TagType::External
+        }
+        (Some((untagged_tokens, _)), _, None, Some((content_tokens, _))) => {
             cx.error_spanned_by(
                 untagged_tokens,
                 "untagged enum cannot have #[serde(content = \"...\")]",
@@ -737,11 +798,7 @@ fn decide_tag(
             );
             TagType::External
         }
-        (None, Some((_, tag)), Some((_, content))) => TagType::Adjacent {
-            tag: tag,
-            content: content,
-        },
-        (Some((untagged_tokens, _)), Some((tag_tokens, _)), Some((content_tokens, _))) => {
+        (Some((untagged_tokens, _)), _, Some((tag_tokens, _)), Some((content_tokens, _))) => {
             cx.error_spanned_by(
                 untagged_tokens,
                 "untagged enum cannot have #[serde(tag = \"...\", content = \"...\")]",

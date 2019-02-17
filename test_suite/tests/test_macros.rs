@@ -1838,3 +1838,54 @@ fn test_internally_tagged_newtype_variant_containing_unit_struct() {
         ],
     );
 }
+
+#[test]
+fn test_integer_tagged_enum() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(integer)]
+    enum MessageKind {
+        Info = 2,
+        Error = 4,
+    }
+
+    assert_tokens(
+        &MessageKind::Info,
+        &[
+            Token::U64(2),
+        ],
+    );
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(integer)]
+    enum AutoNumberedEnum {
+        V0,
+        V1,
+        V3 = 3,
+        V4
+    }
+
+    assert_tokens(
+        &AutoNumberedEnum::V0,
+        &[
+            Token::U64(0),
+        ],
+    );
+    assert_tokens(
+        &AutoNumberedEnum::V1,
+        &[
+            Token::U64(1),
+        ],
+    );
+    assert_tokens(
+        &AutoNumberedEnum::V3,
+        &[
+            Token::U64(3),
+        ],
+    );
+    assert_tokens(
+        &AutoNumberedEnum::V4,
+        &[
+            Token::U64(4),
+        ],
+    );
+}

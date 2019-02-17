@@ -473,6 +473,7 @@ fn serialize_variant(
                 ref content,
             } => serialize_adjacently_tagged_variant(params, variant, cattrs, tag, content),
             attr::TagType::None => serialize_untagged_variant(params, variant, cattrs),
+            attr::TagType::Integer => serialize_integer_variant(params, variant, cattrs),
         });
 
         quote! {
@@ -771,6 +772,18 @@ fn serialize_untagged_variant(
             let type_name = cattrs.name().serialize_name();
             serialize_struct_variant(StructVariant::Untagged, params, &variant.fields, &type_name)
         }
+    }
+}
+
+fn serialize_integer_variant(
+    params: &Parameters,
+    variant: &Variant,
+    _cattrs: &attr::Container,
+) -> Fragment {
+    let this = &params.this;
+    let variant_ident = &variant.ident;
+    quote_expr! {
+        _serde::Serializer::serialize_u64(__serializer, #this::#variant_ident as u64)
     }
 }
 
