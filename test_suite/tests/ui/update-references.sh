@@ -19,32 +19,20 @@
 # If you find yourself manually editing a foo.stderr file, you're
 # doing it wrong.
 
-if [[ "$1" == "--help" || "$1" == "-h" || "$1" == "" || "$2" == "" ]]; then
-    echo "usage: $0 <build-directory> <relative-path-to-rs-files>"
-    echo ""
-    echo "For example:"
-    echo "   $0 ../../../build/x86_64-apple-darwin/test/ui *.rs */*.rs"
-fi
+cd "$(dirname "${BASH_SOURCE[0]}")"
+BUILD_DIR="../../../target/ui"
 
-MYDIR=$(dirname $0)
-
-BUILD_DIR="$1"
-shift
-
-while [[ "$1" != "" ]]; do
-    STDERR_NAME="${1/%.rs/.stderr}"
-    STDOUT_NAME="${1/%.rs/.stdout}"
-    shift
-    if [ -f $BUILD_DIR/$STDOUT_NAME ] && \
-           ! (diff $BUILD_DIR/$STDOUT_NAME $MYDIR/$STDOUT_NAME >& /dev/null); then
-        echo updating $MYDIR/$STDOUT_NAME
-        cp $BUILD_DIR/$STDOUT_NAME $MYDIR/$STDOUT_NAME
+for testcase in */*.rs; do
+    STDERR_NAME="${testcase/%.rs/.stderr}"
+    STDOUT_NAME="${testcase/%.rs/.stdout}"
+    if [ -f "$BUILD_DIR/$STDOUT_NAME" ] && \
+           ! (diff "$BUILD_DIR/$STDOUT_NAME" "$STDOUT_NAME" >& /dev/null); then
+        echo "updating $STDOUT_NAME"
+        cp "$BUILD_DIR/$STDOUT_NAME" "$STDOUT_NAME"
     fi
-    if [ -f $BUILD_DIR/$STDERR_NAME ] && \
-           ! (diff $BUILD_DIR/$STDERR_NAME $MYDIR/$STDERR_NAME >& /dev/null); then
-        echo updating $MYDIR/$STDERR_NAME
-        cp $BUILD_DIR/$STDERR_NAME $MYDIR/$STDERR_NAME
+    if [ -f "$BUILD_DIR/$STDERR_NAME" ] && \
+           ! (diff "$BUILD_DIR/$STDERR_NAME" "$STDERR_NAME" >& /dev/null); then
+        echo "updating $STDERR_NAME"
+        cp "$BUILD_DIR/$STDERR_NAME" "$STDERR_NAME"
     fi
 done
-
-
