@@ -1,0 +1,8 @@
+error: #[serde(integer)] can only be used on enums
+ --> $DIR/integer-struct.rs:5:1
+  |
+5 | struct S;
+  | ^^^^^^
+
+error: aborting due to previous error
+

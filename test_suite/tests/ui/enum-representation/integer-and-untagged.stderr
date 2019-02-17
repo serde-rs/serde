@@ -1,0 +1,14 @@
+error: enum cannot be both untagged and represented as integer
+ --> $DIR/integer-and-untagged.rs:5:9
+  |
+5 | #[serde(untagged)]
+  |         ^^^^^^^^
+
+error: enum cannot be both untagged and represented as integer
+ --> $DIR/integer-and-untagged.rs:4:9
+  |
+4 | #[serde(integer)]
+  |         ^^^^^^^
+
+error: aborting due to 2 previous errors
+

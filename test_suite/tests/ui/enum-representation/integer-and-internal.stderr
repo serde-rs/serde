@@ -1,0 +1,14 @@
+error: enum cannot be both represented as integer and carry a tag
+ --> $DIR/integer-and-internal.rs:4:9
+  |
+4 | #[serde(integer)]
+  |         ^^^^^^^
+
+error: enum cannot be both represented as integer and carry a tag
+ --> $DIR/integer-and-internal.rs:5:9
+  |
+5 | #[serde(tag = "type")]
+  |         ^^^
+
+error: aborting due to 2 previous errors
+
