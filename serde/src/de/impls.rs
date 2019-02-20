@@ -578,6 +578,8 @@ macro_rules! forwarded_impl {
 #[cfg(all(feature = "std", de_boxed_c_str))]
 forwarded_impl!((), Box<CStr>, CString::into_boxed_c_str);
 
+forwarded_impl!((T), Reverse<T>, Reverse);
+
 ////////////////////////////////////////////////////////////////////////////////
 
 struct OptionVisitor<T> {
