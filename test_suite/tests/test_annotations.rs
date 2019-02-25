@@ -16,6 +16,10 @@ trait MyDefault: Sized {
     fn my_default() -> Self;
 }
 
+trait MyConstructor<T>: Sized {
+    fn my_constructor(t: T) -> Self;
+}
+
 trait ShouldSkip: Sized {
     fn should_skip(&self) -> bool;
 }
@@ -35,6 +39,12 @@ trait DeserializeWith: Sized {
 impl MyDefault for i32 {
     fn my_default() -> Self {
         123
+    }
+}
+
+impl MyConstructor<i32> for i32 {
+    fn my_constructor(t: i32) -> Self {
+        t
     }
 }
 
@@ -69,32 +79,6 @@ impl DeserializeWith for i32 {
         }
     }
 }
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct DefaultStruct<A, B, C, D, E>
-where
-    C: MyDefault,
-    E: MyDefault,
-{
-    a1: A,
-    #[serde(default)]
-    a2: B,
-    #[serde(default = "MyDefault::my_default")]
-    a3: C,
-    #[serde(skip_deserializing)]
-    a4: D,
-    #[serde(skip_deserializing, default = "MyDefault::my_default")]
-    a5: E,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct DefaultTupleStruct<A, B, C>(
-    A,
-    #[serde(default)] B,
-    #[serde(default = "MyDefault::my_default")] C,
-)
-where
-    C: MyDefault;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct CollectOther {
@@ -140,6 +124,31 @@ struct FlattenStructTagContentEnumNewtypeVariant {
     value: u32,
 }
 
+// Named-struct tests
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct DefaultStruct<A, B, C, D, E, F, G>
+where
+    C: MyDefault,
+    D: MyDefault,
+    E: MyConstructor<i32>,
+    G: MyDefault,
+{
+    a1: A,
+    #[serde(default)]
+    a2: B,
+    #[serde(default = "MyDefault::my_default")]
+    a3: C,
+    #[serde(default_fn = "MyDefault::my_default")]
+    a4: D,
+    #[serde(default_expr = "E::my_constructor(32)")]
+    a5: E,
+    #[serde(skip_deserializing)]
+    a6: F,
+    #[serde(skip_deserializing, default = "MyDefault::my_default")]
+    a7: G,
+}
+
 #[test]
 fn test_default_struct() {
     assert_de_tokens(
@@ -147,13 +156,15 @@ fn test_default_struct() {
             a1: 1,
             a2: 2,
             a3: 3,
-            a4: 0,
-            a5: 123,
+            a4: 4,
+            a5: 5,
+            a6: 0,   // Deserialization skipped
+            a7: 123, // Deserialization skipped, custom default
         },
         &[
             Token::Struct {
                 name: "DefaultStruct",
-                len: 3,
+                len: 7,
             },
             Token::Str("a1"),
             Token::I32(1),
@@ -165,6 +176,10 @@ fn test_default_struct() {
             Token::I32(4),
             Token::Str("a5"),
             Token::I32(5),
+            Token::Str("a6"),
+            Token::I32(6),
+            Token::Str("a7"),
+            Token::I32(7),
             Token::StructEnd,
         ],
     );
@@ -172,15 +187,17 @@ fn test_default_struct() {
     assert_de_tokens(
         &DefaultStruct {
             a1: 1,
-            a2: 0,
-            a3: 123,
-            a4: 0,
-            a5: 123,
+            a2: 0,   // Default::default
+            a3: 123, // Custom default fn
+            a4: 123, // Custom default fn
+            a5: 32,  // Custom default expr
+            a6: 0,   // Deserialization skipped
+            a7: 123, // Deserialization skipped, custom default
         },
         &[
             Token::Struct {
                 name: "DefaultStruct",
-                len: 3,
+                len: 1,
             },
             Token::Str("a1"),
             Token::I32(1),
@@ -189,24 +206,41 @@ fn test_default_struct() {
     );
 }
 
+// Tuple-struct tests
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct DefaultTupleStruct<A, B, C, D, E>(
+    A,
+    #[serde(default)] B,
+    #[serde(default = "MyDefault::my_default")] C,
+    #[serde(default_fn = "MyDefault::my_default")] D,
+    #[serde(default_expr = "MyConstructor::my_constructor(32)")] E,
+)
+where
+    C: MyDefault,
+    D: MyDefault,
+    E: MyConstructor<i32>;
+
 #[test]
 fn test_default_tuple() {
     assert_de_tokens(
-        &DefaultTupleStruct(1, 2, 3),
+        &DefaultTupleStruct(1, 2, 3, 4, 5),
         &[
             Token::TupleStruct {
                 name: "DefaultTupleStruct",
-                len: 3,
+                len: 5,
             },
             Token::I32(1),
             Token::I32(2),
             Token::I32(3),
+            Token::I32(4),
+            Token::I32(5),
             Token::TupleStructEnd,
         ],
     );
 
     assert_de_tokens(
-        &DefaultTupleStruct(1, 0, 123),
+        &DefaultTupleStruct(1, 0, 123, 123, 32),
         &[
             Token::TupleStruct {
                 name: "DefaultTupleStruct",
@@ -218,11 +252,15 @@ fn test_default_tuple() {
     );
 }
 
+// Named-struct-variant tests
+
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-enum DefaultStructVariant<A, B, C, D, E>
+enum DefaultStructVariant<A, B, C, D, E, F, G>
 where
     C: MyDefault,
-    E: MyDefault,
+    D: MyDefault,
+    E: MyConstructor<i32>,
+    G: MyDefault,
 {
     Struct {
         a1: A,
@@ -230,23 +268,15 @@ where
         a2: B,
         #[serde(default = "MyDefault::my_default")]
         a3: C,
-        #[serde(skip_deserializing)]
+        #[serde(default_fn = "MyDefault::my_default")]
         a4: D,
-        #[serde(skip_deserializing, default = "MyDefault::my_default")]
+        #[serde(default_expr = "E::my_constructor(32)")]
         a5: E,
+        #[serde(skip_deserializing)]
+        a6: F,
+        #[serde(skip_deserializing, default = "MyDefault::my_default")]
+        a7: G,
     },
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-enum DefaultTupleVariant<A, B, C>
-where
-    C: MyDefault,
-{
-    Tuple(
-        A,
-        #[serde(default)] B,
-        #[serde(default = "MyDefault::my_default")] C,
-    ),
 }
 
 #[test]
@@ -256,14 +286,16 @@ fn test_default_struct_variant() {
             a1: 1,
             a2: 2,
             a3: 3,
-            a4: 0,
-            a5: 123,
+            a4: 4,
+            a5: 5,
+            a6: 0,   // Deserialization skipped
+            a7: 123, // Deserialization skipped, custom default
         },
         &[
             Token::StructVariant {
                 name: "DefaultStructVariant",
                 variant: "Struct",
-                len: 3,
+                len: 5,
             },
             Token::Str("a1"),
             Token::I32(1),
@@ -275,6 +307,10 @@ fn test_default_struct_variant() {
             Token::I32(4),
             Token::Str("a5"),
             Token::I32(5),
+            Token::Str("a6"),
+            Token::I32(6),
+            Token::Str("a7"),
+            Token::I32(7),
             Token::StructVariantEnd,
         ],
     );
@@ -282,16 +318,18 @@ fn test_default_struct_variant() {
     assert_de_tokens(
         &DefaultStructVariant::Struct {
             a1: 1,
-            a2: 0,
-            a3: 123,
-            a4: 0,
-            a5: 123,
+            a2: 0,   // Default::default
+            a3: 123, // Custom default fn
+            a4: 123, // Custom default fn
+            a5: 32,  // Custom default expr
+            a6: 0,   // Deserialization skipped
+            a7: 123, // Deserialization skipped, custom default
         },
         &[
             Token::StructVariant {
                 name: "DefaultStructVariant",
                 variant: "Struct",
-                len: 3,
+                len: 5,
             },
             Token::Str("a1"),
             Token::I32(1),
@@ -300,30 +338,50 @@ fn test_default_struct_variant() {
     );
 }
 
+// Tuple-struct-variant tests
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+enum DefaultTupleVariant<A, B, C, D, E>
+where
+    C: MyDefault,
+    D: MyDefault,
+    E: MyConstructor<i32>,
+{
+    Tuple(
+        A,
+        #[serde(default)] B,
+        #[serde(default = "MyDefault::my_default")] C,
+        #[serde(default_fn = "MyDefault::my_default")] D,
+        #[serde(default_expr = "MyConstructor::my_constructor(32)")] E,
+    ),
+}
+
 #[test]
 fn test_default_tuple_variant() {
     assert_de_tokens(
-        &DefaultTupleVariant::Tuple(1, 2, 3),
+        &DefaultTupleVariant::Tuple(1, 2, 3, 4, 5),
         &[
             Token::TupleVariant {
                 name: "DefaultTupleVariant",
                 variant: "Tuple",
-                len: 3,
+                len: 5,
             },
             Token::I32(1),
             Token::I32(2),
             Token::I32(3),
+            Token::I32(4),
+            Token::I32(5),
             Token::TupleVariantEnd,
         ],
     );
 
     assert_de_tokens(
-        &DefaultTupleVariant::Tuple(1, 0, 123),
+        &DefaultTupleVariant::Tuple(1, 0, 123, 123, 32),
         &[
             Token::TupleVariant {
                 name: "DefaultTupleVariant",
                 variant: "Tuple",
-                len: 3,
+                len: 5,
             },
             Token::I32(1),
             Token::TupleVariantEnd,
@@ -420,7 +478,7 @@ struct ContainsNotDeserialize<A, B, C: DeserializeWith, E: MyDefault> {
     b: B,
     #[serde(deserialize_with = "DeserializeWith::deserialize_with", default)]
     c: C,
-    #[serde(skip_deserializing, default = "MyDefault::my_default")]
+    #[serde(skip_deserializing, default_fn = "MyDefault::my_default")]
     e: E,
 }
 
@@ -460,8 +518,10 @@ fn test_ignore_unknown() {
             a1: 1,
             a2: 2,
             a3: 3,
-            a4: 0,
-            a5: 123,
+            a4: 123, // Custom default fn
+            a5: 32,  // Custom default expr
+            a6: 0,   // Deserialization skipped
+            a7: 123, // Deserialization skipped, custom default
         },
         &[
             Token::Struct {

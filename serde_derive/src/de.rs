@@ -161,7 +161,7 @@ fn build_generics(cont: &Container, borrowed: &BorrowedLifetimes) -> syn::Generi
                 attr::Default::Default => {
                     bound::with_self_bound(cont, &generics, &parse_quote!(_serde::export::Default))
                 }
-                attr::Default::None | attr::Default::Path(_) => generics,
+                attr::Default::None | attr::Default::Path(_) | attr::Default::Expr(_) => generics,
             };
 
             let delife = borrowed.de_lifetime();
@@ -364,6 +364,7 @@ fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
                 attr::Default::Default => quote!(_serde::export::Default::default()),
                 attr::Default::Path(ref path) => quote!(#path()),
                 attr::Default::None => quote!(_serde::export::PhantomData),
+                attr::Default::Expr(ref expr) => quote!(#expr),
             };
             quote!(#member: #value)
         }
@@ -650,6 +651,7 @@ fn deserialize_seq(
             let value_if_none = match *field.attrs.default() {
                 attr::Default::Default => quote!(_serde::export::Default::default()),
                 attr::Default::Path(ref path) => quote!(#path()),
+                attr::Default::Expr(ref expr) => quote!(#expr),
                 attr::Default::None => quote!(
                     return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
                 ),
@@ -691,6 +693,9 @@ fn deserialize_seq(
         )),
         attr::Default::Path(ref path) => Some(quote!(
             let __default: Self::Value = #path();
+        )),
+        attr::Default::Expr(ref expr) => Some(quote!(
+            let __deafult: Self::value = #expr;
         )),
         attr::Default::None => {
             // We don't need the default value, to prevent an unused variable warning
@@ -740,6 +745,9 @@ fn deserialize_seq_in_place(
                 attr::Default::Path(ref path) => quote!(
                     self.place.#member = #path();
                 ),
+                attr::Default::Expr(ref expr) => quote!(
+                    self.place.#member = #expr;
+                ),
                 attr::Default::None => quote!(
                     return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
                 ),
@@ -782,6 +790,9 @@ fn deserialize_seq_in_place(
         )),
         attr::Default::Path(ref path) => Some(quote!(
             let __default: #this #ty_generics  = #path();
+        )),
+        attr::Default::Expr(ref expr) => Some(quote!(
+            let __default: #this #ty_generics  = #expr;
         )),
         attr::Default::None => {
             // We don't need the default value, to prevent an unused variable warning
@@ -2507,6 +2518,9 @@ fn deserialize_map(
         attr::Default::Path(ref path) => Some(quote!(
             let __default: Self::Value = #path();
         )),
+        attr::Default::Expr(ref expr) => Some(quote!(
+            let __default: Self::Value = #expr;
+        )),
         attr::Default::None => {
             // We don't need the default value, to prevent an unused variable warning
             // we'll leave the line empty.
@@ -2708,6 +2722,9 @@ fn deserialize_map_in_place(
         attr::Default::Path(ref path) => Some(quote!(
             let __default: #this #ty_generics = #path();
         )),
+        attr::Default::Expr(ref expr) => Some(quote!(
+            let __default: #this #ty_generics = #expr;
+        )),
         attr::Default::None => {
             // We don't need the default value, to prevent an unused variable warning
             // we'll leave the line empty.
@@ -2833,11 +2850,14 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
         attr::Default::Path(ref path) => {
             return quote_expr!(#path());
         }
+        attr::Default::Expr(ref expr) => {
+            return quote_expr!(#expr);
+        }
         attr::Default::None => { /* below */ }
     }
 
     match *cattrs.default() {
-        attr::Default::Default | attr::Default::Path(_) => {
+        attr::Default::Default | attr::Default::Path(_) | attr::Default::Expr(_) => {
             let member = &field.member;
             return quote_expr!(__default.#member);
         }

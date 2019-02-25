@@ -411,14 +411,24 @@ impl Container {
                         ),
                     },
 
-                    // Parse `#[serde(default = "...")]`
-                    Meta(NameValue(ref m)) if m.ident == "default" => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
+                    // Parse `#[serde(default_fn = "...")]` and `#[serde(default = "...")]`
+                    Meta(NameValue(ref m))
+                        if m.ident == "default"
+                            || m.ident == "default_fn"
+                            || m.ident == "default_expr" =>
+                    {
+                        let default_obj = if m.ident == "default" || m.ident == "default_fn" {
+                            parse_lit_into_expr_path(cx, &m.ident, &m.lit).map(Default::Path)
+                        } else {
+                            // "default_expr" thanks to the guards above"
+                            parse_lit_into_expr(cx, &m.ident, &m.lit).map(Default::Expr)
+                        };
+                        if let Ok(default_obj) = default_obj {
                             match item.data {
                                 syn::Data::Struct(syn::DataStruct { ref fields, .. }) => {
                                     match *fields {
                                         syn::Fields::Named(_) => {
-                                            default.set(&m.ident, Default::Path(path));
+                                            default.set(&m.ident, default_obj);
                                         }
                                         syn::Fields::Unnamed(_) | syn::Fields::Unit => cx
                                             .error_spanned_by(
@@ -1145,13 +1155,15 @@ pub enum Default {
     Default,
     /// The default is given by this function.
     Path(syn::ExprPath),
+    /// The default is the result of the given expression.
+    Expr(syn::Expr),
 }
 
 impl Default {
     pub fn is_none(&self) -> bool {
         match *self {
             Default::None => true,
-            Default::Default | Default::Path(_) => false,
+            Default::Default | Default::Path(_) | Default::Expr(_) => false,
         }
     }
 }
@@ -1230,9 +1242,16 @@ impl Field {
                     }
 
                     // Parse `#[serde(default = "...")]`
-                    Meta(NameValue(ref m)) if m.ident == "default" => {
+                    Meta(NameValue(ref m)) if m.ident == "default" || m.ident == "default_fn" => {
                         if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
                             default.set(&m.ident, Default::Path(path));
+                        }
+                    }
+
+                    // Parse `#[serde(default_expr = ...)]`
+                    Meta(NameValue(ref m)) if m.ident == "default_expr" => {
+                        if let Ok(expr) = parse_lit_into_expr(cx, &m.ident, &m.lit) {
+                            default.set(&m.ident, Default::Expr(expr));
                         }
                     }
 
@@ -1634,6 +1653,13 @@ fn parse_lit_into_expr_path(
     let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
     parse_lit_str(string).map_err(|_| {
         cx.error_spanned_by(lit, format!("failed to parse path: {:?}", string.value()))
+    })
+}
+
+fn parse_lit_into_expr(cx: &Ctxt, attr_name: &Ident, lit: &syn::Lit) -> Result<syn::Expr, ()> {
+    let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
+    parse_lit_str(string).map_err(|_| {
+        cx.error_spanned_by(lit, format!("failed to parse expr: {:?}", string.value()))
     })
 }
 
