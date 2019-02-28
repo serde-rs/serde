@@ -59,13 +59,13 @@
 //!    - Box\<T\>
 //!    - Box\<\[T\]\>
 //!    - Box\<str\>
-//!    - Rc\<T\>
-//!    - Arc\<T\>
 //!    - Cow\<'a, T\>
 //!    - Cell\<T\>
 //!    - RefCell\<T\>
 //!    - Mutex\<T\>
 //!    - RwLock\<T\>
+//!    - Rc\<T\>&emsp;*(if* features = ["rc"] *is enabled)*
+//!    - Arc\<T\>&emsp;*(if* features = ["rc"] *is enabled)*
 //!  - **Collection types**:
 //!    - BTreeMap\<K, V\>
 //!    - BTreeSet\<T\>
