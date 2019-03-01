@@ -23,6 +23,12 @@ fn main() {
         println!("cargo:rustc-cfg=collections_bound");
     }
 
+    // core::cmp::Reverse stabilized in Rust 1.19:
+    // https://doc.rust-lang.org/stable/core/cmp/struct.Reverse.html
+    if minor >= 19 {
+        println!("cargo:rustc-cfg=core_reverse");
+    }
+
     // CString::into_boxed_c_str stabilized in Rust 1.20:
     // https://doc.rust-lang.org/std/ffi/struct.CString.html#method.into_boxed_c_str
     if minor >= 20 {
