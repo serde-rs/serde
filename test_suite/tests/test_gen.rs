@@ -523,6 +523,13 @@ fn test_gen() {
     assert::<FlattenWith>();
 
     #[derive(Serialize, Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct FlattenDenyUnknown<T> {
+        #[serde(flatten)]
+        t: T,
+    }
+
+    #[derive(Serialize, Deserialize)]
     struct StaticStrStruct<'a> {
         a: &'a str,
         b: &'static str,
