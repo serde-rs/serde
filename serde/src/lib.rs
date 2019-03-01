@@ -139,8 +139,6 @@ mod lib {
 
     pub use self::core::cell::{Cell, RefCell};
     pub use self::core::clone::{self, Clone};
-    #[cfg(core_reverse)]
-    pub use self::core::cmp::Reverse;
     pub use self::core::convert::{self, From, Into};
     pub use self::core::default::{self, Default};
     pub use self::core::fmt::{self, Debug, Display};
@@ -204,17 +202,20 @@ mod lib {
     #[cfg(feature = "std")]
     pub use std::time::{SystemTime, UNIX_EPOCH};
 
-    #[cfg(any(core_duration, feature = "std"))]
-    pub use self::core::time::Duration;
+    #[cfg(all(feature = "std", collections_bound))]
+    pub use std::collections::Bound;
+
+    #[cfg(core_reverse)]
+    pub use self::core::cmp::Reverse;
+
+    #[cfg(ops_bound)]
+    pub use self::core::ops::Bound;
 
     #[cfg(range_inclusive)]
     pub use self::core::ops::RangeInclusive;
 
-    #[cfg(all(feature = "std", collections_bound))]
-    pub use std::collections::Bound;
-
-    #[cfg(ops_bound)]
-    pub use self::core::ops::Bound;
+    #[cfg(any(core_duration, feature = "std"))]
+    pub use self::core::time::Duration;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
