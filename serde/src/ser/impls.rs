@@ -827,13 +827,13 @@ where
 
 #[cfg(core_reverse)]
 impl<T> Serialize for Reverse<T>
-    where
-        T: Serialize,
+where
+    T: Serialize,
 {
     #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         self.0.serialize(serializer)
     }
