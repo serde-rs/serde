@@ -54,7 +54,7 @@ matrix:
     - rust: nightly
       name: Clippy
       script:
-        - rustup component add clippy-preview || travis_terminate 0
+        - rustup component add clippy || travis_terminate 0
         - cargo clippy -- -D clippy::all
         - cd "${TRAVIS_BUILD_DIR}/serde"
         - cargo clippy --features rc,unstable -- -D clippy::all
