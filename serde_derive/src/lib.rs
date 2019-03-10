@@ -20,7 +20,7 @@
 #![cfg_attr(
     feature = "cargo-clippy",
     allow(
-        cyclomatic_complexity,
+        cognitive_complexity,
         enum_variant_names,
         needless_pass_by_value,
         redundant_field_names,

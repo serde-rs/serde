@@ -3,7 +3,7 @@
 #![cfg_attr(
     feature = "cargo-clippy",
     allow(
-        cyclomatic_complexity,
+        cognitive_complexity,
         redundant_field_names,
         trivially_copy_pass_by_ref
     )
