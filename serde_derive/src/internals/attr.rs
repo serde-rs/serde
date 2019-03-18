@@ -218,6 +218,7 @@ pub struct Container {
     remote: Option<syn::Path>,
     identifier: Identifier,
     has_flatten: bool,
+    serde_path: Option<syn::Path>,
 }
 
 /// Styles of representing an enum.
@@ -298,6 +299,7 @@ impl Container {
         let mut remote = Attr::none(cx, "remote");
         let mut field_identifier = BoolAttr::none(cx, "field_identifier");
         let mut variant_identifier = BoolAttr::none(cx, "variant_identifier");
+        let mut serde_path = Attr::none(cx, "serde_path");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -582,6 +584,13 @@ impl Container {
                         variant_identifier.set_true(word);
                     }
 
+                    // Parse `#[serde(serde_path = "foo")]`
+                    Meta(NameValue(ref m)) if m.ident == "serde_path" => {
+                        if let Ok(path) = parse_lit_into_path(cx, &m.ident, &m.lit) {
+                            serde_path.set(&m.ident, path)
+                        }
+                    }
+
                     Meta(ref meta_item) => {
                         cx.error_spanned_by(
                             meta_item.name(),
@@ -613,6 +622,7 @@ impl Container {
             remote: remote.get(),
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
             has_flatten: false,
+            serde_path: serde_path.get(),
         }
     }
 
@@ -670,6 +680,10 @@ impl Container {
 
     pub fn mark_has_flatten(&mut self) {
         self.has_flatten = true;
+    }
+
+    pub fn serde_path(&self) -> Option<&syn::Path> {
+        self.serde_path.as_ref()
     }
 }
 

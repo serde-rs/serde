@@ -60,7 +60,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream
         }
     };
 
-    Ok(dummy::wrap_in_const("DESERIALIZE", ident, impl_block))
+    Ok(dummy::wrap_in_const(cont.attrs.serde_path(), "DESERIALIZE", ident, impl_block))
 }
 
 fn precondition(cx: &Ctxt, cont: &Container) {
