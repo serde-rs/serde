@@ -1,5 +1,6 @@
 use proc_macro2::{Ident, Span, TokenStream};
 
+use syn;
 use try;
 
 pub fn wrap_in_const(serde_path: Option<&syn::Path>, trait_: &str, ty: &Ident, code: TokenStream) -> TokenStream {
