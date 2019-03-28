@@ -1,7 +1,7 @@
 #[test]
 fn test_gen_custom_serde() {
     #[derive(serde::Serialize, serde::Deserialize)]
-    #[serde(serde_path = "fake_serde")]
+    #[serde(crate = "fake_serde")]
     struct Foo;
 
     // Would be overlapping if serde::Serialize were implemented

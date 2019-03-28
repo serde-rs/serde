@@ -1,6 +1,7 @@
 use internals::Ctxt;
 use proc_macro2::{Group, Span, TokenStream, TokenTree};
 use quote::ToTokens;
+use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::str::FromStr;
 use syn;
@@ -299,7 +300,7 @@ impl Container {
         let mut remote = Attr::none(cx, "remote");
         let mut field_identifier = BoolAttr::none(cx, "field_identifier");
         let mut variant_identifier = BoolAttr::none(cx, "variant_identifier");
-        let mut serde_path = Attr::none(cx, "serde_path");
+        let mut serde_path = Attr::none(cx, "crate");
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -584,8 +585,8 @@ impl Container {
                         variant_identifier.set_true(word);
                     }
 
-                    // Parse `#[serde(serde_path = "foo")]`
-                    Meta(NameValue(ref m)) if m.ident == "serde_path" => {
+                    // Parse `#[serde(crate = "foo")]`
+                    Meta(NameValue(ref m)) if m.ident == "crate" => {
                         if let Ok(path) = parse_lit_into_path(cx, &m.ident, &m.lit) {
                             serde_path.set(&m.ident, path)
                         }
@@ -682,8 +683,14 @@ impl Container {
         self.has_flatten = true;
     }
 
-    pub fn serde_path(&self) -> Option<&syn::Path> {
+    pub fn custom_serde_path(&self) -> Option<&syn::Path> {
         self.serde_path.as_ref()
+    }
+
+    pub fn serde_path<'a>(&'a self) -> Cow<'a, syn::Path> {
+        self.custom_serde_path()
+            .map(Cow::Borrowed)
+            .unwrap_or_else(|| Cow::Owned(parse_quote!(_serde)))
     }
 }
 
