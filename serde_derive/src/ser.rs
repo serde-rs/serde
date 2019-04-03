@@ -22,15 +22,16 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<TokenStream, 
     let params = Parameters::new(&cont);
     let (impl_generics, ty_generics, where_clause) = params.generics.split_for_impl();
     let body = Stmts(serialize_body(&cont, &params));
+    let serde = cont.attrs.serde_path();
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
         let vis = &input.vis;
         let used = pretend::pretend_used(&cont);
         quote! {
             impl #impl_generics #ident #ty_generics #where_clause {
-                #vis fn serialize<__S>(__self: &#remote #ty_generics, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
+                #vis fn serialize<__S>(__self: &#remote #ty_generics, __serializer: __S) -> #serde::export::Result<__S::Ok, __S::Error>
                 where
-                    __S: _serde::Serializer,
+                    __S: #serde::Serializer,
                 {
                     #used
                     #body
@@ -40,10 +41,10 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<TokenStream, 
     } else {
         quote! {
             #[automatically_derived]
-            impl #impl_generics _serde::Serialize for #ident #ty_generics #where_clause {
-                fn serialize<__S>(&self, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
+            impl #impl_generics #serde::Serialize for #ident #ty_generics #where_clause {
+                fn serialize<__S>(&self, __serializer: __S) -> #serde::export::Result<__S::Ok, __S::Error>
                 where
-                    __S: _serde::Serializer,
+                    __S: #serde::Serializer,
                 {
                     #body
                 }
@@ -51,7 +52,7 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<TokenStream, 
         }
     };
 
-    Ok(dummy::wrap_in_const("SERIALIZE", ident, impl_block))
+    Ok(dummy::wrap_in_const(cont.attrs.custom_serde_path(), "SERIALIZE", ident, impl_block))
 }
 
 fn precondition(cx: &Ctxt, cont: &Container) {
