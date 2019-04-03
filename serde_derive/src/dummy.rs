@@ -16,20 +16,17 @@ pub fn wrap_in_const(
         Span::call_site(),
     );
 
-    let use_serde = serde_path
-        .map(|path| {
-            quote! {
-                use #path as _serde;
-            }
-        })
-        .unwrap_or_else(|| {
-            quote! {
-                #[allow(unknown_lints)]
-                #[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
-                #[allow(rust_2018_idioms)]
-                extern crate serde as _serde;
-            }
-        });
+    let use_serde = match serde_path {
+        Some(path) => quote! {
+            use #path as _serde;
+        },
+        None => quote! {
+            #[allow(unknown_lints)]
+            #[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
+            #[allow(rust_2018_idioms)]
+            extern crate serde as _serde;
+        },
+    };
 
     quote! {
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
