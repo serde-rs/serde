@@ -3,7 +3,12 @@ use proc_macro2::{Ident, Span, TokenStream};
 use syn;
 use try;
 
-pub fn wrap_in_const(serde_path: Option<&syn::Path>, trait_: &str, ty: &Ident, code: TokenStream) -> TokenStream {
+pub fn wrap_in_const(
+    serde_path: Option<&syn::Path>,
+    trait_: &str,
+    ty: &Ident,
+    code: TokenStream,
+) -> TokenStream {
     let try_replacement = try::replacement();
 
     let dummy_const = Ident::new(
@@ -11,16 +16,20 @@ pub fn wrap_in_const(serde_path: Option<&syn::Path>, trait_: &str, ty: &Ident, c
         Span::call_site(),
     );
 
-    let use_serde = serde_path.map(|path| {
-        quote!(use #path as _serde;)
-    }).unwrap_or_else(|| {
-        quote! {
-            #[allow(unknown_lints)]
-            #[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
-            #[allow(rust_2018_idioms)]
-            extern crate serde as _serde;
-        }
-    });
+    let use_serde = serde_path
+        .map(|path| {
+            quote! {
+                use #path as _serde;
+            }
+        })
+        .unwrap_or_else(|| {
+            quote! {
+                #[allow(unknown_lints)]
+                #[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
+                #[allow(rust_2018_idioms)]
+                extern crate serde as _serde;
+            }
+        });
 
     quote! {
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]

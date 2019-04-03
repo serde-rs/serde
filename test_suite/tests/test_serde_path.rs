@@ -19,7 +19,8 @@ mod fake_serde {
     where
         T: Serialize,
         T: for<'a> Deserialize<'a>,
-    {}
+    {
+    }
 
     pub trait Serialize {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>;

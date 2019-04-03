@@ -52,7 +52,12 @@ pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<TokenStream, 
         }
     };
 
-    Ok(dummy::wrap_in_const(cont.attrs.custom_serde_path(), "SERIALIZE", ident, impl_block))
+    Ok(dummy::wrap_in_const(
+        cont.attrs.custom_serde_path(),
+        "SERIALIZE",
+        ident,
+        impl_block,
+    ))
 }
 
 fn precondition(cx: &Ctxt, cont: &Container) {

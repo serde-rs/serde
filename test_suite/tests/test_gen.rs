@@ -265,7 +265,7 @@ fn test_gen() {
     #[cfg(feature = "unstable")]
     #[derive(Serialize, Deserialize)]
     struct NonAsciiIdents {
-        σ: f64,
+        σ:  f64,
     }
 
     #[derive(Serialize, Deserialize)]
