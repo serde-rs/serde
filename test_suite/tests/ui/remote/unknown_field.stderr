@@ -12,5 +12,5 @@ error[E0560]: struct `remote::S` has no field named `b`
 
 error: aborting due to 2 previous errors
 
-Some errors occurred: E0560, E0609.
+Some errors have detailed explanations: E0560, E0609.
 For more information about an error, try `rustc --explain E0560`.
