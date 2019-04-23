@@ -29,7 +29,7 @@ matrix:
         - cd "${TRAVIS_BUILD_DIR}/test_suite/deps"
         - cargo build
         - cd "${TRAVIS_BUILD_DIR}/test_suite"
-        - cargo test --features compiletest,unstable
+        - cargo test --features unstable
         - cd "${TRAVIS_BUILD_DIR}/test_suite/no_std"
         - cargo build
 
