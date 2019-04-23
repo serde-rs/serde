@@ -38,4 +38,4 @@ for:
       - cd %APPVEYOR_BUILD_FOLDER%\test_suite\deps
       - cargo build
       - cd %APPVEYOR_BUILD_FOLDER%\test_suite
-      - cargo test --features compiletest,unstable
+      - cargo test --features unstable
