@@ -26,8 +26,6 @@ matrix:
         - cargo build --no-default-features --features alloc
         - cargo build --no-default-features --features rc,alloc
         - cargo test --features derive,rc,unstable
-        - cd "${TRAVIS_BUILD_DIR}/test_suite/deps"
-        - cargo build
         - cd "${TRAVIS_BUILD_DIR}/test_suite"
         - cargo test --features unstable
         - cd "${TRAVIS_BUILD_DIR}/test_suite/no_std"

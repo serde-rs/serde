@@ -4,6 +4,3 @@ error: field `s` does not have lifetime 'b
 5 | /     #[serde(borrow = "'b")]
 6 | |     s: &'a str,
   | |______________^
-
-error: aborting due to previous error
-

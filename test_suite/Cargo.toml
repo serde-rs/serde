@@ -7,14 +7,12 @@ publish = false
 
 [features]
 unstable = ["serde/unstable"]
-compiletest = ["compiletest_rs"]
 
 [dev-dependencies]
 fnv = "1.0"
 rustc-serialize = "0.3.16"
+select-rustc = "0.1"
 serde = { path = "../serde", features = ["rc", "derive"] }
 serde_derive = { path = "../serde_derive", features = ["deserialize_in_place"] }
 serde_test = { path = "../serde_test" }
-
-[dependencies]
-compiletest_rs = { version = "0.3", optional = true, features = ["stable"] }
+trybuild = "1.0"

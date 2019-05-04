@@ -3,6 +3,3 @@ error: #[serde(flatten)] cannot be used on newtype structs
   |
 6 | struct Foo(#[serde(flatten)] HashMap<String, String>);
   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-error: aborting due to previous error
-

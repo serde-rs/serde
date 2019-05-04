@@ -3,6 +3,3 @@ error: #[serde(variant_identifier)] may only contain unit variants
   |
 7 |     B(u8, u8),
   |     ^^^^^^^^^
-
-error: aborting due to previous error
-

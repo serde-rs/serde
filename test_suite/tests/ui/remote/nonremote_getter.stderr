@@ -6,6 +6,3 @@ error: #[serde(getter = "...")] can only be used in structs that have #[serde(re
 6 | |     a: u8,
 7 | | }
   | |_^
-
-error: aborting due to previous error
-

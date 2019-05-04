@@ -4,6 +4,3 @@ error: variant `Newtype` cannot have both #[serde(deserialize_with)] and a field
 5 | /     #[serde(deserialize_with = "deserialize_some_newtype_variant")]
 6 | |     Newtype(#[serde(skip_deserializing)] String),
   | |________________________________________________^
-
-error: aborting due to previous error
-

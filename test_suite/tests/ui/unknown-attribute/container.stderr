@@ -3,6 +3,3 @@ error: unknown serde container attribute `abc`
   |
 4 | #[serde(abc = "xyz")]
   |         ^^^
-
-error: aborting due to previous error
-

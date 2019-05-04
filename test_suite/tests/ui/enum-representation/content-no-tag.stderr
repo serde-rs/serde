@@ -3,6 +3,3 @@ error: #[serde(tag = "...", content = "...")] must be used together
   |
 4 | #[serde(content = "c")]
   |         ^^^^^^^
-
-error: aborting due to previous error
-

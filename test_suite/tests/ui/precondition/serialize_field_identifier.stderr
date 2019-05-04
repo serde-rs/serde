@@ -7,6 +7,3 @@ error: field identifiers cannot be serialized
 7 | |     B,
 8 | | }
   | |_^
-
-error: aborting due to previous error
-

@@ -6,6 +6,3 @@ error: #[serde(transparent)] is not allowed with #[serde(into = "...")]
 6 | |     a: u8,
 7 | | }
   | |_^
-
-error: aborting due to previous error
-

@@ -9,6 +9,3 @@ error: enum cannot be both untagged and internally tagged
   |
 5 | #[serde(tag = "type")]
   |         ^^^
-
-error: aborting due to 2 previous errors
-

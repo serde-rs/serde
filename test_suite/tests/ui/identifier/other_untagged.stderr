@@ -4,6 +4,3 @@ error: #[serde(other)] cannot appear on untagged enum
 6 | /     #[serde(other)]
 7 | |     Other,
   | |_________^
-
-error: aborting due to previous error
-

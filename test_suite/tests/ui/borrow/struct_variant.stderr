@@ -4,6 +4,3 @@ error: #[serde(borrow)] may only be used on newtype variants
 8 | /     #[serde(borrow)]
 9 | |     S { s: Str<'a> },
   | |____________________^
-
-error: aborting due to previous error
-

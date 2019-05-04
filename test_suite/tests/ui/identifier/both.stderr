@@ -9,6 +9,3 @@ error: #[serde(field_identifier)] and #[serde(variant_identifier)] cannot both b
   |
 4 | #[serde(field_identifier, variant_identifier)]
   |                           ^^^^^^^^^^^^^^^^^^
-
-error: aborting due to 2 previous errors
-

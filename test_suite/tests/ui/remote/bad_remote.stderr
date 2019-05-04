@@ -3,6 +3,3 @@ error: failed to parse path: "~~~"
    |
 10 | #[serde(remote = "~~~")]
    |                  ^^^^^
-
-error: aborting due to previous error
-

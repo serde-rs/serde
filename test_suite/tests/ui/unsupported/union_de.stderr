@@ -6,6 +6,3 @@ error: Serde does not support derive for unions
 6 | |     y: (),
 7 | | }
   | |_^
-
-error: aborting due to previous error
-

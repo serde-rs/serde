@@ -3,6 +3,3 @@ error: cannot deserialize when there is a lifetime parameter called 'de
   |
 4 | struct S<'de> {
   |          ^^^
-
-error: aborting due to previous error
-

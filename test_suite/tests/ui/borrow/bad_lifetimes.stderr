@@ -3,6 +3,3 @@ error: failed to parse borrowed lifetimes: "zzz"
   |
 5 |     #[serde(borrow = "zzz")]
   |                      ^^^^^
-
-error: aborting due to previous error
-

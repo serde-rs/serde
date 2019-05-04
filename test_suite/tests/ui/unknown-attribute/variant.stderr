@@ -3,6 +3,3 @@ error: unknown serde variant attribute `abc`
   |
 5 |     #[serde(abc = "xyz")]
   |             ^^^
-
-error: aborting due to previous error
-

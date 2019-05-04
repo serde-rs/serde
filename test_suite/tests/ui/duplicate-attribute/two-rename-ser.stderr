@@ -3,6 +3,3 @@ error: duplicate serde attribute `rename`
   |
 6 |     #[serde(rename(serialize = "y"))]
   |             ^^^^^^
-
-error: aborting due to previous error
-

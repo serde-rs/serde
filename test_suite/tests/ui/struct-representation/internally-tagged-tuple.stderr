@@ -3,6 +3,3 @@ error: #[serde(tag = "...")] can only be used on enums and structs with named fi
   |
 5 | struct S(u8, u8);
   |         ^^^^^^^^
-
-error: aborting due to previous error
-

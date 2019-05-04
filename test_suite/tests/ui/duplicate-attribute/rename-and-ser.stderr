@@ -3,6 +3,3 @@ error: unknown serde field attribute `serialize`
   |
 5 |     #[serde(rename = "x", serialize = "y")]
   |                           ^^^^^^^^^
-
-error: aborting due to previous error
-

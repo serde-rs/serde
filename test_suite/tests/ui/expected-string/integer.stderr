@@ -3,6 +3,3 @@ error: expected serde rename attribute to be a string: `rename = "..."`
   |
 5 |     #[serde(rename = 100)]
   |                      ^^^
-
-error: aborting due to previous error
-

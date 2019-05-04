@@ -3,6 +3,3 @@ error: malformed rename attribute, expected `rename(serialize = ..., deserialize
   |
 5 |     #[serde(rename(unknown))]
   |                    ^^^^^^^
-
-error: aborting due to previous error
-

@@ -7,6 +7,3 @@ error: enum tags `conflict` for type and content conflict with each other
 7 | |     B,
 8 | | }
   | |_^
-
-error: aborting due to previous error
-

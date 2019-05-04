@@ -7,6 +7,3 @@ error: #[serde(transparent)] requires at least one field that is not skipped
 7 | |     a: u8,
 8 | | }
   | |_^
-
-error: aborting due to previous error
-

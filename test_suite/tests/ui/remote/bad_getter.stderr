@@ -3,6 +3,3 @@ error: failed to parse path: "~~~"
    |
 12 |     #[serde(getter = "~~~")]
    |                      ^^^^^
-
-error: aborting due to previous error
-

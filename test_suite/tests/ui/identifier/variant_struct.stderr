@@ -3,6 +3,3 @@ error: #[serde(variant_identifier)] can only be used on an enum
   |
 5 | struct S;
   | ^^^^^^
-
-error: aborting due to previous error
-

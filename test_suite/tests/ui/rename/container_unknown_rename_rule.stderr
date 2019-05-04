@@ -3,6 +3,3 @@ error: unknown rename rule for #[serde(rename_all = "abc")]
   |
 4 | #[serde(rename_all = "abc")]
   |                      ^^^^^
-
-error: aborting due to previous error
-

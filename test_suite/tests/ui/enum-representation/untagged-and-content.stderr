@@ -9,6 +9,3 @@ error: untagged enum cannot have #[serde(content = "...")]
   |
 5 | #[serde(content = "c")]
   |         ^^^^^^^
-
-error: aborting due to 2 previous errors
-
