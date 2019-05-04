@@ -955,7 +955,12 @@ fn deserialize_struct(
         }
     } else if is_enum {
         quote! {
-            _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
+            _serde::de::VariantAccess::struct_variant_with_aliases(
+                __variant,
+                FIELDS,
+                FIELDS_WITH_ALIASES,
+                #visitor_expr,
+            )
         }
     } else if cattrs.has_flatten() {
         quote! {
@@ -964,7 +969,13 @@ fn deserialize_struct(
     } else {
         let type_name = cattrs.name().deserialize_name();
         quote! {
-            _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
+            _serde::Deserializer::deserialize_struct_with_aliases(
+                __deserializer,
+                #type_name,
+                FIELDS,
+                FIELDS_WITH_ALIASES,
+                #visitor_expr,
+            )
         }
     };
 
@@ -1089,12 +1100,23 @@ fn deserialize_struct_in_place(
         }
     } else if is_enum {
         quote! {
-            _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
+            _serde::de::VariantAccess::struct_variant_with_aliases(
+                __variant,
+                FIELDS,
+                FIELDS_WITH_ALIASES,
+                #visitor_expr,
+            )
         }
     } else {
         let type_name = cattrs.name().deserialize_name();
         quote! {
-            _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
+            _serde::Deserializer::deserialize_struct_with_aliases(
+                __deserializer,
+                #type_name,
+                FIELDS,
+                FIELDS_WITH_ALIASES,
+                #visitor_expr,
+            )
         }
     };
 
@@ -1633,9 +1655,10 @@ fn deserialize_adjacently_tagged_enum(
         }
 
         const FIELDS: &'static [&'static str] = &[#tag, #content];
-        _serde::Deserializer::deserialize_struct(
+        _serde::Deserializer::deserialize_struct_with_aliases(
             __deserializer,
             #type_name,
+            FIELDS,
             FIELDS,
             __Visitor {
                 marker: _serde::__private::PhantomData::<#this #ty_generics>,
@@ -2029,21 +2052,18 @@ fn deserialize_custom_identifier(
             )
         })
         .collect();
-
-    let names = names_idents.iter().map(|(name, _, _)| name);
+    let flat_fields = flatten_fields(&names_idents);
 
     let names_const = if fallthrough.is_some() {
         None
     } else if is_variant {
+        let names = names_idents.iter().map(|&(ref name, _, _)| name);
         let variants = quote! {
             const VARIANTS: &'static [&'static str] = &[ #(#names),* ];
         };
         Some(variants)
     } else {
-        let fields = quote! {
-            const FIELDS: &'static [&'static str] = &[ #(#names),* ];
-        };
-        Some(fields)
+        Some(decl_fields_consts(&names_idents, &flat_fields))
     };
 
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
@@ -2090,10 +2110,7 @@ fn deserialize_identifier(
     collect_other_fields: bool,
     expecting: Option<&str>,
 ) -> Fragment {
-    let mut flat_fields = Vec::new();
-    for (_, ident, aliases) in fields {
-        flat_fields.extend(aliases.iter().map(|alias| (alias, ident)));
-    }
+    let flat_fields = flatten_fields(&fields);
 
     let field_strs: &Vec<_> = &flat_fields.iter().map(|(name, _)| name).collect();
     let field_bytes: &Vec<_> = &flat_fields
@@ -2369,6 +2386,29 @@ fn deserialize_identifier(
     }
 }
 
+fn flatten_fields(fields: &[(String, Ident, Vec<String>)]) -> Vec<(&String, &Ident)> {
+    let mut flat = vec![];
+    for &(_, ref ident, ref aliases) in fields {
+        flat.extend(aliases.iter().map(|alias| (alias, ident)))
+    }
+    flat
+}
+
+fn decl_fields_consts(
+    fields: &[(String, Ident, Vec<String>)],
+    flat_fields: &[(&String, &Ident)],
+) -> TokenStream {
+    let block = {
+        let field_names = fields.iter().map(|&(ref name, _, _)| name);
+        let aliases = flat_fields.iter().map(|&(ref name, _)| name);
+        quote! {
+            const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
+            const FIELDS_WITH_ALIASES: &'static [&'static str] = &[ #(#aliases),* ];
+        }
+    };
+    block
+}
+
 fn deserialize_struct_as_struct_visitor(
     struct_path: &TokenStream,
     params: &Parameters,
@@ -2390,18 +2430,18 @@ fn deserialize_struct_as_struct_visitor(
         })
         .collect();
 
-    let fields_stmt = {
-        let field_names = field_names_idents.iter().map(|(name, _, _)| name);
-        quote_block! {
-            const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
-        }
-    };
+    let flat_fields = flatten_fields(&field_names_idents);
+    let fields_stmt = decl_fields_consts(&field_names_idents, &flat_fields);
 
     let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
 
     let visit_map = deserialize_map(struct_path, params, fields, cattrs);
 
-    (field_visitor, Some(fields_stmt), visit_map)
+    (
+        field_visitor,
+        Some(quote_block! { #fields_stmt }),
+        visit_map,
+    )
 }
 
 fn deserialize_struct_as_map_visitor(
@@ -2667,18 +2707,13 @@ fn deserialize_struct_as_struct_in_place_visitor(
         })
         .collect();
 
-    let fields_stmt = {
-        let field_names = field_names_idents.iter().map(|(name, _, _)| name);
-        quote_block! {
-            const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
-        }
-    };
-
+    let flat_fields = flatten_fields(&field_names_idents);
+    let fields_stmt = decl_fields_consts(&field_names_idents, &flat_fields);
     let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
 
     let visit_map = deserialize_map_in_place(params, fields, cattrs);
 
-    (field_visitor, fields_stmt, visit_map)
+    (field_visitor, quote_block! { #fields_stmt }, visit_map)
 }
 
 #[cfg(feature = "deserialize_in_place")]

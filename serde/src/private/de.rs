@@ -2766,14 +2766,27 @@ where
 
     fn deserialize_struct<V>(
         self,
-        _: &'static str,
+        name: &'static str,
         fields: &'static [&'static str],
         visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        visitor.visit_map(FlatStructAccess::new(self.0.iter_mut(), fields))
+        self.deserialize_struct_with_aliases(name, fields, fields, visitor)
+    }
+
+    fn deserialize_struct_with_aliases<V>(
+        self,
+        _: &'static str,
+        _: &'static [&'static str],
+        fields_with_aliases: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_map(FlatStructAccess::new(self.0.iter_mut(), fields_with_aliases))
     }
 
     fn deserialize_newtype_struct<V>(self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
