@@ -627,6 +627,64 @@ fn test_rename_struct() {
 }
 
 #[test]
+#[should_panic] // FIXME(emilio): It shouldn't!
+fn test_alias_flattened() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    struct Flattened {
+        #[serde(flatten)]
+        with_aliases: AliasStruct,
+    }
+
+    // First without the aliases.
+    assert_de_tokens(
+        &Flattened {
+            with_aliases: AliasStruct {
+                a1: 1,
+                a2: 2,
+                a4: 3,
+            },
+        },
+        &[
+            Token::Struct {
+                name: "Flattened",
+                len: 3,
+            },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::Str("a2"),
+            Token::I32(2),
+            Token::Str("a6"),
+            Token::I32(3),
+            Token::StructEnd,
+        ],
+    );
+
+    // Now with them
+    assert_de_tokens(
+        &Flattened {
+            with_aliases: AliasStruct {
+                a1: 1,
+                a2: 2,
+                a4: 3,
+            },
+        },
+        &[
+            Token::Struct {
+                name: "Flattened",
+                len: 3,
+            },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::Str("a3"),
+            Token::I32(2),
+            Token::Str("a6"),
+            Token::I32(3),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_unknown_field_rename_struct() {
     assert_de_tokens_error::<AliasStruct>(
         &[
