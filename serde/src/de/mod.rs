@@ -1112,6 +1112,28 @@ pub trait Deserializer<'de>: Sized {
     where
         V: Visitor<'de>;
 
+    /// Hint that the `Deserialize` type is expecting a struct with a particular
+    /// name and fields.
+    ///
+    /// `_fields_with_aliases` includes all valid field names, including
+    /// aliases.  `fields` only includes the canonical struct fields.
+    ///
+    /// Use this if you care about aliased fields. For backwards compatibility,
+    /// by default this calls `deserialize_struct`. If you implement this, you
+    /// probably want `deserialize_struct` to call this instead.
+    fn deserialize_struct_with_aliases<V>(
+        self,
+        name: &'static str,
+        fields: &'static [&'static str],
+        _fields_with_aliases: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>
+    {
+        self.deserialize_struct(name, fields, visitor)
+    }
+
     /// Hint that the `Deserialize` type is expecting an enum value with a
     /// particular name and possible variants.
     fn deserialize_enum<V>(
@@ -2191,6 +2213,30 @@ pub trait VariantAccess<'de>: Sized {
     ) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>;
+
+    /// Called when deserializing a struct-like variant.
+    ///
+    /// The `fields` are the names of the fields of the struct variant.
+    ///
+    /// `_fields_with_aliases` includes all valid field names, including
+    /// aliases.  `fields` only includes the canonical struct fields.
+    ///
+    /// Use this if you care about aliased fields. For backwards compatibility,
+    /// by default this calls `struct_variant`. If you implement this, you
+    /// probably want `struct_variant` to call this instead.
+    ///
+    /// Same constraints as `struct_vriant` applies.
+    fn struct_variant_with_aliases<V>(
+        self,
+        fields: &'static [&'static str],
+        _fields_with_aliases: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>
+    {
+        self.struct_variant(fields, visitor)
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

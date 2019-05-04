@@ -617,7 +617,6 @@ fn test_rename_struct() {
 }
 
 #[test]
-#[should_panic] // FIXME(emilio): It shouldn't!
 fn test_alias_flattened() {
     #[derive(Debug, PartialEq, Deserialize)]
     struct Flattened {
