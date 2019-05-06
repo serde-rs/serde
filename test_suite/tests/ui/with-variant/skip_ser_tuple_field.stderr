@@ -4,6 +4,3 @@ error: variant `Tuple` cannot have both #[serde(serialize_with)] and a field #0 
 5 | /     #[serde(serialize_with = "serialize_some_other_variant")]
 6 | |     Tuple(#[serde(skip_serializing)] String, u8),
   | |________________________________________________^
-
-error: aborting due to previous error
-

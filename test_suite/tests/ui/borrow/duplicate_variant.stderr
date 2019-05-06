@@ -3,6 +3,3 @@ error: duplicate serde attribute `borrow`
   |
 8 |     #[serde(borrow)]
   |             ^^^^^^
-
-error: aborting due to previous error
-

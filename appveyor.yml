@@ -35,7 +35,5 @@ for:
       - cargo build --no-default-features --features alloc
       - cargo build --no-default-features --features rc,alloc
       - cargo test --features derive,rc,unstable
-      - cd %APPVEYOR_BUILD_FOLDER%\test_suite\deps
-      - cargo build
       - cd %APPVEYOR_BUILD_FOLDER%\test_suite
       - cargo test --features unstable

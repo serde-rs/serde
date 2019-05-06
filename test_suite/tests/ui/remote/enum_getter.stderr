@@ -9,6 +9,3 @@ error: #[serde(getter = "...")] is not allowed in an enum
 15 | |     },
 16 | | }
    | |_^
-
-error: aborting due to previous error
-

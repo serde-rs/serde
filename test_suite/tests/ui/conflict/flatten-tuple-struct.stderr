@@ -3,6 +3,3 @@ error: #[serde(flatten)] cannot be used on tuple structs
   |
 6 | struct Foo(u32, #[serde(flatten)] HashMap<String, String>);
   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-error: aborting due to previous error
-

@@ -4,6 +4,3 @@ error: #[serde(transparent)] is not allowed on a unit struct
 4 | / #[serde(transparent)]
 5 | | struct S;
   | |_________^
-
-error: aborting due to previous error
-

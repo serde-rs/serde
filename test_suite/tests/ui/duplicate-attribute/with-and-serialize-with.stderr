@@ -3,6 +3,3 @@ error: duplicate serde attribute `serialize_with`
   |
 5 |     #[serde(with = "w", serialize_with = "s")]
   |                         ^^^^^^^^^^^^^^
-
-error: aborting due to previous error
-

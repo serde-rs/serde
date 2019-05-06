@@ -3,6 +3,3 @@ error: at least one lifetime must be borrowed
   |
 5 |     #[serde(borrow = "")]
   |                      ^^
-
-error: aborting due to previous error
-

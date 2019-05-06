@@ -6,6 +6,3 @@ error: cannot deserialize a dynamically sized struct
 6 | |     slice: [u8],
 7 | | }
   | |_^
-
-error: aborting due to previous error
-

@@ -3,6 +3,3 @@ error: unexpected literal in serde container attribute
   |
 4 | #[serde("literal")]
   |         ^^^^^^^^^
-
-error: aborting due to previous error
-

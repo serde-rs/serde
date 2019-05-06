@@ -3,6 +3,3 @@ error: duplicate borrowed lifetime `'a`
   |
 5 |     #[serde(borrow = "'a + 'a")]
   |                      ^^^^^^^^^
-
-error: aborting due to previous error
-

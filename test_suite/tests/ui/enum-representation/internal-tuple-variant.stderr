@@ -3,6 +3,3 @@ error: #[serde(tag = "...")] cannot be used with tuple variants
   |
 6 |     Tuple(u8, u8),
   |     ^^^^^^^^^^^^^
-
-error: aborting due to previous error
-

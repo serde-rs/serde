@@ -3,6 +3,3 @@ error: `Other` must be the last variant
   |
 7 |     Other(String),
   |     ^^^^^^^^^^^^^
-
-error: aborting due to previous error
-

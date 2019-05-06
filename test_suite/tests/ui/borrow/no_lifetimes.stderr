@@ -4,6 +4,3 @@ error: field `s` has no lifetimes to borrow
 5 | /     #[serde(borrow)]
 6 | |     s: String,
   | |_____________^
-
-error: aborting due to previous error
-

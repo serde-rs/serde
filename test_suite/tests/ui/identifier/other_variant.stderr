@@ -4,6 +4,3 @@ error: #[serde(other)] may not be used on a variant identifier
 6 | /     #[serde(other)]
 7 | |     Other,
   | |_________^
-
-error: aborting due to previous error
-

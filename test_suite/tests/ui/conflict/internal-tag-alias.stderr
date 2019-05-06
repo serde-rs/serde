@@ -9,6 +9,3 @@ error: variant field name `conflict` conflicts with internal tag
 9  | |     },
 10 | | }
    | |_^
-
-error: aborting due to previous error
-

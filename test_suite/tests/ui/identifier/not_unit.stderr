@@ -4,6 +4,3 @@ error: #[serde(other)] must be on a unit variant
 7 | /     #[serde(other)]
 8 | |     Other(u8, u8),
   | |_________________^
-
-error: aborting due to previous error
-

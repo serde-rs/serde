@@ -3,6 +3,3 @@ error: #[serde(default)] can only be used on structs with named fields
   |
 5 | enum E {
   | ^^^^
-
-error: aborting due to previous error
-

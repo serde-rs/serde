@@ -5,6 +5,3 @@ error: variant `Unit` cannot have both #[serde(serialize_with)] and #[serde(skip
 6 | |     #[serde(skip_serializing)]
 7 | |     Unit,
   | |________^
-
-error: aborting due to previous error
-

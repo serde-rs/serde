@@ -9,6 +9,3 @@ error: #[serde(transparent)] requires at least one field that is neither skipped
 9  | |     b: u8,
 10 | | }
    | |_^
-
-error: aborting due to previous error
-
