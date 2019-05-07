@@ -8,6 +8,9 @@ publish = false
 [features]
 unstable = ["serde/unstable"]
 
+[dependencies]
+serde = { path = "../serde" }
+
 [dev-dependencies]
 fnv = "1.0"
 rustc-serialize = "0.3.16"
