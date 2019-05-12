@@ -379,7 +379,7 @@ pub trait Serializer: Sized {
     /// Serialize a `bool` value.
     ///
     /// ```edition2018
-    /// # use serde::Serializer;
+    /// # use serde::{Serializer, Serialize};
     /// #
     /// # serde::__private_serialize!();
     /// #
@@ -401,7 +401,7 @@ pub trait Serializer: Sized {
     /// forward to `serialize_i64`.
     ///
     /// ```edition2018
-    /// # use serde::Serializer;
+    /// # use serde::{Serializer, Serialize};
     /// #
     /// # serde::__private_serialize!();
     /// #
@@ -423,7 +423,7 @@ pub trait Serializer: Sized {
     /// forward to `serialize_i64`.
     ///
     /// ```edition2018
-    /// # use serde::Serializer;
+    /// # use serde::{Serializer, Serialize};
     /// #
     /// # serde::__private_serialize!();
     /// #
@@ -445,7 +445,7 @@ pub trait Serializer: Sized {
     /// forward to `serialize_i64`.
     ///
     /// ```edition2018
-    /// # use serde::Serializer;
+    /// # use serde::{Serializer, Serialize};
     /// #
     /// # serde::__private_serialize!();
     /// #
@@ -463,7 +463,7 @@ pub trait Serializer: Sized {
     /// Serialize an `i64` value.
     ///
     /// ```edition2018
-    /// # use serde::Serializer;
+    /// # use serde::{Serializer, Serialize};
     /// #
     /// # serde::__private_serialize!();
     /// #
@@ -482,7 +482,7 @@ pub trait Serializer: Sized {
         /// Serialize an `i128` value.
         ///
         /// ```edition2018
-        /// # use serde::Serializer;
+        /// # use serde::{Serializer, Serialize};
         /// #
         /// # serde::__private_serialize!();
         /// #
@@ -511,7 +511,7 @@ pub trait Serializer: Sized {
     /// forward to `serialize_u64`.
     ///
     /// ```edition2018
-    /// # use serde::Serializer;
+    /// # use serde::{Serializer, Serialize};
     /// #
     /// # serde::__private_serialize!();
     /// #
@@ -533,7 +533,7 @@ pub trait Serializer: Sized {
     /// forward to `serialize_u64`.
     ///
     /// ```edition2018
-    /// # use serde::Serializer;
+    /// # use serde::{Serializer, Serialize};
     /// #
     /// # serde::__private_serialize!();
     /// #
@@ -555,7 +555,7 @@ pub trait Serializer: Sized {
     /// forward to `serialize_u64`.
     ///
     /// ```edition2018
-    /// # use serde::Serializer;
+    /// # use serde::{Serializer, Serialize};
     /// #
     /// # serde::__private_serialize!();
     /// #
@@ -573,7 +573,7 @@ pub trait Serializer: Sized {
     /// Serialize a `u64` value.
     ///
     /// ```edition2018
-    /// # use serde::Serializer;
+    /// # use serde::{Serializer, Serialize};
     /// #
     /// # serde::__private_serialize!();
     /// #
@@ -592,7 +592,7 @@ pub trait Serializer: Sized {
         /// Serialize a `u128` value.
         ///
         /// ```edition2018
-        /// # use serde::Serializer;
+        /// # use serde::{Serializer, Serialize};
         /// #
         /// # serde::__private_serialize!();
         /// #
@@ -621,7 +621,7 @@ pub trait Serializer: Sized {
     /// forward to `serialize_f64`.
     ///
     /// ```edition2018
-    /// # use serde::Serializer;
+    /// # use serde::{Serializer, Serialize};
     /// #
     /// # serde::__private_serialize!();
     /// #
@@ -639,7 +639,7 @@ pub trait Serializer: Sized {
     /// Serialize an `f64` value.
     ///
     /// ```edition2018
-    /// # use serde::Serializer;
+    /// # use serde::{Serializer, Serialize};
     /// #
     /// # serde::__private_serialize!();
     /// #
@@ -660,7 +660,7 @@ pub trait Serializer: Sized {
     /// it as a single element `str` or a `u32`.
     ///
     /// ```edition2018
-    /// # use serde::Serializer;
+    /// # use serde::{Serializer, Serialize};
     /// #
     /// # serde::__private_serialize!();
     /// #
@@ -678,7 +678,7 @@ pub trait Serializer: Sized {
     /// Serialize a `&str`.
     ///
     /// ```edition2018
-    /// # use serde::Serializer;
+    /// # use serde::{Serializer, Serialize};
     /// #
     /// # serde::__private_serialize!();
     /// #
@@ -799,7 +799,7 @@ pub trait Serializer: Sized {
     /// Serialize a `()` value.
     ///
     /// ```edition2018
-    /// # use serde::Serializer;
+    /// # use serde::{Serializer, Serialize};
     /// #
     /// # serde::__private_serialize!();
     /// #
