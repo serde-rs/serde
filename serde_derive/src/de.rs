@@ -269,6 +269,8 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
         deserialize_transparent(cont, params)
     } else if let Some(type_from) = cont.attrs.type_from() {
         deserialize_from(type_from)
+    } else if let Some(type_try_from) = cont.attrs.type_try_from() {
+        deserialize_try_from(type_try_from)
     } else if let attr::Identifier::No = cont.attrs.identifier() {
         match cont.data {
             Data::Enum(ref variants) => deserialize_enum(params, variants, &cont.attrs),
@@ -298,6 +300,7 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
 
     if cont.attrs.transparent()
         || cont.attrs.type_from().is_some()
+        || cont.attrs.type_try_from().is_some()
         || cont.attrs.identifier().is_some()
         || cont
             .data
@@ -387,6 +390,14 @@ fn deserialize_from(type_from: &syn::Type) -> Fragment {
         _serde::export::Result::map(
             <#type_from as _serde::Deserialize>::deserialize(__deserializer),
             _serde::export::From::from)
+    }
+}
+
+fn deserialize_try_from(type_try_from: &syn::Type) -> Fragment {
+    quote_block! {
+        _serde::export::Result::and_then(
+            <#type_try_from as _serde::Deserialize>::deserialize(__deserializer),
+            |v| _serde::export::TryFrom::try_from(v).map_err(_serde::de::Error::custom))
     }
 }
 
