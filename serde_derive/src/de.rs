@@ -29,10 +29,17 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream
     let delife = params.borrowed.de_lifetime();
     let serde = cont.attrs.serde_path();
 
+    let avoid_circular_from = quote! {
+            trait AvoidFromMyself{}
+            impl #de_impl_generics AvoidFromMyself for #ident #ty_generics #where_clause {}
+        };
+
     let impl_block = if let Some(remote) = cont.attrs.remote() {
         let vis = &input.vis;
         let used = pretend::pretend_used(&cont);
         quote! {
+            #avoid_circular_from
+
             impl #de_impl_generics #ident #ty_generics #where_clause {
                 #vis fn deserialize<__D>(__deserializer: __D) -> #serde::export::Result<#remote #ty_generics, __D::Error>
                 where
@@ -47,6 +54,8 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream
         let fn_deserialize_in_place = deserialize_in_place_body(&cont, &params);
 
         quote! {
+            #avoid_circular_from
+
             #[automatically_derived]
             impl #de_impl_generics #serde::Deserialize<#delife> for #ident #ty_generics #where_clause {
                 fn deserialize<__D>(__deserializer: __D) -> #serde::export::Result<Self, __D::Error>
@@ -384,6 +393,9 @@ fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
 
 fn deserialize_from(type_from: &syn::Type) -> Fragment {
     quote_block! {
+
+        impl AvoidFromMyself for #type_from {}
+
         _serde::export::Result::map(
             <#type_from as _serde::Deserialize>::deserialize(__deserializer),
             _serde::export::From::from)

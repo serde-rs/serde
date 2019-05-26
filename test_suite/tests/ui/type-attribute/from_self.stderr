@@ -1,0 +1,10 @@
+error[E0119]: conflicting implementations of trait `_IMPL_DESERIALIZE_FOR_Point::AvoidFromMyself` for type `Point`:
+ --> $DIR/from_self.rs:3:10
+  |
+3 | #[derive(Deserialize)]
+  |          ^^^^^^^^^^^
+  |          |
+  |          first implementation here
+  |          conflicting implementation for `Point`
+
+For more information about this error, try `rustc --explain E0119`.
