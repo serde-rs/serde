@@ -2059,7 +2059,7 @@ fn deserialize_identifier(
     ) = if collect_other_fields {
         (
             Some(quote! {
-                let __value = _serde::private::de::Content::String(__value.to_string());
+                let __value = _serde::private::de::Content::String(_serde::export::ToString::to_string(__value));
             }),
             Some(quote! {
                 let __value = _serde::private::de::Content::Str(__value);
