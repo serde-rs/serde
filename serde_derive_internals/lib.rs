@@ -1,4 +1,5 @@
 #![doc(html_root_url = "https://docs.rs/serde_derive_internals/0.24.1")]
+#![allow(unknown_lints, bare_trait_objects)]
 #![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
 #![cfg_attr(
     feature = "cargo-clippy",
