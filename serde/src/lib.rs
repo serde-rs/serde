@@ -154,7 +154,7 @@ mod lib {
     #[cfg(all(feature = "alloc", not(feature = "std")))]
     pub use alloc::string::{String, ToString};
     #[cfg(feature = "std")]
-    pub use std::string::String;
+    pub use std::string::{String, ToString};
 
     #[cfg(all(feature = "alloc", not(feature = "std")))]
     pub use alloc::vec::Vec;
