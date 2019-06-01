@@ -90,6 +90,7 @@
     feature = "cargo-clippy",
     allow(
         // not available in our oldest supported compiler
+        checked_conversions,
         const_static_lifetime,
         empty_enum,
         redundant_field_names,

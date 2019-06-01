@@ -35,6 +35,7 @@
     feature = "cargo-clippy",
     allow(
         cast_possible_truncation,
+        checked_conversions,
         doc_markdown,
         enum_glob_use,
         filter_map,
