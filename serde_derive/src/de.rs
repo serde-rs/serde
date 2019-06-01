@@ -1630,35 +1630,69 @@ fn deserialize_untagged_enum(
         .iter()
         .filter(|variant| !variant.attrs.skip_deserializing())
         .map(|variant| {
-            Expr(deserialize_untagged_variant(
+            let de_any = Expr(deserialize_untagged_variant(
                 params,
                 variant,
                 cattrs,
                 quote!(_serde::private::de::ContentRefDeserializer::<__D::Error>::new(&__content)),
-            ))
+            ));
+
+            if cfg!(feature = "verbose-debug") {
+                let variant_name = variant.ident.to_string();
+                quote! {
+                    _serde::export::Result::map_err(
+                        #de_any,
+                        |e| -> __D::Error {
+                            _serde::de::Error::custom(
+                                format!("attempted to deserialize `{}` but failed with: {}", #variant_name, e.to_string())
+                            )
+                        },
+                    )
+                }
+            } else {
+                quote! { #de_any }
+            }
         });
 
-    // TODO this message could be better by saving the errors from the failed
-    // attempts. The heuristic used by TOML was to count the number of fields
-    // processed before an error, and use the error that happened after the
-    // largest number of fields. I'm not sure I like that. Maybe it would be
-    // better to save all the errors and combine them into one message that
-    // explains why none of the variants matched.
-    let fallthrough_msg = format!(
-        "data did not match any variant of untagged enum {}",
-        params.type_name()
-    );
+    if cfg!(feature = "verbose-debug") {
+        let type_name = params.type_name();
 
-    quote_block! {
-        let __content = try!(<_serde::private::de::Content as _serde::Deserialize>::deserialize(__deserializer));
+        quote_block! {
+            let __content = try!(<_serde::private::de::Content as _serde::Deserialize>::deserialize(__deserializer));
+            let mut fallthrough_msg = format!(
+                "data did not match any variant of untagged enum `{}`",
+                #type_name
+            );
 
-        #(
-            if let _serde::export::Ok(__ok) = #attempts {
-                return _serde::export::Ok(__ok);
-            }
-        )*
+            #(
+                match #attempts {
+                    _serde::export::Ok(__ok) => return _serde::export::Ok(__ok),
+                    _serde::export::Err(__err) => {
+                        fallthrough_msg.push_str("\n\t- ");
+                        fallthrough_msg.push_str(&__err.to_string());
+                    }
+                }
+            )*
 
-        _serde::export::Err(_serde::de::Error::custom(#fallthrough_msg))
+            _serde::export::Err(_serde::de::Error::custom(fallthrough_msg))
+        }
+    } else {
+        let fallthrough_msg = format!(
+            "data did not match any variant of untagged enum {}",
+            params.type_name()
+        );
+
+        quote_block! {
+            let __content = try!(<_serde::private::de::Content as _serde::Deserialize>::deserialize(__deserializer));
+
+            #(
+                if let _serde::export::Ok(__ok) = #attempts {
+                    return _serde::export::Ok(__ok);
+                }
+            )*
+
+            _serde::export::Err(_serde::de::Error::custom(#fallthrough_msg))
+        }
     }
 }
 

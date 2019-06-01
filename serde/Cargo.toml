@@ -53,3 +53,6 @@ alloc = []
 # does not preserve identity and may result in multiple copies of the same data.
 # Be sure that this is what you want before enabling this feature.
 rc = []
+
+# Opt into verbose errors that are more expensive to compute.
+verbose-debug = ["serde_derive/verbose-debug"]
