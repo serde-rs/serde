@@ -96,7 +96,6 @@
         // integer and float ser/de requires these sorts of casts
         cast_possible_truncation,
         cast_possible_wrap,
-        cast_precision_loss,
         cast_sign_loss,
         // things are often more readable this way
         cast_lossless,
