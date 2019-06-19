@@ -90,9 +90,9 @@
     allow(
         // not available in our oldest supported compiler
         checked_conversions,
-        const_static_lifetime,
         empty_enum,
         redundant_field_names,
+        redundant_static_lifetimes,
         // integer and float ser/de requires these sorts of casts
         cast_possible_truncation,
         cast_possible_wrap,
