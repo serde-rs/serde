@@ -1467,6 +1467,34 @@ fn test_internally_tagged_struct_with_flattened_field() {
 }
 
 #[test]
+fn test_untagged_enum_with_flattened_integer_key() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(untagged)]
+    pub enum Untagged {
+        Variant {
+            #[serde(flatten)]
+            map: BTreeMap<u64, String>,
+        },
+    }
+
+    assert_tokens(
+        &Untagged::Variant {
+            map: {
+                let mut map = BTreeMap::new();
+                map.insert(100, "BTreeMap".to_owned());
+                map
+            },
+        },
+        &[
+            Token::Map { len: None },
+            Token::U64(100),
+            Token::Str("BTreeMap"),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_enum_in_untagged_enum() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(untagged)]
