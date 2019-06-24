@@ -2827,11 +2827,10 @@ fn wrap_deserialize_with(
             lifetime: _serde::export::PhantomData<&#delife ()>,
         }
 
-        impl #de_impl_generics _serde::DeserializeSeed<#delife> for __DeserializeWith #de_ty_generics #where_clause {
+        impl #de_impl_generics _serde::de::DeserializeSeed<#delife> for __DeserializeWith #de_ty_generics #where_clause {
             type Value = #value_ty;
 
             fn deserialize<__D>(self, __deserializer: __D) -> _serde::export::Result<Self::Value, __D::Error>
-                where __D: _serde::Deserializer<'de>
             where
                 __D: _serde::Deserializer<#delife>,
             {

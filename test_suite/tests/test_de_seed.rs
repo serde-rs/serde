@@ -409,3 +409,10 @@ fn test_node_deserialize() {
         ],
     );
 }
+
+#[derive(DeserializeState, Debug, PartialEq)]
+#[serde(deserialize_state = "Seed")]
+struct Attr {
+    #[serde(with = "i32")]
+    x: i32,
+}
