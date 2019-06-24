@@ -1,0 +1,5 @@
+error: #[serde(field_identifier)] can only be used on an enum
+ --> $DIR/field_struct.rs:5:1
+  |
+5 | struct S;
+  | ^^^^^^

@@ -1,0 +1,5 @@
+error: duplicate serde attribute `rename`
+ --> $DIR/rename-ser-rename.rs:6:13
+  |
+6 |     #[serde(rename = "y")]
+  |             ^^^^^^

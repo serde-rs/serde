@@ -1,11 +1,3 @@
-// Copyright 2017 Serde Developers
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. This file may not be copied, modified, or distributed
-// except according to those terms.
-
 //! This crate provides a convenient concise way to write unit tests for
 //! implementations of [`Serialize`] and [`Deserialize`].
 //!
@@ -32,19 +24,10 @@
 //!
 //! [`linked-hash-map`]: https://github.com/contain-rs/linked-hash-map
 //!
-//! ```rust
-//! # extern crate serde;
-//! #
-//! # macro_rules! ignore {
-//! #     ($($tt:tt)+) => {}
-//! # }
-//! #
-//! # ignore! {
-//! extern crate linked_hash_map;
+//! ```edition2018
+//! # const IGNORE: &str = stringify! {
 //! use linked_hash_map::LinkedHashMap;
-//! # }
-//!
-//! extern crate serde_test;
+//! # };
 //! use serde_test::{Token, assert_tokens};
 //!
 //! # use std::fmt;
@@ -161,16 +144,21 @@
 //! # }
 //! ```
 
-#![doc(html_root_url = "https://docs.rs/serde_test/1.0.67")]
+#![doc(html_root_url = "https://docs.rs/serde_test/1.0.93")]
+#![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
-// Whitelisted clippy lints
+// Ignored clippy lints
 #![cfg_attr(feature = "cargo-clippy", allow(float_cmp))]
-// Whitelisted clippy_pedantic lints
+// Ignored clippy_pedantic lints
 #![cfg_attr(
     feature = "cargo-clippy",
     allow(
-        empty_line_after_outer_attr, missing_docs_in_private_items, redundant_field_names, stutter,
-        use_debug, use_self
+        empty_line_after_outer_attr,
+        missing_docs_in_private_items,
+        module_name_repetitions,
+        redundant_field_names,
+        use_debug,
+        use_self
     )
 )]
 

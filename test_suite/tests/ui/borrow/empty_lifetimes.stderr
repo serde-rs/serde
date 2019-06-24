@@ -1,0 +1,5 @@
+error: at least one lifetime must be borrowed
+ --> $DIR/empty_lifetimes.rs:5:22
+  |
+5 |     #[serde(borrow = "")]
+  |                      ^^

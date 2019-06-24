@@ -8,7 +8,7 @@ You may be looking for:
 
 - [An overview of Serde](https://serde.rs/)
 - [Data formats supported by Serde](https://serde.rs/#data-formats)
-- [Setting up `#[derive(Serialize, Deserialize)]`](https://serde.rs/codegen.html)
+- [Setting up `#[derive(Serialize, Deserialize)]`](https://serde.rs/derive.html)
 - [Examples](https://serde.rs/examples.html)
 - [API documentation](https://docs.serde.rs/serde/)
 - [Release notes](https://github.com/serde-rs/serde/releases)
@@ -16,11 +16,7 @@ You may be looking for:
 ## Serde in action
 
 ```rust
-#[macro_use]
-extern crate serde_derive;
-
-extern crate serde;
-extern crate serde_json;
+use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Point {
@@ -47,9 +43,10 @@ fn main() {
 
 ## Getting help
 
-Serde developers live in the #serde channel on
-[`irc.mozilla.org`](https://wiki.mozilla.org/IRC). The #rust channel is also a
-good resource with generally faster response time but less specific knowledge
-about Serde. If IRC is not your thing or you don't get a good response, we are
-happy to respond to [GitHub issues](https://github.com/serde-rs/serde/issues/new)
-as well.
+Serde developers live in the #serde channel on [`irc.mozilla.org`][irc]. The
+\#rust channel is also a good resource with generally faster response time but
+less specific knowledge about Serde. If IRC is not your thing or you don't get a
+good response, we are happy to respond to [GitHub issues][issues] as well.
+
+[irc]: https://wiki.mozilla.org/IRC
+[issues]: https://github.com/serde-rs/serde/issues/new/choose

@@ -1,10 +1,5 @@
-// Copyright 2017 Serde Developers
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. This file may not be copied, modified, or distributed
-// except according to those terms.
+//! Code to convert the Rust-styled field/variant (e.g. `my_field`, `MyType`) to the
+//! case of the source (e.g. `my-field`, `MY_FIELD`).
 
 // See https://users.rust-lang.org/t/psa-dealing-with-warning-unused-import-std-ascii-asciiext-in-today-s-nightly/13726
 #[allow(deprecated, unused_imports)]
@@ -14,7 +9,8 @@ use std::str::FromStr;
 
 use self::RenameRule::*;
 
-#[derive(PartialEq)]
+/// The different possible ways to change case of fields in a struct, or variants in an enum.
+#[derive(Copy, Clone, PartialEq)]
 pub enum RenameRule {
     /// Don't apply a default rename rule.
     None,
@@ -22,13 +18,16 @@ pub enum RenameRule {
     LowerCase,
     /// Rename direct children to "UPPERCASE" style.
     UPPERCASE,
-    /// Rename direct children to "PascalCase" style, as typically used for enum variants.
+    /// Rename direct children to "PascalCase" style, as typically used for
+    /// enum variants.
     PascalCase,
     /// Rename direct children to "camelCase" style.
     CamelCase,
-    /// Rename direct children to "snake_case" style, as commonly used for fields.
+    /// Rename direct children to "snake_case" style, as commonly used for
+    /// fields.
     SnakeCase,
-    /// Rename direct children to "SCREAMING_SNAKE_CASE" style, as commonly used for constants.
+    /// Rename direct children to "SCREAMING_SNAKE_CASE" style, as commonly
+    /// used for constants.
     ScreamingSnakeCase,
     /// Rename direct children to "kebab-case" style.
     KebabCase,
@@ -37,6 +36,7 @@ pub enum RenameRule {
 }
 
 impl RenameRule {
+    /// Apply a renaming rule to an enum variant, returning the version expected in the source.
     pub fn apply_to_variant(&self, variant: &str) -> String {
         match *self {
             None | PascalCase => variant.to_owned(),
@@ -61,6 +61,7 @@ impl RenameRule {
         }
     }
 
+    /// Apply a renaming rule to a struct field, returning the version expected in the source.
     pub fn apply_to_field(&self, field: &str) -> String {
         match *self {
             None | LowerCase | SnakeCase => field.to_owned(),

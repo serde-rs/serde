@@ -1,0 +1,8 @@
+error: #[serde(transparent)] is not allowed with #[serde(from = "...")]
+ --> $DIR/with_from.rs:4:1
+  |
+4 | / #[serde(transparent, from = "u64")]
+5 | | struct S {
+6 | |     a: u8,
+7 | | }
+  | |_^

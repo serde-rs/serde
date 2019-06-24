@@ -1,11 +1,3 @@
-// Copyright 2017 Serde Developers
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. This file may not be copied, modified, or distributed
-// except according to those terms.
-
 //! This module contains `Impossible` serializer and its implementations.
 
 use lib::*;
@@ -23,10 +15,7 @@ use ser::{
 /// [`SerializeTuple`], [`SerializeTupleStruct`], [`SerializeTupleVariant`],
 /// [`SerializeMap`], [`SerializeStruct`], and [`SerializeStructVariant`].
 ///
-/// ```rust
-/// # #[macro_use]
-/// # extern crate serde;
-/// #
+/// ```edition2018
 /// # use serde::ser::{Serializer, Impossible};
 /// # use serde::private::ser::Error;
 /// #
@@ -52,14 +41,12 @@ use ser::{
 ///     }
 ///
 ///     /* other Serializer methods */
-/// #     __serialize_unimplemented! {
+/// #     serde::__serialize_unimplemented! {
 /// #         bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str bytes none some
 /// #         unit unit_struct unit_variant newtype_struct newtype_variant
 /// #         tuple tuple_struct tuple_variant map struct struct_variant
 /// #     }
 /// }
-/// #
-/// # fn main() {}
 /// ```
 ///
 /// [`Serializer`]: trait.Serializer.html

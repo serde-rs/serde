@@ -1,0 +1,5 @@
+error: #[serde(field_identifier)] may only contain unit variants
+ --> $DIR/field_tuple.rs:7:5
+  |
+7 |     B(u8, u8),
+  |     ^^^^^^^^^

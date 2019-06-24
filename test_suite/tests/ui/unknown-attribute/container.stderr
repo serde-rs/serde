@@ -1,0 +1,5 @@
+error: unknown serde container attribute `abc`
+ --> $DIR/container.rs:4:9
+  |
+4 | #[serde(abc = "xyz")]
+  |         ^^^

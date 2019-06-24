@@ -1,17 +1,8 @@
-// Copyright 2017 Serde Developers
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. This file may not be copied, modified, or distributed
-// except according to those terms.
-
-#[macro_use]
-extern crate serde_derive;
-
-extern crate serde;
-use serde::de::{value, IntoDeserializer};
-use serde::Deserialize;
+use serde::de::value::{self, MapAccessDeserializer};
+use serde::de::{IntoDeserializer, MapAccess, Visitor};
+use serde::{Deserialize, Deserializer};
+use serde_test::{assert_de_tokens, Token};
+use std::fmt;
 
 #[test]
 fn test_u32_to_enum() {
@@ -26,6 +17,7 @@ fn test_u32_to_enum() {
     assert_eq!(E::B, e);
 }
 
+#[cfg(not(any(target_arch = "asmjs", target_arch = "wasm32")))]
 #[test]
 fn test_integer128() {
     let de_u128 = IntoDeserializer::<value::Error>::into_deserializer(1u128);
@@ -42,4 +34,61 @@ fn test_integer128() {
 
     // i128 to i128
     assert_eq!(1i128, i128::deserialize(de_i128).unwrap());
+}
+
+#[test]
+fn test_map_access_to_enum() {
+    #[derive(PartialEq, Debug)]
+    struct Potential(PotentialKind);
+
+    #[derive(PartialEq, Debug, Deserialize)]
+    enum PotentialKind {
+        Airebo(Airebo),
+    }
+
+    #[derive(PartialEq, Debug, Deserialize)]
+    struct Airebo {
+        lj_sigma: f64,
+    }
+
+    impl<'de> Deserialize<'de> for Potential {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            struct PotentialVisitor;
+
+            impl<'de> Visitor<'de> for PotentialVisitor {
+                type Value = Potential;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                    write!(formatter, "a map")
+                }
+
+                fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+                where
+                    A: MapAccess<'de>,
+                {
+                    Deserialize::deserialize(MapAccessDeserializer::new(map)).map(Potential)
+                }
+            }
+
+            deserializer.deserialize_any(PotentialVisitor)
+        }
+    }
+
+    let expected = Potential(PotentialKind::Airebo(Airebo { lj_sigma: 14.0 }));
+
+    assert_de_tokens(
+        &expected,
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("Airebo"),
+            Token::Map { len: Some(1) },
+            Token::Str("lj_sigma"),
+            Token::F64(14.0),
+            Token::MapEnd,
+            Token::MapEnd,
+        ],
+    );
 }

@@ -1,0 +1,9 @@
+error: #[serde(transparent)] requires struct to have at most one transparent field
+ --> $DIR/at_most_one.rs:4:1
+  |
+4 | / #[serde(transparent)]
+5 | | struct S {
+6 | |     a: u8,
+7 | |     b: u8,
+8 | | }
+  | |_^

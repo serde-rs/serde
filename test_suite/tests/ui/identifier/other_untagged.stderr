@@ -1,0 +1,6 @@
+error: #[serde(other)] cannot appear on untagged enum
+ --> $DIR/other_untagged.rs:6:5
+  |
+6 | /     #[serde(other)]
+7 | |     Other,
+  | |_________^

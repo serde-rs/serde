@@ -1,35 +1,20 @@
-// Copyright 2017 Serde Developers
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. This file may not be copied, modified, or distributed
-// except according to those terms.
-
-#![cfg_attr(feature = "cargo-clippy", allow(decimal_literal_representation))]
+#![allow(clippy::decimal_literal_representation)]
 #![cfg_attr(feature = "unstable", feature(never_type))]
-
-#[macro_use]
-extern crate serde_derive;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::default::Default;
 use std::ffi::{CStr, CString, OsString};
 use std::net;
 use std::num::Wrapping;
+use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak as RcWeak};
 use std::sync::{Arc, Weak as ArcWeak};
 use std::time::{Duration, UNIX_EPOCH};
 
-extern crate serde;
+use fnv::FnvHasher;
 use serde::{Deserialize, Deserializer};
-
-extern crate fnv;
-use self::fnv::FnvHasher;
-
-extern crate serde_test;
-use self::serde_test::{assert_de_tokens, assert_de_tokens_error, Configure, Token};
+use serde_test::{assert_de_tokens, assert_de_tokens_error, Configure, Token};
 
 #[macro_use]
 mod macros;
@@ -132,6 +117,13 @@ enum EnumSkipAll {
     Skipped,
 }
 
+#[derive(PartialEq, Debug, Deserialize)]
+enum EnumOther {
+    Unit,
+    #[serde(other)]
+    Other,
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 macro_rules! declare_tests {
@@ -153,8 +145,12 @@ macro_rules! declare_tests {
         )+
     };
 
-    ($($name:ident { $($value:expr => $tokens:expr,)+ })+) => {
+    ($(
+        $(#[$cfg:meta])*
+        $name:ident { $($value:expr => $tokens:expr,)+ }
+    )+) => {
         $(
+            $(#[$cfg])*
             #[test]
             fn $name() {
                 $(
@@ -214,10 +210,11 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
         Token::Str("a"),
         Token::I32(1),
         Token::Str("ignored"),
-    ].into_iter()
-        .chain(ignorable_tokens.to_vec().into_iter())
-        .chain(vec![Token::MapEnd].into_iter())
-        .collect();
+    ]
+    .into_iter()
+    .chain(ignorable_tokens.to_vec().into_iter())
+    .chain(vec![Token::MapEnd].into_iter())
+    .collect();
 
     let mut de = serde_test::Deserializer::new(&concated_tokens);
     let base = IgnoreBase::deserialize(&mut de).unwrap();
@@ -257,6 +254,7 @@ declare_tests! {
         0f32 => &[Token::F32(0.)],
         0f64 => &[Token::F64(0.)],
     }
+    #[cfg(not(any(target_arch = "asmjs", target_arch = "wasm32")))]
     test_small_int_to_128 {
         1i128 => &[Token::I8(1)],
         1i128 => &[Token::I16(1)],
@@ -745,6 +743,20 @@ declare_tests! {
             Token::Unit,
         ],
     }
+    test_enum_other_unit {
+        EnumOther::Unit => &[
+            Token::Enum { name: "EnumOther" },
+            Token::Str("Unit"),
+            Token::Unit,
+        ],
+    }
+    test_enum_other {
+        EnumOther::Other => &[
+            Token::Enum { name: "EnumOther" },
+            Token::Str("Foo"),
+            Token::Unit,
+        ],
+    }
     test_box {
         Box::new(0i32) => &[Token::I32(0)],
     }
@@ -806,6 +818,40 @@ declare_tests! {
                 Token::U64(1),
                 Token::U64(2),
             Token::SeqEnd,
+        ],
+    }
+    test_range_inclusive {
+        1u32..=2u32 => &[
+            Token::Struct { name: "RangeInclusive", len: 2 },
+                Token::Str("start"),
+                Token::U32(1),
+
+                Token::Str("end"),
+                Token::U32(2),
+            Token::StructEnd,
+        ],
+        1u32..=2u32 => &[
+            Token::Seq { len: Some(2) },
+                Token::U64(1),
+                Token::U64(2),
+            Token::SeqEnd,
+        ],
+    }
+    test_bound {
+        Bound::Unbounded::<()> => &[
+            Token::Enum { name: "Bound" },
+            Token::Str("Unbounded"),
+            Token::Unit,
+        ],
+        Bound::Included(0) => &[
+            Token::Enum { name: "Bound" },
+            Token::Str("Included"),
+            Token::U8(0),
+        ],
+        Bound::Excluded(0) => &[
+            Token::Enum { name: "Bound" },
+            Token::Str("Excluded"),
+            Token::U8(0),
         ],
     }
     test_path {

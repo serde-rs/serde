@@ -1,0 +1,5 @@
+error: unknown serde variant attribute `abc`
+ --> $DIR/variant.rs:5:13
+  |
+5 |     #[serde(abc = "xyz")]
+  |             ^^^

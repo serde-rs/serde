@@ -1,0 +1,5 @@
+error: #[serde(flatten)] cannot be used on newtype structs
+ --> $DIR/flatten-newtype-struct.rs:6:12
+  |
+6 | struct Foo(#[serde(flatten)] HashMap<String, String>);
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

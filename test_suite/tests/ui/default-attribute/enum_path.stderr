@@ -1,0 +1,5 @@
+error: #[serde(default = "...")] can only be used on structs with named fields
+ --> $DIR/enum_path.rs:5:1
+  |
+5 | enum E {
+  | ^^^^

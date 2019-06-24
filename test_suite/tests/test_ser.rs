@@ -1,15 +1,4 @@
-// Copyright 2017 Serde Developers
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. This file may not be copied, modified, or distributed
-// except according to those terms.
-
 #![cfg_attr(feature = "unstable", feature(never_type))]
-
-#[macro_use]
-extern crate serde_derive;
 
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
@@ -17,6 +6,7 @@ use std::ffi::CString;
 use std::mem;
 use std::net;
 use std::num::Wrapping;
+use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak as RcWeak};
 use std::sync::{Arc, Weak as ArcWeak};
@@ -25,11 +15,9 @@ use std::time::{Duration, UNIX_EPOCH};
 #[cfg(unix)]
 use std::str;
 
-extern crate serde_test;
-use self::serde_test::{assert_ser_tokens, assert_ser_tokens_error, Configure, Token};
-
-extern crate fnv;
-use self::fnv::FnvHasher;
+use fnv::FnvHasher;
+use serde::Serialize;
+use serde_test::{assert_ser_tokens, assert_ser_tokens_error, Configure, Token};
 
 #[macro_use]
 mod macros;
@@ -377,6 +365,34 @@ declare_tests! {
             Token::StructEnd,
         ],
     }
+    test_range_inclusive {
+        1u32..=2u32 => &[
+            Token::Struct { name: "RangeInclusive", len: 2 },
+                Token::Str("start"),
+                Token::U32(1),
+
+                Token::Str("end"),
+                Token::U32(2),
+            Token::StructEnd,
+        ],
+    }
+    test_bound {
+        Bound::Unbounded::<()> => &[
+            Token::Enum { name: "Bound" },
+            Token::Str("Unbounded"),
+            Token::Unit,
+        ],
+        Bound::Included(0u8) => &[
+            Token::Enum { name: "Bound" },
+            Token::Str("Included"),
+            Token::U8(0),
+        ],
+        Bound::Excluded(0u8) => &[
+            Token::Enum { name: "Bound" },
+            Token::Str("Excluded"),
+            Token::U8(0),
+        ],
+    }
     test_path {
         Path::new("/usr/local/lib") => &[
             Token::Str("/usr/local/lib"),
@@ -607,6 +623,7 @@ fn test_enum_skipped() {
     );
 }
 
+#[cfg(not(any(target_arch = "asmjs", target_arch = "wasm32")))]
 #[test]
 fn test_integer128() {
     assert_ser_tokens_error(&1i128, &[], "i128 is not supported");

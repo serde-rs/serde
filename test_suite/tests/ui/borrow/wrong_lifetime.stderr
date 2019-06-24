@@ -1,0 +1,6 @@
+error: field `s` does not have lifetime 'b
+ --> $DIR/wrong_lifetime.rs:5:5
+  |
+5 | /     #[serde(borrow = "'b")]
+6 | |     s: &'a str,
+  | |______________^

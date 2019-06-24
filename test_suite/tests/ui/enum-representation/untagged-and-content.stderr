@@ -1,0 +1,11 @@
+error: untagged enum cannot have #[serde(content = "...")]
+ --> $DIR/untagged-and-content.rs:4:9
+  |
+4 | #[serde(untagged)]
+  |         ^^^^^^^^
+
+error: untagged enum cannot have #[serde(content = "...")]
+ --> $DIR/untagged-and-content.rs:5:9
+  |
+5 | #[serde(content = "c")]
+  |         ^^^^^^^

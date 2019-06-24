@@ -1,0 +1,5 @@
+error: unknown rename rule for #[serde(rename_all = "abc")]
+ --> $DIR/variant_unknown_rename_rule.rs:5:26
+  |
+5 |     #[serde(rename_all = "abc")]
+  |                          ^^^^^

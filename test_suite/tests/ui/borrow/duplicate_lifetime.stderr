@@ -1,0 +1,5 @@
+error: duplicate borrowed lifetime `'a`
+ --> $DIR/duplicate_lifetime.rs:5:22
+  |
+5 |     #[serde(borrow = "'a + 'a")]
+  |                      ^^^^^^^^^

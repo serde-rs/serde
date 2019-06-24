@@ -1,0 +1,5 @@
+error: failed to parse type: into = "Option<T"
+ --> $DIR/into.rs:4:16
+  |
+4 | #[serde(into = "Option<T")]
+  |                ^^^^^^^^^^

@@ -1,0 +1,7 @@
+error: variant `Unit` cannot have both #[serde(serialize_with)] and #[serde(skip_serializing)]
+ --> $DIR/skip_ser_whole_variant.rs:5:5
+  |
+5 | /     #[serde(serialize_with = "serialize_some_unit_variant")]
+6 | |     #[serde(skip_serializing)]
+7 | |     Unit,
+  | |________^

@@ -1,0 +1,5 @@
+error: expected serde rename attribute to be a string: `rename = "..."`
+ --> $DIR/float.rs:5:22
+  |
+5 |     #[serde(rename = 3.14)]
+  |                      ^^^^

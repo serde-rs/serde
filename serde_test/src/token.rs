@@ -1,18 +1,10 @@
-// Copyright 2017 Serde Developers
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. This file may not be copied, modified, or distributed
-// except according to those terms.
-
 use std::fmt::{self, Debug, Display};
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Token {
     /// A serialized `bool`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&true, &[Token::Bool(true)]);
@@ -21,7 +13,7 @@ pub enum Token {
 
     /// A serialized `i8`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0i8, &[Token::I8(0)]);
@@ -30,7 +22,7 @@ pub enum Token {
 
     /// A serialized `i16`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0i16, &[Token::I16(0)]);
@@ -39,7 +31,7 @@ pub enum Token {
 
     /// A serialized `i32`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0i32, &[Token::I32(0)]);
@@ -48,7 +40,7 @@ pub enum Token {
 
     /// A serialized `i64`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0i64, &[Token::I64(0)]);
@@ -57,7 +49,7 @@ pub enum Token {
 
     /// A serialized `u8`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0u8, &[Token::U8(0)]);
@@ -66,7 +58,7 @@ pub enum Token {
 
     /// A serialized `u16`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0u16, &[Token::U16(0)]);
@@ -75,7 +67,7 @@ pub enum Token {
 
     /// A serialized `u32`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0u32, &[Token::U32(0)]);
@@ -84,7 +76,7 @@ pub enum Token {
 
     /// A serialized `u64`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0u64, &[Token::U64(0)]);
@@ -93,7 +85,7 @@ pub enum Token {
 
     /// A serialized `f32`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0f32, &[Token::F32(0.0)]);
@@ -102,7 +94,7 @@ pub enum Token {
 
     /// A serialized `f64`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0f64, &[Token::F64(0.0)]);
@@ -111,7 +103,7 @@ pub enum Token {
 
     /// A serialized `char`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&'\n', &[Token::Char('\n')]);
@@ -120,7 +112,7 @@ pub enum Token {
 
     /// A serialized `str`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// let s = String::from("transient");
@@ -130,7 +122,7 @@ pub enum Token {
 
     /// A borrowed `str`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// let s: &str = "borrowed";
@@ -140,7 +132,7 @@ pub enum Token {
 
     /// A serialized `String`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// let s = String::from("owned");
@@ -159,7 +151,7 @@ pub enum Token {
 
     /// A serialized `Option<T>` containing none.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// let opt = None::<char>;
@@ -171,7 +163,7 @@ pub enum Token {
     ///
     /// The tokens of the value follow after this header.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// let opt = Some('c');
@@ -184,7 +176,7 @@ pub enum Token {
 
     /// A serialized `()`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&(), &[Token::Unit]);
@@ -193,13 +185,8 @@ pub enum Token {
 
     /// A serialized unit struct of the given name.
     ///
-    /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde_derive;
-    /// #
-    /// # extern crate serde;
-    /// # extern crate serde_test;
-    /// #
+    /// ```edition2018
+    /// # use serde::{Serialize, Deserialize};
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// # fn main() {
@@ -213,13 +200,8 @@ pub enum Token {
 
     /// A unit variant of an enum.
     ///
-    /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde_derive;
-    /// #
-    /// # extern crate serde;
-    /// # extern crate serde_test;
-    /// #
+    /// ```edition2018
+    /// # use serde::{Serialize, Deserialize};
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// # fn main() {
@@ -241,13 +223,8 @@ pub enum Token {
     ///
     /// After this header is the value contained in the newtype struct.
     ///
-    /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde_derive;
-    /// #
-    /// # extern crate serde;
-    /// # extern crate serde_test;
-    /// #
+    /// ```edition2018
+    /// # use serde::{Serialize, Deserialize};
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// # fn main() {
@@ -267,13 +244,8 @@ pub enum Token {
     ///
     /// After this header is the value contained in the newtype variant.
     ///
-    /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde_derive;
-    /// #
-    /// # extern crate serde;
-    /// # extern crate serde_test;
-    /// #
+    /// ```edition2018
+    /// # use serde::{Serialize, Deserialize};
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// # fn main() {
@@ -299,7 +271,7 @@ pub enum Token {
     /// After this header are the elements of the sequence, followed by
     /// `SeqEnd`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// let vec = vec!['a', 'b', 'c'];
@@ -320,7 +292,7 @@ pub enum Token {
     ///
     /// After this header are the elements of the tuple, followed by `TupleEnd`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// let tuple = ('a', 100);
@@ -341,13 +313,8 @@ pub enum Token {
     /// After this header are the fields of the tuple struct, followed by
     /// `TupleStructEnd`.
     ///
-    /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde_derive;
-    /// #
-    /// # extern crate serde;
-    /// # extern crate serde_test;
-    /// #
+    /// ```edition2018
+    /// # use serde::{Serialize, Deserialize};
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// # fn main() {
@@ -373,13 +340,8 @@ pub enum Token {
     /// After this header are the fields of the tuple variant, followed by
     /// `TupleVariantEnd`.
     ///
-    /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde_derive;
-    /// #
-    /// # extern crate serde;
-    /// # extern crate serde_test;
-    /// #
+    /// ```edition2018
+    /// # use serde::{Serialize, Deserialize};
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// # fn main() {
@@ -410,7 +372,7 @@ pub enum Token {
     ///
     /// After this header are the entries of the map, followed by `MapEnd`.
     ///
-    /// ```rust
+    /// ```edition2018
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// use std::collections::BTreeMap;
@@ -437,13 +399,8 @@ pub enum Token {
     ///
     /// After this header are the fields of the struct, followed by `StructEnd`.
     ///
-    /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde_derive;
-    /// #
-    /// # extern crate serde;
-    /// # extern crate serde_test;
-    /// #
+    /// ```edition2018
+    /// # use serde::{Serialize, Deserialize};
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// # fn main() {
@@ -474,13 +431,8 @@ pub enum Token {
     /// After this header are the fields of the struct variant, followed by
     /// `StructVariantEnd`.
     ///
-    /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde_derive;
-    /// #
-    /// # extern crate serde;
-    /// # extern crate serde_test;
-    /// #
+    /// ```edition2018
+    /// # use serde::{Serialize, Deserialize};
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// # fn main() {
@@ -509,13 +461,8 @@ pub enum Token {
 
     /// The header to an enum of the given name.
     ///
-    /// ```rust
-    /// # #[macro_use]
-    /// # extern crate serde_derive;
-    /// #
-    /// # extern crate serde;
-    /// # extern crate serde_test;
-    /// #
+    /// ```edition2018
+    /// # use serde::{Serialize, Deserialize};
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// # fn main() {

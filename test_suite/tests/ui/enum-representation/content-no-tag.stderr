@@ -1,0 +1,5 @@
+error: #[serde(tag = "...", content = "...")] must be used together
+ --> $DIR/content-no-tag.rs:4:9
+  |
+4 | #[serde(content = "c")]
+  |         ^^^^^^^

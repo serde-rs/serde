@@ -1,11 +1,3 @@
-// Copyright 2017 Serde Developers
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. This file may not be copied, modified, or distributed
-// except according to those terms.
-
 pub use lib::clone::Clone;
 pub use lib::convert::{From, Into};
 pub use lib::default::Default;
@@ -17,7 +9,7 @@ pub use lib::result::Result::{self, Err, Ok};
 pub use self::string::from_utf8_lossy;
 
 #[cfg(any(feature = "alloc", feature = "std"))]
-pub use lib::Vec;
+pub use lib::{ToString, Vec};
 
 mod string {
     use lib::*;

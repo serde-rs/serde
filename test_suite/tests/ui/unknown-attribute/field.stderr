@@ -1,0 +1,5 @@
+error: unknown serde field attribute `abc`
+ --> $DIR/field.rs:5:13
+  |
+5 |     #[serde(abc = "xyz")]
+  |             ^^^

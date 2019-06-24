@@ -6,5 +6,5 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-pub mod ser;
 pub mod de;
+pub mod ser;

@@ -1,0 +1,11 @@
+error: #[serde(field_identifier)] and #[serde(variant_identifier)] cannot both be set
+ --> $DIR/both.rs:4:9
+  |
+4 | #[serde(field_identifier, variant_identifier)]
+  |         ^^^^^^^^^^^^^^^^
+
+error: #[serde(field_identifier)] and #[serde(variant_identifier)] cannot both be set
+ --> $DIR/both.rs:4:27
+  |
+4 | #[serde(field_identifier, variant_identifier)]
+  |                           ^^^^^^^^^^^^^^^^^^

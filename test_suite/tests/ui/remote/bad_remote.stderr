@@ -1,0 +1,5 @@
+error: failed to parse path: "~~~"
+  --> $DIR/bad_remote.rs:10:18
+   |
+10 | #[serde(remote = "~~~")]
+   |                  ^^^^^

@@ -1,0 +1,9 @@
+error: variant identifiers cannot be serialized
+ --> $DIR/serialize_variant_identifier.rs:4:1
+  |
+4 | / #[serde(variant_identifier)]
+5 | | enum F {
+6 | |     A,
+7 | |     B,
+8 | | }
+  | |_^

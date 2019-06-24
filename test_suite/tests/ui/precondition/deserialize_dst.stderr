@@ -1,0 +1,8 @@
+error: cannot deserialize a dynamically sized struct
+ --> $DIR/deserialize_dst.rs:4:1
+  |
+4 | / struct S {
+5 | |     string: String,
+6 | |     slice: [u8],
+7 | | }
+  | |_^

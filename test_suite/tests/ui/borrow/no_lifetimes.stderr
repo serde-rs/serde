@@ -1,0 +1,6 @@
+error: field `s` has no lifetimes to borrow
+ --> $DIR/no_lifetimes.rs:5:5
+  |
+5 | /     #[serde(borrow)]
+6 | |     s: String,
+  | |_____________^

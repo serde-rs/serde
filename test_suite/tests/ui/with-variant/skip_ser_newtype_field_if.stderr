@@ -1,0 +1,6 @@
+error: variant `Newtype` cannot have both #[serde(serialize_with)] and a field #0 marked with #[serde(skip_serializing_if)]
+ --> $DIR/skip_ser_newtype_field_if.rs:5:5
+  |
+5 | /     #[serde(serialize_with = "serialize_some_newtype_variant")]
+6 | |     Newtype(#[serde(skip_serializing_if = "always")] String),
+  | |____________________________________________________________^

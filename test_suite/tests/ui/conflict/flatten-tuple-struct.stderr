@@ -1,0 +1,5 @@
+error: #[serde(flatten)] cannot be used on tuple structs
+ --> $DIR/flatten-tuple-struct.rs:6:17
+  |
+6 | struct Foo(u32, #[serde(flatten)] HashMap<String, String>);
+  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

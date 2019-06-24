@@ -22,7 +22,7 @@ impl<'de> Visitor<'de> for ByteBufVisitor {
         V: SeqAccess<'de>,
     {
         let mut values = Vec::new();
-        while let Some(value) = try!(visitor.next_element()) {
+        while let Some(value) = visitor.next_element()? {
             values.push(value);
         }
         Ok(values)

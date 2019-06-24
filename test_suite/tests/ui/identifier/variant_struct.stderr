@@ -1,0 +1,5 @@
+error: #[serde(variant_identifier)] can only be used on an enum
+ --> $DIR/variant_struct.rs:5:1
+  |
+5 | struct S;
+  | ^^^^^^

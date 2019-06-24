@@ -14,12 +14,9 @@ pub struct Compact<T: ?Sized>(T);
 /// Trait to determine whether a value is represented in human-readable or
 /// compact form.
 ///
-/// ```
-/// extern crate serde;
-/// extern crate serde_test;
-///
+/// ```edition2018
 /// use serde::{Deserialize, Deserializer, Serialize, Serializer};
-/// use serde_test::{Configure, Token, assert_tokens};
+/// use serde_test::{assert_tokens, Configure, Token};
 ///
 /// #[derive(Debug, PartialEq)]
 /// struct Example(u8, u8);
@@ -67,12 +64,7 @@ pub struct Compact<T: ?Sized>(T);
 ///             Token::TupleEnd,
 ///         ],
 ///     );
-///     assert_tokens(
-///         &Example(1, 0).readable(),
-///         &[
-///             Token::Str("1.0"),
-///         ],
-///     );
+///     assert_tokens(&Example(1, 0).readable(), &[Token::Str("1.0")]);
 /// }
 /// ```
 pub trait Configure {
@@ -205,7 +197,7 @@ macro_rules! impl_serializer {
                 $is_human_readable
             }
 
-            forward_serialize_methods!{
+            forward_serialize_methods! {
                 serialize_bool bool,
                 serialize_i8 i8,
                 serialize_i16 i16,

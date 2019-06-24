@@ -1,0 +1,5 @@
+error: duplicate serde attribute `borrow`
+ --> $DIR/duplicate_variant.rs:8:13
+  |
+8 |     #[serde(borrow)]
+  |             ^^^^^^

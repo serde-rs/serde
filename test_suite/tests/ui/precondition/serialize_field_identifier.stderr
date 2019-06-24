@@ -1,0 +1,9 @@
+error: field identifiers cannot be serialized
+ --> $DIR/serialize_field_identifier.rs:4:1
+  |
+4 | / #[serde(field_identifier)]
+5 | | enum F {
+6 | |     A,
+7 | |     B,
+8 | | }
+  | |_^

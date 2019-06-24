@@ -1,11 +1,3 @@
-// Copyright 2017 Serde Developers
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. This file may not be copied, modified, or distributed
-// except according to those terms.
-
 use lib::*;
 
 use de::{Deserialize, DeserializeSeed, Deserializer, Error, IntoDeserializer, Visitor};
@@ -231,8 +223,8 @@ mod content {
 
     use super::size_hint;
     use de::{
-        self, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected, MapAccess,
-        SeqAccess, Unexpected, Visitor,
+        self, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected, IgnoredAny,
+        MapAccess, SeqAccess, Unexpected, Visitor,
     };
 
     /// Used from generated code to buffer the contents of the Deserializer when
@@ -832,8 +824,8 @@ mod content {
     }
 
     impl<'de, T> TaggedContentVisitor<'de, T> {
-        /// Visitor for the content of an internally tagged enum with the given tag
-        /// name.
+        /// Visitor for the content of an internally tagged enum with the given
+        /// tag name.
         pub fn new(name: &'static str) -> Self {
             TaggedContentVisitor {
                 tag_name: name,
@@ -1075,8 +1067,8 @@ mod content {
         Ok(value)
     }
 
-    /// Used when deserializing an internally tagged enum because the content will
-    /// be used exactly once.
+    /// Used when deserializing an internally tagged enum because the content
+    /// will be used exactly once.
     impl<'de, E> Deserializer<'de> for ContentDeserializer<'de, E>
     where
         E: de::Error,
@@ -1427,6 +1419,8 @@ mod content {
                 Content::Str(v) => visitor.visit_borrowed_str(v),
                 Content::ByteBuf(v) => visitor.visit_byte_buf(v),
                 Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
+                Content::U8(v) => visitor.visit_u8(v),
+                Content::U64(v) => visitor.visit_u64(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1763,7 +1757,7 @@ mod content {
         V: Visitor<'de>,
         E: de::Error,
     {
-        let seq = content.into_iter().map(ContentRefDeserializer::new);
+        let seq = content.iter().map(ContentRefDeserializer::new);
         let mut seq_visitor = de::value::SeqDeserializer::new(seq);
         let value = try!(visitor.visit_seq(&mut seq_visitor));
         try!(seq_visitor.end());
@@ -1778,7 +1772,7 @@ mod content {
         V: Visitor<'de>,
         E: de::Error,
     {
-        let map = content.into_iter().map(|&(ref k, ref v)| {
+        let map = content.iter().map(|&(ref k, ref v)| {
             (
                 ContentRefDeserializer::new(k),
                 ContentRefDeserializer::new(v),
@@ -1790,8 +1784,8 @@ mod content {
         Ok(value)
     }
 
-    /// Used when deserializing an untagged enum because the content may need to be
-    /// used more than once.
+    /// Used when deserializing an untagged enum because the content may need
+    /// to be used more than once.
     impl<'de, 'a, E> Deserializer<'de> for ContentRefDeserializer<'a, 'de, E>
     where
         E: de::Error,
@@ -2085,7 +2079,7 @@ mod content {
         {
             let (variant, value) = match *self.content {
                 Content::Map(ref value) => {
-                    let mut iter = value.into_iter();
+                    let mut iter = value.iter();
                     let &(ref variant, ref value) = match iter.next() {
                         Some(v) => v,
                         None => {
@@ -2129,6 +2123,8 @@ mod content {
                 Content::Str(v) => visitor.visit_borrowed_str(v),
                 Content::ByteBuf(ref v) => visitor.visit_bytes(v),
                 Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
+                Content::U8(v) => visitor.visit_u8(v),
+                Content::U64(v) => visitor.visit_u64(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2272,9 +2268,9 @@ mod content {
     where
         E: de::Error,
     {
-        fn new(vec: &'a [Content<'de>]) -> Self {
+        fn new(slice: &'a [Content<'de>]) -> Self {
             SeqRefDeserializer {
-                iter: vec.into_iter(),
+                iter: slice.iter(),
                 err: PhantomData,
             }
         }
@@ -2350,7 +2346,7 @@ mod content {
     {
         fn new(map: &'a [(Content<'de>, Content<'de>)]) -> Self {
             MapRefDeserializer {
-                iter: map.into_iter(),
+                iter: map.iter(),
                 value: None,
                 err: PhantomData,
             }
@@ -2470,10 +2466,11 @@ mod content {
             Ok(())
         }
 
-        fn visit_map<M>(self, _: M) -> Result<(), M::Error>
+        fn visit_map<M>(self, mut access: M) -> Result<(), M::Error>
         where
             M: MapAccess<'de>,
         {
+            while let Some(_) = try!(access.next_entry::<IgnoredAny, IgnoredAny>()) {}
             Ok(())
         }
     }
@@ -2714,7 +2711,7 @@ where
         }
 
         Err(Error::custom(format_args!(
-            "no variant of enum {} not found in flattened data",
+            "no variant of enum {} found in flattened data",
             name
         )))
     }
@@ -2915,18 +2912,17 @@ where
     where
         T: DeserializeSeed<'de>,
     {
-        match self.iter.next() {
-            Some(item) => {
+        while let Some(item) = self.iter.next() {
+            if let Some((ref key, ref content)) = *item {
                 // Do not take(), instead borrow this entry. The internally tagged
                 // enum does its own buffering so we can't tell whether this entry
                 // is going to be consumed. Borrowing here leaves the entry
                 // available for later flattened fields.
-                let (ref key, ref content) = *item.as_ref().unwrap();
                 self.pending = Some(content);
-                seed.deserialize(ContentRefDeserializer::new(key)).map(Some)
+                return seed.deserialize(ContentRefDeserializer::new(key)).map(Some);
             }
-            None => Ok(None),
         }
+        Ok(None)
     }
 
     fn next_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>

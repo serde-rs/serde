@@ -1,0 +1,6 @@
+error: #[serde(borrow)] may only be used on newtype variants
+ --> $DIR/struct_variant.rs:8:5
+  |
+8 | /     #[serde(borrow)]
+9 | |     S { s: Str<'a> },
+  | |____________________^

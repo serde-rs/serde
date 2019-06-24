@@ -1,0 +1,5 @@
+error: malformed bound attribute, expected `bound(serialize = ..., deserialize = ...)`
+ --> $DIR/bound.rs:5:19
+  |
+5 |     #[serde(bound(unknown))]
+  |                   ^^^^^^^

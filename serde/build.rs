@@ -11,6 +11,24 @@ fn main() {
         None => return,
     };
 
+    let target = env::var("TARGET").unwrap();
+    let emscripten = target == "asmjs-unknown-emscripten" || target == "wasm32-unknown-emscripten";
+
+    // std::collections::Bound was stabilized in Rust 1.17
+    // but it was moved to core::ops later in Rust 1.26:
+    // https://doc.rust-lang.org/core/ops/enum.Bound.html
+    if minor >= 26 {
+        println!("cargo:rustc-cfg=ops_bound");
+    } else if minor >= 17 && cfg!(feature = "std") {
+        println!("cargo:rustc-cfg=collections_bound");
+    }
+
+    // core::cmp::Reverse stabilized in Rust 1.19:
+    // https://doc.rust-lang.org/stable/core/cmp/struct.Reverse.html
+    if minor >= 19 {
+        println!("cargo:rustc-cfg=core_reverse");
+    }
+
     // CString::into_boxed_c_str stabilized in Rust 1.20:
     // https://doc.rust-lang.org/std/ffi/struct.CString.html#method.into_boxed_c_str
     if minor >= 20 {
@@ -32,8 +50,17 @@ fn main() {
 
     // 128-bit integers stabilized in Rust 1.26:
     // https://blog.rust-lang.org/2018/05/10/Rust-1.26.html
-    if minor >= 26 {
+    //
+    // Disabled on Emscripten targets as Emscripten doesn't
+    // currently support integers larger than 64 bits.
+    if minor >= 26 && !emscripten {
         println!("cargo:rustc-cfg=integer128");
+    }
+
+    // Inclusive ranges methods stabilized in Rust 1.27:
+    // https://github.com/rust-lang/rust/pull/50758
+    if minor >= 27 {
+        println!("cargo:rustc-cfg=range_inclusive");
     }
 
     // Non-zero integers stabilized in Rust 1.28:
@@ -58,11 +85,6 @@ fn rustc_minor_version() -> Option<u32> {
         Ok(version) => version,
         Err(_) => return None,
     };
-
-    // Temporary workaround to support the old 1.26-dev compiler on docs.rs.
-    if version.contains("0eb87c9bf") {
-        return Some(25);
-    }
 
     let mut pieces = version.split('.');
     if pieces.next() != Some("rustc 1") {

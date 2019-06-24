@@ -1,11 +1,3 @@
-// Copyright 2017 Serde Developers
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. This file may not be copied, modified, or distributed
-// except according to those terms.
-
 use lib::*;
 
 use de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
@@ -16,18 +8,20 @@ use de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
 /// any type, except that it does not store any information about the data that
 /// gets deserialized.
 ///
-/// ```rust
+/// ```edition2018
 /// use std::fmt;
 /// use std::marker::PhantomData;
 ///
-/// use serde::de::{self, Deserialize, DeserializeSeed, Deserializer, Visitor, SeqAccess, IgnoredAny};
+/// use serde::de::{
+///     self, Deserialize, DeserializeSeed, Deserializer, IgnoredAny, SeqAccess, Visitor,
+/// };
 ///
 /// /// A seed that can be used to deserialize only the `n`th element of a sequence
 /// /// while efficiently discarding elements of any type before or after index `n`.
 /// ///
 /// /// For example to deserialize only the element at index 3:
 /// ///
-/// /// ```rust
+/// /// ```
 /// /// NthElement::new(3).deserialize(deserializer)
 /// /// ```
 /// pub struct NthElement<T> {
@@ -51,7 +45,11 @@ use de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
 ///     type Value = T;
 ///
 ///     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-///         write!(formatter, "a sequence in which we care about element {}", self.n)
+///         write!(
+///             formatter,
+///             "a sequence in which we care about element {}",
+///             self.n
+///         )
 ///     }
 ///
 ///     fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>

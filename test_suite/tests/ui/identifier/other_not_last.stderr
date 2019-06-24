@@ -1,0 +1,6 @@
+error: #[serde(other)] must be on the last variant
+ --> $DIR/other_not_last.rs:7:5
+  |
+7 | /     #[serde(other)]
+8 | |     Other,
+  | |_________^

@@ -1,23 +1,10 @@
-// Copyright 2017 Serde Developers
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. This file may not be copied, modified, or distributed
-// except according to those terms.
-
 #![deny(trivial_numeric_casts)]
-#![cfg_attr(feature = "cargo-clippy", allow(redundant_field_names))]
-
-#[macro_use]
-extern crate serde_derive;
-
-extern crate serde;
-extern crate serde_test;
+#![allow(clippy::redundant_field_names)]
 
 mod bytes;
 
-use self::serde_test::{
+use serde::{Deserialize, Serialize};
+use serde_test::{
     assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_tokens, Token,
 };
 
@@ -1378,6 +1365,130 @@ fn test_enum_in_internally_tagged_enum() {
             Token::Str("f"),
             Token::U8(1),
             Token::StructEnd,
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_internally_tagged_struct() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "type")]
+    pub struct Struct {
+        a: u8,
+    }
+
+    assert_tokens(
+        &Struct { a: 1 },
+        &[
+            Token::Struct {
+                name: "Struct",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::Str("Struct"),
+            Token::Str("a"),
+            Token::U8(1),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &Struct { a: 1 },
+        &[
+            Token::Struct {
+                name: "Struct",
+                len: 1,
+            },
+            Token::Str("a"),
+            Token::U8(1),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_internally_tagged_braced_struct_with_zero_fields() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "type")]
+    struct S {}
+
+    assert_tokens(
+        &S {},
+        &[
+            Token::Struct { name: "S", len: 1 },
+            Token::Str("type"),
+            Token::Str("S"),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_internally_tagged_struct_with_flattened_field() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "tag_struct")]
+    pub struct Struct {
+        #[serde(flatten)]
+        pub flat: Enum,
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "tag_enum", content = "content")]
+    pub enum Enum {
+        A(u64),
+    }
+
+    assert_tokens(
+        &Struct { flat: Enum::A(0) },
+        &[
+            Token::Map { len: None },
+            Token::Str("tag_struct"),
+            Token::Str("Struct"),
+            Token::Str("tag_enum"),
+            Token::Str("A"),
+            Token::Str("content"),
+            Token::U64(0),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &Struct { flat: Enum::A(0) },
+        &[
+            Token::Map { len: None },
+            Token::Str("tag_enum"),
+            Token::Str("A"),
+            Token::Str("content"),
+            Token::U64(0),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_untagged_enum_with_flattened_integer_key() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(untagged)]
+    pub enum Untagged {
+        Variant {
+            #[serde(flatten)]
+            map: BTreeMap<u64, String>,
+        },
+    }
+
+    assert_tokens(
+        &Untagged::Variant {
+            map: {
+                let mut map = BTreeMap::new();
+                map.insert(100, "BTreeMap".to_owned());
+                map
+            },
+        },
+        &[
+            Token::Map { len: None },
+            Token::U64(100),
+            Token::Str("BTreeMap"),
             Token::MapEnd,
         ],
     );

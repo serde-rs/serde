@@ -48,8 +48,10 @@ impl<'de> DeserializeState<'de, Seed> for Inner {
 #[derive(DeserializeState, Debug, PartialEq)]
 #[serde(deserialize_state = "Seed")]
 struct SeedStruct {
-    #[serde(deserialize_state)] value: Inner,
-    #[serde(deserialize_state_with = "deserialize_inner")] value2: Inner,
+    #[serde(deserialize_state)]
+    value: Inner,
+    #[serde(deserialize_state_with = "deserialize_inner")]
+    value2: Inner,
     value3: Inner,
 }
 
@@ -111,12 +113,10 @@ impl<T> AsMut<Seed> for ExtraParameterNewtypeSeed<T> {
     }
 }
 
-
 #[derive(DeserializeState, Debug, PartialEq)]
 #[serde(deserialize_state = "ExtraParameterNewtypeSeed<T>")]
 #[serde(de_parameters = "T")]
 struct ExtraParameterNewtype(#[serde(deserialize_state_with = "deserialize_inner")] Inner);
-
 
 #[test]
 fn extra_parameter_test_newtype_deserialize_state() {
@@ -198,8 +198,10 @@ where
 #[serde(de_parameters = "S")]
 #[serde(bound = "S: Clone + DeserializeSeed<'de, Value = T>")]
 struct GenericType<T> {
-    #[serde(deserialize_state_with = "deserialize_inner")] inner: Inner,
-    #[serde(deserialize_state_with = "deserialize_nested_seed")] t: T,
+    #[serde(deserialize_state_with = "deserialize_inner")]
+    inner: Inner,
+    #[serde(deserialize_state_with = "deserialize_nested_seed")]
+    t: T,
 }
 
 #[test]
@@ -224,7 +226,6 @@ fn test_generic_deserialize_state() {
 
     assert_eq!((seed.0).0, 1);
 }
-
 
 #[derive(DeserializeState, Debug, PartialEq)]
 #[serde(deserialize_state = "Seed")]
@@ -255,7 +256,6 @@ fn test_enum_deserialize_state() {
     assert_eq!(seed.0, 1);
 }
 
-
 #[test]
 fn test_enum_deserialize_state_2() {
     let value = Enum::Inner2(3, Inner);
@@ -282,8 +282,10 @@ fn test_enum_deserialize_state_2() {
 #[serde(deserialize_state = "NodeMap")]
 struct Node {
     data: char,
-    #[serde(deserialize_state_with = "deserialize_option_node")] left: Option<Rc<Node>>,
-    #[serde(deserialize_state_with = "deserialize_option_node")] right: Option<Rc<Node>>,
+    #[serde(deserialize_state_with = "deserialize_option_node")]
+    left: Option<Rc<Node>>,
+    #[serde(deserialize_state_with = "deserialize_option_node")]
+    right: Option<Rc<Node>>,
 }
 
 fn deserialize_option_node<'de, D>(
@@ -316,7 +318,6 @@ where
     }
 }
 
-
 type Id = u32;
 type IdToShared<T> = HashMap<Id, T>;
 
@@ -341,14 +342,18 @@ impl<'de> Deserialize<'de> for Node {
 enum Variant {
     Plain {
         data: char,
-        #[serde(deserialize_state_with = "deserialize_option_node")] left: Option<Rc<Node>>,
-        #[serde(deserialize_state_with = "deserialize_option_node")] right: Option<Rc<Node>>,
+        #[serde(deserialize_state_with = "deserialize_option_node")]
+        left: Option<Rc<Node>>,
+        #[serde(deserialize_state_with = "deserialize_option_node")]
+        right: Option<Rc<Node>>,
     },
     Marked {
         id: u32,
         data: char,
-        #[serde(deserialize_state_with = "deserialize_option_node")] left: Option<Rc<Node>>,
-        #[serde(deserialize_state_with = "deserialize_option_node")] right: Option<Rc<Node>>,
+        #[serde(deserialize_state_with = "deserialize_option_node")]
+        left: Option<Rc<Node>>,
+        #[serde(deserialize_state_with = "deserialize_option_node")]
+        right: Option<Rc<Node>>,
     },
     Reference(u32),
 }

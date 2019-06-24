@@ -1,0 +1,5 @@
+error: failed to parse path: "~~~"
+  --> $DIR/bad_getter.rs:12:22
+   |
+12 |     #[serde(getter = "~~~")]
+   |                      ^^^^^

@@ -1,17 +1,10 @@
-// Copyright 2017 Serde Developers
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. This file may not be copied, modified, or distributed
-// except according to those terms.
-
 use serde::{ser, Serialize};
 
 use error::Error;
 use token::Token;
 
-/// A `Serializer` that ensures that a value serializes to a given list of tokens.
+/// A `Serializer` that ensures that a value serializes to a given list of
+/// tokens.
 #[derive(Debug)]
 pub struct Serializer<'a> {
     tokens: &'a [Token],

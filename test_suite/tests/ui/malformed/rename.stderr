@@ -1,0 +1,5 @@
+error: malformed rename attribute, expected `rename(serialize = ..., deserialize = ...)`
+ --> $DIR/rename.rs:5:20
+  |
+5 |     #[serde(rename(unknown))]
+  |                    ^^^^^^^
