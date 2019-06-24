@@ -1,6 +1,6 @@
 [package]
 name = "serde_derive_state"
-version = "0.4.5" # remember to update html_root_url
+version = "0.4.6" # remember to update html_root_url
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "Macros 1.1 implementation of #[derive(Serialize, Deserialize)]"
