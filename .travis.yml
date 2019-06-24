@@ -31,19 +31,6 @@ matrix:
         - cd "${TRAVIS_BUILD_DIR}/test_suite/no_std"
         - cargo build
 
-    - rust: 1.13.0
-      script:
-        - cd "${TRAVIS_BUILD_DIR}/serde"
-        - cargo build --features rc
-        - cargo build --no-default-features
-        - cd "${TRAVIS_BUILD_DIR}/serde_test"
-        - cargo build
-
-    - rust: 1.15.0
-      script:
-        - cd "${TRAVIS_BUILD_DIR}/serde_derive"
-        - cargo build
-
     - rust: 1.20.0
     - rust: 1.21.0
     - rust: 1.25.0
