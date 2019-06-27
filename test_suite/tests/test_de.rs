@@ -124,6 +124,19 @@ enum EnumOther {
     Other,
 }
 
+#[derive(PartialEq, Debug)]
+struct IgnoredAny;
+
+impl<'de> Deserialize<'de> for IgnoredAny {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        serde::de::IgnoredAny::deserialize(deserializer)?;
+        Ok(IgnoredAny)
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 macro_rules! declare_tests {
@@ -927,6 +940,21 @@ declare_tests! {
             Token::Seq { len: Some(1) },
             Token::Bool(true),
             Token::SeqEnd,
+        ],
+    }
+    test_ignored_any {
+        IgnoredAny => &[
+            Token::Str("s"),
+        ],
+        IgnoredAny => &[
+            Token::Seq { len: Some(1) },
+            Token::Bool(true),
+            Token::SeqEnd,
+        ],
+        IgnoredAny => &[
+            Token::Enum { name: "E" },
+            Token::Str("Rust"),
+            Token::Unit,
         ],
     }
 }
