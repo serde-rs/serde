@@ -212,8 +212,7 @@ impl<'de> Visitor<'de> for IgnoredAny {
     where
         A: EnumAccess<'de>,
     {
-        let (IgnoredAny, content) = data.variant()?;
-        content.newtype_variant()
+        data.variant::<IgnoredAny>()?.1.newtype_variant()
     }
 }
 
