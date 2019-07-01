@@ -1,13 +1,13 @@
 /// Conditional compilation depending on whether Serde is built with support for
 /// 128-bit integers.
 ///
-/// Data formats that wish to support Rust compiler versions older than 1.26 may
-/// place the i128 / u128 methods of their Serializer and Deserializer behind
-/// this macro.
+/// Data formats that wish to support Rust compiler versions older than 1.26
+/// (or targets that lack 128-bit integers) may place the i128 / u128 methods
+/// of their Serializer and Deserializer behind this macro.
 ///
-/// Data formats that require a minimum Rust compiler version of at least 1.26
-/// do not need to bother with this macro and may assume support for 128-bit
-/// integers.
+/// Data formats that require a minimum Rust compiler version of at least 1.26,
+/// or do not target platforms that lack 128-bit integers, do not need to
+/// bother with this macro and may assume support for 128-bit integers.
 ///
 /// ```edition2018
 /// # use serde::private::ser::Error;
