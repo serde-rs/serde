@@ -10,6 +10,7 @@ use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak as RcWeak};
 use std::sync::{Arc, Weak as ArcWeak};
+use std::sync::atomic;
 use std::time::{Duration, UNIX_EPOCH};
 
 #[cfg(unix)]
@@ -482,6 +483,20 @@ declare_tests! {
         format_args!("{}{}", 1, 'a') => &[
             Token::Str("1a"),
         ],
+    }
+    test_atomic {
+        atomic::AtomicBool::new(false) => &[Token::Bool(false)],
+        atomic::AtomicBool::new(true) => &[Token::Bool(true)],
+        atomic::AtomicI8::new(63i8) => &[Token::I8(63i8)],
+        atomic::AtomicI16::new(-318i16) => &[Token::I16(-318i16)],
+        atomic::AtomicI32::new(65792i32) => &[Token::I32(65792i32)],
+        atomic::AtomicI64::new(-4295032832i64) => &[Token::I64(-4295032832i64)],
+        atomic::AtomicIsize::new(-65792isize) => &[Token::I64(-65792i64)],
+        atomic::AtomicU8::new(192u8) => &[Token::U8(192u8)],
+        atomic::AtomicU16::new(510u16) => &[Token::U16(510u16)],
+        atomic::AtomicU32::new(131072u32) => &[Token::U32(131072u32)],
+        atomic::AtomicU64::new(12884901888u64) => &[Token::U64(12884901888u64)],
+        atomic::AtomicUsize::new(655360usize) => &[Token::U64(655360u64)],
     }
 }
 
