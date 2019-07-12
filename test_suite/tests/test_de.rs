@@ -1141,7 +1141,6 @@ fn test_never_type() {
     );
 }
 
-
 macro_rules! assert_de_tokens_atomic {
     ($ty:ty, $val:expr, $tokens:expr) => {
         let mut de = serde_test::Deserializer::new($tokens);
