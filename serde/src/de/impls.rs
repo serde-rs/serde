@@ -2543,3 +2543,56 @@ where
         Deserialize::deserialize(deserializer).map(Wrapping)
     }
 }
+
+#[cfg(feature = "std")]
+use std::sync::atomic;
+
+
+#[cfg(feature = "std")]
+macro_rules! atomic_impl {
+    ($ty:path, $primitive:ident) => {
+        impl<'de> Deserialize<'de> for $ty
+        {
+            #[inline]
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+                where D: Deserializer<'de>
+            {
+                let val = $primitive::deserialize(deserializer)?;
+                Ok(Self::new(val))
+            }
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+atomic_impl!(atomic::AtomicBool, bool);
+
+#[cfg(feature = "std")]
+atomic_impl!(atomic::AtomicI8, i8);
+
+#[cfg(feature = "std")]
+atomic_impl!(atomic::AtomicI16, i16);
+
+#[cfg(feature = "std")]
+atomic_impl!(atomic::AtomicI32, i32);
+
+#[cfg(feature = "std")]
+atomic_impl!(atomic::AtomicI64, i64);
+
+#[cfg(feature = "std")]
+atomic_impl!(atomic::AtomicIsize, isize);
+
+#[cfg(feature = "std")]
+atomic_impl!(atomic::AtomicU8, u8);
+
+#[cfg(feature = "std")]
+atomic_impl!(atomic::AtomicU16, u16);
+
+#[cfg(feature = "std")]
+atomic_impl!(atomic::AtomicU32, u32);
+
+#[cfg(feature = "std")]
+atomic_impl!(atomic::AtomicU64, u64);
+
+#[cfg(feature = "std")]
+atomic_impl!(atomic::AtomicUsize, usize);
