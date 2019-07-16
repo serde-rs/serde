@@ -214,9 +214,11 @@ mod lib {
 
     #[cfg(all(feature = "std", std_integer_atomics))]
     pub use std::sync::atomic::{
-        AtomicBool, AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize, AtomicU16, AtomicU32,
-        AtomicU64, AtomicU8, AtomicUsize, Ordering,
+        AtomicBool, AtomicI16, AtomicI32, AtomicI8, AtomicIsize, AtomicU16, AtomicU32, AtomicU8,
+        AtomicUsize, Ordering,
     };
+    #[cfg(all(feature = "std", std_integer_atomics, not(target_os = "emscripten")))]
+    pub use std::sync::atomic::{AtomicI64, AtomicU64};
 
     #[cfg(any(core_duration, feature = "std"))]
     pub use self::core::time::Duration;

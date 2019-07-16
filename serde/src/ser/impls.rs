@@ -861,6 +861,11 @@ macro_rules! atomic_impl {
 #[cfg(all(feature = "std", std_integer_atomics))]
 atomic_impl! {
     AtomicBool
-    AtomicI8 AtomicI16 AtomicI32 AtomicI64 AtomicIsize
-    AtomicU8 AtomicU16 AtomicU32 AtomicU64 AtomicUsize
+    AtomicI8 AtomicI16 AtomicI32 AtomicIsize
+    AtomicU8 AtomicU16 AtomicU32 AtomicUsize
+}
+
+#[cfg(all(feature = "std", std_integer_atomics, not(target_os = "emscripten")))]
+atomic_impl! {
+    AtomicI64 AtomicU64
 }
