@@ -844,48 +844,48 @@ where
 
 #[cfg(all(feature = "std", std_integer_atomics))]
 macro_rules! atomic_impl {
-    ($ty:ident, $method:ident $($cast:tt)*) => {
+    ($ty:ident) => {
         impl Serialize for $ty {
             #[inline]
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where
                 S: Serializer,
             {
-                serializer.$method(self.load(Ordering::SeqCst) $($cast)*)
+                self.load(Ordering::SeqCst).serialize(serializer)
             }
         }
     }
 }
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(AtomicBool, serialize_bool);
+atomic_impl!(AtomicBool);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(AtomicI8, serialize_i8);
+atomic_impl!(AtomicI8);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(AtomicI16, serialize_i16);
+atomic_impl!(AtomicI16);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(AtomicI32, serialize_i32);
+atomic_impl!(AtomicI32);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(AtomicI64, serialize_i64);
+atomic_impl!(AtomicI64);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(AtomicIsize, serialize_i64 as i64);
+atomic_impl!(AtomicIsize);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(AtomicU8, serialize_u8);
+atomic_impl!(AtomicU8);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(AtomicU16, serialize_u16);
+atomic_impl!(AtomicU16);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(AtomicU32, serialize_u32);
+atomic_impl!(AtomicU32);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(AtomicU64, serialize_u64);
+atomic_impl!(AtomicU64);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(AtomicUsize, serialize_u64 as u64);
+atomic_impl!(AtomicUsize);
