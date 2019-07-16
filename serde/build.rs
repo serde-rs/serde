@@ -68,6 +68,10 @@ fn main() {
     if minor >= 28 {
         println!("cargo:rustc-cfg=num_nonzero");
     }
+
+    if minor >= 34 {
+        println!("cargo:rustc-cfg=std_integer_atomics");
+    }
 }
 
 fn rustc_minor_version() -> Option<u32> {
