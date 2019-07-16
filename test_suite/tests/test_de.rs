@@ -11,11 +11,14 @@ use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak as RcWeak};
 use std::sync::atomic::{
-    AtomicBool, AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize, AtomicU16, AtomicU32,
-    AtomicU64, AtomicU8, AtomicUsize, Ordering,
+    AtomicBool, AtomicI16, AtomicI32, AtomicI8, AtomicIsize, AtomicU16, AtomicU32, AtomicU8,
+    AtomicUsize, Ordering,
 };
 use std::sync::{Arc, Weak as ArcWeak};
 use std::time::{Duration, UNIX_EPOCH};
+
+#[cfg(not(target_os = "emscripten"))]
+use std::sync::atomic::{AtomicI64, AtomicU64};
 
 use fnv::FnvHasher;
 use serde::de::DeserializeOwned;
@@ -1172,13 +1175,17 @@ fn test_atomics() {
     test(AtomicI8::load, -127, Token::I8(-127i8));
     test(AtomicI16::load, -510, Token::I16(-510i16));
     test(AtomicI32::load, -131072, Token::I32(-131072i32));
-    test(AtomicI64::load, -8589934592, Token::I64(-8589934592));
     test(AtomicIsize::load, -131072isize, Token::I32(-131072));
     test(AtomicU8::load, 127, Token::U8(127u8));
     test(AtomicU16::load, 510u16, Token::U16(510u16));
     test(AtomicU32::load, 131072u32, Token::U32(131072u32));
-    test(AtomicU64::load, 8589934592u64, Token::U64(8589934592));
     test(AtomicUsize::load, 131072usize, Token::U32(131072));
+
+    #[cfg(not(target_os = "emscripten"))]
+    {
+        test(AtomicI64::load, -8589934592, Token::I64(-8589934592));
+        test(AtomicU64::load, 8589934592u64, Token::U64(8589934592));
+    }
 }
 
 declare_error_tests! {
