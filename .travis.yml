@@ -49,6 +49,11 @@ matrix:
     - rust: 1.25.0
     - rust: 1.26.0
 
+    - rust: 1.36.0
+      script:
+        - cd "${TRAVIS_BUILD_DIR}/serde"
+        - cargo build --no-default-features --features alloc
+
     - rust: nightly
       name: Clippy
       script:
