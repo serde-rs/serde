@@ -52,7 +52,7 @@ unstable = []
 # Requires a dependency on the unstable core allocation library:
 #
 #    https://doc.rust-lang.org/alloc/
-alloc = ["unstable"]
+alloc = []
 
 # Opt into impls for Rc<T> and Arc<T>. Serializing and deserializing these types
 # does not preserve identity and may result in multiple copies of the same data.
