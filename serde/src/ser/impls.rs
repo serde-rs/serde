@@ -841,10 +841,11 @@ where
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-#[cfg(all(feature="std", std_integer_atomics))]
+
+#[cfg(all(feature = "std", std_integer_atomics))]
 use std::sync::atomic;
 
-#[cfg(all(feature="std", std_integer_atomics))]
+#[cfg(all(feature = "std", std_integer_atomics))]
 macro_rules! atomic_impl {
     ($ty:path, $method:ident $($cast:tt)*) => {
         impl Serialize for $ty {
@@ -859,35 +860,35 @@ macro_rules! atomic_impl {
     }
 }
 
-#[cfg(all(feature="std", std_integer_atomics))]
+#[cfg(all(feature = "std", std_integer_atomics))]
 atomic_impl!(atomic::AtomicBool, serialize_bool);
 
-#[cfg(all(feature="std", std_integer_atomics))]
+#[cfg(all(feature = "std", std_integer_atomics))]
 atomic_impl!(atomic::AtomicI8, serialize_i8);
 
-#[cfg(all(feature="std", std_integer_atomics))]
+#[cfg(all(feature = "std", std_integer_atomics))]
 atomic_impl!(atomic::AtomicI16, serialize_i16);
 
-#[cfg(all(feature="std", std_integer_atomics))]
+#[cfg(all(feature = "std", std_integer_atomics))]
 atomic_impl!(atomic::AtomicI32, serialize_i32);
 
-#[cfg(all(feature="std", std_integer_atomics))]
+#[cfg(all(feature = "std", std_integer_atomics))]
 atomic_impl!(atomic::AtomicI64, serialize_i64);
 
-#[cfg(all(feature="std", std_integer_atomics))]
+#[cfg(all(feature = "std", std_integer_atomics))]
 atomic_impl!(atomic::AtomicIsize, serialize_i64 as i64);
 
-#[cfg(all(feature="std", std_integer_atomics))]
+#[cfg(all(feature = "std", std_integer_atomics))]
 atomic_impl!(atomic::AtomicU8, serialize_u8);
 
-#[cfg(all(feature="std", std_integer_atomics))]
+#[cfg(all(feature = "std", std_integer_atomics))]
 atomic_impl!(atomic::AtomicU16, serialize_u16);
 
-#[cfg(all(feature="std", std_integer_atomics))]
+#[cfg(all(feature = "std", std_integer_atomics))]
 atomic_impl!(atomic::AtomicU32, serialize_u32);
 
-#[cfg(all(feature="std", std_integer_atomics))]
+#[cfg(all(feature = "std", std_integer_atomics))]
 atomic_impl!(atomic::AtomicU64, serialize_u64);
 
-#[cfg(all(feature="std", std_integer_atomics))]
+#[cfg(all(feature = "std", std_integer_atomics))]
 atomic_impl!(atomic::AtomicUsize, serialize_u64 as u64);

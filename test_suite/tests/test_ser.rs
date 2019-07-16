@@ -9,8 +9,7 @@ use std::num::Wrapping;
 use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak as RcWeak};
-use std::sync::{Arc, Weak as ArcWeak};
-use std::sync::atomic;
+use std::sync::{atomic, Arc, Weak as ArcWeak};
 use std::time::{Duration, UNIX_EPOCH};
 
 #[cfg(unix)]

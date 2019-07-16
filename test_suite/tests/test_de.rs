@@ -9,8 +9,7 @@ use std::num::Wrapping;
 use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak as RcWeak};
-use std::sync::atomic;
-use std::sync::{Arc, Weak as ArcWeak};
+use std::sync::{atomic, Arc, Weak as ArcWeak};
 use std::time::{Duration, UNIX_EPOCH};
 
 use fnv::FnvHasher;
@@ -1148,72 +1147,28 @@ macro_rules! assert_de_tokens_atomic {
             Ok(v) => {
                 let loaded = v.load(atomic::Ordering::SeqCst);
                 assert_eq!($val, loaded);
-            },
-            Err(e) => panic!("tokens failed to deserialize: {}", e)
+            }
+            Err(e) => panic!("tokens failed to deserialize: {}", e),
         };
         if de.remaining() > 0 {
             panic!("{} remaining tokens", de.remaining());
         }
-    }
+    };
 }
 
 #[test]
 fn test_atomics() {
-    assert_de_tokens_atomic!(
-        atomic::AtomicBool,
-        true,
-        &[Token::Bool(true)]
-    );
-    assert_de_tokens_atomic!(
-        atomic::AtomicI8,
-        -127,
-        &[Token::I8(-127i8)]
-    );
-    assert_de_tokens_atomic!(
-        atomic::AtomicI16,
-        -510,
-        &[Token::I16(-510i16)]
-    );
-    assert_de_tokens_atomic!(
-        atomic::AtomicI32,
-        -131072,
-        &[Token::I32(-131072i32)]
-    );
-    assert_de_tokens_atomic!(
-        atomic::AtomicI64,
-        -8589934592,
-        &[Token::I64(-8589934592)]
-    );
-    assert_de_tokens_atomic!(
-        atomic::AtomicIsize,
-        -131072isize,
-        &[Token::I32(-131072)]
-    );
-    assert_de_tokens_atomic!(
-        atomic::AtomicU8,
-        127,
-        &[Token::U8(127u8)]
-    );
-    assert_de_tokens_atomic!(
-        atomic::AtomicU16,
-        510u16,
-        &[Token::U16(510u16)]
-    );
-    assert_de_tokens_atomic!(
-        atomic::AtomicU32,
-        131072u32,
-        &[Token::U32(131072u32)]
-    );
-    assert_de_tokens_atomic!(
-        atomic::AtomicU64,
-        8589934592u64,
-        &[Token::U64(8589934592)]
-    );
-    assert_de_tokens_atomic!(
-        atomic::AtomicUsize,
-        131072usize,
-        &[Token::U32(131072)]
-    );
+    assert_de_tokens_atomic!(atomic::AtomicBool, true, &[Token::Bool(true)]);
+    assert_de_tokens_atomic!(atomic::AtomicI8, -127, &[Token::I8(-127i8)]);
+    assert_de_tokens_atomic!(atomic::AtomicI16, -510, &[Token::I16(-510i16)]);
+    assert_de_tokens_atomic!(atomic::AtomicI32, -131072, &[Token::I32(-131072i32)]);
+    assert_de_tokens_atomic!(atomic::AtomicI64, -8589934592, &[Token::I64(-8589934592)]);
+    assert_de_tokens_atomic!(atomic::AtomicIsize, -131072isize, &[Token::I32(-131072)]);
+    assert_de_tokens_atomic!(atomic::AtomicU8, 127, &[Token::U8(127u8)]);
+    assert_de_tokens_atomic!(atomic::AtomicU16, 510u16, &[Token::U16(510u16)]);
+    assert_de_tokens_atomic!(atomic::AtomicU32, 131072u32, &[Token::U32(131072u32)]);
+    assert_de_tokens_atomic!(atomic::AtomicU64, 8589934592u64, &[Token::U64(8589934592)]);
+    assert_de_tokens_atomic!(atomic::AtomicUsize, 131072usize, &[Token::U32(131072)]);
 }
 
 declare_error_tests! {
