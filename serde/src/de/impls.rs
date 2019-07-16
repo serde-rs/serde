@@ -2547,11 +2547,8 @@ where
 }
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-use std::sync::atomic;
-
-#[cfg(all(feature = "std", std_integer_atomics))]
 macro_rules! atomic_impl {
-    ($ty:path, $primitive:ident) => {
+    ($ty:ident, $primitive:ident) => {
         impl<'de> Deserialize<'de> for $ty {
             #[inline]
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -2566,34 +2563,34 @@ macro_rules! atomic_impl {
 }
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(atomic::AtomicBool, bool);
+atomic_impl!(AtomicBool, bool);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(atomic::AtomicI8, i8);
+atomic_impl!(AtomicI8, i8);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(atomic::AtomicI16, i16);
+atomic_impl!(AtomicI16, i16);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(atomic::AtomicI32, i32);
+atomic_impl!(AtomicI32, i32);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(atomic::AtomicI64, i64);
+atomic_impl!(AtomicI64, i64);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(atomic::AtomicIsize, isize);
+atomic_impl!(AtomicIsize, isize);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(atomic::AtomicU8, u8);
+atomic_impl!(AtomicU8, u8);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(atomic::AtomicU16, u16);
+atomic_impl!(AtomicU16, u16);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(atomic::AtomicU32, u32);
+atomic_impl!(AtomicU32, u32);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(atomic::AtomicU64, u64);
+atomic_impl!(AtomicU64, u64);
 
 #[cfg(all(feature = "std", std_integer_atomics))]
-atomic_impl!(atomic::AtomicUsize, usize);
+atomic_impl!(AtomicUsize, usize);

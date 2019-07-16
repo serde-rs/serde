@@ -212,6 +212,12 @@ mod lib {
     #[cfg(range_inclusive)]
     pub use self::core::ops::RangeInclusive;
 
+    #[cfg(all(feature = "std", std_integer_atomics))]
+    pub use std::sync::atomic::{
+        AtomicBool, AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize, AtomicU16, AtomicU32,
+        AtomicU64, AtomicU8, AtomicUsize, Ordering,
+    };
+
     #[cfg(any(core_duration, feature = "std"))]
     pub use self::core::time::Duration;
 }
