@@ -19,7 +19,7 @@ use std::time::{Duration, UNIX_EPOCH};
 
 #[cfg(unix)]
 use std::str;
-#[cfg(not(target_os = "emscripten"))]
+#[cfg(target_arch = "x86_64")]
 use std::sync::atomic::{AtomicI64, AtomicU64};
 
 use fnv::FnvHasher;
@@ -504,7 +504,7 @@ declare_tests! {
     }
 }
 
-#[cfg(not(target_os = "emscripten"))]
+#[cfg(target_arch = "x86_64")]
 declare_tests! {
     test_atomic64 {
         AtomicI64::new(-4295032832i64) => &[Token::I64(-4295032832i64)],

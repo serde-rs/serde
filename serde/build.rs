@@ -14,8 +14,6 @@ fn main() {
     let target = env::var("TARGET").unwrap();
     let emscripten = target == "asmjs-unknown-emscripten" || target == "wasm32-unknown-emscripten";
 
-    let has_atomic_integers = target_has_at_least_atomic_u64(&target);
-
     // std::collections::Bound was stabilized in Rust 1.17
     // but it was moved to core::ops later in Rust 1.26:
     // https://doc.rust-lang.org/core/ops/enum.Bound.html
@@ -71,8 +69,23 @@ fn main() {
         println!("cargo:rustc-cfg=num_nonzero");
     }
 
-    if minor >= 34 && has_atomic_integers {
-        println!("cargo:rustc-cfg=std_integer_atomics");
+    if minor >= 34 {
+        // Whitelist of archs that support std::sync::atomic module. Ideally we
+        // would use #[cfg(target_has_atomic = "...")] but it is not stable yet.
+        // Instead this is based on rustc's src/librustc_target/spec/*.rs.
+        let has_atomic64 = target.starts_with("x86_64")
+            || target.starts_with("i686")
+            || target.starts_with("aarch64")
+            || target.starts_with("powerpc64")
+            || target.starts_with("sparc64")
+            || target.starts_with("mips64el");
+        let has_atomic32 = has_atomic64 || emscripten;
+        if has_atomic64 {
+            println!("cargo:rustc-cfg=std_atomic64");
+        }
+        if has_atomic32 {
+            println!("cargo:rustc-cfg=std_atomic");
+        }
     }
 }
 
@@ -103,18 +116,4 @@ fn rustc_minor_version() -> Option<u32> {
     };
 
     u32::from_str(next).ok()
-}
-
-fn target_has_at_least_atomic_u64(target: &str) -> bool {
-    // The cfg variable target_has_atomic is unstable
-    // so this data comes from the  src/librustc_target/spec/*.rs
-    // files in the rust source. Generally, it's 64-bit platforms
-    // plus i686.
-    if target.starts_with("x86_64") || target.starts_with("i686") ||
-        target.starts_with("aarch64") || target.starts_with("powerpc64") ||
-        target.starts_with("sparc64") || target.starts_with("mips64el") {
-        true
-    } else {
-        false
-    }
 }

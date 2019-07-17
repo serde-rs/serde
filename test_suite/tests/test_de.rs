@@ -17,7 +17,7 @@ use std::sync::atomic::{
 use std::sync::{Arc, Weak as ArcWeak};
 use std::time::{Duration, UNIX_EPOCH};
 
-#[cfg(not(target_os = "emscripten"))]
+#[cfg(target_arch = "x86_64")]
 use std::sync::atomic::{AtomicI64, AtomicU64};
 
 use fnv::FnvHasher;
@@ -1181,7 +1181,7 @@ fn test_atomics() {
     test(AtomicU32::load, 131072u32, Token::U32(131072u32));
     test(AtomicUsize::load, 131072usize, Token::U32(131072));
 
-    #[cfg(not(target_os = "emscripten"))]
+    #[cfg(target_arch = "x86_64")]
     {
         test(AtomicI64::load, -8589934592, Token::I64(-8589934592));
         test(AtomicU64::load, 8589934592u64, Token::U64(8589934592));
