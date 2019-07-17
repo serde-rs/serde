@@ -14,6 +14,8 @@ fn main() {
     let target = env::var("TARGET").unwrap();
     let emscripten = target == "asmjs-unknown-emscripten" || target == "wasm32-unknown-emscripten";
 
+    let has_atomic_integers = target_has_at_least_atomic_u64(&target);
+
     // std::collections::Bound was stabilized in Rust 1.17
     // but it was moved to core::ops later in Rust 1.26:
     // https://doc.rust-lang.org/core/ops/enum.Bound.html
@@ -69,7 +71,7 @@ fn main() {
         println!("cargo:rustc-cfg=num_nonzero");
     }
 
-    if minor >= 34 {
+    if minor >= 34 && has_atomic_integers {
         println!("cargo:rustc-cfg=std_integer_atomics");
     }
 }
@@ -101,4 +103,18 @@ fn rustc_minor_version() -> Option<u32> {
     };
 
     u32::from_str(next).ok()
+}
+
+fn target_has_at_least_atomic_u64(target: &str) -> bool {
+    // The cfg variable target_has_atomic is unstable
+    // so this data comes from the  src/librustc_target/spec/*.rs
+    // files in the rust source. Generally, it's 64-bit platforms
+    // plus i686.
+    if target.starts_with("x86_64") || target.starts_with("i686") ||
+        target.starts_with("aarch64") || target.starts_with("powerpc64") ||
+        target.starts_with("sparc64") || target.starts_with("mips64el") {
+        true
+    } else {
+        false
+    }
 }
