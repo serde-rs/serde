@@ -1610,13 +1610,13 @@ impl TryFrom<u32> for TryFromU32 {
 
 #[test]
 fn test_from_into_traits() {
-    assert_ser_tokens::<EnumToU32>(&EnumToU32::One, &[Token::Some, Token::U32(1)]);
-    assert_ser_tokens::<EnumToU32>(&EnumToU32::Nothing, &[Token::None]);
-    assert_de_tokens::<EnumToU32>(&EnumToU32::Two, &[Token::Some, Token::U32(2)]);
-    assert_ser_tokens::<StructFromEnum>(&StructFromEnum(Some(5)), &[Token::None]);
-    assert_ser_tokens::<StructFromEnum>(&StructFromEnum(None), &[Token::None]);
-    assert_de_tokens::<StructFromEnum>(&StructFromEnum(Some(2)), &[Token::Some, Token::U32(2)]);
-    assert_de_tokens::<TryFromU32>(&TryFromU32::Two, &[Token::U32(2)]);
+    assert_ser_tokens(&EnumToU32::One, &[Token::Some, Token::U32(1)]);
+    assert_ser_tokens(&EnumToU32::Nothing, &[Token::None]);
+    assert_de_tokens(&EnumToU32::Two, &[Token::Some, Token::U32(2)]);
+    assert_ser_tokens(&StructFromEnum(Some(5)), &[Token::None]);
+    assert_ser_tokens(&StructFromEnum(None), &[Token::None]);
+    assert_de_tokens(&StructFromEnum(Some(2)), &[Token::Some, Token::U32(2)]);
+    assert_de_tokens(&TryFromU32::Two, &[Token::U32(2)]);
     assert_de_tokens_error::<TryFromU32>(&[Token::U32(5)], "out of range");
 }
 
