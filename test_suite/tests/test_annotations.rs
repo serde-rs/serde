@@ -5,6 +5,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
+use std::convert::TryFrom;
 use std::marker::PhantomData;
 
 use serde_test::{
@@ -1588,6 +1589,25 @@ impl From<Option<u32>> for EnumToU32 {
     }
 }
 
+#[derive(Clone, Deserialize, PartialEq, Debug)]
+#[serde(try_from = "EnumToU32")]
+struct StructTryFromEnum(Option<u32>);
+
+impl TryFrom<EnumToU32> for StructTryFromEnum {
+    type Error = String;
+
+    fn try_from(value: EnumToU32) -> Result<Self, Self::Error> {
+        println!("{:?}", value);
+        match value {
+            EnumToU32::One => Ok(StructTryFromEnum(Some(1))),
+            EnumToU32::Two => Ok(StructTryFromEnum(Some(2))),
+            EnumToU32::Three => Ok(StructTryFromEnum(Some(3))),
+            EnumToU32::Four => Ok(StructTryFromEnum(Some(4))),
+            _ => Err("out of range".into()),
+        }
+    }
+}
+
 #[test]
 fn test_from_into_traits() {
     assert_ser_tokens::<EnumToU32>(&EnumToU32::One, &[Token::Some, Token::U32(1)]);
@@ -1596,6 +1616,9 @@ fn test_from_into_traits() {
     assert_ser_tokens::<StructFromEnum>(&StructFromEnum(Some(5)), &[Token::None]);
     assert_ser_tokens::<StructFromEnum>(&StructFromEnum(None), &[Token::None]);
     assert_de_tokens::<StructFromEnum>(&StructFromEnum(Some(2)), &[Token::Some, Token::U32(2)]);
+    assert_de_tokens::<StructTryFromEnum>(&StructTryFromEnum(Some(2)), &[Token::Some, Token::U32(2)]);
+    assert_de_tokens_error::<StructTryFromEnum>(&[Token::Some, Token::U32(5)], "out of range");
+    assert_de_tokens_error::<StructTryFromEnum>(&[Token::None], "out of range");
 }
 
 #[test]

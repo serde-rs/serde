@@ -1,5 +1,5 @@
 pub use lib::clone::Clone;
-pub use lib::convert::{From, Into};
+pub use lib::convert::{From, Into, TryFrom};
 pub use lib::default::Default;
 pub use lib::fmt::{self, Formatter};
 pub use lib::marker::PhantomData;

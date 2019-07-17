@@ -215,6 +215,7 @@ pub struct Container {
     de_bound: Option<Vec<syn::WherePredicate>>,
     tag: TagType,
     type_from: Option<syn::Type>,
+    type_try_from: Option<syn::Type>,
     type_into: Option<syn::Type>,
     remote: Option<syn::Path>,
     identifier: Identifier,
@@ -296,6 +297,7 @@ impl Container {
         let mut internal_tag = Attr::none(cx, "tag");
         let mut content = Attr::none(cx, "content");
         let mut type_from = Attr::none(cx, "from");
+        let mut type_try_from = Attr::none(cx, "try_from");
         let mut type_into = Attr::none(cx, "into");
         let mut remote = Attr::none(cx, "remote");
         let mut field_identifier = BoolAttr::none(cx, "field_identifier");
@@ -557,6 +559,13 @@ impl Container {
                         }
                     }
 
+                    // Parse `#[serde(try_from = "Type")]
+                    Meta(NameValue(ref m)) if m.ident == "try_from" => {
+                        if let Ok(try_from_ty) = parse_lit_into_ty(cx, &m.ident, &m.lit) {
+                            type_try_from.set_opt(&m.ident, Some(try_from_ty));
+                        }
+                    }
+
                     // Parse `#[serde(into = "Type")]
                     Meta(NameValue(ref m)) if m.ident == "into" => {
                         if let Ok(into_ty) = parse_lit_into_ty(cx, &m.ident, &m.lit) {
@@ -619,6 +628,7 @@ impl Container {
             de_bound: de_bound.get(),
             tag: decide_tag(cx, item, untagged, internal_tag, content),
             type_from: type_from.get(),
+            type_try_from: type_try_from.get(),
             type_into: type_into.get(),
             remote: remote.get(),
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
@@ -661,6 +671,10 @@ impl Container {
 
     pub fn type_from(&self) -> Option<&syn::Type> {
         self.type_from.as_ref()
+    }
+
+    pub fn type_try_from(&self) -> Option<&syn::Type> {
+        self.type_try_from.as_ref()
     }
 
     pub fn type_into(&self) -> Option<&syn::Type> {
