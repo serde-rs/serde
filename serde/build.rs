@@ -69,7 +69,12 @@ fn main() {
         println!("cargo:rustc-cfg=num_nonzero");
     }
 
+    // TryFrom and Atomic types stabilized in Rust 1.34:
+    // https://blog.rust-lang.org/2019/04/11/Rust-1.34.0.html#tryfrom-and-tryinto
+    // https://blog.rust-lang.org/2019/04/11/Rust-1.34.0.html#library-stabilizations
     if minor >= 34 {
+        println!("cargo:rustc-cfg=core_try_from");
+
         // Whitelist of archs that support std::sync::atomic module. Ideally we
         // would use #[cfg(target_has_atomic = "...")] but it is not stable yet.
         // Instead this is based on rustc's src/librustc_target/spec/*.rs.

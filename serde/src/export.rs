@@ -1,5 +1,5 @@
 pub use lib::clone::Clone;
-pub use lib::convert::{From, Into, TryFrom};
+pub use lib::convert::{From, Into};
 pub use lib::default::Default;
 pub use lib::fmt::{self, Formatter};
 pub use lib::marker::PhantomData;
@@ -10,6 +10,9 @@ pub use self::string::from_utf8_lossy;
 
 #[cfg(any(feature = "alloc", feature = "std"))]
 pub use lib::{ToString, Vec};
+
+#[cfg(core_try_from)]
+pub use lib::convert::TryFrom;
 
 mod string {
     use lib::*;
