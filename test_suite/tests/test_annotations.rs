@@ -4,8 +4,8 @@ use serde::de::{self, MapAccess, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::collections::{BTreeMap, HashMap};
-use std::fmt;
 use std::convert::TryFrom;
+use std::fmt;
 use std::marker::PhantomData;
 
 use serde_test::{
@@ -1616,7 +1616,10 @@ fn test_from_into_traits() {
     assert_ser_tokens::<StructFromEnum>(&StructFromEnum(Some(5)), &[Token::None]);
     assert_ser_tokens::<StructFromEnum>(&StructFromEnum(None), &[Token::None]);
     assert_de_tokens::<StructFromEnum>(&StructFromEnum(Some(2)), &[Token::Some, Token::U32(2)]);
-    assert_de_tokens::<StructTryFromEnum>(&StructTryFromEnum(Some(2)), &[Token::Some, Token::U32(2)]);
+    assert_de_tokens::<StructTryFromEnum>(
+        &StructTryFromEnum(Some(2)),
+        &[Token::Some, Token::U32(2)],
+    );
     assert_de_tokens_error::<StructTryFromEnum>(&[Token::Some, Token::U32(5)], "out of range");
     assert_de_tokens_error::<StructTryFromEnum>(&[Token::None], "out of range");
 }
