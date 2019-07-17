@@ -1590,20 +1590,20 @@ impl From<Option<u32>> for EnumToU32 {
 }
 
 #[derive(Clone, Deserialize, PartialEq, Debug)]
-#[serde(try_from = "EnumToU32")]
-struct StructTryFromEnum(Option<u32>);
+#[serde(try_from = "u32")]
+enum TryFromU32 {
+    One,
+    Two,
+}
 
-impl TryFrom<EnumToU32> for StructTryFromEnum {
+impl TryFrom<u32> for TryFromU32 {
     type Error = String;
 
-    fn try_from(value: EnumToU32) -> Result<Self, Self::Error> {
-        println!("{:?}", value);
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
         match value {
-            EnumToU32::One => Ok(StructTryFromEnum(Some(1))),
-            EnumToU32::Two => Ok(StructTryFromEnum(Some(2))),
-            EnumToU32::Three => Ok(StructTryFromEnum(Some(3))),
-            EnumToU32::Four => Ok(StructTryFromEnum(Some(4))),
-            _ => Err("out of range".into()),
+            1 => Ok(TryFromU32::One),
+            2 => Ok(TryFromU32::Two),
+            _ => Err("out of range".to_owned()),
         }
     }
 }
@@ -1616,12 +1616,8 @@ fn test_from_into_traits() {
     assert_ser_tokens::<StructFromEnum>(&StructFromEnum(Some(5)), &[Token::None]);
     assert_ser_tokens::<StructFromEnum>(&StructFromEnum(None), &[Token::None]);
     assert_de_tokens::<StructFromEnum>(&StructFromEnum(Some(2)), &[Token::Some, Token::U32(2)]);
-    assert_de_tokens::<StructTryFromEnum>(
-        &StructTryFromEnum(Some(2)),
-        &[Token::Some, Token::U32(2)],
-    );
-    assert_de_tokens_error::<StructTryFromEnum>(&[Token::Some, Token::U32(5)], "out of range");
-    assert_de_tokens_error::<StructTryFromEnum>(&[Token::None], "out of range");
+    assert_de_tokens::<TryFromU32>(&TryFromU32::Two, &[Token::U32(2)]);
+    assert_de_tokens_error::<TryFromU32>(&[Token::U32(5)], "out of range");
 }
 
 #[test]
