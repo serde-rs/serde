@@ -865,7 +865,7 @@ atomic_impl! {
     AtomicU8 AtomicU16 AtomicU32 AtomicUsize
 }
 
-#[cfg(all(feature = "std", std_integer_atomics, not(target_os = "emscripten")))]
+#[cfg(all(feature = "std", std_integer_atomics_64))]
 atomic_impl! {
     AtomicI64 AtomicU64
 }

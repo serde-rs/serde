@@ -13,6 +13,8 @@ fn main() {
 
     let target = env::var("TARGET").unwrap();
     let emscripten = target == "asmjs-unknown-emscripten" || target == "wasm32-unknown-emscripten";
+    let x86 = target.starts_with("x86-");
+    let x86_64 = target.starts_with("x86_64-");
 
     // std::collections::Bound was stabilized in Rust 1.17
     // but it was moved to core::ops later in Rust 1.26:
@@ -69,8 +71,15 @@ fn main() {
         println!("cargo:rustc-cfg=num_nonzero");
     }
 
-    if minor >= 34 {
+    // Whitelist of archs that support std::sync::atomic module. Ideally we
+    // would use #[cfg(target_has_atomic = "...")] but it is not stable yet.
+    let has_atomic = x86 || x86_64 || emscripten;
+    let has_atomic_64 = x86 || x86_64;
+    if minor >= 34 && has_atomic {
         println!("cargo:rustc-cfg=std_integer_atomics");
+        if has_atomic_64 {
+            println!("cargo:rustc-cfg=std_integer_atomics_64");
+        }
     }
 }
 
