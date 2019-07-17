@@ -110,7 +110,7 @@ fn target_has_at_least_atomic_u64(target: &str) -> bool {
     // so this data comes from the  src/librustc_target/spec/*.rs
     // files in the rust source. Generally, it's 64-bit platforms
     // plus i686.
-    if target.starts_with("x86-64") || target.starts_with("i686") ||
+    if target.starts_with("x86_64") || target.starts_with("i686") ||
         target.starts_with("aarch64") || target.starts_with("powerpc64") ||
         target.starts_with("sparc64") || target.starts_with("mips64el") {
         true
