@@ -141,7 +141,7 @@ struct Parameters {
     /// remote type has a private field.
     has_getter: bool,
 
-    de_parameter_idents: Option<Vec<syn::Ident>>,
+    de_parameters: Option<Vec<syn::GenericParam>>,
 }
 
 impl Parameters {
@@ -161,7 +161,7 @@ impl Parameters {
             generics: generics,
             borrowed: borrowed,
             has_getter: has_getter,
-            de_parameter_idents: cont.attrs.de_parameters().map(|params| params.to_owned()),
+            de_parameters: cont.attrs.de_parameters().map(|params| params.to_owned()),
         }
     }
 
@@ -2986,12 +2986,8 @@ struct DeImplGenerics<'a>(&'a Parameters);
 impl<'a> ToTokens for DeImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
-        if let Some(ref idents) = self.0.de_parameter_idents {
-            generics.params.extend(
-                idents
-                    .iter()
-                    .map(|ident| syn::GenericParam::Type(ident.clone().into())),
-            );
+        if let Some(ref params) = self.0.de_parameters {
+            generics.params.extend(params.iter().cloned());
         }
         if let Some(de_lifetime) = self.0.borrowed.de_lifetime_def() {
             generics.params = Some(syn::GenericParam::Lifetime(de_lifetime))
@@ -3060,12 +3056,8 @@ struct DeTypeGenerics<'a>(&'a Parameters);
 impl<'a> ToTokens for DeTypeGenerics<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
-        if let Some(ref idents) = self.0.de_parameter_idents {
-            generics.params.extend(
-                idents
-                    .iter()
-                    .map(|ident| syn::GenericParam::Type(ident.clone().into())),
-            );
+        if let Some(ref params) = self.0.de_parameters {
+            generics.params.extend(params.iter().cloned());
         }
         let mut generics = self.0.generics.clone();
         if self.0.borrowed.de_lifetime_def().is_some() {
@@ -3132,12 +3124,8 @@ struct DeSeedImplGenerics<'a>(&'a Parameters);
 impl<'a> ToTokens for DeSeedImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
-        if let Some(ref idents) = self.0.de_parameter_idents {
-            generics.params.extend(
-                idents
-                    .iter()
-                    .map(|ident| syn::GenericParam::Type(ident.clone().into())),
-            );
+        if let Some(ref params) = self.0.de_parameters {
+            generics.params.extend(params.iter().cloned());
         }
         for param in &mut generics.params {
             if let syn::GenericParam::Type(ref mut param) = *param {
@@ -3165,12 +3153,8 @@ struct DeSeedTypeGenerics<'a>(&'a Parameters);
 impl<'a> ToTokens for DeSeedTypeGenerics<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
-        if let Some(ref idents) = self.0.de_parameter_idents {
-            generics.params.extend(
-                idents
-                    .iter()
-                    .map(|ident| syn::GenericParam::Type(ident.clone().into())),
-            );
+        if let Some(ref params) = self.0.de_parameters {
+            generics.params.extend(params.iter().cloned());
         }
         generics.params.insert(0, lifetime("'de").into());
         generics.params.insert(0, lifetime("'seed").into());

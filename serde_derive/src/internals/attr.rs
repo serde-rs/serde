@@ -2,7 +2,7 @@ use internals::Ctxt;
 use proc_macro2::{Group, Span, TokenStream, TokenTree};
 use quote::ToTokens;
 use std::borrow::Cow;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 use std::str::FromStr;
 use syn;
 use syn::parse::{self, Parse, ParseStream};
@@ -223,8 +223,8 @@ pub struct Container {
 
     deserialize_state: Option<syn::Type>,
     serialize_state: Option<syn::Type>,
-    de_parameters: Option<Vec<syn::Ident>>,
-    ser_parameters: Option<Vec<syn::Ident>>,
+    de_parameters: Option<Vec<syn::GenericParam>>,
+    ser_parameters: Option<Vec<syn::GenericParam>>,
 }
 
 /// Styles of representing an enum.
@@ -616,13 +616,13 @@ impl Container {
                     }
 
                     Meta(NameValue(ref m)) if m.ident == "de_parameters" => {
-                        if let Ok(path) = parse_lit_into_identifiers(cx, &m.ident, &m.lit) {
+                        if let Ok(path) = parse_lit_into_generics(cx, &m.ident, &m.lit) {
                             de_parameters.set(&m.ident, path);
                         }
                     }
 
                     Meta(NameValue(ref m)) if m.ident == "ser_parameters" => {
-                        if let Ok(path) = parse_lit_into_identifiers(cx, &m.ident, &m.lit) {
+                        if let Ok(path) = parse_lit_into_generics(cx, &m.ident, &m.lit) {
                             ser_parameters.set(&m.ident, path);
                         }
                     }
@@ -739,11 +739,11 @@ impl Container {
         self.serialize_state.as_ref()
     }
 
-    pub fn de_parameters(&self) -> Option<&[syn::Ident]> {
+    pub fn de_parameters(&self) -> Option<&[syn::GenericParam]> {
         self.de_parameters.as_ref().map(|x| &x[..])
     }
 
-    pub fn ser_parameters(&self) -> Option<&[syn::Ident]> {
+    pub fn ser_parameters(&self) -> Option<&[syn::GenericParam]> {
         self.ser_parameters.as_ref().map(|x| &x[..])
     }
 }
@@ -1862,29 +1862,29 @@ fn is_implicitly_borrowed_reference(ty: &syn::Type) -> bool {
     is_reference(ty, is_str) || is_reference(ty, is_slice_u8)
 }
 
-fn parse_lit_into_identifiers(
+fn parse_lit_into_generics(
     cx: &Ctxt,
     attr_name: &syn::Ident,
     lit: &syn::Lit,
-) -> Result<Vec<syn::Ident>, ()> {
+) -> Result<Vec<syn::GenericParam>, ()> {
     let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
     if string.value().is_empty() {
         cx.error_spanned_by(lit, "at least one identifier must be defined");
         return Err(());
     }
 
-    struct Identifiers(Punctuated<syn::Ident, Token![,]>);
-    impl Parse for Identifiers {
+    struct Generics(Punctuated<syn::GenericParam, Token![,]>);
+    impl Parse for Generics {
         fn parse(input: ParseStream) -> parse::Result<Self> {
-            Punctuated::parse_separated_nonempty(input).map(Identifiers)
+            Punctuated::parse_separated_nonempty(input).map(Generics)
         }
     }
 
-    if let Ok(Identifiers(identifiers)) = parse_lit_str(string) {
-        let mut set = BTreeSet::new();
+    if let Ok(Generics(identifiers)) = parse_lit_str(string) {
+        let mut set = HashSet::new();
         for ident in identifiers {
             if !set.insert(ident.clone()) {
-                cx.error_spanned_by(&ident, format!("duplicate borrowed lifetime `{}`", ident));
+                cx.error_spanned_by(&ident, format!("duplicate parameter `{:?}`", ident));
             }
         }
         return Ok(set.into_iter().collect());

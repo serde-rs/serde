@@ -109,7 +109,7 @@ struct Parameters {
     /// Type has a `serde(remote = "...")` attribute.
     is_remote: bool,
 
-    ser_parameter_idents: Option<Vec<syn::Ident>>,
+    ser_parameters: Option<Vec<syn::GenericParam>>,
 }
 
 impl Parameters {
@@ -133,7 +133,7 @@ impl Parameters {
             this: this,
             generics: generics,
             is_remote: is_remote,
-            ser_parameter_idents: cont.attrs.ser_parameters().map(|params| params.to_owned()),
+            ser_parameters: cont.attrs.ser_parameters().map(|params| params.to_owned()),
         }
     }
 
@@ -1389,12 +1389,8 @@ struct SerImplGenerics<'a>(&'a Parameters);
 impl<'a> ToTokens for SerImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
-        if let Some(ref idents) = self.0.ser_parameter_idents {
-            generics.params.extend(
-                idents
-                    .iter()
-                    .map(|ident| syn::GenericParam::Type(ident.clone().into())),
-            );
+        if let Some(ref params) = self.0.ser_parameters {
+            generics.params.extend(params.iter().cloned());
         }
         let (impl_generics, _, _) = generics.split_for_impl();
         impl_generics.to_tokens(tokens);
@@ -1418,12 +1414,8 @@ struct SerLifetimeImplGenerics<'a>(&'a Parameters);
 impl<'a> ToTokens for SerLifetimeImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = bound::with_lifetime_bound(&self.0.generics, "'__a");
-        if let Some(ref idents) = self.0.ser_parameter_idents {
-            generics.params.extend(
-                idents
-                    .iter()
-                    .map(|ident| syn::GenericParam::Type(ident.clone().into())),
-            );
+        if let Some(ref params) = self.0.ser_parameters {
+            generics.params.extend(params.iter().cloned());
         }
         let (impl_generics, _, _) = generics.split_for_impl();
         impl_generics.to_tokens(tokens);
