@@ -486,6 +486,10 @@ nonzero_integers! {
     NonZeroU32,
     NonZeroU64,
     NonZeroUsize,
+}
+
+#[cfg(num_nonzero_signed)]
+nonzero_integers! {
     NonZeroI8,
     NonZeroI16,
     NonZeroI32,
@@ -498,6 +502,10 @@ nonzero_integers! {
 serde_if_integer128! {
     nonzero_integers! {
         NonZeroU128,
+    }
+
+    #[cfg(num_nonzero_signed)]
+    nonzero_integers! {
         NonZeroI128,
     }
 }
