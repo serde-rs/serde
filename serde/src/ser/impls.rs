@@ -481,7 +481,6 @@ macro_rules! nonzero_integers {
 }
 
 nonzero_integers! {
-    // Not including signed NonZeroI* since they might be removed
     NonZeroU8,
     NonZeroU16,
     NonZeroU32,
@@ -489,11 +488,25 @@ nonzero_integers! {
     NonZeroUsize,
 }
 
+#[cfg(num_nonzero_signed)]
+nonzero_integers! {
+    NonZeroI8,
+    NonZeroI16,
+    NonZeroI32,
+    NonZeroI64,
+    NonZeroIsize,
+}
+
 // Currently 128-bit integers do not work on Emscripten targets so we need an
 // additional `#[cfg]`
 serde_if_integer128! {
     nonzero_integers! {
         NonZeroU128,
+    }
+
+    #[cfg(num_nonzero_signed)]
+    nonzero_integers! {
+        NonZeroI128,
     }
 }
 
