@@ -1,6 +1,8 @@
 use lib::*;
 
-use de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
+use de::{
+    Deserialize, Deserializer, EnumAccess, Error, MapAccess, SeqAccess, VariantAccess, Visitor,
+};
 
 /// An efficient way of discarding data from a deserializer.
 ///
@@ -204,6 +206,13 @@ impl<'de> Visitor<'de> for IgnoredAny {
     {
         let _ = bytes;
         Ok(IgnoredAny)
+    }
+
+    fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
+    where
+        A: EnumAccess<'de>,
+    {
+        data.variant::<IgnoredAny>()?.1.newtype_variant()
     }
 }
 

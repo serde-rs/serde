@@ -1,0 +1,8 @@
+error: #[serde(from = "...")] and #[serde(try_from = "...")] conflict with each other
+ --> $DIR/from-try-from.rs:4:1
+  |
+4 | / #[serde(from = "u64", try_from = "u64")]
+5 | | struct S {
+6 | |     a: u8,
+7 | | }
+  | |_^

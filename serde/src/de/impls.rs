@@ -790,7 +790,8 @@ seq_impl!(
     BinaryHeap::clear,
     BinaryHeap::with_capacity(size_hint::cautious(seq.size_hint())),
     BinaryHeap::reserve,
-    BinaryHeap::push);
+    BinaryHeap::push
+);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(
@@ -799,7 +800,8 @@ seq_impl!(
     BTreeSet::clear,
     BTreeSet::new(),
     nop_reserve,
-    BTreeSet::insert);
+    BTreeSet::insert
+);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(
@@ -2402,7 +2404,6 @@ macro_rules! nonzero_integers {
 }
 
 nonzero_integers! {
-    // Not including signed NonZeroI* since they might be removed
     NonZeroU8,
     NonZeroU16,
     NonZeroU32,
@@ -2410,11 +2411,25 @@ nonzero_integers! {
     NonZeroUsize,
 }
 
+#[cfg(num_nonzero_signed)]
+nonzero_integers! {
+    NonZeroI8,
+    NonZeroI16,
+    NonZeroI32,
+    NonZeroI64,
+    NonZeroIsize,
+}
+
 // Currently 128-bit integers do not work on Emscripten targets so we need an
 // additional `#[cfg]`
 serde_if_integer128! {
     nonzero_integers! {
         NonZeroU128,
+    }
+
+    #[cfg(num_nonzero_signed)]
+    nonzero_integers! {
+        NonZeroI128,
     }
 }
 
@@ -2542,4 +2557,32 @@ where
     {
         Deserialize::deserialize(deserializer).map(Wrapping)
     }
+}
+
+#[cfg(all(feature = "std", std_atomic))]
+macro_rules! atomic_impl {
+    ($($ty:ident)*) => {
+        $(
+            impl<'de> Deserialize<'de> for $ty {
+                fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+                where
+                    D: Deserializer<'de>,
+                {
+                    Deserialize::deserialize(deserializer).map(Self::new)
+                }
+            }
+        )*
+    };
+}
+
+#[cfg(all(feature = "std", std_atomic))]
+atomic_impl! {
+    AtomicBool
+    AtomicI8 AtomicI16 AtomicI32 AtomicIsize
+    AtomicU8 AtomicU16 AtomicU32 AtomicUsize
+}
+
+#[cfg(all(feature = "std", std_atomic64))]
+atomic_impl! {
+    AtomicI64 AtomicU64
 }

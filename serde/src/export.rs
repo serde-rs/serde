@@ -11,6 +11,9 @@ pub use self::string::from_utf8_lossy;
 #[cfg(any(feature = "alloc", feature = "std"))]
 pub use lib::{ToString, Vec};
 
+#[cfg(core_try_from)]
+pub use lib::convert::TryFrom;
+
 mod string {
     use lib::*;
 

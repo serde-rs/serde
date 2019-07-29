@@ -68,6 +68,31 @@ fn main() {
     if minor >= 28 {
         println!("cargo:rustc-cfg=num_nonzero");
     }
+
+    // TryFrom, Atomic types, and non-zero signed integers stabilized in Rust 1.34:
+    // https://blog.rust-lang.org/2019/04/11/Rust-1.34.0.html#tryfrom-and-tryinto
+    // https://blog.rust-lang.org/2019/04/11/Rust-1.34.0.html#library-stabilizations
+    if minor >= 34 {
+        println!("cargo:rustc-cfg=core_try_from");
+        println!("cargo:rustc-cfg=num_nonzero_signed");
+
+        // Whitelist of archs that support std::sync::atomic module. Ideally we
+        // would use #[cfg(target_has_atomic = "...")] but it is not stable yet.
+        // Instead this is based on rustc's src/librustc_target/spec/*.rs.
+        let has_atomic64 = target.starts_with("x86_64")
+            || target.starts_with("i686")
+            || target.starts_with("aarch64")
+            || target.starts_with("powerpc64")
+            || target.starts_with("sparc64")
+            || target.starts_with("mips64el");
+        let has_atomic32 = has_atomic64 || emscripten;
+        if has_atomic64 {
+            println!("cargo:rustc-cfg=std_atomic64");
+        }
+        if has_atomic32 {
+            println!("cargo:rustc-cfg=std_atomic");
+        }
+    }
 }
 
 fn rustc_minor_version() -> Option<u32> {

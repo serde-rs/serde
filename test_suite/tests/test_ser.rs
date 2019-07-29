@@ -1,3 +1,4 @@
+#![allow(clippy::unreadable_literal)]
 #![cfg_attr(feature = "unstable", feature(never_type))]
 
 use std::cell::RefCell;
@@ -9,11 +10,17 @@ use std::num::Wrapping;
 use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak as RcWeak};
+use std::sync::atomic::{
+    AtomicBool, AtomicI16, AtomicI32, AtomicI8, AtomicIsize, AtomicU16, AtomicU32, AtomicU8,
+    AtomicUsize,
+};
 use std::sync::{Arc, Weak as ArcWeak};
 use std::time::{Duration, UNIX_EPOCH};
 
 #[cfg(unix)]
 use std::str;
+#[cfg(target_arch = "x86_64")]
+use std::sync::atomic::{AtomicI64, AtomicU64};
 
 use fnv::FnvHasher;
 use serde::Serialize;
@@ -482,6 +489,26 @@ declare_tests! {
         format_args!("{}{}", 1, 'a') => &[
             Token::Str("1a"),
         ],
+    }
+    test_atomic {
+        AtomicBool::new(false) => &[Token::Bool(false)],
+        AtomicBool::new(true) => &[Token::Bool(true)],
+        AtomicI8::new(63i8) => &[Token::I8(63i8)],
+        AtomicI16::new(-318i16) => &[Token::I16(-318i16)],
+        AtomicI32::new(65792i32) => &[Token::I32(65792i32)],
+        AtomicIsize::new(-65792isize) => &[Token::I64(-65792i64)],
+        AtomicU8::new(192u8) => &[Token::U8(192u8)],
+        AtomicU16::new(510u16) => &[Token::U16(510u16)],
+        AtomicU32::new(131072u32) => &[Token::U32(131072u32)],
+        AtomicUsize::new(655360usize) => &[Token::U64(655360u64)],
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+declare_tests! {
+    test_atomic64 {
+        AtomicI64::new(-4295032832i64) => &[Token::I64(-4295032832i64)],
+        AtomicU64::new(12884901888u64) => &[Token::U64(12884901888u64)],
     }
 }
 

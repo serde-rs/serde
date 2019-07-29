@@ -1,18 +1,27 @@
-#![allow(clippy::decimal_literal_representation)]
+#![allow(clippy::decimal_literal_representation, clippy::unreadable_literal)]
 #![cfg_attr(feature = "unstable", feature(never_type))]
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::default::Default;
 use std::ffi::{CStr, CString, OsString};
+use std::fmt::Debug;
 use std::net;
 use std::num::Wrapping;
 use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak as RcWeak};
+use std::sync::atomic::{
+    AtomicBool, AtomicI16, AtomicI32, AtomicI8, AtomicIsize, AtomicU16, AtomicU32, AtomicU8,
+    AtomicUsize, Ordering,
+};
 use std::sync::{Arc, Weak as ArcWeak};
 use std::time::{Duration, UNIX_EPOCH};
 
+#[cfg(target_arch = "x86_64")]
+use std::sync::atomic::{AtomicI64, AtomicU64};
+
 use fnv::FnvHasher;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer};
 use serde_test::{assert_de_tokens, assert_de_tokens_error, Configure, Token};
 
@@ -122,6 +131,19 @@ enum EnumOther {
     Unit,
     #[serde(other)]
     Other,
+}
+
+#[derive(PartialEq, Debug)]
+struct IgnoredAny;
+
+impl<'de> Deserialize<'de> for IgnoredAny {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        serde::de::IgnoredAny::deserialize(deserializer)?;
+        Ok(IgnoredAny)
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -929,6 +951,21 @@ declare_tests! {
             Token::SeqEnd,
         ],
     }
+    test_ignored_any {
+        IgnoredAny => &[
+            Token::Str("s"),
+        ],
+        IgnoredAny => &[
+            Token::Seq { len: Some(1) },
+            Token::Bool(true),
+            Token::SeqEnd,
+        ],
+        IgnoredAny => &[
+            Token::Enum { name: "E" },
+            Token::Str("Rust"),
+            Token::Unit,
+        ],
+    }
 }
 
 declare_tests! {
@@ -1110,6 +1147,45 @@ fn test_never_type() {
         }],
         "cannot deserialize `!`",
     );
+}
+
+#[test]
+fn test_atomics() {
+    fn test<L, A, T>(load: L, val: T, token: Token)
+    where
+        L: Fn(&A, Ordering) -> T,
+        A: DeserializeOwned,
+        T: PartialEq + Debug,
+    {
+        let tokens = &[token];
+        let mut de = serde_test::Deserializer::new(tokens);
+        match A::deserialize(&mut de) {
+            Ok(v) => {
+                let loaded = load(&v, Ordering::SeqCst);
+                assert_eq!(val, loaded);
+            }
+            Err(e) => panic!("tokens failed to deserialize: {}", e),
+        };
+        if de.remaining() > 0 {
+            panic!("{} remaining tokens", de.remaining());
+        }
+    }
+
+    test(AtomicBool::load, true, Token::Bool(true));
+    test(AtomicI8::load, -127, Token::I8(-127i8));
+    test(AtomicI16::load, -510, Token::I16(-510i16));
+    test(AtomicI32::load, -131072, Token::I32(-131072i32));
+    test(AtomicIsize::load, -131072isize, Token::I32(-131072));
+    test(AtomicU8::load, 127, Token::U8(127u8));
+    test(AtomicU16::load, 510u16, Token::U16(510u16));
+    test(AtomicU32::load, 131072u32, Token::U32(131072u32));
+    test(AtomicUsize::load, 131072usize, Token::U32(131072));
+
+    #[cfg(target_arch = "x86_64")]
+    {
+        test(AtomicI64::load, -8589934592, Token::I64(-8589934592));
+        test(AtomicU64::load, 8589934592u64, Token::U64(8589934592));
+    }
 }
 
 declare_error_tests! {
