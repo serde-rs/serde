@@ -453,8 +453,7 @@ impl Container {
 
                     // Parse `#[serde(bound = "T: SomeBound")]`
                     Meta(NameValue(ref m)) if m.ident == BOUND => {
-                        if let Ok(where_predicates) =
-                            parse_lit_into_where(cx, BOUND, BOUND, &m.lit)
+                        if let Ok(where_predicates) = parse_lit_into_where(cx, BOUND, BOUND, &m.lit)
                         {
                             ser_bound.set(&m.ident, where_predicates.clone());
                             de_bound.set(&m.ident, where_predicates);
@@ -1013,8 +1012,7 @@ impl Variant {
 
                     // Parse `#[serde(bound = "T: SomeBound")]`
                     Meta(NameValue(ref m)) if m.ident == BOUND => {
-                        if let Ok(where_predicates) =
-                            parse_lit_into_where(cx, BOUND, BOUND, &m.lit)
+                        if let Ok(where_predicates) = parse_lit_into_where(cx, BOUND, BOUND, &m.lit)
                         {
                             ser_bound.set(&m.ident, where_predicates.clone());
                             de_bound.set(&m.ident, where_predicates);
@@ -1289,7 +1287,8 @@ impl Field {
 
                     // Parse `#[serde(skip_serializing_if = "...")]`
                     Meta(NameValue(ref m)) if m.ident == SKIP_SERIALIZING_IF => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, SKIP_SERIALIZING_IF, &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, SKIP_SERIALIZING_IF, &m.lit)
+                        {
                             skip_serializing_if.set(&m.ident, path);
                         }
                     }
@@ -1328,8 +1327,7 @@ impl Field {
 
                     // Parse `#[serde(bound = "T: SomeBound")]`
                     Meta(NameValue(ref m)) if m.ident == BOUND => {
-                        if let Ok(where_predicates) =
-                            parse_lit_into_where(cx, BOUND, BOUND, &m.lit)
+                        if let Ok(where_predicates) = parse_lit_into_where(cx, BOUND, BOUND, &m.lit)
                         {
                             ser_bound.set(&m.ident, where_predicates.clone());
                             de_bound.set(&m.ident, where_predicates);
@@ -1633,11 +1631,7 @@ pub fn get_serde_meta_items(attr: &syn::Attribute) -> Option<Vec<syn::NestedMeta
     }
 }
 
-fn get_lit_str<'a>(
-    cx: &Ctxt,
-    attr_name: Symbol,
-    lit: &'a syn::Lit,
-) -> Result<&'a syn::LitStr, ()> {
+fn get_lit_str<'a>(cx: &Ctxt, attr_name: Symbol, lit: &'a syn::Lit) -> Result<&'a syn::LitStr, ()> {
     get_lit_str2(cx, attr_name, attr_name, lit)
 }
 
