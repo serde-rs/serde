@@ -145,7 +145,7 @@ impl Parameters {
     /// Type name to use in error messages and `&'static str` arguments to
     /// various Deserializer methods.
     fn type_name(&self) -> String {
-        self.this.segments.last().unwrap().value().ident.to_string()
+        self.this.segments.last().unwrap().ident.to_string()
     }
 }
 

@@ -54,6 +54,12 @@ impl PartialEq<Symbol> for Path {
     }
 }
 
+impl<'a> PartialEq<Symbol> for &'a Path {
+    fn eq(&self, word: &Symbol) -> bool {
+        self.is_ident(word.0)
+    }
+}
+
 impl Display for Symbol {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str(self.0)
