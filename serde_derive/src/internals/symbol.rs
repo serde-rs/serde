@@ -2,7 +2,7 @@ use std::fmt::{self, Display};
 use syn::{Ident, Path};
 
 #[derive(Copy, Clone)]
-pub struct Symbol(pub &'static str);
+pub struct Symbol(&'static str);
 
 pub const ALIAS: Symbol = Symbol("alias");
 pub const BORROW: Symbol = Symbol("borrow");

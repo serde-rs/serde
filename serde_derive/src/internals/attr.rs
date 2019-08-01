@@ -24,13 +24,13 @@ pub use internals::case::RenameRule;
 
 struct Attr<'c, T> {
     cx: &'c Ctxt,
-    name: &'static str,
+    name: Symbol,
     tokens: TokenStream,
     value: Option<T>,
 }
 
 impl<'c, T> Attr<'c, T> {
-    fn none(cx: &'c Ctxt, name: &'static str) -> Self {
+    fn none(cx: &'c Ctxt, name: Symbol) -> Self {
         Attr {
             cx: cx,
             name: name,
@@ -78,7 +78,7 @@ impl<'c, T> Attr<'c, T> {
 struct BoolAttr<'c>(Attr<'c, ()>);
 
 impl<'c> BoolAttr<'c> {
-    fn none(cx: &'c Ctxt, name: &'static str) -> Self {
+    fn none(cx: &'c Ctxt, name: Symbol) -> Self {
         BoolAttr(Attr::none(cx, name))
     }
 
@@ -93,13 +93,13 @@ impl<'c> BoolAttr<'c> {
 
 struct VecAttr<'c, T> {
     cx: &'c Ctxt,
-    name: &'static str,
+    name: Symbol,
     first_dup_tokens: TokenStream,
     values: Vec<T>,
 }
 
 impl<'c, T> VecAttr<'c, T> {
-    fn none(cx: &'c Ctxt, name: &'static str) -> Self {
+    fn none(cx: &'c Ctxt, name: Symbol) -> Self {
         VecAttr {
             cx: cx,
             name: name,
@@ -285,25 +285,25 @@ impl Identifier {
 impl Container {
     /// Extract out the `#[serde(...)]` attributes from an item.
     pub fn from_ast(cx: &Ctxt, item: &syn::DeriveInput) -> Self {
-        let mut ser_name = Attr::none(cx, "rename");
-        let mut de_name = Attr::none(cx, "rename");
-        let mut transparent = BoolAttr::none(cx, "transparent");
-        let mut deny_unknown_fields = BoolAttr::none(cx, "deny_unknown_fields");
-        let mut default = Attr::none(cx, "default");
-        let mut rename_all_ser_rule = Attr::none(cx, "rename_all");
-        let mut rename_all_de_rule = Attr::none(cx, "rename_all");
-        let mut ser_bound = Attr::none(cx, "bound");
-        let mut de_bound = Attr::none(cx, "bound");
-        let mut untagged = BoolAttr::none(cx, "untagged");
-        let mut internal_tag = Attr::none(cx, "tag");
-        let mut content = Attr::none(cx, "content");
-        let mut type_from = Attr::none(cx, "from");
-        let mut type_try_from = Attr::none(cx, "try_from");
-        let mut type_into = Attr::none(cx, "into");
-        let mut remote = Attr::none(cx, "remote");
-        let mut field_identifier = BoolAttr::none(cx, "field_identifier");
-        let mut variant_identifier = BoolAttr::none(cx, "variant_identifier");
-        let mut serde_path = Attr::none(cx, "crate");
+        let mut ser_name = Attr::none(cx, RENAME);
+        let mut de_name = Attr::none(cx, RENAME);
+        let mut transparent = BoolAttr::none(cx, TRANSPARENT);
+        let mut deny_unknown_fields = BoolAttr::none(cx, DENY_UNKNOWN_FIELDS);
+        let mut default = Attr::none(cx, DEFAULT);
+        let mut rename_all_ser_rule = Attr::none(cx, RENAME_ALL);
+        let mut rename_all_de_rule = Attr::none(cx, RENAME_ALL);
+        let mut ser_bound = Attr::none(cx, BOUND);
+        let mut de_bound = Attr::none(cx, BOUND);
+        let mut untagged = BoolAttr::none(cx, UNTAGGED);
+        let mut internal_tag = Attr::none(cx, TAG);
+        let mut content = Attr::none(cx, CONTENT);
+        let mut type_from = Attr::none(cx, FROM);
+        let mut type_try_from = Attr::none(cx, TRY_FROM);
+        let mut type_into = Attr::none(cx, INTO);
+        let mut remote = Attr::none(cx, REMOTE);
+        let mut field_identifier = BoolAttr::none(cx, FIELD_IDENTIFIER);
+        let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
+        let mut serde_path = Attr::none(cx, CRATE);
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -890,19 +890,19 @@ pub struct Variant {
 
 impl Variant {
     pub fn from_ast(cx: &Ctxt, variant: &syn::Variant) -> Self {
-        let mut ser_name = Attr::none(cx, "rename");
-        let mut de_name = Attr::none(cx, "rename");
-        let mut de_aliases = VecAttr::none(cx, "rename");
-        let mut skip_deserializing = BoolAttr::none(cx, "skip_deserializing");
-        let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
-        let mut rename_all_ser_rule = Attr::none(cx, "rename_all");
-        let mut rename_all_de_rule = Attr::none(cx, "rename_all");
-        let mut ser_bound = Attr::none(cx, "bound");
-        let mut de_bound = Attr::none(cx, "bound");
-        let mut other = BoolAttr::none(cx, "other");
-        let mut serialize_with = Attr::none(cx, "serialize_with");
-        let mut deserialize_with = Attr::none(cx, "deserialize_with");
-        let mut borrow = Attr::none(cx, "borrow");
+        let mut ser_name = Attr::none(cx, RENAME);
+        let mut de_name = Attr::none(cx, RENAME);
+        let mut de_aliases = VecAttr::none(cx, RENAME);
+        let mut skip_deserializing = BoolAttr::none(cx, SKIP_DESERIALIZING);
+        let mut skip_serializing = BoolAttr::none(cx, SKIP_SERIALIZING);
+        let mut rename_all_ser_rule = Attr::none(cx, RENAME_ALL);
+        let mut rename_all_de_rule = Attr::none(cx, RENAME_ALL);
+        let mut ser_bound = Attr::none(cx, BOUND);
+        let mut de_bound = Attr::none(cx, BOUND);
+        let mut other = BoolAttr::none(cx, OTHER);
+        let mut serialize_with = Attr::none(cx, SERIALIZE_WITH);
+        let mut deserialize_with = Attr::none(cx, DESERIALIZE_WITH);
+        let mut borrow = Attr::none(cx, BORROW);
 
         for meta_items in variant.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -1200,20 +1200,20 @@ impl Field {
         attrs: Option<&Variant>,
         container_default: &Default,
     ) -> Self {
-        let mut ser_name = Attr::none(cx, "rename");
-        let mut de_name = Attr::none(cx, "rename");
-        let mut de_aliases = VecAttr::none(cx, "rename");
-        let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
-        let mut skip_deserializing = BoolAttr::none(cx, "skip_deserializing");
-        let mut skip_serializing_if = Attr::none(cx, "skip_serializing_if");
-        let mut default = Attr::none(cx, "default");
-        let mut serialize_with = Attr::none(cx, "serialize_with");
-        let mut deserialize_with = Attr::none(cx, "deserialize_with");
-        let mut ser_bound = Attr::none(cx, "bound");
-        let mut de_bound = Attr::none(cx, "bound");
-        let mut borrowed_lifetimes = Attr::none(cx, "borrow");
-        let mut getter = Attr::none(cx, "getter");
-        let mut flatten = BoolAttr::none(cx, "flatten");
+        let mut ser_name = Attr::none(cx, RENAME);
+        let mut de_name = Attr::none(cx, RENAME);
+        let mut de_aliases = VecAttr::none(cx, RENAME);
+        let mut skip_serializing = BoolAttr::none(cx, SKIP_SERIALIZING);
+        let mut skip_deserializing = BoolAttr::none(cx, SKIP_DESERIALIZING);
+        let mut skip_serializing_if = Attr::none(cx, SKIP_SERIALIZING_IF);
+        let mut default = Attr::none(cx, DEFAULT);
+        let mut serialize_with = Attr::none(cx, SERIALIZE_WITH);
+        let mut deserialize_with = Attr::none(cx, DESERIALIZE_WITH);
+        let mut ser_bound = Attr::none(cx, BOUND);
+        let mut de_bound = Attr::none(cx, BOUND);
+        let mut borrowed_lifetimes = Attr::none(cx, BORROW);
+        let mut getter = Attr::none(cx, GETTER);
+        let mut flatten = BoolAttr::none(cx, FLATTEN);
 
         let ident = match field.ident {
             Some(ref ident) => unraw(ident),
@@ -1561,8 +1561,8 @@ where
     T: 'a,
     F: Fn(&Ctxt, Symbol, Symbol, &'a syn::Lit) -> Result<T, ()>,
 {
-    let mut ser_meta = VecAttr::none(cx, attr_name.0);
-    let mut de_meta = VecAttr::none(cx, attr_name.0);
+    let mut ser_meta = VecAttr::none(cx, attr_name);
+    let mut de_meta = VecAttr::none(cx, attr_name);
 
     for meta in metas {
         match *meta {
