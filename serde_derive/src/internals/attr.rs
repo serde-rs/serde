@@ -310,7 +310,7 @@ impl Container {
                 match meta_item {
                     // Parse `#[serde(rename = "foo")]`
                     Meta(NameValue(ref m)) if m.ident == RENAME => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
+                        if let Ok(s) = get_lit_str(cx, RENAME, &m.lit) {
                             ser_name.set(&m.ident, s.value());
                             de_name.set(&m.ident, s.value());
                         }
@@ -326,7 +326,7 @@ impl Container {
 
                     // Parse `#[serde(rename_all = "foo")]`
                     Meta(NameValue(ref m)) if m.ident == RENAME_ALL => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
+                        if let Ok(s) = get_lit_str(cx, RENAME_ALL, &m.lit) {
                             match RenameRule::from_str(&s.value()) {
                                 Ok(rename_rule) => {
                                     rename_all_ser_rule.set(&m.ident, rename_rule);
@@ -419,7 +419,7 @@ impl Container {
 
                     // Parse `#[serde(default = "...")]`
                     Meta(NameValue(ref m)) if m.ident == DEFAULT => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, DEFAULT, &m.lit) {
                             match item.data {
                                 syn::Data::Struct(syn::DataStruct { ref fields, .. }) => {
                                     match *fields {
@@ -454,7 +454,7 @@ impl Container {
                     // Parse `#[serde(bound = "T: SomeBound")]`
                     Meta(NameValue(ref m)) if m.ident == BOUND => {
                         if let Ok(where_predicates) =
-                            parse_lit_into_where(cx, &m.ident, &m.ident, &m.lit)
+                            parse_lit_into_where(cx, BOUND, BOUND, &m.lit)
                         {
                             ser_bound.set(&m.ident, where_predicates.clone());
                             de_bound.set(&m.ident, where_predicates);
@@ -494,7 +494,7 @@ impl Container {
 
                     // Parse `#[serde(tag = "type")]`
                     Meta(NameValue(ref m)) if m.ident == TAG => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
+                        if let Ok(s) = get_lit_str(cx, TAG, &m.lit) {
                             match item.data {
                                 syn::Data::Enum(_) => {
                                     internal_tag.set(&m.ident, s.value());
@@ -528,7 +528,7 @@ impl Container {
 
                     // Parse `#[serde(content = "c")]`
                     Meta(NameValue(ref m)) if m.ident == CONTENT => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
+                        if let Ok(s) = get_lit_str(cx, CONTENT, &m.lit) {
                             match item.data {
                                 syn::Data::Enum(_) => {
                                     content.set(&m.ident, s.value());
@@ -555,28 +555,28 @@ impl Container {
 
                     // Parse `#[serde(from = "Type")]
                     Meta(NameValue(ref m)) if m.ident == FROM => {
-                        if let Ok(from_ty) = parse_lit_into_ty(cx, &m.ident, &m.lit) {
+                        if let Ok(from_ty) = parse_lit_into_ty(cx, FROM, &m.lit) {
                             type_from.set_opt(&m.ident, Some(from_ty));
                         }
                     }
 
                     // Parse `#[serde(try_from = "Type")]
                     Meta(NameValue(ref m)) if m.ident == TRY_FROM => {
-                        if let Ok(try_from_ty) = parse_lit_into_ty(cx, &m.ident, &m.lit) {
+                        if let Ok(try_from_ty) = parse_lit_into_ty(cx, TRY_FROM, &m.lit) {
                             type_try_from.set_opt(&m.ident, Some(try_from_ty));
                         }
                     }
 
                     // Parse `#[serde(into = "Type")]
                     Meta(NameValue(ref m)) if m.ident == INTO => {
-                        if let Ok(into_ty) = parse_lit_into_ty(cx, &m.ident, &m.lit) {
+                        if let Ok(into_ty) = parse_lit_into_ty(cx, INTO, &m.lit) {
                             type_into.set_opt(&m.ident, Some(into_ty));
                         }
                     }
 
                     // Parse `#[serde(remote = "...")]`
                     Meta(NameValue(ref m)) if m.ident == REMOTE => {
-                        if let Ok(path) = parse_lit_into_path(cx, &m.ident, &m.lit) {
+                        if let Ok(path) = parse_lit_into_path(cx, REMOTE, &m.lit) {
                             if is_primitive_path(&path, "Self") {
                                 remote.set(&m.ident, item.ident.clone().into());
                             } else {
@@ -597,7 +597,7 @@ impl Container {
 
                     // Parse `#[serde(crate = "foo")]`
                     Meta(NameValue(ref m)) if m.ident == CRATE => {
-                        if let Ok(path) = parse_lit_into_path(cx, &m.ident, &m.lit) {
+                        if let Ok(path) = parse_lit_into_path(cx, CRATE, &m.lit) {
                             serde_path.set(&m.ident, path)
                         }
                     }
@@ -909,7 +909,7 @@ impl Variant {
                 match meta_item {
                     // Parse `#[serde(rename = "foo")]`
                     Meta(NameValue(ref m)) if m.ident == RENAME => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
+                        if let Ok(s) = get_lit_str(cx, RENAME, &m.lit) {
                             ser_name.set(&m.ident, s.value());
                             de_name.set_if_none(s.value());
                             de_aliases.insert(&m.ident, s.value());
@@ -929,14 +929,14 @@ impl Variant {
 
                     // Parse `#[serde(alias = "foo")]`
                     Meta(NameValue(ref m)) if m.ident == ALIAS => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
+                        if let Ok(s) = get_lit_str(cx, ALIAS, &m.lit) {
                             de_aliases.insert(&m.ident, s.value());
                         }
                     }
 
                     // Parse `#[serde(rename_all = "foo")]`
                     Meta(NameValue(ref m)) if m.ident == RENAME_ALL => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
+                        if let Ok(s) = get_lit_str(cx, RENAME_ALL, &m.lit) {
                             match RenameRule::from_str(&s.value()) {
                                 Ok(rename_rule) => {
                                     rename_all_ser_rule.set(&m.ident, rename_rule);
@@ -1014,7 +1014,7 @@ impl Variant {
                     // Parse `#[serde(bound = "T: SomeBound")]`
                     Meta(NameValue(ref m)) if m.ident == BOUND => {
                         if let Ok(where_predicates) =
-                            parse_lit_into_where(cx, &m.ident, &m.ident, &m.lit)
+                            parse_lit_into_where(cx, BOUND, BOUND, &m.lit)
                         {
                             ser_bound.set(&m.ident, where_predicates.clone());
                             de_bound.set(&m.ident, where_predicates);
@@ -1031,7 +1031,7 @@ impl Variant {
 
                     // Parse `#[serde(with = "...")]`
                     Meta(NameValue(ref m)) if m.ident == WITH => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, WITH, &m.lit) {
                             let mut ser_path = path.clone();
                             ser_path
                                 .path
@@ -1049,14 +1049,14 @@ impl Variant {
 
                     // Parse `#[serde(serialize_with = "...")]`
                     Meta(NameValue(ref m)) if m.ident == SERIALIZE_WITH => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, SERIALIZE_WITH, &m.lit) {
                             serialize_with.set(&m.ident, path);
                         }
                     }
 
                     // Parse `#[serde(deserialize_with = "...")]`
                     Meta(NameValue(ref m)) if m.ident == DESERIALIZE_WITH => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, DESERIALIZE_WITH, &m.lit) {
                             deserialize_with.set(&m.ident, path);
                         }
                     }
@@ -1234,7 +1234,7 @@ impl Field {
                 match meta_item {
                     // Parse `#[serde(rename = "foo")]`
                     Meta(NameValue(ref m)) if m.ident == RENAME => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
+                        if let Ok(s) = get_lit_str(cx, RENAME, &m.lit) {
                             ser_name.set(&m.ident, s.value());
                             de_name.set_if_none(s.value());
                             de_aliases.insert(&m.ident, s.value());
@@ -1254,7 +1254,7 @@ impl Field {
 
                     // Parse `#[serde(alias = "foo")]`
                     Meta(NameValue(ref m)) if m.ident == ALIAS => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
+                        if let Ok(s) = get_lit_str(cx, ALIAS, &m.lit) {
                             de_aliases.insert(&m.ident, s.value());
                         }
                     }
@@ -1266,7 +1266,7 @@ impl Field {
 
                     // Parse `#[serde(default = "...")]`
                     Meta(NameValue(ref m)) if m.ident == DEFAULT => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, DEFAULT, &m.lit) {
                             default.set(&m.ident, Default::Path(path));
                         }
                     }
@@ -1289,28 +1289,28 @@ impl Field {
 
                     // Parse `#[serde(skip_serializing_if = "...")]`
                     Meta(NameValue(ref m)) if m.ident == SKIP_SERIALIZING_IF => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, SKIP_SERIALIZING_IF, &m.lit) {
                             skip_serializing_if.set(&m.ident, path);
                         }
                     }
 
                     // Parse `#[serde(serialize_with = "...")]`
                     Meta(NameValue(ref m)) if m.ident == SERIALIZE_WITH => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, SERIALIZE_WITH, &m.lit) {
                             serialize_with.set(&m.ident, path);
                         }
                     }
 
                     // Parse `#[serde(deserialize_with = "...")]`
                     Meta(NameValue(ref m)) if m.ident == DESERIALIZE_WITH => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, DESERIALIZE_WITH, &m.lit) {
                             deserialize_with.set(&m.ident, path);
                         }
                     }
 
                     // Parse `#[serde(with = "...")]`
                     Meta(NameValue(ref m)) if m.ident == WITH => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, WITH, &m.lit) {
                             let mut ser_path = path.clone();
                             ser_path
                                 .path
@@ -1329,7 +1329,7 @@ impl Field {
                     // Parse `#[serde(bound = "T: SomeBound")]`
                     Meta(NameValue(ref m)) if m.ident == BOUND => {
                         if let Ok(where_predicates) =
-                            parse_lit_into_where(cx, &m.ident, &m.ident, &m.lit)
+                            parse_lit_into_where(cx, BOUND, BOUND, &m.lit)
                         {
                             ser_bound.set(&m.ident, where_predicates.clone());
                             de_bound.set(&m.ident, where_predicates);
@@ -1353,7 +1353,7 @@ impl Field {
 
                     // Parse `#[serde(borrow = "'a + 'b")]`
                     Meta(NameValue(ref m)) if m.ident == BORROW => {
-                        if let Ok(lifetimes) = parse_lit_into_lifetimes(cx, &m.ident, &m.lit) {
+                        if let Ok(lifetimes) = parse_lit_into_lifetimes(cx, BORROW, &m.lit) {
                             if let Ok(borrowable) = borrowable_lifetimes(cx, &ident, field) {
                                 for lifetime in &lifetimes {
                                     if !borrowable.contains(lifetime) {
@@ -1373,7 +1373,7 @@ impl Field {
 
                     // Parse `#[serde(getter = "...")]`
                     Meta(NameValue(ref m)) if m.ident == GETTER => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
+                        if let Ok(path) = parse_lit_into_expr_path(cx, GETTER, &m.lit) {
                             getter.set(&m.ident, path);
                         }
                     }
@@ -1553,28 +1553,27 @@ type SerAndDe<T> = (Option<T>, Option<T>);
 
 fn get_ser_and_de<'a, 'b, T, F>(
     cx: &'b Ctxt,
-    attr_name: &'static str,
+    attr_name: Symbol,
     metas: &'a Punctuated<syn::NestedMeta, Token![,]>,
     f: F,
 ) -> Result<(VecAttr<'b, T>, VecAttr<'b, T>), ()>
 where
     T: 'a,
-    F: Fn(&Ctxt, &Ident, &Ident, &'a syn::Lit) -> Result<T, ()>,
+    F: Fn(&Ctxt, Symbol, Symbol, &'a syn::Lit) -> Result<T, ()>,
 {
-    let mut ser_meta = VecAttr::none(cx, attr_name);
-    let mut de_meta = VecAttr::none(cx, attr_name);
-    let attr_name = Ident::new(attr_name, Span::call_site());
+    let mut ser_meta = VecAttr::none(cx, attr_name.0);
+    let mut de_meta = VecAttr::none(cx, attr_name.0);
 
     for meta in metas {
         match *meta {
             Meta(NameValue(ref meta)) if meta.ident == SERIALIZE => {
-                if let Ok(v) = f(cx, &attr_name, &meta.ident, &meta.lit) {
+                if let Ok(v) = f(cx, attr_name, SERIALIZE, &meta.lit) {
                     ser_meta.insert(&meta.ident, v);
                 }
             }
 
             Meta(NameValue(ref meta)) if meta.ident == DESERIALIZE => {
-                if let Ok(v) = f(cx, &attr_name, &meta.ident, &meta.lit) {
+                if let Ok(v) = f(cx, attr_name, DESERIALIZE, &meta.lit) {
                     de_meta.insert(&meta.ident, v);
                 }
             }
@@ -1600,7 +1599,7 @@ fn get_renames<'a>(
     cx: &Ctxt,
     items: &'a Punctuated<syn::NestedMeta, Token![,]>,
 ) -> Result<SerAndDe<&'a syn::LitStr>, ()> {
-    let (ser, de) = try!(get_ser_and_de(cx, "rename", items, get_lit_str));
+    let (ser, de) = try!(get_ser_and_de(cx, RENAME, items, get_lit_str2));
     Ok((try!(ser.at_most_one()), try!(de.at_most_one())))
 }
 
@@ -1608,7 +1607,7 @@ fn get_multiple_renames<'a>(
     cx: &Ctxt,
     items: &'a Punctuated<syn::NestedMeta, Token![,]>,
 ) -> Result<(Option<&'a syn::LitStr>, Vec<&'a syn::LitStr>), ()> {
-    let (ser, de) = try!(get_ser_and_de(cx, "rename", items, get_lit_str));
+    let (ser, de) = try!(get_ser_and_de(cx, RENAME, items, get_lit_str2));
     Ok((try!(ser.at_most_one()), de.get()))
 }
 
@@ -1616,7 +1615,7 @@ fn get_where_predicates(
     cx: &Ctxt,
     items: &Punctuated<syn::NestedMeta, Token![,]>,
 ) -> Result<SerAndDe<Vec<syn::WherePredicate>>, ()> {
-    let (ser, de) = try!(get_ser_and_de(cx, "bound", items, parse_lit_into_where));
+    let (ser, de) = try!(get_ser_and_de(cx, BOUND, items, parse_lit_into_where));
     Ok((try!(ser.at_most_one()), try!(de.at_most_one())))
 }
 
@@ -1636,8 +1635,16 @@ pub fn get_serde_meta_items(attr: &syn::Attribute) -> Option<Vec<syn::NestedMeta
 
 fn get_lit_str<'a>(
     cx: &Ctxt,
-    attr_name: &Ident,
-    meta_item_name: &Ident,
+    attr_name: Symbol,
+    lit: &'a syn::Lit,
+) -> Result<&'a syn::LitStr, ()> {
+    get_lit_str2(cx, attr_name, attr_name, lit)
+}
+
+fn get_lit_str2<'a>(
+    cx: &Ctxt,
+    attr_name: Symbol,
+    meta_item_name: Symbol,
     lit: &'a syn::Lit,
 ) -> Result<&'a syn::LitStr, ()> {
     if let syn::Lit::Str(ref lit) = *lit {
@@ -1654,8 +1661,8 @@ fn get_lit_str<'a>(
     }
 }
 
-fn parse_lit_into_path(cx: &Ctxt, attr_name: &Ident, lit: &syn::Lit) -> Result<syn::Path, ()> {
-    let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
+fn parse_lit_into_path(cx: &Ctxt, attr_name: Symbol, lit: &syn::Lit) -> Result<syn::Path, ()> {
+    let string = try!(get_lit_str(cx, attr_name, lit));
     parse_lit_str(string).map_err(|_| {
         cx.error_spanned_by(lit, format!("failed to parse path: {:?}", string.value()))
     })
@@ -1663,10 +1670,10 @@ fn parse_lit_into_path(cx: &Ctxt, attr_name: &Ident, lit: &syn::Lit) -> Result<s
 
 fn parse_lit_into_expr_path(
     cx: &Ctxt,
-    attr_name: &Ident,
+    attr_name: Symbol,
     lit: &syn::Lit,
 ) -> Result<syn::ExprPath, ()> {
-    let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
+    let string = try!(get_lit_str(cx, attr_name, lit));
     parse_lit_str(string).map_err(|_| {
         cx.error_spanned_by(lit, format!("failed to parse path: {:?}", string.value()))
     })
@@ -1674,11 +1681,11 @@ fn parse_lit_into_expr_path(
 
 fn parse_lit_into_where(
     cx: &Ctxt,
-    attr_name: &Ident,
-    meta_item_name: &Ident,
+    attr_name: Symbol,
+    meta_item_name: Symbol,
     lit: &syn::Lit,
 ) -> Result<Vec<syn::WherePredicate>, ()> {
-    let string = try!(get_lit_str(cx, attr_name, meta_item_name, lit));
+    let string = try!(get_lit_str2(cx, attr_name, meta_item_name, lit));
     if string.value().is_empty() {
         return Ok(Vec::new());
     }
@@ -1690,8 +1697,8 @@ fn parse_lit_into_where(
         .map_err(|err| cx.error_spanned_by(lit, err))
 }
 
-fn parse_lit_into_ty(cx: &Ctxt, attr_name: &Ident, lit: &syn::Lit) -> Result<syn::Type, ()> {
-    let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
+fn parse_lit_into_ty(cx: &Ctxt, attr_name: Symbol, lit: &syn::Lit) -> Result<syn::Type, ()> {
+    let string = try!(get_lit_str(cx, attr_name, lit));
 
     parse_lit_str(string).map_err(|_| {
         cx.error_spanned_by(
@@ -1705,10 +1712,10 @@ fn parse_lit_into_ty(cx: &Ctxt, attr_name: &Ident, lit: &syn::Lit) -> Result<syn
 // lifetimes separated by `+`.
 fn parse_lit_into_lifetimes(
     cx: &Ctxt,
-    attr_name: &Ident,
+    attr_name: Symbol,
     lit: &syn::Lit,
 ) -> Result<BTreeSet<syn::Lifetime>, ()> {
-    let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
+    let string = try!(get_lit_str(cx, attr_name, lit));
     if string.value().is_empty() {
         cx.error_spanned_by(lit, "at least one lifetime must be borrowed");
         return Err(());

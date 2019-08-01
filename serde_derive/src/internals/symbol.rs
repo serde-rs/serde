@@ -1,6 +1,8 @@
+use std::fmt::{self, Display};
 use syn::{Ident, Path};
 
-pub struct Symbol(&'static str);
+#[derive(Copy, Clone)]
+pub struct Symbol(pub &'static str);
 
 pub const ALIAS: Symbol = Symbol("alias");
 pub const BORROW: Symbol = Symbol("borrow");
@@ -49,5 +51,11 @@ impl<'a> PartialEq<Symbol> for &'a Ident {
 impl PartialEq<Symbol> for Path {
     fn eq(&self, word: &Symbol) -> bool {
         self.is_ident(word.0)
+    }
+}
+
+impl Display for Symbol {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str(self.0)
     }
 }
