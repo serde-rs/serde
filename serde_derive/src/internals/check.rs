@@ -407,7 +407,7 @@ fn member_message(member: &Member) -> String {
 fn allow_transparent(field: &Field, derive: Derive) -> bool {
     if let Type::Path(ref ty) = *field.ty {
         if let Some(seg) = ty.path.segments.last() {
-            if seg.into_value().ident == "PhantomData" {
+            if seg.ident == "PhantomData" {
                 return false;
             }
         }

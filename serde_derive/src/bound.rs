@@ -115,7 +115,7 @@ pub fn with_bound(
     impl<'ast> Visit<'ast> for FindTyParams<'ast> {
         fn visit_field(&mut self, field: &'ast syn::Field) {
             if let syn::Type::Path(ref ty) = field.ty {
-                if let Some(Pair::Punctuated(ref t, _)) = ty.path.segments.first() {
+                if let Some(Pair::Punctuated(ref t, _)) = ty.path.segments.pairs().next() {
                     if self.all_type_params.contains(&t.ident) {
                         self.associated_type_usage.push(ty);
                     }
@@ -126,7 +126,7 @@ pub fn with_bound(
 
         fn visit_path(&mut self, path: &'ast syn::Path) {
             if let Some(seg) = path.segments.last() {
-                if seg.into_value().ident == "PhantomData" {
+                if seg.ident == "PhantomData" {
                     // Hardcoded exception, because PhantomData<T> implements
                     // Serialize and Deserialize whether or not T implements it.
                     return;
