@@ -1597,24 +1597,24 @@ fn get_renames<'a>(
     cx: &Ctxt,
     items: &'a Punctuated<syn::NestedMeta, Token![,]>,
 ) -> Result<SerAndDe<&'a syn::LitStr>, ()> {
-    let (ser, de) = try!(get_ser_and_de(cx, RENAME, items, get_lit_str2));
-    Ok((try!(ser.at_most_one()), try!(de.at_most_one())))
+    let (ser, de) = get_ser_and_de(cx, RENAME, items, get_lit_str2)?;
+    Ok((ser.at_most_one()?, de.at_most_one()?))
 }
 
 fn get_multiple_renames<'a>(
     cx: &Ctxt,
     items: &'a Punctuated<syn::NestedMeta, Token![,]>,
 ) -> Result<(Option<&'a syn::LitStr>, Vec<&'a syn::LitStr>), ()> {
-    let (ser, de) = try!(get_ser_and_de(cx, RENAME, items, get_lit_str2));
-    Ok((try!(ser.at_most_one()), de.get()))
+    let (ser, de) = get_ser_and_de(cx, RENAME, items, get_lit_str2)?;
+    Ok((ser.at_most_one()?, de.get()))
 }
 
 fn get_where_predicates(
     cx: &Ctxt,
     items: &Punctuated<syn::NestedMeta, Token![,]>,
 ) -> Result<SerAndDe<Vec<syn::WherePredicate>>, ()> {
-    let (ser, de) = try!(get_ser_and_de(cx, BOUND, items, parse_lit_into_where));
-    Ok((try!(ser.at_most_one()), try!(de.at_most_one())))
+    let (ser, de) = get_ser_and_de(cx, BOUND, items, parse_lit_into_where)?;
+    Ok((ser.at_most_one()?, de.at_most_one()?))
 }
 
 pub fn get_serde_meta_items(attr: &syn::Attribute) -> Option<Vec<syn::NestedMeta>> {
@@ -1656,7 +1656,7 @@ fn get_lit_str2<'a>(
 }
 
 fn parse_lit_into_path(cx: &Ctxt, attr_name: Symbol, lit: &syn::Lit) -> Result<syn::Path, ()> {
-    let string = try!(get_lit_str(cx, attr_name, lit));
+    let string = get_lit_str(cx, attr_name, lit)?;
     parse_lit_str(string).map_err(|_| {
         cx.error_spanned_by(lit, format!("failed to parse path: {:?}", string.value()))
     })
@@ -1667,7 +1667,7 @@ fn parse_lit_into_expr_path(
     attr_name: Symbol,
     lit: &syn::Lit,
 ) -> Result<syn::ExprPath, ()> {
-    let string = try!(get_lit_str(cx, attr_name, lit));
+    let string = get_lit_str(cx, attr_name, lit)?;
     parse_lit_str(string).map_err(|_| {
         cx.error_spanned_by(lit, format!("failed to parse path: {:?}", string.value()))
     })
@@ -1679,7 +1679,7 @@ fn parse_lit_into_where(
     meta_item_name: Symbol,
     lit: &syn::Lit,
 ) -> Result<Vec<syn::WherePredicate>, ()> {
-    let string = try!(get_lit_str2(cx, attr_name, meta_item_name, lit));
+    let string = get_lit_str2(cx, attr_name, meta_item_name, lit)?;
     if string.value().is_empty() {
         return Ok(Vec::new());
     }
@@ -1692,7 +1692,7 @@ fn parse_lit_into_where(
 }
 
 fn parse_lit_into_ty(cx: &Ctxt, attr_name: Symbol, lit: &syn::Lit) -> Result<syn::Type, ()> {
-    let string = try!(get_lit_str(cx, attr_name, lit));
+    let string = get_lit_str(cx, attr_name, lit)?;
 
     parse_lit_str(string).map_err(|_| {
         cx.error_spanned_by(
@@ -1709,7 +1709,7 @@ fn parse_lit_into_lifetimes(
     attr_name: Symbol,
     lit: &syn::Lit,
 ) -> Result<BTreeSet<syn::Lifetime>, ()> {
-    let string = try!(get_lit_str(cx, attr_name, lit));
+    let string = get_lit_str(cx, attr_name, lit)?;
     if string.value().is_empty() {
         cx.error_spanned_by(lit, "at least one lifetime must be borrowed");
         return Err(());
@@ -1965,12 +1965,12 @@ fn parse_lit_str<T>(s: &syn::LitStr) -> parse::Result<T>
 where
     T: Parse,
 {
-    let tokens = try!(spanned_tokens(s));
+    let tokens = spanned_tokens(s)?;
     syn::parse2(tokens)
 }
 
 fn spanned_tokens(s: &syn::LitStr) -> parse::Result<TokenStream> {
-    let stream = try!(syn::parse_str(&s.value()));
+    let stream = syn::parse_str(&s.value())?;
     Ok(respan_token_stream(stream, s.span()))
 }
 
