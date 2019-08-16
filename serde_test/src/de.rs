@@ -89,11 +89,11 @@ impl<'de> Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        let value = try!(visitor.visit_seq(DeserializerSeqVisitor {
+        let value = visitor.visit_seq(DeserializerSeqVisitor {
             de: self,
             len: len,
             end: end,
-        },));
+        })?;
         assert_next_token!(self, end);
         Ok(value)
     }
@@ -107,11 +107,11 @@ impl<'de> Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        let value = try!(visitor.visit_map(DeserializerMapVisitor {
+        let value = visitor.visit_map(DeserializerMapVisitor {
             de: self,
             len: len,
             end: end,
-        },));
+        })?;
         assert_next_token!(self, end);
         Ok(value)
     }
@@ -456,11 +456,11 @@ impl<'de, 'a> EnumAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
             | Token::TupleVariant { variant: v, .. }
             | Token::StructVariant { variant: v, .. } => {
                 let de = v.into_deserializer();
-                let value = try!(seed.deserialize(de));
+                let value = seed.deserialize(de)?;
                 Ok((value, self))
             }
             _ => {
-                let value = try!(seed.deserialize(&mut *self.de));
+                let value = seed.deserialize(&mut *self.de)?;
                 Ok((value, self))
             }
         }
@@ -613,7 +613,7 @@ impl<'de, 'a> MapAccess<'de> for EnumMapVisitor<'a, 'de> {
                         len: None,
                         end: Token::TupleVariantEnd,
                     };
-                    try!(seed.deserialize(SeqAccessDeserializer::new(visitor)))
+                    seed.deserialize(SeqAccessDeserializer::new(visitor))?
                 };
                 assert_next_token!(self.de, Token::TupleVariantEnd);
                 Ok(value)
@@ -625,7 +625,7 @@ impl<'de, 'a> MapAccess<'de> for EnumMapVisitor<'a, 'de> {
                         len: None,
                         end: Token::StructVariantEnd,
                     };
-                    try!(seed.deserialize(MapAccessDeserializer::new(visitor)))
+                    seed.deserialize(MapAccessDeserializer::new(visitor))?
                 };
                 assert_next_token!(self.de, Token::StructVariantEnd);
                 Ok(value)
