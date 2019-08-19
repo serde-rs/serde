@@ -787,7 +787,7 @@ where
 ///
 /// The role of this trait is to define the deserialization half of the [Serde
 /// data model], which is a way to categorize every Rust data type into one of
-/// 29 possible types. Each method of the `Serializer` trait corresponds to one
+/// 29 possible types. Each method of the `Deserializer` trait corresponds to one
 /// of the types of the data model.
 ///
 /// Implementations of `Deserialize` map themselves into this data model by
