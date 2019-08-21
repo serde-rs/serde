@@ -45,6 +45,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream
         }
     } else {
         let fn_deserialize_in_place = deserialize_in_place_body(&cont, &params);
+        let fn_version_helpers = fn_version_helpers(&conte, &params);
 
         quote! {
             #[automatically_derived]
@@ -57,6 +58,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream
                 }
 
                 #fn_deserialize_in_place
+                #fn_version_helpers
             }
         }
     };
@@ -289,6 +291,89 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
             }
             Data::Struct(_, _) => unreachable!("checked in serde_derive_internals"),
         }
+    }
+}
+
+#[cfg(not(feature = "versioning"))]
+fn fn_version_helpers(cont: &Container, params: &Parameters) -> Option<Stmts> {
+    None
+}
+
+#[cfg(feature = "versioning")]
+fn fn_version_helpers(cont: &Container, params: &Parameters, deserializer: Option<&TokenStream>) -> Option<Stmts> {
+    if let Some(versions) = cont.attrs.versions() {
+        let deserializer = deserializer_token_stream(deserializer);
+        let deser_name = cont.attrs.name().deserialize_name();
+        let next_element_dispatch_arms = &versions
+            .iter()
+            .enumerate()
+            .map(|(i, path)| {
+                let version_number = i + 1;
+                quote! {
+                    _serde::export::Result::map(
+                        <#path as _serde::Deserialize>::next_element_seed_versioned(#deserializer, seed, version_map),
+                        _serde::export::Into::into
+                    )
+                }
+            })
+            .collect::<Vec<_>>();
+        let next_value_dispatch_arms = &versions
+            .iter()
+            .enumerate()
+            .map(|(i, path)| {
+                let version_number = i + 1;
+                quote! {
+                    _serde::export::Result::map(
+                        <#path as _serde::Deserialize>::next_value_seed_versioned(#deserializer, seed, version_map),
+                        _serde::export::Into::into
+                    )
+                }
+            })
+            .collect::<Vec<_>>();
+
+        // TODO: handle properly unknown version error
+
+        let result = quote_block! {
+            /// Get the next element in a sequence with versioning support
+            fn next_element_seed_versioned<S: SeqAccess<'de>, Seed: DeserializeSeed<'de, Value = Self>>(
+                seq: &mut S,
+                seed: Seed,
+                version_map: Option<&VersionMap>,
+            ) -> Result<Option<Self>, S::Error> {
+                match version_map {
+                    Some(version_map) => {
+                        match version_map.get(#deser_name) {
+                            #(#next_element_dispatch_arms)*
+                            None => seq.next_element_seed::<Self>(seed),
+                            _ => seq.next_element_seed::<Self>(seed), // Unknown version, we should report an error here
+                        }
+                    },
+                    None => seq.next_element_seed::<Self>(seed),
+                }
+            }
+
+            /// Get the next map value with versioning support
+            fn next_value_seed_versioned<M: MapAccess<'de>, Seed: DeserializeSeed<'de, Value = Self>>(
+                map: &mut M,
+                seed: Seed,
+                version_map: Option<&VersionMap>,
+            ) -> Result<Self, M::Error> {
+                match version_map {
+                    Some(version_map) => {
+                        match version_map.get(#deser_name) {
+                            #(#next_value_dispatch_arms)*
+                            None => map.next_value_seed::<Self>(seed),
+                            _ => map.next_value_seed::<Self>(seed), // Unknown version, we should report an error here
+                        }
+                    },
+                    None => map.next_value_seed::<Self>(seed),
+                }
+            }
+        };
+
+        Some(Stmts(result))
+    } else {
+        None
     }
 }
 
@@ -1043,8 +1128,12 @@ fn deserialize_struct(
         None
     };
 
+    let version_match_dispatch = dispatch_serialize_for_versions(cattrs, deserializer.as_ref());
+
     let field_version_map = field_version_map();
     quote_block! {
+        #version_match_dispatch
+
         #field_visitor
 
         struct __Visitor #de_impl_generics #where_clause {
@@ -3180,9 +3269,13 @@ fn split_with_de_lifetime(
     (de_impl_generics, de_ty_generics, ty_generics, where_clause)
 }
 
-fn deserializer_token_stream(deserializer: Option<TokenStream>) -> TokenStream {
+//
+// Versioning helpers
+//
+
+fn deserializer_token_stream(deserializer: Option<&TokenStream>) -> TokenStream {
     if cfg!(feature = "versioning") {
-        deserializer.unwrap_or_else(|| quote! { __deserializer })
+        deserializer.clone().unwrap_or_else(|| quote! { __deserializer })
     } else {
         TokenStream::new()
     }
@@ -3211,6 +3304,46 @@ fn init_version_map() -> TokenStream {
     if cfg!(feature = "versioning") {
         let result: TokenStream = quote! { version_map: __version_map };
         result
+    } else {
+        TokenStream::new()
+    }
+}
+
+fn dispatch_serialize_for_versions(cattr: &attr::Container, deserializer: Option<&TokenStream>) -> TokenStream {
+    if cfg!(feature = "versioning") {
+        if let Some(versions) = cattrs.versions() {
+            let deserializer = deserializer_token_stream(deserializer);
+
+            let version_dispatch_arms = versions.iter()
+                .enumerate()
+                .map(|(i, path)| {
+                    let version_number = i + 1;
+                    quote! {
+                        Some(#version_number) => return _serde::export::Result::map(
+                            <#path as _serde::Deserialize>::deserialize(#deserializer),
+                            _serde::export::Into::into
+                        ),
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            let deser_name = cattrs.name().deserialize_name().to_string();
+            // TODO: report properly the unknown version error
+            let result: TokenStream =  quote! {
+                match #deserializer.version_map() {
+                    Some(version_map) => match version_map(#deser_name) {
+                        #(version_dispatch_arms)*
+                        None => {},     // continue the deserialization
+                        _ => {}         // Unknown version, we should report an error here
+                    },
+                    None => {}          // continue the deserialization
+                }
+            };
+
+            result
+        } else {
+            TokenStream::new()
+        }
     } else {
         TokenStream::new()
     }

@@ -21,6 +21,7 @@ use syn::NestedMeta::{Lit, Meta};
 // rather than just the first.
 
 pub use internals::case::RenameRule;
+use std::ops::Deref;
 
 struct Attr<'c, T> {
     cx: &'c Ctxt,
@@ -208,6 +209,13 @@ pub struct RenameAllRules {
 #[cfg(feature = "versioning")]
 pub struct Versions {
     versions: Vec<syn::Path>,
+}
+impl Deref for Versions {
+    type Target = [syn::Path];
+
+    fn deref(&self) -> &Self::Target {
+        &self.versions
+    }
 }
 
 /// Represents struct or enum attribute information.
@@ -742,7 +750,7 @@ impl Container {
     }
 
     #[cfg(feature = "versioning")]
-    pub fn versions(&self) -> Option<&Version> {
+    pub fn versions(&self) -> Option<&Versions> {
         self.versions.as_ref()
     }
 }
