@@ -1573,6 +1573,29 @@ fn deserialize_adjacently_tagged_enum(
         }
     };
 
+    let next_value_seed = if cfg!(feature = "versioned") {
+        quote! {
+            <#this #ty_generics as _serde::Deserialize<'de>>::next_value_seed_versioned(
+                &mut __map,
+                __Seed {
+                    field: __field,
+                    marker: _serde::export::PhantomData,
+                    lifetime: _serde::export::PhantomData,
+                },
+                &self.version_map,
+            )
+        }
+    } else {
+        quote! {
+            _serde::de::MapAccess::next_value_seed(&mut __map,
+            __Seed {
+                field: __field,
+                marker: _serde::export::PhantomData,
+                lifetime: _serde::export::PhantomData,
+            })
+        }
+    };
+
     let field_version_map = field_version_map();
     let init_version_map = init_version_map();
     let let_version_map = let_version_map(None);
@@ -1631,12 +1654,7 @@ fn deserialize_adjacently_tagged_enum(
                             }
                             // Second key is the content.
                             _serde::export::Some(_serde::private::de::TagOrContentField::Content) => {
-                                let __ret = try!(_serde::de::MapAccess::next_value_seed(&mut __map,
-                                    __Seed {
-                                        field: __field,
-                                        marker: _serde::export::PhantomData,
-                                        lifetime: _serde::export::PhantomData,
-                                    }));
+                                let __ret = try!(#next_value_seed);
                                 // Visit remaining keys, looking for duplicates.
                                 #visit_remaining_keys
                             }
@@ -2479,17 +2497,30 @@ fn deserialize_map(
                 None => {
                     let field_ty = field.ty;
                     let span = field.original.span();
-                    let func =
-                        quote_spanned!(span=> _serde::de::MapAccess::next_value::<#field_ty>);
-                    quote! {
-                        try!(#func(&mut __map))
+                    if cfg!(feature = "versioned") {
+                        let func =
+                            quote_spanned!(span=> <#field_ty as _serde::Deserialize<'de>>::next_value_versioned);
+                        quote! {
+                            try!(#func(&mut __map, &self.version_map))
+                        }
+                    } else {
+                        let func =
+                                quote_spanned!(span=> _serde::de::MapAccess::next_value::<#field_ty>);
+                            quote! {
+                            try!(#func(&mut __map))
+                        }
                     }
                 }
                 Some(path) => {
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
+                    let next_value = if cfg!(feature = "versioned") {
+                        quote! { <#wrapper_ty as _serde::Deserialize<'de>>::next_value_versioned(&mut __map, &self.version_map) }
+                    } else {
+                        quote! { _serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map) }
+                    };
                     quote!({
                         #wrapper
-                        match _serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map) {
+                        match #next_value {
                             _serde::export::Ok(__wrapper) => __wrapper.value,
                             _serde::export::Err(__err) => {
                                 return _serde::export::Err(__err);
@@ -2716,18 +2747,30 @@ fn deserialize_map_in_place(
         .map(|&(field, ref name)| {
             let deser_name = field.attrs.name().deserialize_name();
             let member = &field.member;
+            let ty = field.ty;
 
             let visit = match field.attrs.deserialize_with() {
                 None => {
-                    quote! {
-                        try!(_serde::de::MapAccess::next_value_seed(&mut __map, _serde::private::de::InPlaceSeed(&mut self.place.#member)))
+                    if cfg!(feature = "versioning") {
+                        quote! {
+                            try!(<#ty as _serde::Deserialize<'de>>::next_value_seed(&mut __map, _serde::private::de::InPlaceSeed(&mut self.place.#member)), &self.version_map)
+                        }
+                    } else {
+                        quote! {
+                            try!(_serde::de::MapAccess::next_value_seed(&mut __map, _serde::private::de::InPlaceSeed(&mut self.place.#member)))
+                        }
                     }
                 }
                 Some(path) => {
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
+                    let next_value = if cfg!(feature = "versioning") {
+                        quote! { <#wrapper_ty as _serde::Deserialize<'de>>::next_value_versioned(&mut __map, &self.version_map) }
+                    } else {
+                        quote! { _serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map) }
+                    };
                     quote!({
                         #wrapper
-                        self.place.#member = match _serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map) {
+                        self.place.#member = match #next_value {
                             _serde::export::Ok(__wrapper) => __wrapper.value,
                             _serde::export::Err(__err) => {
                                 return _serde::export::Err(__err);
