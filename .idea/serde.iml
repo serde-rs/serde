@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="CPP_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/serde/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/serde/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/serde/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/serde/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/serde_derive/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/serde_derive/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/serde_derive/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/serde_derive/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/serde_derive_internals/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/serde_derive_internals/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/serde_derive_internals/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/serde_derive_internals/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/serde_test/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/serde_test/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/serde_test/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/serde_test/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/test_suite/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/test_suite/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/test_suite/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/test_suite/benches" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/serde/target" />
+      <excludeFolder url="file://$MODULE_DIR$/serde_derive/target" />
+      <excludeFolder url="file://$MODULE_DIR$/serde_derive_internals/target" />
+      <excludeFolder url="file://$MODULE_DIR$/serde_test/target" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+      <excludeFolder url="file://$MODULE_DIR$/test_suite/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

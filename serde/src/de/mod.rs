@@ -560,7 +560,31 @@ pub trait Deserialize<'de>: Sized {
         *place = Deserialize::deserialize(deserializer)?;
         Ok(())
     }
+
+    #[cfg(feature = "versioning")]
+    fn version_map(&self) -> Option<&VersionMap> { None }
+
+    /// Get the next element in a sequence with versioning support
+    #[cfg(feature = "versioning")]
+    fn next_element_versioned<S: SeqAccess<'de>>(
+        seq: &mut S,
+        versions: Option<&VersionMap>,
+    ) -> Result<Option<Self>, S::Error> {
+        seq.next_element::<Self>()
+    }
+
+    /// Get the next map value with versioning support
+    #[cfg(feature = "versioning")]
+    fn next_value_versioned<M: MapAccess<'de>>(
+        map: &mut M,
+        versions: Option<&VersionMap>,
+    ) -> Result<Self, M::Error> {
+        map.next_value::<Self>()
+    }
 }
+
+#[cfg(feature = "versioning")]
+pub type VersionMap = std::collections::HashMap<String, usize>;
 
 /// A data structure that can be deserialized without borrowing any data from
 /// the deserializer.
