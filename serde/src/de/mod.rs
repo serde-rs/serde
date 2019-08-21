@@ -573,6 +573,16 @@ pub trait Deserialize<'de>: Sized {
         seq.next_element::<Self>()
     }
 
+    /// Get the next element in a sequence with versioning support
+    #[cfg(feature = "versioning")]
+    fn next_element_seed_versioned<S: SeqAccess<'de>, Seed: DeserializeSeed<'de, Value = Self>>(
+        seq: &mut S,
+        seed: Seed,
+        versions: Option<&VersionMap>,
+    ) -> Result<Option<Self>, S::Error> {
+        seq.next_element_seed::<Self>(seed)
+    }
+
     /// Get the next map value with versioning support
     #[cfg(feature = "versioning")]
     fn next_value_versioned<M: MapAccess<'de>>(
@@ -580,6 +590,16 @@ pub trait Deserialize<'de>: Sized {
         versions: Option<&VersionMap>,
     ) -> Result<Self, M::Error> {
         map.next_value::<Self>()
+    }
+
+    /// Get the next map value with versioning support
+    #[cfg(feature = "versioning")]
+    fn next_value_seed_versioned<M: MapAccess<'de>, Seed: DeserializeSeed<'de, Value = Self>>(
+        map: &mut M,
+        seed: Seed,
+        versions: Option<&VersionMap>,
+    ) -> Result<Self, M::Error> {
+        map.next_value_seed::<Self>(seed)
     }
 }
 

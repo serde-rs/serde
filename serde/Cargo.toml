@@ -57,3 +57,6 @@ rc = []
 
 # Provide versioning support
 versioning = []
+
+# Provide versioning with derive support
+versioning_derive = ["derive", "versioning", "serde_derive/versioning"]

@@ -650,18 +650,33 @@ fn deserialize_seq(
                 None => {
                     let field_ty = field.ty;
                     let span = field.original.span();
-                    let func =
-                        quote_spanned!(span=> _serde::de::SeqAccess::next_element::<#field_ty>);
-                    quote!(try!(#func(&mut __seq)))
+                    if cfg!(feature = "versioning") {
+                        let func =
+                            quote_spanned!(span=> <#field_ty as _serde::Deserialize<'de>>::next_element_versioned);
+                        quote!(try!(#func(&mut __seq, &self.version_map)))
+                    } else {
+                        let func =
+                            quote_spanned!(span=> _serde::de::SeqAccess::next_element::<#field_ty>);
+                        quote!(try!(#func(&mut __seq)))
+                    }
                 }
                 Some(path) => {
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
-                    quote!({
-                        #wrapper
-                        _serde::export::Option::map(
-                            try!(_serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)),
-                            |__wrap| __wrap.value)
-                    })
+                    if cfg!(feature = "versioned") {
+                        quote!({
+                            #wrapper
+                            _serde::export::Option::map(
+                                try!(<#wrapper_ty as _serde::Deserialize<'de>>::next_element_versioned(&mut __seq, &self.version_map)),
+                                |__wrap| __wrap.value)
+                        })
+                    } else {
+                        quote!({
+                            #wrapper
+                            _serde::export::Option::map(
+                                try!(_serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)),
+                                |__wrap| __wrap.value)
+                        })
+                    }
                 }
             };
             let value_if_none = match *field.attrs.default() {
@@ -763,9 +778,15 @@ fn deserialize_seq_in_place(
             };
             let write = match field.attrs.deserialize_with() {
                 None => {
+                    let next_element = if cfg!(feature = "versioned") {
+                        let ty = &field.ty;
+                        quote! { <#ty as _serde::Deserialize<'de>>::next_element_seed_versioned(&mut __seq, _serde::private::de::InPlaceSeed(&mut self.place.#member), &self.version_map) }
+                    } else {
+                        quote! { _serde::de::SeqAccess::next_element_seed(&mut __seq, _serde::private::de::InPlaceSeed(&mut self.place.#member)) }
+                    };
+
                     quote! {
-                        if let _serde::export::None = try!(_serde::de::SeqAccess::next_element_seed(&mut __seq,
-                            _serde::private::de::InPlaceSeed(&mut self.place.#member)))
+                        if let _serde::export::None = try!(#next_element)
                         {
                             #value_if_none
                         }
@@ -773,9 +794,16 @@ fn deserialize_seq_in_place(
                 }
                 Some(path) => {
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
+
+                    let next_element = if cfg!(feature = "versioned") {
+                        quote! { <#wrapper_ty as _serde::Deserialize<'de>>::next_element_versioned(&mut __seq, &self.version_map) }
+                    } else {
+                        quote! { _serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq) }
+                    };
+
                     quote!({
                         #wrapper
-                        match try!(_serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)) {
+                        match try!(#next_element) {
                             _serde::export::Some(__wrap) => {
                                 self.place.#member = __wrap.value;
                             }
@@ -1484,6 +1512,31 @@ fn deserialize_adjacently_tagged_enum(
         }
     };
 
+    let next_element = if cfg!(feature = "versioning") {
+        quote! {
+            <#this #ty_generics as _serde::Deserialize<'de>>::next_element_seed_versioned(
+                &mut __seq,
+                __Seed {
+                    field: __field,
+                    marker: _serde::export::PhantomData,
+                    lifetime: _serde::export::PhantomData,
+                },
+                &self.version_map,
+            )
+        }
+    } else {
+        quote! {
+            _serde::de::SeqAccess::next_element_seed(
+                &mut __seq,
+                __Seed {
+                    field: __field,
+                    marker: _serde::export::PhantomData,
+                    lifetime: _serde::export::PhantomData,
+                },
+            )
+        }
+    };
+
     quote_block! {
         #variant_visitor
 
@@ -1587,14 +1640,7 @@ fn deserialize_adjacently_tagged_enum(
                 match try!(_serde::de::SeqAccess::next_element(&mut __seq)) {
                     _serde::export::Some(__field) => {
                         // Visit the second element - the content.
-                        match try!(_serde::de::SeqAccess::next_element_seed(
-                            &mut __seq,
-                            __Seed {
-                                field: __field,
-                                marker: _serde::export::PhantomData,
-                                lifetime: _serde::export::PhantomData,
-                            },
-                        )) {
+                        match try!(#next_element) {
                             _serde::export::Some(__ret) => _serde::export::Ok(__ret),
                             // There is no second element.
                             _serde::export::None => {

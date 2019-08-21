@@ -205,6 +205,11 @@ pub struct RenameAllRules {
     deserialize: RenameRule,
 }
 
+#[cfg(feature = "versioning")]
+pub struct Versions {
+    versions: Vec<syn::Path>,
+}
+
 /// Represents struct or enum attribute information.
 pub struct Container {
     name: Name,
@@ -222,6 +227,8 @@ pub struct Container {
     identifier: Identifier,
     has_flatten: bool,
     serde_path: Option<syn::Path>,
+    #[cfg(feature = "versioning")]
+    versions: Option<Versions>
 }
 
 /// Styles of representing an enum.
@@ -304,6 +311,8 @@ impl Container {
         let mut field_identifier = BoolAttr::none(cx, FIELD_IDENTIFIER);
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
         let mut serde_path = Attr::none(cx, CRATE);
+        #[cfg(feature = "versioned")]
+        let mut versions = Attr::none(cx, VERSIONS);
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
@@ -599,6 +608,27 @@ impl Container {
                         }
                     }
 
+                    #[cfg(feature = "versioned")]
+                    Meta(List(ref m)) if m.path == VERSIONS => {
+                        let mut paths = Vec::new();
+                        for nested in m.nested.iter() {
+                            match *nested {
+                                Meta(Path(ref p)) => {
+                                    paths.push(*p);
+                                }
+                                _ => {
+                                    cx.error_spanned_by(
+                                        meta,
+                                            "malformed version attribute, expected `version(type1, type2, ...)`",
+                                    );
+                                    return Err(());
+                                }
+                            }
+                        }
+
+                        versions.set(&m.path, Versions { versions: paths });
+                    }
+
                     Meta(ref meta_item) => {
                         let path = meta_item
                             .path()
@@ -637,6 +667,8 @@ impl Container {
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
             has_flatten: false,
             serde_path: serde_path.get(),
+            #[cfg(feature = "versioning")]
+            versions: versions.get(),
         }
     }
 
@@ -707,6 +739,11 @@ impl Container {
     pub fn serde_path(&self) -> Cow<syn::Path> {
         self.custom_serde_path()
             .map_or_else(|| Cow::Owned(parse_quote!(_serde)), Cow::Borrowed)
+    }
+
+    #[cfg(feature = "versioning")]
+    pub fn versions(&self) -> Option<&Version> {
+        self.versions.as_ref()
     }
 }
 

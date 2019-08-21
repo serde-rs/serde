@@ -18,6 +18,8 @@ appveyor = { repository = "serde-rs/serde" }
 [features]
 default = []
 deserialize_in_place = []
+# Versioning support
+versioning = []
 
 [lib]
 name = "serde_derive"
