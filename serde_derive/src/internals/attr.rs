@@ -21,7 +21,6 @@ use syn::NestedMeta::{Lit, Meta};
 // rather than just the first.
 
 pub use internals::case::RenameRule;
-use std::ops::Deref;
 
 struct Attr<'c, T> {
     cx: &'c Ctxt,
@@ -210,6 +209,7 @@ pub struct RenameAllRules {
 pub struct Versions {
     versions: Vec<syn::Path>,
 }
+#[cfg(feature = "versioning")]
 impl Deref for Versions {
     type Target = [syn::Path];
 

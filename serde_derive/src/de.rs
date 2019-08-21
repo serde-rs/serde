@@ -2,7 +2,7 @@ use proc_macro2::{Literal, Span, TokenStream};
 use quote::ToTokens;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{self, Ident, Index, Member, LifetimeDef};
+use syn::{self, Ident, Index, Member};
 
 use bound;
 use dummy;
@@ -45,7 +45,7 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream
         }
     } else {
         let fn_deserialize_in_place = deserialize_in_place_body(&cont, &params);
-        let fn_version_helpers = fn_version_helpers(&conte, &params);
+        let fn_version_helpers = fn_version_helpers(&cont, &params, None);
 
         quote! {
             #[automatically_derived]
@@ -295,7 +295,7 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
 }
 
 #[cfg(not(feature = "versioning"))]
-fn fn_version_helpers(cont: &Container, params: &Parameters) -> Option<Stmts> {
+fn fn_version_helpers(_cont: &Container, _params: &Parameters, _deserializer: Option<&TokenStream>) -> Option<Stmts> {
     None
 }
 
@@ -569,7 +569,7 @@ fn deserialize_tuple(
             #init_version_map,
         }
     };
-    let let_version_map = let_version_map(deserializer.clone());
+    let let_version_map = let_version_map(deserializer.as_ref());
     let dispatch = if let Some(deserializer) = deserializer {
         quote!(#let_version_map _serde::Deserializer::deserialize_tuple(#deserializer, #nfields, #visitor_expr))
     } else if is_enum {
@@ -659,7 +659,7 @@ fn deserialize_tuple_in_place(
         }
     };
 
-    let let_version_map = let_version_map(deserializer.clone());
+    let let_version_map = let_version_map(deserializer.as_ref());
     let dispatch = if let Some(deserializer) = deserializer {
         quote!(#let_version_map _serde::Deserializer::deserialize_tuple(#deserializer, #nfields, #visitor_expr))
     } else if is_enum {
@@ -1060,7 +1060,8 @@ fn deserialize_struct(
             #init_version_map
         }
     };
-    let let_version_map = let_version_map(deserializer.clone());
+    let let_version_map = let_version_map(deserializer.as_ref());
+    let version_match_dispatch = dispatch_serialize_for_versions(cattrs, deserializer.as_ref());
     let dispatch = if let Some(deserializer) = deserializer {
         quote! {
             #let_version_map
@@ -1127,8 +1128,6 @@ fn deserialize_struct(
     } else {
         None
     };
-
-    let version_match_dispatch = dispatch_serialize_for_versions(cattrs, deserializer.as_ref());
 
     let field_version_map = field_version_map();
     quote_block! {
@@ -1211,7 +1210,7 @@ fn deserialize_struct_in_place(
             #init_version_map
         }
     };
-    let let_version_map = let_version_map(deserializer.clone());
+    let let_version_map = let_version_map(deserializer.as_ref());
     let dispatch = if let Some(deserializer) = deserializer {
         quote! {
             #let_version_map
@@ -1251,7 +1250,6 @@ fn deserialize_struct_in_place(
     let in_place_ty_generics = de_ty_generics.in_place();
     let place_life = place_lifetime();
 
-    let init_version_map = init_version_map();
     let field_version_map = field_version_map();
     Some(quote_block! {
         #field_visitor
@@ -1397,7 +1395,7 @@ fn deserialize_externally_tagged_enum(
     };
 
     let init_version_map = init_version_map();
-    let let_version_map = let_version_map(deserializer.clone());
+    let let_version_map = let_version_map(None);
     let field_version_map = field_version_map();
     quote_block! {
         #variant_visitor
@@ -3105,14 +3103,14 @@ struct DeImplGenerics<'a>(&'a Parameters);
 struct InPlaceImplGenerics<'a>(&'a Parameters);
 
 #[inline]
-fn visitor_version_lifetime_def() -> Option<syn::LifetimeDef> {
+fn visitor_version_lifetime_def() -> Option<syn::GenericParam> {
     if cfg!(feature = "versioning") {
-        Some(syn::LifetimeDef {
+        Some(syn::GenericParam::Lifetime(syn::LifetimeDef {
             attrs: Vec::new(),
             lifetime: syn::Lifetime::new("'__v", Span::call_site()),
             colon_token: None,
             bounds: Punctuated::new(),
-        })
+        }))
     } else {
         None
     }
@@ -3122,7 +3120,7 @@ impl<'a> ToTokens for DeImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
 
-        generics.params = visitor_version_lifetime_def
+        generics.params = visitor_version_lifetime_def()
             .into_iter()
             .chain(generics.params)
             .collect();
@@ -3161,7 +3159,7 @@ impl<'a> ToTokens for InPlaceImplGenerics<'a> {
         generics.params = Some(syn::GenericParam::Lifetime(place_lifetime))
             .into_iter()
             .chain(generics.params)
-            .chain(visitor_version_lifetime_def.into_iter())
+            .chain(visitor_version_lifetime_def().into_iter())
             .collect();
         if let Some(de_lifetime) = self.0.borrowed.de_lifetime_def() {
             generics.params = Some(syn::GenericParam::Lifetime(de_lifetime))
@@ -3189,7 +3187,7 @@ impl<'a> ToTokens for DeTypeGenerics<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
 
-        generics.params = visitor_version_lifetime_def
+        generics.params = visitor_version_lifetime_def()
             .into_iter()
             .chain(generics.params)
             .collect();
@@ -3275,7 +3273,7 @@ fn split_with_de_lifetime(
 
 fn deserializer_token_stream(deserializer: Option<&TokenStream>) -> TokenStream {
     if cfg!(feature = "versioning") {
-        deserializer.clone().unwrap_or_else(|| quote! { __deserializer })
+        deserializer.cloned().unwrap_or_else(|| quote! { __deserializer })
     } else {
         TokenStream::new()
     }
@@ -3290,7 +3288,7 @@ fn field_version_map() -> TokenStream {
     }
 }
 
-fn let_version_map(deserializer: Option<TokenStream>) -> TokenStream {
+fn let_version_map(deserializer: Option<&TokenStream>) -> TokenStream {
     if cfg!(feature = "versioning") {
         let deserializer = deserializer_token_stream(deserializer);
         let result: TokenStream = quote! { let __version_map = #deserializer.version_map(); };
@@ -3309,41 +3307,42 @@ fn init_version_map() -> TokenStream {
     }
 }
 
+#[cfg(not(feature = "versioning"))]
+fn dispatch_serialize_for_versions(_cattr: &attr::Container, _deserializer: Option<&TokenStream>) -> TokenStream {
+    TokenStream::new()
+}
+#[cfg(feature = "versioning")]
 fn dispatch_serialize_for_versions(cattr: &attr::Container, deserializer: Option<&TokenStream>) -> TokenStream {
-    if cfg!(feature = "versioning") {
-        if let Some(versions) = cattrs.versions() {
-            let deserializer = deserializer_token_stream(deserializer);
+    if let Some(versions) = cattr.versions() {
+        let deserializer = deserializer_token_stream(deserializer);
 
-            let version_dispatch_arms = versions.iter()
-                .enumerate()
-                .map(|(i, path)| {
-                    let version_number = i + 1;
-                    quote! {
-                        Some(#version_number) => return _serde::export::Result::map(
-                            <#path as _serde::Deserialize>::deserialize(#deserializer),
-                            _serde::export::Into::into
-                        ),
-                    }
-                })
-                .collect::<Vec<_>>();
-
-            let deser_name = cattrs.name().deserialize_name().to_string();
-            // TODO: report properly the unknown version error
-            let result: TokenStream =  quote! {
-                match #deserializer.version_map() {
-                    Some(version_map) => match version_map(#deser_name) {
-                        #(version_dispatch_arms)*
-                        None => {},     // continue the deserialization
-                        _ => {}         // Unknown version, we should report an error here
-                    },
-                    None => {}          // continue the deserialization
+        let version_dispatch_arms = versions.iter()
+            .enumerate()
+            .map(|(i, path)| {
+                let version_number = i + 1;
+                quote! {
+                    Some(#version_number) => return _serde::export::Result::map(
+                        <#path as _serde::Deserialize>::deserialize(#deserializer),
+                        _serde::export::Into::into
+                    ),
                 }
-            };
+            })
+            .collect::<Vec<_>>();
 
-            result
-        } else {
-            TokenStream::new()
-        }
+        let deser_name = cattr.name().deserialize_name().to_string();
+        // TODO: report properly the unknown version error
+        let result: TokenStream =  quote! {
+            match #deserializer.version_map() {
+                Some(version_map) => match version_map(#deser_name) {
+                    #(version_dispatch_arms)*
+                    None => {},     // continue the deserialization
+                    _ => {}         // Unknown version, we should report an error here
+                },
+                None => {}          // continue the deserialization
+            }
+        };
+
+        result
     } else {
         TokenStream::new()
     }
