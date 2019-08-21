@@ -2,7 +2,7 @@ use proc_macro2::{Literal, Span, TokenStream};
 use quote::ToTokens;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{self, Ident, Index, Member};
+use syn::{self, Ident, Index, Member, LifetimeDef};
 
 use bound;
 use dummy;
@@ -476,22 +476,25 @@ fn deserialize_tuple(
         &type_path, params, fields, false, cattrs, &expecting,
     ));
 
+    let init_version_map = init_version_map();
     let visitor_expr = quote! {
         __Visitor {
             marker: _serde::export::PhantomData::<#this #ty_generics>,
             lifetime: _serde::export::PhantomData,
+            #init_version_map,
         }
     };
+    let let_version_map = let_version_map(deserializer.clone());
     let dispatch = if let Some(deserializer) = deserializer {
-        quote!(_serde::Deserializer::deserialize_tuple(#deserializer, #nfields, #visitor_expr))
+        quote!(#let_version_map _serde::Deserializer::deserialize_tuple(#deserializer, #nfields, #visitor_expr))
     } else if is_enum {
-        quote!(_serde::de::VariantAccess::tuple_variant(__variant, #nfields, #visitor_expr))
+        quote!(#let_version_map _serde::de::VariantAccess::tuple_variant(__variant, #nfields, #visitor_expr))
     } else if nfields == 1 {
         let type_name = cattrs.name().deserialize_name();
-        quote!(_serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
+        quote!(#let_version_map _serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
     } else {
         let type_name = cattrs.name().deserialize_name();
-        quote!(_serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #nfields, #visitor_expr))
+        quote!(#let_version_map _serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #nfields, #visitor_expr))
     };
 
     let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
@@ -501,10 +504,12 @@ fn deserialize_tuple(
         quote!(mut __seq)
     };
 
+    let field_version_map = field_version_map();
     quote_block! {
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&#delife ()>,
+            #field_version_map,
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
@@ -560,23 +565,26 @@ fn deserialize_tuple_in_place(
 
     let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, &expecting));
 
+    let init_version_map = init_version_map();
     let visitor_expr = quote! {
         __Visitor {
             place: __place,
             lifetime: _serde::export::PhantomData,
+            #init_version_map,
         }
     };
 
+    let let_version_map = let_version_map(deserializer.clone());
     let dispatch = if let Some(deserializer) = deserializer {
-        quote!(_serde::Deserializer::deserialize_tuple(#deserializer, #nfields, #visitor_expr))
+        quote!(#let_version_map _serde::Deserializer::deserialize_tuple(#deserializer, #nfields, #visitor_expr))
     } else if is_enum {
-        quote!(_serde::de::VariantAccess::tuple_variant(__variant, #nfields, #visitor_expr))
+        quote!(#let_version_map _serde::de::VariantAccess::tuple_variant(__variant, #nfields, #visitor_expr))
     } else if nfields == 1 {
         let type_name = cattrs.name().deserialize_name();
-        quote!(_serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
+        quote!(#let_version_map _serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
     } else {
         let type_name = cattrs.name().deserialize_name();
-        quote!(_serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #nfields, #visitor_expr))
+        quote!(#let_version_map _serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #nfields, #visitor_expr))
     };
 
     let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
@@ -590,10 +598,12 @@ fn deserialize_tuple_in_place(
     let in_place_ty_generics = de_ty_generics.in_place();
     let place_life = place_lifetime();
 
+    let field_version_map = field_version_map();
     quote_block! {
         struct __Visitor #in_place_impl_generics #where_clause {
             place: &#place_life mut #this #ty_generics,
             lifetime: _serde::export::PhantomData<&#delife ()>,
+            #field_version_map,
         }
 
         impl #in_place_impl_generics _serde::de::Visitor<#delife> for __Visitor #in_place_ty_generics #where_clause {
@@ -922,6 +932,7 @@ fn deserialize_struct(
     let this = &params.this;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
+
     let delife = params.borrowed.de_lifetime();
 
     // If there are getters (implying private fields), construct the local type
@@ -956,31 +967,39 @@ fn deserialize_struct(
     let fields_stmt = fields_stmt.map(Stmts);
     let visit_map = Stmts(visit_map);
 
-    let visitor_expr = quote! {
+    let init_version_map = init_version_map();
+    let visitor_expr =  quote! {
         __Visitor {
             marker: _serde::export::PhantomData::<#this #ty_generics>,
             lifetime: _serde::export::PhantomData,
+            #init_version_map
         }
     };
+    let let_version_map = let_version_map(deserializer.clone());
     let dispatch = if let Some(deserializer) = deserializer {
         quote! {
+            #let_version_map
             _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
         }
     } else if is_enum && cattrs.has_flatten() {
         quote! {
+            #let_version_map
             _serde::de::VariantAccess::newtype_variant_seed(__variant, #visitor_expr)
         }
     } else if is_enum {
         quote! {
+            #let_version_map
             _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
         }
     } else if cattrs.has_flatten() {
         quote! {
+            #let_version_map
             _serde::Deserializer::deserialize_map(__deserializer, #visitor_expr)
         }
     } else {
         let type_name = cattrs.name().deserialize_name();
         quote! {
+            #let_version_map
             _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
         }
     };
@@ -1024,12 +1043,14 @@ fn deserialize_struct(
         None
     };
 
+    let field_version_map = field_version_map();
     quote_block! {
         #field_visitor
 
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&#delife ()>,
+            #field_version_map,
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
@@ -1093,23 +1114,29 @@ fn deserialize_struct_in_place(
     let fields_stmt = Stmts(fields_stmt);
     let visit_map = Stmts(visit_map);
 
+    let init_version_map = init_version_map();
     let visitor_expr = quote! {
         __Visitor {
             place: __place,
             lifetime: _serde::export::PhantomData,
+            #init_version_map
         }
     };
+    let let_version_map = let_version_map(deserializer.clone());
     let dispatch = if let Some(deserializer) = deserializer {
         quote! {
+            #let_version_map
             _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
         }
     } else if is_enum {
         quote! {
+            #let_version_map
             _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
         }
     } else {
         let type_name = cattrs.name().deserialize_name();
         quote! {
+            #let_version_map
             _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
         }
     };
@@ -1135,12 +1162,15 @@ fn deserialize_struct_in_place(
     let in_place_ty_generics = de_ty_generics.in_place();
     let place_life = place_lifetime();
 
+    let init_version_map = init_version_map();
+    let field_version_map = field_version_map();
     Some(quote_block! {
         #field_visitor
 
         struct __Visitor #in_place_impl_generics #where_clause {
             place: &#place_life mut #this #ty_generics,
             lifetime: _serde::export::PhantomData<&#delife ()>,
+            #field_version_map;
         }
 
         impl #in_place_impl_generics _serde::de::Visitor<#delife> for __Visitor #in_place_ty_generics #where_clause {
@@ -1277,12 +1307,16 @@ fn deserialize_externally_tagged_enum(
         }
     };
 
+    let init_version_map = init_version_map();
+    let let_version_map = let_version_map(deserializer.clone());
+    let field_version_map = field_version_map();
     quote_block! {
         #variant_visitor
 
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&#delife ()>,
+            #field_version_map,
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
@@ -1302,6 +1336,7 @@ fn deserialize_externally_tagged_enum(
 
         #variants_stmt
 
+        #let_version_map
         _serde::Deserializer::deserialize_enum(
             __deserializer,
             #type_name,
@@ -1309,6 +1344,7 @@ fn deserialize_externally_tagged_enum(
             __Visitor {
                 marker: _serde::export::PhantomData::<#this #ty_generics>,
                 lifetime: _serde::export::PhantomData,
+                #init_version_map,
             },
         )
     }
@@ -1537,6 +1573,9 @@ fn deserialize_adjacently_tagged_enum(
         }
     };
 
+    let field_version_map = field_version_map();
+    let init_version_map = init_version_map();
+    let let_version_map = let_version_map(None);
     quote_block! {
         #variant_visitor
 
@@ -1564,6 +1603,7 @@ fn deserialize_adjacently_tagged_enum(
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&#delife ()>,
+            #field_version_map,
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
@@ -1656,6 +1696,7 @@ fn deserialize_adjacently_tagged_enum(
             }
         }
 
+        #let_version_map
         const FIELDS: &'static [&'static str] = &[#tag, #content];
         _serde::Deserializer::deserialize_struct(
             __deserializer,
@@ -1664,6 +1705,7 @@ fn deserialize_adjacently_tagged_enum(
             __Visitor {
                 marker: _serde::export::PhantomData::<#this #ty_generics>,
                 lifetime: _serde::export::PhantomData,
+                #init_version_map,
             },
         )
     }
@@ -2930,9 +2972,29 @@ struct DeImplGenerics<'a>(&'a Parameters);
 #[cfg(feature = "deserialize_in_place")]
 struct InPlaceImplGenerics<'a>(&'a Parameters);
 
+#[inline]
+fn visitor_version_lifetime_def() -> Option<syn::LifetimeDef> {
+    if cfg!(feature = "versioning") {
+        Some(syn::LifetimeDef {
+            attrs: Vec::new(),
+            lifetime: syn::Lifetime::new("'__v", Span::call_site()),
+            colon_token: None,
+            bounds: Punctuated::new(),
+        })
+    } else {
+        None
+    }
+}
+
 impl<'a> ToTokens for DeImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
+
+        generics.params = visitor_version_lifetime_def
+            .into_iter()
+            .chain(generics.params)
+            .collect();
+
         if let Some(de_lifetime) = self.0.borrowed.de_lifetime_def() {
             generics.params = Some(syn::GenericParam::Lifetime(de_lifetime))
                 .into_iter()
@@ -2967,6 +3029,7 @@ impl<'a> ToTokens for InPlaceImplGenerics<'a> {
         generics.params = Some(syn::GenericParam::Lifetime(place_lifetime))
             .into_iter()
             .chain(generics.params)
+            .chain(visitor_version_lifetime_def.into_iter())
             .collect();
         if let Some(de_lifetime) = self.0.borrowed.de_lifetime_def() {
             generics.params = Some(syn::GenericParam::Lifetime(de_lifetime))
@@ -2993,6 +3056,12 @@ struct InPlaceTypeGenerics<'a>(&'a Parameters);
 impl<'a> ToTokens for DeTypeGenerics<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
+
+        generics.params = visitor_version_lifetime_def
+            .into_iter()
+            .chain(generics.params)
+            .collect();
+
         if self.0.borrowed.de_lifetime_def().is_some() {
             let def = syn::LifetimeDef {
                 attrs: Vec::new(),
@@ -3016,6 +3085,7 @@ impl<'a> ToTokens for InPlaceTypeGenerics<'a> {
         let mut generics = self.0.generics.clone();
         generics.params = Some(syn::GenericParam::Lifetime(place_lifetime()))
             .into_iter()
+            .chain(visitor_version_lifetime_def().into_iter())
             .chain(generics.params)
             .collect();
 
@@ -3065,4 +3135,40 @@ fn split_with_de_lifetime(
     let de_ty_generics = DeTypeGenerics(params);
     let (_, ty_generics, where_clause) = params.generics.split_for_impl();
     (de_impl_generics, de_ty_generics, ty_generics, where_clause)
+}
+
+fn deserializer_token_stream(deserializer: Option<TokenStream>) -> TokenStream {
+    if cfg!(feature = "versioning") {
+        deserializer.unwrap_or_else(|| quote! { __deserializer })
+    } else {
+        TokenStream::new()
+    }
+}
+
+fn field_version_map() -> TokenStream {
+    if cfg!(feature = "versioning") {
+        let result: TokenStream = quote! { version_map: &'__v _serde::de::VersionMap };
+        result
+    } else {
+        TokenStream::new()
+    }
+}
+
+fn let_version_map(deserializer: Option<TokenStream>) -> TokenStream {
+    if cfg!(feature = "versioning") {
+        let deserializer = deserializer_token_stream(deserializer);
+        let result: TokenStream = quote! { let __version_map = #deserializer.version_map(); };
+        result
+    } else {
+        TokenStream::new()
+    }
+}
+
+fn init_version_map() -> TokenStream {
+    if cfg!(feature = "versioning") {
+        let result: TokenStream = quote! { version_map: __version_map };
+        result
+    } else {
+        TokenStream::new()
+    }
 }
