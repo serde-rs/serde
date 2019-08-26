@@ -7,7 +7,7 @@ publish = false
 
 [features]
 unstable = ["serde/unstable"]
-versioning = ["serde/versioning", "serde_derive/versioning"]
+versioning = ["serde/versioning", "serde_derive/versioning", "serde_test/versioning"]
 
 [dependencies]
 serde = { path = "../serde" }

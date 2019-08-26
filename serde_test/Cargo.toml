@@ -11,6 +11,9 @@ keywords = ["serde", "serialization"]
 readme = "crates-io.md"
 include = ["Cargo.toml", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 
+[features]
+versioning = ["serde/versioning", "serde_derive/versioning"]
+
 [dependencies]
 serde = { version = "1.0.60", path = "../serde" }
 
