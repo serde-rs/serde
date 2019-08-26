@@ -3288,11 +3288,11 @@ fn init_version_map() -> TokenStream {
 }
 
 #[cfg(not(feature = "versioning"))]
-fn dispatch_serialize_for_versions(_cattr: &attr::Container, _deserializer: Option<&TokenStream>) -> TokenStream {
-    TokenStream::new()
+fn dispatch_serialize_for_versions(_cattr: &attr::Container, _deserializer: Option<&TokenStream>) -> Option<Stmts> {
+    None
 }
 #[cfg(feature = "versioning")]
-fn dispatch_serialize_for_versions(cattr: &attr::Container, deserializer: Option<&TokenStream>) -> TokenStream {
+fn dispatch_serialize_for_versions(cattr: &attr::Container, deserializer: Option<&TokenStream>) -> Option<Stmts> {
     if let Some(versions) = cattr.versions() {
         let deserializer = deserializer_token_stream(deserializer);
 
@@ -3311,7 +3311,7 @@ fn dispatch_serialize_for_versions(cattr: &attr::Container, deserializer: Option
 
         let deser_name = cattr.name().deserialize_name().to_string();
         // TODO: report properly the unknown version error
-        let result: TokenStream =  quote! {
+        let result =  quote_block! {
             match #deserializer.version_map() {
                 Some(version_map) => match version_map(#deser_name) {
                     #(#version_dispatch_arms)*
@@ -3322,8 +3322,8 @@ fn dispatch_serialize_for_versions(cattr: &attr::Container, deserializer: Option
             };
         };
 
-        result
+        Some(Stmts(result))
     } else {
-        TokenStream::new()
+        None
     }
 }
