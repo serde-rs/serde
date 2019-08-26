@@ -10,6 +10,8 @@ use token::Token;
 #[derive(Debug)]
 pub struct Deserializer<'de> {
     tokens: &'de [Token],
+    #[cfg(feature = "versioned")]
+    version_map: Option<serde::de::VersionMap>,
 }
 
 macro_rules! assert_next_token {
@@ -41,8 +43,14 @@ macro_rules! end_of_tokens {
 }
 
 impl<'de> Deserializer<'de> {
+    #[cfg(not(feature = "versioned"))]
     pub fn new(tokens: &'de [Token]) -> Self {
         Deserializer { tokens: tokens }
+    }
+
+    #[cfg(feature = "versioned")]
+    pub fn new(tokens: &'de [Token], version_map: Option<serde::de::VersionMap>) -> Self {
+        Deserializer { tokens: tokens, version_map }
     }
 
     fn peek_token_opt(&self) -> Option<Token> {
@@ -123,6 +131,11 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
         bytes byte_buf unit seq map identifier ignored_any
+    }
+
+    #[cfg(feature = "versioned")]
+    fn version_map(&self) -> Option<&serde::de::VersionMap> {
+        self.version_map.as_ref()
     }
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Error>

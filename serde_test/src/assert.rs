@@ -5,6 +5,7 @@ use ser::Serializer;
 use token::Token;
 
 use std::fmt::Debug;
+use std::mem::MaybeUninit;
 
 /// Runs both `assert_ser_tokens` and `assert_de_tokens`.
 ///
@@ -157,8 +158,57 @@ pub fn assert_de_tokens<'de, T>(value: &T, tokens: &'de [Token])
 where
     T: Deserialize<'de> + PartialEq + Debug,
 {
-    let mut de = Deserializer::new(tokens);
-    let mut deserialized_val = match T::deserialize(&mut de) {
+    #[cfg(not(feature = "versioning"))]
+    {
+        internal_assert_de_tokens(value, Deserializer::new(tokens));
+        internal_assert_de_in_place_tokens(value, Deserializer::new(tokens));
+    }
+    #[cfg(feature = "versioning")]
+    {
+        internal_assert_de_tokens(value, Deserializer::new(tokens, None));
+        internal_assert_de_in_place_tokens(value, Deserializer::new(tokens, None));
+    }
+}
+
+/// Asserts that the given `tokens` deserialize into `value`, using a specific version map
+///
+/// ```edition2018
+/// # use serde::{Serialize, Deserialize};
+/// # use serde_test::{assert_de_tokens, Token};
+/// #
+/// # fn main() {
+/// #[derive(Serialize, Deserialize, PartialEq, Debug)]
+/// struct S {
+///     a: u8,
+///     b: u8,
+/// }
+///
+/// let s = S { a: 0, b: 0 };
+/// assert_de_tokens_versions(&s, &[
+///     Token::Struct { name: "S", len: 2 },
+///     Token::Str("a"),
+///     Token::U8(0),
+///     Token::Str("b"),
+///     Token::U8(0),
+///     Token::StructEnd,
+/// ],
+///     None);
+/// # }
+/// ```
+#[cfg(feature = "versioning")]
+pub fn assert_de_tokens_versions<'de, T>(value: &T, tokens: &'de [Token], version_map: Option<serde::de::VersionMap>)
+    where
+        T: Deserialize<'de> + PartialEq + Debug,
+{
+    internal_assert_de_tokens(value, Deserializer::new(tokens, version_map));
+    internal_assert_de_in_place_tokens(value, Deserializer::new(tokens, version_map));
+}
+
+fn internal_assert_de_tokens<'de, T>(value: &T, mut de: Deserializer<'de>)
+    where
+        T: Deserialize<'de> + PartialEq + Debug,
+{
+    match T::deserialize(&mut de) {
         Ok(v) => {
             assert_eq!(v, *value);
             v
@@ -168,14 +218,18 @@ where
     if de.remaining() > 0 {
         panic!("{} remaining tokens", de.remaining());
     }
-
+}
+fn internal_assert_de_in_place_tokens<'de, T>(value: &T, mut de: Deserializer<'de>)
+    where
+        T: Deserialize<'de> + PartialEq + Debug,
+{
     // Do the same thing for deserialize_in_place. This isn't *great* because a
     // no-op impl of deserialize_in_place can technically succeed here. Still,
     // this should catch a lot of junk.
-    let mut de = Deserializer::new(tokens);
-    match T::deserialize_in_place(&mut de, &mut deserialized_val) {
+    let mut val = unsafe { MaybeUninit::uninit().assume_init() };
+    match T::deserialize_in_place(&mut de, &mut val) {
         Ok(()) => {
-            assert_eq!(deserialized_val, *value);
+            assert_eq!(val, *value);
         }
         Err(e) => panic!("tokens failed to deserialize_in_place: {}", e),
     }
