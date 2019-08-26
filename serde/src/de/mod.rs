@@ -561,6 +561,7 @@ pub trait Deserialize<'de>: Sized {
         Ok(())
     }
 
+    /// Get the version map if it exists
     #[cfg(feature = "versioning")]
     fn version_map(&self) -> Option<&VersionMap> { None }
 
@@ -568,7 +569,7 @@ pub trait Deserialize<'de>: Sized {
     #[cfg(feature = "versioning")]
     fn next_element_versioned<S: SeqAccess<'de>>(
         seq: &mut S,
-        versions: Option<&VersionMap>,
+        _versions: Option<&VersionMap>,
     ) -> Result<Option<Self>, S::Error> {
         seq.next_element::<Self>()
     }
@@ -578,16 +579,16 @@ pub trait Deserialize<'de>: Sized {
     fn next_element_seed_versioned<S: SeqAccess<'de>, Seed: DeserializeSeed<'de, Value = Self>>(
         seq: &mut S,
         seed: Seed,
-        versions: Option<&VersionMap>,
+        _versions: Option<&VersionMap>,
     ) -> Result<Option<Self>, S::Error> {
-        seq.next_element_seed::<Self>(seed)
+        seq.next_element_seed(seed)
     }
 
     /// Get the next map value with versioning support
     #[cfg(feature = "versioning")]
     fn next_value_versioned<M: MapAccess<'de>>(
         map: &mut M,
-        versions: Option<&VersionMap>,
+        _versions: Option<&VersionMap>,
     ) -> Result<Self, M::Error> {
         map.next_value::<Self>()
     }
@@ -597,12 +598,14 @@ pub trait Deserialize<'de>: Sized {
     fn next_value_seed_versioned<M: MapAccess<'de>, Seed: DeserializeSeed<'de, Value = Self>>(
         map: &mut M,
         seed: Seed,
-        versions: Option<&VersionMap>,
+        _versions: Option<&VersionMap>,
     ) -> Result<Self, M::Error> {
-        map.next_value_seed::<Self>(seed)
+        map.next_value_seed(seed)
     }
 }
 
+/// Map each type id to its current version. If a version is missing,
+/// the version used is the one of the currently executed code.
 #[cfg(feature = "versioning")]
 pub type VersionMap = std::collections::HashMap<String, usize>;
 

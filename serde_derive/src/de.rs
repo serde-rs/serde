@@ -300,9 +300,8 @@ fn fn_version_helpers(_cont: &Container, _params: &Parameters, _deserializer: Op
 }
 
 #[cfg(feature = "versioning")]
-fn fn_version_helpers(cont: &Container, params: &Parameters, deserializer: Option<&TokenStream>) -> Option<Stmts> {
+fn fn_version_helpers(cont: &Container, _params: &Parameters, deserializer: Option<&TokenStream>) -> Option<Stmts> {
     if let Some(versions) = cont.attrs.versions() {
-        let deserializer = deserializer_token_stream(deserializer);
         let deser_name = cont.attrs.name().deserialize_name();
         let next_element_dispatch_arms = &versions
             .iter()
@@ -310,10 +309,10 @@ fn fn_version_helpers(cont: &Container, params: &Parameters, deserializer: Optio
             .map(|(i, path)| {
                 let version_number = i + 1;
                 quote! {
-                    _serde::export::Result::map(
-                        <#path as _serde::Deserialize>::next_element_seed_versioned(#deserializer, seed, version_map),
-                        _serde::export::Into::into
-                    )
+                    Some(#version_number) => _serde::export::Result::map(
+                        <#path as _serde::Deserialize<'de>>::next_element_seed_versioned(seed, version_map),
+                        _serde::export::Into::into,
+                    ),
                 }
             })
             .collect::<Vec<_>>();
@@ -323,10 +322,10 @@ fn fn_version_helpers(cont: &Container, params: &Parameters, deserializer: Optio
             .map(|(i, path)| {
                 let version_number = i + 1;
                 quote! {
-                    _serde::export::Result::map(
-                        <#path as _serde::Deserialize>::next_value_seed_versioned(#deserializer, seed, version_map),
-                        _serde::export::Into::into
-                    )
+                    Some(#version_number) => _serde::export::Result::map(
+                        <#path as _serde::Deserialize<'de>>::next_value_seed_versioned(seed, version_map),
+                        _serde::export::Into::into,
+                    ),
                 }
             })
             .collect::<Vec<_>>();
@@ -335,10 +334,10 @@ fn fn_version_helpers(cont: &Container, params: &Parameters, deserializer: Optio
 
         let result = quote_block! {
             /// Get the next element in a sequence with versioning support
-            fn next_element_seed_versioned<S: SeqAccess<'de>, Seed: DeserializeSeed<'de, Value = Self>>(
+            fn next_element_seed_versioned<S: _serde::de::SeqAccess<'de>, Seed: _serde::de::DeserializeSeed<'de, Value = Self>>(
                 seq: &mut S,
                 seed: Seed,
-                version_map: Option<&VersionMap>,
+                version_map: Option<&_serde::de::VersionMap>,
             ) -> Result<Option<Self>, S::Error> {
                 match version_map {
                     Some(version_map) => {
@@ -353,10 +352,10 @@ fn fn_version_helpers(cont: &Container, params: &Parameters, deserializer: Optio
             }
 
             /// Get the next map value with versioning support
-            fn next_value_seed_versioned<M: MapAccess<'de>, Seed: DeserializeSeed<'de, Value = Self>>(
+            fn next_value_seed_versioned<M: _serde::de::MapAccess<'de>, Seed: _serde::de::DeserializeSeed<'de, Value = Self>>(
                 map: &mut M,
                 seed: Seed,
-                version_map: Option<&VersionMap>,
+                version_map: Option<&_serde::de::VersionMap>,
             ) -> Result<Self, M::Error> {
                 match version_map {
                     Some(version_map) => {
@@ -566,7 +565,7 @@ fn deserialize_tuple(
         __Visitor {
             marker: _serde::export::PhantomData::<#this #ty_generics>,
             lifetime: _serde::export::PhantomData,
-            #init_version_map,
+            #init_version_map
         }
     };
     let let_version_map = let_version_map(deserializer.as_ref());
@@ -594,7 +593,7 @@ fn deserialize_tuple(
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&#delife ()>,
-            #field_version_map,
+            #field_version_map
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
@@ -655,7 +654,7 @@ fn deserialize_tuple_in_place(
         __Visitor {
             place: __place,
             lifetime: _serde::export::PhantomData,
-            #init_version_map,
+            #init_version_map
         }
     };
 
@@ -688,7 +687,7 @@ fn deserialize_tuple_in_place(
         struct __Visitor #in_place_impl_generics #where_clause {
             place: &#place_life mut #this #ty_generics,
             lifetime: _serde::export::PhantomData<&#delife ()>,
-            #field_version_map,
+            #field_version_map
         }
 
         impl #in_place_impl_generics _serde::de::Visitor<#delife> for __Visitor #in_place_ty_generics #where_clause {
@@ -1138,7 +1137,7 @@ fn deserialize_struct(
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&#delife ()>,
-            #field_version_map,
+            #field_version_map
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
@@ -1257,7 +1256,7 @@ fn deserialize_struct_in_place(
         struct __Visitor #in_place_impl_generics #where_clause {
             place: &#place_life mut #this #ty_generics,
             lifetime: _serde::export::PhantomData<&#delife ()>,
-            #field_version_map;
+            #field_version_map
         }
 
         impl #in_place_impl_generics _serde::de::Visitor<#delife> for __Visitor #in_place_ty_generics #where_clause {
@@ -1403,7 +1402,7 @@ fn deserialize_externally_tagged_enum(
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&#delife ()>,
-            #field_version_map,
+            #field_version_map
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
@@ -1431,7 +1430,7 @@ fn deserialize_externally_tagged_enum(
             __Visitor {
                 marker: _serde::export::PhantomData::<#this #ty_generics>,
                 lifetime: _serde::export::PhantomData,
-                #init_version_map,
+                #init_version_map
             },
         )
     }
@@ -1635,52 +1634,33 @@ fn deserialize_adjacently_tagged_enum(
         }
     };
 
-    let next_element = if cfg!(feature = "versioning") {
-        quote! {
-            <#this #ty_generics as _serde::Deserialize<'de>>::next_element_seed_versioned(
-                &mut __seq,
-                __Seed {
-                    field: __field,
-                    marker: _serde::export::PhantomData,
-                    lifetime: _serde::export::PhantomData,
-                },
-                &self.version_map,
-            )
-        }
+    let version_map = if cfg!(feature = "versioning") {
+        quote! { &self.version_map, }
     } else {
-        quote! {
-            _serde::de::SeqAccess::next_element_seed(
-                &mut __seq,
-                __Seed {
-                    field: __field,
-                    marker: _serde::export::PhantomData,
-                    lifetime: _serde::export::PhantomData,
-                },
-            )
-        }
+        TokenStream::new()
     };
-
-    let next_value_seed = if cfg!(feature = "versioned") {
-        quote! {
-            <#this #ty_generics as _serde::Deserialize<'de>>::next_value_seed_versioned(
-                &mut __map,
-                __Seed {
-                    field: __field,
-                    marker: _serde::export::PhantomData,
-                    lifetime: _serde::export::PhantomData,
-                },
-                &self.version_map,
-            )
-        }
-    } else {
-        quote! {
-            _serde::de::MapAccess::next_value_seed(&mut __map,
+    let next_element = quote! {
+        <#this #ty_generics as _serde::Deserialize<'de>>::next_element_seed_versioned(
+            &mut __seq,
             __Seed {
                 field: __field,
                 marker: _serde::export::PhantomData,
                 lifetime: _serde::export::PhantomData,
-            })
-        }
+            },
+            #version_map
+        )
+    };
+
+    let next_value_seed = quote! {
+        <#this #ty_generics as _serde::Deserialize<'de>>::next_value_seed_versioned(
+            &mut __map,
+            __Seed {
+                field: __field,
+                marker: _serde::export::PhantomData,
+                lifetime: _serde::export::PhantomData,
+            },
+            #version_map
+        )
     };
 
     let field_version_map = field_version_map();
@@ -1713,7 +1693,7 @@ fn deserialize_adjacently_tagged_enum(
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&#delife ()>,
-            #field_version_map,
+            #field_version_map
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
@@ -1810,7 +1790,7 @@ fn deserialize_adjacently_tagged_enum(
             __Visitor {
                 marker: _serde::export::PhantomData::<#this #ty_generics>,
                 lifetime: _serde::export::PhantomData,
-                #init_version_map,
+                #init_version_map
             },
         )
     }
@@ -2840,7 +2820,7 @@ fn deserialize_map_in_place(
                 None => {
                     if cfg!(feature = "versioning") {
                         quote! {
-                            try!(<#ty as _serde::Deserialize<'de>>::next_value_seed(&mut __map, _serde::private::de::InPlaceSeed(&mut self.place.#member)), &self.version_map)
+                            try!(<#ty as _serde::Deserialize<'de>>::next_value_seed_versioned(&mut __map, _serde::private::de::InPlaceSeed(&mut self.place.#member), &self.version_map))
                         }
                     } else {
                         quote! {
@@ -3281,7 +3261,7 @@ fn deserializer_token_stream(deserializer: Option<&TokenStream>) -> TokenStream 
 
 fn field_version_map() -> TokenStream {
     if cfg!(feature = "versioning") {
-        let result: TokenStream = quote! { version_map: &'__v _serde::de::VersionMap };
+        let result: TokenStream = quote! { version_map: &'__v _serde::de::VersionMap, };
         result
     } else {
         TokenStream::new()
@@ -3300,7 +3280,7 @@ fn let_version_map(deserializer: Option<&TokenStream>) -> TokenStream {
 
 fn init_version_map() -> TokenStream {
     if cfg!(feature = "versioning") {
-        let result: TokenStream = quote! { version_map: __version_map };
+        let result: TokenStream = quote! { version_map: __version_map, };
         result
     } else {
         TokenStream::new()
@@ -3323,7 +3303,7 @@ fn dispatch_serialize_for_versions(cattr: &attr::Container, deserializer: Option
                 quote! {
                     Some(#version_number) => return _serde::export::Result::map(
                         <#path as _serde::Deserialize>::deserialize(#deserializer),
-                        _serde::export::Into::into
+                        _serde::export::Into::into,
                     ),
                 }
             })
@@ -3334,12 +3314,12 @@ fn dispatch_serialize_for_versions(cattr: &attr::Container, deserializer: Option
         let result: TokenStream =  quote! {
             match #deserializer.version_map() {
                 Some(version_map) => match version_map(#deser_name) {
-                    #(version_dispatch_arms)*
+                    #(#version_dispatch_arms)*
                     None => {},     // continue the deserialization
-                    _ => {}         // Unknown version, we should report an error here
+                    _ => {},         // Unknown version, we should report an error here
                 },
-                None => {}          // continue the deserialization
-            }
+                None => {},          // continue the deserialization
+            };
         };
 
         result

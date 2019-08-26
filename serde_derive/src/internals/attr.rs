@@ -210,7 +210,7 @@ pub struct Versions {
     versions: Vec<syn::Path>,
 }
 #[cfg(feature = "versioning")]
-impl Deref for Versions {
+impl std::ops::Deref for Versions {
     type Target = [syn::Path];
 
     fn deref(&self) -> &Self::Target {
@@ -319,7 +319,7 @@ impl Container {
         let mut field_identifier = BoolAttr::none(cx, FIELD_IDENTIFIER);
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
         let mut serde_path = Attr::none(cx, CRATE);
-        #[cfg(feature = "versioned")]
+        #[cfg(feature = "versioning")]
         let mut versions = Attr::none(cx, VERSIONS);
 
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
@@ -616,25 +616,54 @@ impl Container {
                         }
                     }
 
-                    #[cfg(feature = "versioned")]
+                    #[cfg(feature = "versioning")]
+                    // Parse `#[serde(versions(Foo, Bar)]`
                     Meta(List(ref m)) if m.path == VERSIONS => {
                         let mut paths = Vec::new();
-                        for nested in m.nested.iter() {
-                            match *nested {
-                                Meta(Path(ref p)) => {
-                                    paths.push(*p);
+
+                        match item.data {
+                            syn::Data::Struct(syn::DataStruct {
+                                    ref struct_token, ..
+                                }) => {
+                                let mut is_valid = true;
+                                for nested in m.nested.iter() {
+                                    match *nested {
+                                        Meta(Path(ref p)) => {
+                                            paths.push(p.to_owned());
+                                        }
+                                        _ => {
+                                            is_valid = false;
+                                            break;
+                                        }
+                                    }
                                 }
-                                _ => {
+
+                                if is_valid {
+                                    versions.set(&m.path, Versions { versions: paths });
+                                } else {
                                     cx.error_spanned_by(
-                                        meta,
-                                            "malformed version attribute, expected `version(type1, type2, ...)`",
+                                        struct_token,
+                                        "malformed version attribute, expected `version(type1, type2, ...)`",
                                     );
-                                    return Err(());
                                 }
                             }
+                            syn::Data::Enum(syn::DataEnum {
+                                ref enum_token, ..
+                                }) => {
+                                cx.error_spanned_by(
+                                enum_token,
+                                    "#[serde(versions(...)] can only be used on structs",
+                                );
+                            }
+                            syn::Data::Union(syn::DataUnion {
+                                    ref union_token, ..
+                                }) => {
+                                cx.error_spanned_by(
+                                    union_token,
+                                    "#[serde(versions(...)] can only be used on structs",
+                                );
+                            }
                         }
-
-                        versions.set(&m.path, Versions { versions: paths });
                     }
 
                     Meta(ref meta_item) => {

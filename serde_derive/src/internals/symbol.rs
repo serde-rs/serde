@@ -34,6 +34,7 @@ pub const TRANSPARENT: Symbol = Symbol("transparent");
 pub const TRY_FROM: Symbol = Symbol("try_from");
 pub const UNTAGGED: Symbol = Symbol("untagged");
 pub const VARIANT_IDENTIFIER: Symbol = Symbol("variant_identifier");
+#[cfg(feature = "versioning")]
 pub const VERSIONS: Symbol = Symbol("versions");
 pub const WITH: Symbol = Symbol("with");
 
