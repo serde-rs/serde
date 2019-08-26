@@ -14,9 +14,9 @@ include = ["Cargo.toml", "lib.rs", "src/**/*.rs", "LICENSE-APACHE", "LICENSE-MIT
 path = "lib.rs"
 
 [dependencies]
-proc-macro2 = "0.4"
-quote = "0.6.3"
-syn = { version = "0.15", default-features = false, features = ["derive", "parsing", "printing", "clone-impls"] }
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "1.0", default-features = false, features = ["derive", "parsing", "printing", "clone-impls"] }
 
 [badges]
 travis-ci = { repository = "serde-rs/serde" }
