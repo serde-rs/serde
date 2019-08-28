@@ -940,7 +940,7 @@ pub trait Deserializer<'de>: Sized {
 
     /// Get the version map if it exists
     #[cfg(feature = "versioning")]
-    fn version_map(&self) -> Option<&VersionMap> { None }
+    fn version_map(&self) -> Option<crate::export::Arc<VersionMap>> { None }
 
     /// Require the `Deserializer` to figure out how to drive the visitor based
     /// on what data type is in the input.

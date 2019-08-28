@@ -11,7 +11,7 @@ use token::Token;
 pub struct Deserializer<'de> {
     tokens: &'de [Token],
     #[cfg(feature = "versioning")]
-    version_map: Option<std::rc::Rc<serde::de::VersionMap>>,
+    version_map: Option<serde::export::Arc<serde::de::VersionMap>>,
 }
 
 macro_rules! assert_next_token {
@@ -49,7 +49,12 @@ impl<'de> Deserializer<'de> {
     }
 
     #[cfg(feature = "versioning")]
-    pub fn new(tokens: &'de [Token], version_map: Option<std::rc::Rc<serde::de::VersionMap>>) -> Self {
+    pub fn new(tokens: &'de [Token]) -> Self {
+        Deserializer { tokens, version_map: None }
+    }
+
+    #[cfg(feature = "versioning")]
+    pub fn with_versions(tokens: &'de [Token], version_map: Option<serde::export::Arc<serde::de::VersionMap>>) -> Self {
         Deserializer { tokens: tokens, version_map }
     }
 
@@ -134,8 +139,8 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     }
 
     #[cfg(feature = "versioning")]
-    fn version_map(&self) -> Option<&serde::de::VersionMap> {
-        self.version_map.as_ref().map(std::ops::Deref::deref)
+    fn version_map(&self) -> Option<serde::export::Arc<serde::de::VersionMap>> {
+        self.version_map.clone()
     }
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Error>

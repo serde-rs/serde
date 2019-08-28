@@ -35,7 +35,7 @@ macro_rules! declare_tests_versions {
     ) => {
         #[test]
         fn $name() {
-            let version_map = vec![$(($version_ty, $version_num),)*]
+            let version_map = vec![$(($version_ty.to_owned(), $version_num),)*]
                 .into_iter().collect::<serde::de::VersionMap>();
             $(
                 // Test ser/de roundtripping
@@ -104,6 +104,11 @@ struct StructSkipDefaultv1 {
     #[serde(skip_deserializing)]
     a: i32,
 
+}
+impl Default for StructSkipDefaultv1 {
+    fn default() -> Self {
+        Self { a:  1 }
+    }
 }
 #[derive(PartialEq, Debug, Deserialize)]
 #[serde(versions(StructSkipDefaultv1))]

@@ -158,16 +158,8 @@ pub fn assert_de_tokens<'de, T>(value: &T, tokens: &'de [Token])
 where
     T: Deserialize<'de> + PartialEq + Debug,
 {
-    #[cfg(not(feature = "versioning"))]
-    {
-        internal_assert_de_tokens(value, Deserializer::new(tokens));
-        internal_assert_de_in_place_tokens(value, Deserializer::new(tokens));
-    }
-    #[cfg(feature = "versioning")]
-    {
-        internal_assert_de_tokens(value, Deserializer::new(tokens, None));
-        internal_assert_de_in_place_tokens(value, Deserializer::new(tokens, None));
-    }
+    internal_assert_de_tokens(value, Deserializer::new(tokens));
+    internal_assert_de_in_place_tokens(value, Deserializer::new(tokens));
 }
 
 /// Asserts that the given `tokens` deserialize into `value`, using a specific version map
@@ -200,9 +192,9 @@ pub fn assert_de_tokens_versions<'de, T>(value: &T, tokens: &'de [Token], versio
     where
         T: Deserialize<'de> + PartialEq + Debug,
 {
-    let version_map = version_map.map(std::rc::Rc::new);
-    internal_assert_de_tokens(value, Deserializer::new(tokens, version_map.clone()));
-    internal_assert_de_in_place_tokens(value, Deserializer::new(tokens, version_map));
+    let version_map = version_map.map(serde::export::Arc::new);
+    internal_assert_de_tokens(value, Deserializer::with_versions(tokens, version_map.clone()));
+    internal_assert_de_in_place_tokens(value, Deserializer::with_versions(tokens, version_map));
 }
 
 fn internal_assert_de_tokens<'de, T>(value: &T, mut de: Deserializer<'de>)
@@ -266,11 +258,7 @@ pub fn assert_de_tokens_error<'de, T>(tokens: &'de [Token], error: &str)
 where
     T: Deserialize<'de>,
 {
-    #[cfg(not(feature = "versioning"))]
     let mut de = Deserializer::new(tokens);
-    #[cfg(feature = "versioning")]
-    let mut de = Deserializer::new(tokens, None);
-
     match T::deserialize(&mut de) {
         Ok(_) => panic!("tokens deserialized successfully"),
         Err(e) => assert_eq!(e, *error),

@@ -56,7 +56,8 @@ alloc = []
 rc = []
 
 # Provide versioning support
-versioning = []
+# Requires Rc as we need `Arc`
+versioning = ["rc"]
 
 # Provide versioning with derive support
 versioning-derive = ["derive", "versioning", "serde_derive/versioning"]
