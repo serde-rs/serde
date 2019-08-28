@@ -300,7 +300,7 @@ fn fn_version_helpers(_cont: &Container, _params: &Parameters, _deserializer: Op
 }
 
 #[cfg(feature = "versioning")]
-fn fn_version_helpers(cont: &Container, _params: &Parameters, deserializer: Option<&TokenStream>) -> Option<Stmts> {
+fn fn_version_helpers(cont: &Container, _params: &Parameters, _deserializer: Option<&TokenStream>) -> Option<Stmts> {
     if let Some(versions) = cont.attrs.versions() {
         let deser_name = cont.attrs.name().deserialize_name();
         let next_element_dispatch_arms = &versions
@@ -524,6 +524,7 @@ fn deserialize_tuple(
     let this = &params.this;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
+    let (de_v_impl_generics, de_v_ty_generics) = (de_impl_generics.visitor(), de_ty_generics.visitor());
     let delife = params.borrowed.de_lifetime();
 
     assert!(!cattrs.has_flatten());
@@ -568,7 +569,20 @@ fn deserialize_tuple(
             #init_version_map
         }
     };
-    let let_version_map = let_version_map(deserializer.as_ref());
+    let version_map_get = if cfg!(feature = "versioning") {
+        Some(
+            if let Some(deserializer) = deserializer.as_ref() {
+                quote! { #deserializer.version_map() }
+            } else if is_enum {
+                quote! { self.version_map }
+            } else {
+                quote! { __deserializer.version_map() }
+            }
+        )
+    } else {
+        None
+    };
+    let let_version_map = version_map_get.as_ref().map(|get| quote! { let __version_map = #get; });
     let dispatch = if let Some(deserializer) = deserializer {
         quote!(#let_version_map _serde::Deserializer::deserialize_tuple(#deserializer, #nfields, #visitor_expr))
     } else if is_enum {
@@ -590,13 +604,13 @@ fn deserialize_tuple(
 
     let field_version_map = field_version_map();
     quote_block! {
-        struct __Visitor #de_impl_generics #where_clause {
+        struct __Visitor #de_v_impl_generics #where_clause {
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&#delife ()>,
             #field_version_map
         }
 
-        impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
+        impl #de_v_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_v_ty_generics #where_clause {
             type Value = #this #ty_generics;
 
             fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
@@ -747,7 +761,7 @@ fn deserialize_seq(
                     if cfg!(feature = "versioning") {
                         let func =
                             quote_spanned!(span=> <#field_ty as _serde::Deserialize<'de>>::next_element_versioned);
-                        quote!(try!(#func(&mut __seq, &self.version_map)))
+                        quote!(try!(#func(&mut __seq, self.version_map)))
                     } else {
                         let func =
                             quote_spanned!(span=> _serde::de::SeqAccess::next_element::<#field_ty>);
@@ -756,11 +770,11 @@ fn deserialize_seq(
                 }
                 Some(path) => {
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
-                    if cfg!(feature = "versioned") {
+                    if cfg!(feature = "versioning") {
                         quote!({
                             #wrapper
                             _serde::export::Option::map(
-                                try!(<#wrapper_ty as _serde::Deserialize<'de>>::next_element_versioned(&mut __seq, &self.version_map)),
+                                try!(<#wrapper_ty as _serde::Deserialize<'de>>::next_element_versioned(&mut __seq, self.version_map)),
                                 |__wrap| __wrap.value)
                         })
                     } else {
@@ -872,9 +886,9 @@ fn deserialize_seq_in_place(
             };
             let write = match field.attrs.deserialize_with() {
                 None => {
-                    let next_element = if cfg!(feature = "versioned") {
+                    let next_element = if cfg!(feature = "versioning") {
                         let ty = &field.ty;
-                        quote! { <#ty as _serde::Deserialize<'de>>::next_element_seed_versioned(&mut __seq, _serde::private::de::InPlaceSeed(&mut self.place.#member), &self.version_map) }
+                        quote! { <#ty as _serde::Deserialize<'de>>::next_element_seed_versioned(&mut __seq, _serde::private::de::InPlaceSeed(&mut self.place.#member), self.version_map) }
                     } else {
                         quote! { _serde::de::SeqAccess::next_element_seed(&mut __seq, _serde::private::de::InPlaceSeed(&mut self.place.#member)) }
                     };
@@ -889,8 +903,8 @@ fn deserialize_seq_in_place(
                 Some(path) => {
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
 
-                    let next_element = if cfg!(feature = "versioned") {
-                        quote! { <#wrapper_ty as _serde::Deserialize<'de>>::next_element_versioned(&mut __seq, &self.version_map) }
+                    let next_element = if cfg!(feature = "versioning") {
+                        quote! { <#wrapper_ty as _serde::Deserialize<'de>>::next_element_versioned(&mut __seq, self.version_map) }
                     } else {
                         quote! { _serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq) }
                     };
@@ -1016,6 +1030,7 @@ fn deserialize_struct(
     let this = &params.this;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
+    let (de_v_impl_generics, de_v_ty_generics) = (de_impl_generics.visitor(), de_ty_generics.visitor());
 
     let delife = params.borrowed.de_lifetime();
 
@@ -1059,8 +1074,21 @@ fn deserialize_struct(
             #init_version_map
         }
     };
-    let let_version_map = let_version_map(deserializer.as_ref());
-    let version_match_dispatch = dispatch_serialize_for_versions(cattrs, deserializer.as_ref());
+    let version_map_get = if cfg!(feature = "versioning") {
+        Some(
+            if let Some(deserializer) = deserializer.as_ref() {
+                quote! { #deserializer.version_map() }
+            } else if is_enum {
+                quote! { self.version_map }
+            } else {
+                quote! { __deserializer.version_map() }
+            }
+        )
+    } else {
+        None
+    };
+    let let_version_map =  version_map_get.as_ref().map(|get| quote!{ let __version_map = #get; });
+    let version_match_dispatch = dispatch_serialize_for_versions(cattrs, version_map_get.as_ref());
     let dispatch = if let Some(deserializer) = deserializer {
         quote! {
             #let_version_map
@@ -1113,7 +1141,7 @@ fn deserialize_struct(
 
     let visitor_seed = if is_enum && cattrs.has_flatten() {
         Some(quote! {
-            impl #de_impl_generics _serde::de::DeserializeSeed<#delife> for __Visitor #de_ty_generics #where_clause {
+            impl #de_v_impl_generics _serde::de::DeserializeSeed<#delife> for __Visitor #de_v_ty_generics #where_clause {
                 type Value = #this #ty_generics;
 
                 fn deserialize<__D>(self, __deserializer: __D) -> _serde::export::Result<Self::Value, __D::Error>
@@ -1134,13 +1162,13 @@ fn deserialize_struct(
 
         #field_visitor
 
-        struct __Visitor #de_impl_generics #where_clause {
+        struct __Visitor #de_v_impl_generics #where_clause {
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&#delife ()>,
             #field_version_map
         }
 
-        impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
+        impl #de_v_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_v_ty_generics #where_clause {
             type Value = #this #ty_generics;
 
             fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
@@ -1185,6 +1213,7 @@ fn deserialize_struct_in_place(
     let this = &params.this;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
+
     let delife = params.borrowed.de_lifetime();
 
     let expecting = match variant_ident {
@@ -1347,6 +1376,7 @@ fn deserialize_externally_tagged_enum(
     let this = &params.this;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
+    let (de_v_impl_generics, de_v_ty_generics) = (de_impl_generics.visitor(), de_ty_generics.visitor());
     let delife = params.borrowed.de_lifetime();
 
     let type_name = cattrs.name().deserialize_name();
@@ -1399,13 +1429,13 @@ fn deserialize_externally_tagged_enum(
     quote_block! {
         #variant_visitor
 
-        struct __Visitor #de_impl_generics #where_clause {
+        struct __Visitor #de_v_impl_generics #where_clause {
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&#delife ()>,
             #field_version_map
         }
 
-        impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
+        impl #de_v_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_v_ty_generics #where_clause {
             type Value = #this #ty_generics;
 
             fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
@@ -1492,6 +1522,7 @@ fn deserialize_adjacently_tagged_enum(
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
+    let (de_v_impl_generics, de_v_ty_generics) = (de_impl_generics.visitor(), de_ty_generics.visitor());
 
     let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants, cattrs);
 
@@ -1634,33 +1665,54 @@ fn deserialize_adjacently_tagged_enum(
         }
     };
 
-    let version_map = if cfg!(feature = "versioning") {
-        quote! { &self.version_map, }
+    let next_element = if cfg!(feature = "versioning") {
+        quote! {
+            <#this #ty_generics as _serde::Deserialize<'de>>::next_element_seed_versioned(
+                &mut __seq,
+                __Seed {
+                    field: __field,
+                    marker: _serde::export::PhantomData,
+                    lifetime: _serde::export::PhantomData,
+                },
+                self.version_map,
+            )
+        }
     } else {
-        TokenStream::new()
-    };
-    let next_element = quote! {
-        <#this #ty_generics as _serde::Deserialize<'de>>::next_element_seed_versioned(
-            &mut __seq,
-            __Seed {
-                field: __field,
-                marker: _serde::export::PhantomData,
-                lifetime: _serde::export::PhantomData,
-            },
-            #version_map
-        )
+        quote! {
+            _serde::de::SeqAccess::next_element_seed(
+                &mut __seq,
+                __Seed {
+                    field: __field,
+                    marker: _serde::export::PhantomData,
+                    lifetime: _serde::export::PhantomData,
+                },
+            )
+        }
     };
 
-    let next_value_seed = quote! {
-        <#this #ty_generics as _serde::Deserialize<'de>>::next_value_seed_versioned(
-            &mut __map,
-            __Seed {
-                field: __field,
-                marker: _serde::export::PhantomData,
-                lifetime: _serde::export::PhantomData,
-            },
-            #version_map
-        )
+    let next_value_seed = if cfg!(feature = "versioning") {
+        quote! {
+            <#this #ty_generics as _serde::Deserialize<'de>>::next_value_seed_versioned(
+                &mut __map,
+                __Seed {
+                    field: __field,
+                    marker: _serde::export::PhantomData,
+                    lifetime: _serde::export::PhantomData,
+                },
+                self.version_map,
+            )
+        }
+    } else {
+        quote! {
+            _serde::de::MapAccess::next_value_seed(
+                &mut __map,
+                __Seed {
+                    field: __field,
+                    marker: _serde::export::PhantomData,
+                    lifetime: _serde::export::PhantomData,
+                }
+            )
+        }
     };
 
     let field_version_map = field_version_map();
@@ -1690,13 +1742,13 @@ fn deserialize_adjacently_tagged_enum(
             }
         }
 
-        struct __Visitor #de_impl_generics #where_clause {
+        struct __Visitor #de_v_impl_generics #where_clause {
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&#delife ()>,
             #field_version_map
         }
 
-        impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
+        impl #de_v_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_v_ty_generics #where_clause {
             type Value = #this #ty_generics;
 
             fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
@@ -2158,6 +2210,7 @@ fn deserialize_custom_identifier(
 
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
+
     let delife = params.borrowed.de_lifetime();
     let visitor_impl = Stmts(deserialize_identifier(
         &this,
@@ -2564,11 +2617,11 @@ fn deserialize_map(
                 None => {
                     let field_ty = field.ty;
                     let span = field.original.span();
-                    if cfg!(feature = "versioned") {
+                    if cfg!(feature = "versioning") {
                         let func =
                             quote_spanned!(span=> <#field_ty as _serde::Deserialize<'de>>::next_value_versioned);
                         quote! {
-                            try!(#func(&mut __map, &self.version_map))
+                            try!(#func(&mut __map, self.version_map))
                         }
                     } else {
                         let func =
@@ -2580,8 +2633,8 @@ fn deserialize_map(
                 }
                 Some(path) => {
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
-                    let next_value = if cfg!(feature = "versioned") {
-                        quote! { <#wrapper_ty as _serde::Deserialize<'de>>::next_value_versioned(&mut __map, &self.version_map) }
+                    let next_value = if cfg!(feature = "versioning") {
+                        quote! { <#wrapper_ty as _serde::Deserialize<'de>>::next_value_versioned(&mut __map, self.version_map) }
                     } else {
                         quote! { _serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map) }
                     };
@@ -2820,7 +2873,7 @@ fn deserialize_map_in_place(
                 None => {
                     if cfg!(feature = "versioning") {
                         quote! {
-                            try!(<#ty as _serde::Deserialize<'de>>::next_value_seed_versioned(&mut __map, _serde::private::de::InPlaceSeed(&mut self.place.#member), &self.version_map))
+                            try!(<#ty as _serde::Deserialize<'de>>::next_value_seed_versioned(&mut __map, _serde::private::de::InPlaceSeed(&mut self.place.#member), self.version_map))
                         }
                     } else {
                         quote! {
@@ -2831,7 +2884,7 @@ fn deserialize_map_in_place(
                 Some(path) => {
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
                     let next_value = if cfg!(feature = "versioning") {
-                        quote! { <#wrapper_ty as _serde::Deserialize<'de>>::next_value_versioned(&mut __map, &self.version_map) }
+                        quote! { <#wrapper_ty as _serde::Deserialize<'de>>::next_value_versioned(&mut __map, self.version_map) }
                     } else {
                         quote! { _serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map) }
                     };
@@ -3081,6 +3134,15 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
 struct DeImplGenerics<'a>(&'a Parameters);
 #[cfg(feature = "deserialize_in_place")]
 struct InPlaceImplGenerics<'a>(&'a Parameters);
+#[cfg(feature = "versioning")]
+struct DeImplVisitorGenerics<'a>(&'a Parameters);
+
+impl<'a> DeImplGenerics<'a> {
+    #[cfg(feature = "versioning")]
+    fn visitor(&self) -> DeImplVisitorGenerics { DeImplVisitorGenerics(self.0) }
+    #[cfg(not(feature = "versioning"))]
+    fn visitor(&self) -> DeImplGenerics { Self(self.0) }
+}
 
 #[inline]
 fn visitor_version_lifetime_def() -> Option<syn::GenericParam> {
@@ -3099,11 +3161,6 @@ fn visitor_version_lifetime_def() -> Option<syn::GenericParam> {
 impl<'a> ToTokens for DeImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
-
-        generics.params = visitor_version_lifetime_def()
-            .into_iter()
-            .chain(generics.params)
-            .collect();
 
         if let Some(de_lifetime) = self.0.borrowed.de_lifetime_def() {
             generics.params = Some(syn::GenericParam::Lifetime(de_lifetime))
@@ -3159,11 +3216,8 @@ impl<'a> DeImplGenerics<'a> {
     }
 }
 
-struct DeTypeGenerics<'a>(&'a Parameters);
-#[cfg(feature = "deserialize_in_place")]
-struct InPlaceTypeGenerics<'a>(&'a Parameters);
-
-impl<'a> ToTokens for DeTypeGenerics<'a> {
+#[cfg(feature = "versioning")]
+impl<'a> ToTokens for DeImplVisitorGenerics<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
 
@@ -3171,6 +3225,34 @@ impl<'a> ToTokens for DeTypeGenerics<'a> {
             .into_iter()
             .chain(generics.params)
             .collect();
+
+        if let Some(de_lifetime) = self.0.borrowed.de_lifetime_def() {
+            generics.params = Some(syn::GenericParam::Lifetime(de_lifetime))
+                .into_iter()
+                .chain(generics.params)
+                .collect();
+        }
+        let (impl_generics, _, _) = generics.split_for_impl();
+        impl_generics.to_tokens(tokens);
+    }
+}
+
+struct DeTypeGenerics<'a>(&'a Parameters);
+#[cfg(feature = "deserialize_in_place")]
+struct InPlaceTypeGenerics<'a>(&'a Parameters);
+#[cfg(feature = "versioning")]
+struct DeVisitorTypeGenerics<'a>(&'a Parameters);
+
+impl<'a> DeTypeGenerics<'a> {
+    #[cfg(not(feature = "versioning"))]
+    fn visitor(&self) -> DeTypeGenerics { Self(self.0) }
+    #[cfg(feature = "versioning")]
+    fn visitor(&self) -> DeVisitorTypeGenerics { DeVisitorTypeGenerics(self.0) }
+}
+
+impl<'a> ToTokens for DeTypeGenerics<'a> {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let mut generics = self.0.generics.clone();
 
         if self.0.borrowed.de_lifetime_def().is_some() {
             let def = syn::LifetimeDef {
@@ -3196,6 +3278,33 @@ impl<'a> ToTokens for InPlaceTypeGenerics<'a> {
         generics.params = Some(syn::GenericParam::Lifetime(place_lifetime()))
             .into_iter()
             .chain(visitor_version_lifetime_def().into_iter())
+            .chain(generics.params)
+            .collect();
+
+        if self.0.borrowed.de_lifetime_def().is_some() {
+            let def = syn::LifetimeDef {
+                attrs: Vec::new(),
+                lifetime: syn::Lifetime::new("'de", Span::call_site()),
+                colon_token: None,
+                bounds: Punctuated::new(),
+            };
+            generics.params = Some(syn::GenericParam::Lifetime(def))
+                .into_iter()
+                .chain(generics.params)
+                .collect();
+        }
+        let (_, ty_generics, _) = generics.split_for_impl();
+        ty_generics.to_tokens(tokens);
+    }
+}
+
+#[cfg(feature = "versioning")]
+impl<'a> ToTokens for DeVisitorTypeGenerics<'a> {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let mut generics = self.0.generics.clone();
+
+        generics.params = visitor_version_lifetime_def()
+            .into_iter()
             .chain(generics.params)
             .collect();
 
@@ -3261,7 +3370,7 @@ fn deserializer_token_stream(deserializer: Option<&TokenStream>) -> TokenStream 
 
 fn field_version_map() -> TokenStream {
     if cfg!(feature = "versioning") {
-        let result: TokenStream = quote! { version_map: &'__v _serde::de::VersionMap, };
+        let result: TokenStream = quote! { version_map: Option<&'__v _serde::de::VersionMap>, };
         result
     } else {
         TokenStream::new()
@@ -3288,13 +3397,13 @@ fn init_version_map() -> TokenStream {
 }
 
 #[cfg(not(feature = "versioning"))]
-fn dispatch_serialize_for_versions(_cattr: &attr::Container, _deserializer: Option<&TokenStream>) -> Option<Stmts> {
+fn dispatch_serialize_for_versions(_cattr: &attr::Container, version_map_get: Option<&TokenStream>) -> Option<Stmts> {
     None
 }
 #[cfg(feature = "versioning")]
-fn dispatch_serialize_for_versions(cattr: &attr::Container, deserializer: Option<&TokenStream>) -> Option<Stmts> {
+fn dispatch_serialize_for_versions(cattr: &attr::Container, version_map_get: Option<&TokenStream>) -> Option<Stmts> {
     if let Some(versions) = cattr.versions() {
-        let deserializer = deserializer_token_stream(deserializer);
+        let version_map_get = version_map_get.unwrap(); // with feature versioning, we always have a value
 
         let version_dispatch_arms = versions.iter()
             .enumerate()
@@ -3302,7 +3411,7 @@ fn dispatch_serialize_for_versions(cattr: &attr::Container, deserializer: Option
                 let version_number = i + 1;
                 quote! {
                     Some(#version_number) => return _serde::export::Result::map(
-                        <#path as _serde::Deserialize>::deserialize(#deserializer),
+                        <#path as _serde::Deserialize>::deserialize(__deserializer),
                         _serde::export::Into::into,
                     ),
                 }
@@ -3312,7 +3421,7 @@ fn dispatch_serialize_for_versions(cattr: &attr::Container, deserializer: Option
         let deser_name = cattr.name().deserialize_name().to_string();
         // TODO: report properly the unknown version error
         let result =  quote_block! {
-            match #deserializer.version_map() {
+            match #version_map_get {
                 Some(version_map) => match version_map(#deser_name) {
                     #(#version_dispatch_arms)*
                     None => {},     // continue the deserialization

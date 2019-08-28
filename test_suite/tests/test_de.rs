@@ -238,6 +238,9 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
     .chain(vec![Token::MapEnd].into_iter())
     .collect();
 
+    #[cfg(feature = "versioning")]
+    let mut de = serde_test::Deserializer::new(&concated_tokens, None);
+    #[cfg(not(feature = "versioning"))]
     let mut de = serde_test::Deserializer::new(&concated_tokens);
     let base = IgnoreBase::deserialize(&mut de).unwrap();
     assert_eq!(base, IgnoreBase { a: 1 });

@@ -561,10 +561,6 @@ pub trait Deserialize<'de>: Sized {
         Ok(())
     }
 
-    /// Get the version map if it exists
-    #[cfg(feature = "versioning")]
-    fn version_map(&self) -> Option<&VersionMap> { None }
-
     /// Get the next element in a sequence with versioning support
     #[cfg(feature = "versioning")]
     fn next_element_versioned<S: SeqAccess<'de>>(
@@ -576,11 +572,11 @@ pub trait Deserialize<'de>: Sized {
 
     /// Get the next element in a sequence with versioning support
     #[cfg(feature = "versioning")]
-    fn next_element_seed_versioned<S: SeqAccess<'de>, Seed: DeserializeSeed<'de, Value = Self>>(
+    fn next_element_seed_versioned<S: SeqAccess<'de>, Seed: DeserializeSeed<'de>>(
         seq: &mut S,
         seed: Seed,
         _versions: Option<&VersionMap>,
-    ) -> Result<Option<Self>, S::Error> {
+    ) -> Result<Option<Seed::Value>, S::Error> {
         seq.next_element_seed(seed)
     }
 
@@ -595,11 +591,11 @@ pub trait Deserialize<'de>: Sized {
 
     /// Get the next map value with versioning support
     #[cfg(feature = "versioning")]
-    fn next_value_seed_versioned<M: MapAccess<'de>, Seed: DeserializeSeed<'de, Value = Self>>(
+    fn next_value_seed_versioned<M: MapAccess<'de>, Seed: DeserializeSeed<'de>>(
         map: &mut M,
         seed: Seed,
         _versions: Option<&VersionMap>,
-    ) -> Result<Self, M::Error> {
+    ) -> Result<Seed::Value, M::Error> {
         map.next_value_seed(seed)
     }
 }
@@ -941,6 +937,10 @@ pub trait Deserializer<'de>: Sized {
     /// The error type that can be returned if some error occurs during
     /// deserialization.
     type Error: Error;
+
+    /// Get the version map if it exists
+    #[cfg(feature = "versioning")]
+    fn version_map(&self) -> Option<&VersionMap> { None }
 
     /// Require the `Deserializer` to figure out how to drive the visitor based
     /// on what data type is in the input.

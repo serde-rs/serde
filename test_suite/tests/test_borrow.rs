@@ -112,7 +112,11 @@ fn test_cow() {
         Token::StructEnd,
     ];
 
+    #[cfg(feature = "versioning")]
+    let mut de = serde_test::Deserializer::new(tokens, None);
+    #[cfg(not(feature = "versioning"))]
     let mut de = serde_test::Deserializer::new(tokens);
+
     let cows = Cows::deserialize(&mut de).unwrap();
 
     match cows.copied {

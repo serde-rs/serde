@@ -200,7 +200,8 @@ pub fn assert_de_tokens_versions<'de, T>(value: &T, tokens: &'de [Token], versio
     where
         T: Deserialize<'de> + PartialEq + Debug,
 {
-    internal_assert_de_tokens(value, Deserializer::new(tokens, version_map));
+    let version_map = version_map.map(std::rc::Rc::new);
+    internal_assert_de_tokens(value, Deserializer::new(tokens, version_map.clone()));
     internal_assert_de_in_place_tokens(value, Deserializer::new(tokens, version_map));
 }
 
@@ -265,7 +266,11 @@ pub fn assert_de_tokens_error<'de, T>(tokens: &'de [Token], error: &str)
 where
     T: Deserialize<'de>,
 {
+    #[cfg(not(feature = "versioning"))]
     let mut de = Deserializer::new(tokens);
+    #[cfg(feature = "versioning")]
+    let mut de = Deserializer::new(tokens, None);
+
     match T::deserialize(&mut de) {
         Ok(_) => panic!("tokens deserialized successfully"),
         Err(e) => assert_eq!(e, *error),

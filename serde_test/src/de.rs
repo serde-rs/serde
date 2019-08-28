@@ -10,8 +10,8 @@ use token::Token;
 #[derive(Debug)]
 pub struct Deserializer<'de> {
     tokens: &'de [Token],
-    #[cfg(feature = "versioned")]
-    version_map: Option<serde::de::VersionMap>,
+    #[cfg(feature = "versioning")]
+    version_map: Option<std::rc::Rc<serde::de::VersionMap>>,
 }
 
 macro_rules! assert_next_token {
@@ -43,13 +43,13 @@ macro_rules! end_of_tokens {
 }
 
 impl<'de> Deserializer<'de> {
-    #[cfg(not(feature = "versioned"))]
+    #[cfg(not(feature = "versioning"))]
     pub fn new(tokens: &'de [Token]) -> Self {
         Deserializer { tokens: tokens }
     }
 
-    #[cfg(feature = "versioned")]
-    pub fn new(tokens: &'de [Token], version_map: Option<serde::de::VersionMap>) -> Self {
+    #[cfg(feature = "versioning")]
+    pub fn new(tokens: &'de [Token], version_map: Option<std::rc::Rc<serde::de::VersionMap>>) -> Self {
         Deserializer { tokens: tokens, version_map }
     }
 
@@ -133,9 +133,9 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
         bytes byte_buf unit seq map identifier ignored_any
     }
 
-    #[cfg(feature = "versioned")]
+    #[cfg(feature = "versioning")]
     fn version_map(&self) -> Option<&serde::de::VersionMap> {
-        self.version_map.as_ref()
+        self.version_map.as_ref().map(std::ops::Deref::deref)
     }
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Error>
