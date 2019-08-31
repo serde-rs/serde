@@ -154,6 +154,7 @@ impl Parameters {
 // All the generics in the input, plus a bound `T: Deserialize` for each generic
 // field type that will be deserialized by us, plus a bound `T: Default` for
 // each generic field type that will be set to a default value.
+// versioning: plus a Type: Default for each versioned type which has the default feature
 fn build_generics(cont: &Container, borrowed: &BorrowedLifetimes) -> syn::Generics {
     let generics = bound::without_defaults(cont.generics);
 
@@ -161,6 +162,8 @@ fn build_generics(cont: &Container, borrowed: &BorrowedLifetimes) -> syn::Generi
 
     let generics =
         bound::with_where_predicates_from_variants(cont, &generics, attr::Variant::de_bound);
+
+    let generics = bound::with_versioned_defaults(cont, &generics);
 
     match cont.attrs.de_bound() {
         Some(predicates) => bound::with_where_predicates(&generics, predicates),
@@ -328,8 +331,9 @@ fn fn_version_helpers(cont: &Container, _params: &Parameters, _deserializer: Opt
         let next_element_dispatch_arms = &versions
             .iter()
             .enumerate()
-            .map(|(i, path)| {
+            .map(|(i, version)| {
                 let version_number = i + 1;
+                let path = &version.path;
                 quote! {
                     Some(#version_number) => _serde::export::Result::map(
                         <#path as _serde::Deserialize>::next_element_versioned(seq, _serde::export::Some(version_map)),
@@ -343,8 +347,9 @@ fn fn_version_helpers(cont: &Container, _params: &Parameters, _deserializer: Opt
         let next_value_dispatch_arms = &versions
             .iter()
             .enumerate()
-            .map(|(i, path)| {
+            .map(|(i, version)| {
                 let version_number = i + 1;
+                let path = &version.path;
                 quote! {
                     Some(#version_number) => _serde::export::Result::map(
                         <#path as _serde::Deserialize>::next_value_versioned(map, _serde::export::Some(version_map)),
@@ -3281,8 +3286,9 @@ fn dispatch_serialize_for_versions(cont: &Container) -> Option<Stmts> {
 
         let version_dispatch_arms = versions.iter()
             .enumerate()
-            .map(|(i, path)| {
+            .map(|(i, version)| {
                 let version_number = i + 1;
+                let path = &version.path;
                 quote! {
                     Some(#version_number) => return _serde::export::Result::map(
                         <#path as _serde::Deserialize>::deserialize(__deserializer),

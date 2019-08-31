@@ -32,10 +32,14 @@ pub const SKIP_SERIALIZING_IF: Symbol = Symbol("skip_serializing_if");
 pub const TAG: Symbol = Symbol("tag");
 pub const TRANSPARENT: Symbol = Symbol("transparent");
 pub const TRY_FROM: Symbol = Symbol("try_from");
+#[cfg(feature = "versioning")]
+pub const TYPE: Symbol = Symbol("type");
 pub const UNTAGGED: Symbol = Symbol("untagged");
 pub const VARIANT_IDENTIFIER: Symbol = Symbol("variant_identifier");
 #[cfg(feature = "versioning")]
 pub const VERSIONS: Symbol = Symbol("versions");
+#[cfg(feature = "versioning")]
+pub const VERSION: Symbol = Symbol("version");
 pub const WITH: Symbol = Symbol("with");
 
 impl PartialEq<Symbol> for Ident {

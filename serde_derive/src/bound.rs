@@ -80,6 +80,35 @@ pub fn with_where_predicates_from_variants(
     generics
 }
 
+#[cfg(feature = "versioning")]
+pub fn with_versioned_defaults(
+    cont: &Container,
+    generics: &syn::Generics,
+) -> syn::Generics {
+
+    if let Some(versions) = cont.attrs.versions() {
+        let mut generics = generics.clone();
+        generics.make_where_clause().predicates.extend(
+            versions.iter().filter(|v|v.is_default)
+                .map(|v| {
+                    let p = &v.path;
+                    syn::parse2::<syn::WherePredicate>(quote! { #p: Default }).unwrap()
+            })
+        );
+        generics
+    } else {
+        generics.clone()
+    }
+}
+
+#[cfg(not(feature = "versioning"))]
+pub fn with_versioned_defaults(
+    _cont: &Container,
+    generics: &syn::Generics,
+) -> syn::Generics {
+    generics.clone()
+}
+
 // Puts the given bound on any generic type parameters that are used in fields
 // for which filter returns true.
 //

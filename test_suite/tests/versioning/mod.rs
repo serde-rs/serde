@@ -60,7 +60,7 @@ struct Structv1 {
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
-#[serde(versions(Structv1))]
+#[serde(versions("Structv1"))]
 struct Struct {
     d: i32,
     e: i32,
@@ -83,7 +83,7 @@ struct StructSkipAllv1 {
     a: i32,
 }
 #[derive(PartialEq, Debug, Deserialize)]
-#[serde(versions(StructSkipAllv1))]
+#[serde(versions("StructSkipAllv1"))]
 struct StructSkipAll {
     b: i32,
 }
@@ -108,7 +108,7 @@ impl Default for StructSkipDefaultv1 {
     }
 }
 #[derive(PartialEq, Debug, Deserialize)]
-#[serde(versions(StructSkipDefaultv1))]
+#[serde(versions("StructSkipDefaultv1"))]
 struct StructSkipDefault {
     b: i32
 }
@@ -127,7 +127,7 @@ struct StructSkipAllDenyUnknownv1{
     a: i32,
 }
 #[derive(PartialEq, Debug, Deserialize)]
-#[serde(versions(StructSkipAllDenyUnknownv1))]
+#[serde(versions("StructSkipAllDenyUnknownv1"))]
 struct StructSkipAllDenyUnknown {
     b: i32
 }
@@ -156,7 +156,7 @@ impl Default for StructDefaultv1<String> {
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
-#[serde(versions(StructDefaultv1<T>))]
+#[serde(versions(version(default, type = "StructDefaultv1<T>")))]
 struct StructDefault<T> {
     c: i32,
     d: T

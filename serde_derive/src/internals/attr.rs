@@ -206,12 +206,18 @@ pub struct RenameAllRules {
 }
 
 #[cfg(feature = "versioning")]
+pub struct Version {
+    pub path: syn::Path,
+    pub is_default: bool,
+}
+
+#[cfg(feature = "versioning")]
 pub struct Versions {
-    versions: Vec<syn::Path>,
+    versions: Vec<Version>,
 }
 #[cfg(feature = "versioning")]
 impl std::ops::Deref for Versions {
-    type Target = [syn::Path];
+    type Target = [Version];
 
     fn deref(&self) -> &Self::Target {
         &self.versions
@@ -321,7 +327,6 @@ impl Container {
         let mut serde_path = Attr::none(cx, CRATE);
         #[cfg(feature = "versioning")]
         let mut versions = Attr::none(cx, VERSIONS);
-
         for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
             for meta_item in meta_items {
                 match meta_item {
@@ -617,9 +622,9 @@ impl Container {
                     }
 
                     #[cfg(feature = "versioning")]
-                    // Parse `#[serde(versions(Foo, Bar)]`
+                    // Parse `#[serde(versions("Foo", version(type = "Bar", default), ...)]`
                     Meta(List(ref m)) if m.path == VERSIONS => {
-                        let mut paths = Vec::new();
+                        let mut parsed_versions = Vec::new();
 
                         match item.data {
                             syn::Data::Struct(syn::DataStruct {
@@ -628,8 +633,55 @@ impl Container {
                                 let mut is_valid = true;
                                 for nested in m.nested.iter() {
                                     match *nested {
-                                        Meta(Path(ref p)) => {
-                                            paths.push(p.to_owned());
+                                        // Parse "typeA" as shorthand for 'version(type = "typeA")'
+                                        Lit(syn::Lit::Str(ref str)) => {
+                                            if let Ok(path) = str.parse::<syn::Path>() {
+                                                parsed_versions.push(Version {
+                                                    path,
+                                                    is_default: false,
+                                                });
+                                            }
+                                            else {
+                                                is_valid = false;
+                                                break;
+                                            }
+                                        }
+                                        // Parse 'version(type = "typeA", default)'
+                                        Meta(List(ref list)) if list.path == VERSION => {
+                                            let mut path = None;
+                                            let mut default = false;
+                                            for item in &list.nested {
+                                                match item {
+                                                    Meta(NameValue(ref pair)) if pair.path == TYPE => {
+                                                        match pair.lit {
+                                                            syn::Lit::Str(ref str) => {
+                                                                if let Ok(path2) = str.parse::<syn::Path>() {
+                                                                    path = Some(path2);
+                                                                }
+                                                            },
+                                                            _ => {
+                                                                is_valid = false;
+                                                                break;
+                                                            }
+                                                        };
+                                                    },
+                                                    Meta(Path(ref p)) if p == DEFAULT => {
+                                                        default = true;
+                                                    },
+                                                    _ => {
+                                                        is_valid = false;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            // type path is mandatory
+                                            is_valid &= path.is_some();
+                                            if !is_valid { break; }
+
+                                            parsed_versions.push(Version {
+                                                path: path.unwrap(),
+                                                is_default: default
+                                            })
                                         }
                                         _ => {
                                             is_valid = false;
@@ -639,11 +691,11 @@ impl Container {
                                 }
 
                                 if is_valid {
-                                    versions.set(&m.path, Versions { versions: paths });
+                                    versions.set(&m.path, Versions { versions: parsed_versions });
                                 } else {
                                     cx.error_spanned_by(
                                         struct_token,
-                                        "malformed version attribute, expected `version(type1, type2, ...)`",
+                                        "malformed versions attribute, expected `versions(\"type1\", version(type = \"type2\", default), ...)`",
                                     );
                                 }
                             }
