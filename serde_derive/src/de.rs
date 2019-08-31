@@ -332,8 +332,8 @@ fn fn_version_helpers(cont: &Container, _params: &Parameters, _deserializer: Opt
                 let version_number = i + 1;
                 quote! {
                     Some(#version_number) => _serde::export::Result::map(
-                        <#path as _serde::Deserialize<'de>>::next_element_versioned(seq, version_map),
-                        _serde::export::Into::into,
+                        <#path as _serde::Deserialize<'de>>::next_element_versioned(seq, _serde::export::Some(version_map)),
+                        |v| _serde::export::Option::map(v, _serde::export::Into::into),
                     ),
                 }
             })
@@ -347,7 +347,7 @@ fn fn_version_helpers(cont: &Container, _params: &Parameters, _deserializer: Opt
                 let version_number = i + 1;
                 quote! {
                     Some(#version_number) => _serde::export::Result::map(
-                        <#path as _serde::Deserialize<'de>>::next_value_versioned(map, version_map),
+                        <#path as _serde::Deserialize<'de>>::next_value_versioned(map, _serde::export::Some(version_map)),
                         _serde::export::Into::into,
                     ),
                 }
@@ -358,9 +358,9 @@ fn fn_version_helpers(cont: &Container, _params: &Parameters, _deserializer: Opt
 
         let result = quote_block! {
             /// Get the next element in a sequence with versioning support
-            fn next_element_versioned<S: SeqAccess<'de>>(
+            fn next_element_versioned<S: _serde::de::SeqAccess<'de>>(
                 seq: &mut S,
-                versions: Option<&VersionMap>,
+                version_map: Option<&_serde::de::VersionMap>,
             ) -> Result<Option<Self>, S::Error> {
                 match version_map {
                     Some(version_map) => {
@@ -375,9 +375,9 @@ fn fn_version_helpers(cont: &Container, _params: &Parameters, _deserializer: Opt
             }
 
             /// Get the next map value with versioning support
-            fn next_value_versioned<M: MapAccess<'de>>(
+            fn next_value_versioned<M: _serde::de::MapAccess<'de>>(
                 map: &mut M,
-                _versions: Option<&VersionMap>,
+                version_map: Option<&_serde::de::VersionMap>,
             ) -> Result<Self, M::Error> {
                 match version_map {
                     Some(version_map) => {
@@ -3268,7 +3268,7 @@ fn dispatch_serialize_for_versions(cattr: &attr::Container) -> Option<Stmts> {
                 quote! {
                     Some(#version_number) => return _serde::export::Result::map(
                         <#path as _serde::Deserialize>::deserialize(__deserializer),
-                        _serde::export::Into::<Self>::into,
+                        _serde::export::Into::into,
                     ),
                 }
             })
@@ -3277,8 +3277,8 @@ fn dispatch_serialize_for_versions(cattr: &attr::Container) -> Option<Stmts> {
         let deser_name = cattr.name().deserialize_name().to_string();
         // TODO: report properly the unknown version error
         let result =  quote_block! {
-            match __deserializer.version_map() {
-                Some(version_map) => match version_map(#deser_name) {
+            match __deserializer.version_map().as_ref() {
+                Some(version_map) => match version_map.get(#deser_name) {
                     #(#version_dispatch_arms)*
                     None => {},     // continue the deserialization
                     _ => {},         // Unknown version, we should report an error here

@@ -20,10 +20,7 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
         .chain(vec![Token::MapEnd].into_iter())
         .collect();
 
-    #[cfg(feature = "versioning")]
-        let mut de = serde_test::Deserializer::new(&concated_tokens, None);
-    #[cfg(not(feature = "versioning"))]
-        let mut de = serde_test::Deserializer::new(&concated_tokens);
+    let mut de = serde_test::Deserializer::new(&concated_tokens);
     let base = IgnoreBase::deserialize(&mut de).unwrap();
     assert_eq!(base, IgnoreBase { a: 1 });
 }
@@ -159,7 +156,7 @@ impl Default for StructDefaultv1<String> {
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
-#[serde(versions(StructDefaultv1))]
+#[serde(versions(StructDefaultv1<T>))]
 struct StructDefault<T> {
     c: i32,
     d: T
@@ -244,11 +241,11 @@ declare_tests_versions! {
         ],
     }
     test_versioned_struct_skip_all ("versioning::StructSkipAll" => 1) {
-        StructSkipAll { a: 0 } => &[
+        StructSkipAll { b: 0 } => &[
             Token::Struct { name: "StructSkipAll", len: 0 },
             Token::StructEnd,
         ],
-        StructSkipAll { a: 0 } => &[
+        StructSkipAll { b: 0 } => &[
             Token::Struct { name: "StructSkipAll", len: 0 },
                 Token::Str("a"),
                 Token::I32(1),
@@ -259,19 +256,19 @@ declare_tests_versions! {
         ],
     }
     test_versioned_struct_skip_default ("versioning::StructSkipDefault" => 1) {
-        StructSkipDefault { a: 16 } => &[
+        StructSkipDefault { b: 16 } => &[
             Token::Struct { name: "StructSkipDefault", len: 0 },
             Token::StructEnd,
         ],
     }
     test_versioned_struct_skip_all_deny_unknown ("versioning::StructSkipAllDenyUnknown" => 1) {
-        StructSkipAllDenyUnknown { a: 0 } => &[
+        StructSkipAllDenyUnknown { b: 0 } => &[
             Token::Struct { name: "StructSkipAllDenyUnknown", len: 0 },
             Token::StructEnd,
         ],
     }
     test_versioned_struct_default ("versioning::StructDefault" => 1) {
-        StructDefault { a: 50, b: "overwritten".to_string() } => &[
+        StructDefault { c: 50, d: "overwritten".to_string() } => &[
             Token::Struct { name: "StructDefault", len: 2 },
                 Token::Str("a"),
                 Token::I32(50),
@@ -280,7 +277,7 @@ declare_tests_versions! {
                 Token::String("overwritten"),
             Token::StructEnd,
         ],
-        StructDefault { a: 100, b: "default".to_string() } => &[
+        StructDefault { c: 100, d: "default".to_string() } => &[
             Token::Struct { name: "StructDefault",  len: 2 },
             Token::StructEnd,
         ],
