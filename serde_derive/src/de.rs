@@ -287,7 +287,7 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
 
         if cfg!(feature = "versioning") {
             // Add a match to dispatch to a previous version if required
-            let version_match_dispatch = dispatch_serialize_for_versions(&cont.attrs);
+            let version_match_dispatch = dispatch_serialize_for_versions(&cont);
             quote_block! {
                 #version_match_dispatch
                 #result
@@ -3272,12 +3272,12 @@ fn init_version_map() -> TokenStream {
 }
 
 #[cfg(not(feature = "versioning"))]
-fn dispatch_serialize_for_versions(_cattr: &attr::Container) -> Option<Stmts> {
+fn dispatch_serialize_for_versions(_cont: &Container) -> Option<Stmts> {
     None
 }
 #[cfg(feature = "versioning")]
-fn dispatch_serialize_for_versions(cattr: &attr::Container) -> Option<Stmts> {
-    if let Some(versions) = cattr.versions() {
+fn dispatch_serialize_for_versions(cont: &Container) -> Option<Stmts> {
+    if let Some(versions) = cont.attrs.versions() {
 
         let version_dispatch_arms = versions.iter()
             .enumerate()
@@ -3292,7 +3292,7 @@ fn dispatch_serialize_for_versions(cattr: &attr::Container) -> Option<Stmts> {
             })
             .collect::<Vec<_>>();
 
-        let deser_name = cattr.name().deserialize_name().to_string();
+        let deser_name = cont.attrs.name().deserialize_name().to_string();
         // TODO: report properly the unknown version error
         let result =  quote_block! {
             match __deserializer.version_map().as_ref() {
