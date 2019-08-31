@@ -173,7 +173,7 @@ impl<T> From<StructDefaultv1<T>> for StructDefault<T> {
 //////////////////////////////////////////////////////////////////////////
 
 declare_tests_versions! {
-    test_versioned_struct ("versioning::Struct" => 1) {
+    test_versioned_struct ("Struct" => 1) {
         Struct { d: 1, e: 2, f: 0 } => &[
             Token::Map { len: Some(3) },
                 Token::Str("a"),
@@ -208,7 +208,7 @@ declare_tests_versions! {
             Token::SeqEnd,
         ],
     }
-    test_versioned_struct_with_skip ("versioning::Struct" => 1) {
+    test_versioned_struct_with_skip ("Struct" => 1) {
         Struct { d: 1, e: 2, f: 0 } => &[
             Token::Map { len: Some(3) },
                 Token::Str("a"),
@@ -240,7 +240,7 @@ declare_tests_versions! {
             Token::StructEnd,
         ],
     }
-    test_versioned_struct_skip_all ("versioning::StructSkipAll" => 1) {
+    test_versioned_struct_skip_all ("StructSkipAll" => 1) {
         StructSkipAll { b: 0 } => &[
             Token::Struct { name: "StructSkipAll", len: 0 },
             Token::StructEnd,
@@ -255,19 +255,19 @@ declare_tests_versions! {
             Token::StructEnd,
         ],
     }
-    test_versioned_struct_skip_default ("versioning::StructSkipDefault" => 1) {
+    test_versioned_struct_skip_default ("StructSkipDefault" => 1) {
         StructSkipDefault { b: 16 } => &[
             Token::Struct { name: "StructSkipDefault", len: 0 },
             Token::StructEnd,
         ],
     }
-    test_versioned_struct_skip_all_deny_unknown ("versioning::StructSkipAllDenyUnknown" => 1) {
+    test_versioned_struct_skip_all_deny_unknown ("StructSkipAllDenyUnknown" => 1) {
         StructSkipAllDenyUnknown { b: 0 } => &[
             Token::Struct { name: "StructSkipAllDenyUnknown", len: 0 },
             Token::StructEnd,
         ],
     }
-    test_versioned_struct_default ("versioning::StructDefault" => 1) {
+    test_versioned_struct_default ("StructDefault" => 1) {
         StructDefault { c: 50, d: "overwritten".to_string() } => &[
             Token::Struct { name: "StructDefault", len: 2 },
                 Token::Str("a"),

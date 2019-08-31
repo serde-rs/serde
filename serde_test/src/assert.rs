@@ -164,6 +164,8 @@ where
 
 /// Asserts that the given `tokens` deserialize into `value`, using a specific version map
 ///
+/// Only tests deserialize and not deserialize in place
+///
 /// ```edition2018
 /// # use serde::{Serialize, Deserialize};
 /// # use serde_test::{assert_de_tokens, Token};
@@ -194,7 +196,6 @@ pub fn assert_de_tokens_versions<'de, T>(value: &T, tokens: &'de [Token], versio
 {
     let version_map = version_map.map(serde::export::Arc::new);
     internal_assert_de_tokens(value, Deserializer::with_versions(tokens, version_map.clone()));
-    internal_assert_de_in_place_tokens(value, Deserializer::with_versions(tokens, version_map));
 }
 
 fn internal_assert_de_tokens<'de, T>(value: &T, mut de: Deserializer<'de>)
