@@ -104,7 +104,7 @@ struct StructSkipDefaultv1 {
 }
 impl Default for StructSkipDefaultv1 {
     fn default() -> Self {
-        Self { a:  1 }
+        Self { a:  16 }
     }
 }
 #[derive(PartialEq, Debug, Deserialize)]
