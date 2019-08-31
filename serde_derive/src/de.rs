@@ -604,13 +604,13 @@ fn deserialize_tuple(
         Some(
             if let Some(deserializer) = deserializer.as_ref() {
                 // We have a deserializer, the version_map comes from it
-                quote! { _serde::de::Deserializer::version_map(#deserializer).clone() }
+                quote! { _serde::de::Deserializer::version_map(&#deserializer).clone() }
             } else if is_enum {
                 // In an enum, the version_map is in the parent visitor properties
                 quote! { self.version_map.clone() }
             } else {
                 // Use the default deserializer variable
-                quote! { _serde::de::Deserializer::version_map(__deserializer).clone() }
+                quote! { _serde::de::Deserializer::version_map(&__deserializer).clone() }
             }
         )
     } else {
@@ -1098,13 +1098,13 @@ fn deserialize_struct(
         Some(
             if let Some(deserializer) = deserializer.as_ref() {
                 // Comes from the deserializer
-                quote! { _serde::de::Deserializer::version_map(#deserializer).clone() }
+                quote! { _serde::de::Deserializer::version_map(&#deserializer).clone() }
             } else if is_enum {
                 // Comes from the parent visitor member
                 quote! { self.version_map.clone() }
             } else {
                 // Comes from default deserialize variable
-                quote! { _serde::de::Deserializer::version_map(__deserializer).clone() }
+                quote! { _serde::de::Deserializer::version_map(&__deserializer).clone() }
             }
         )
     } else {
@@ -3255,7 +3255,7 @@ fn field_version_map() -> TokenStream {
 fn let_version_map(deserializer: Option<&TokenStream>) -> TokenStream {
     if cfg!(feature = "versioning") {
         let deserializer = deserializer_token_stream(deserializer);
-        let result: TokenStream = quote! { let __version_map = _serde::de::Deserializer::version_map(#deserializer); };
+        let result: TokenStream = quote! { let __version_map = _serde::de::Deserializer::version_map(&#deserializer); };
         result
     } else {
         TokenStream::new()
