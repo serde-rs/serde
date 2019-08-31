@@ -332,7 +332,7 @@ fn fn_version_helpers(cont: &Container, _params: &Parameters, _deserializer: Opt
                 let version_number = i + 1;
                 quote! {
                     Some(#version_number) => _serde::export::Result::map(
-                        <#path as _serde::Deserialize<'de>>::next_element_versioned(seq, _serde::export::Some(version_map)),
+                        <#path as _serde::Deserialize>::next_element_versioned(seq, _serde::export::Some(version_map)),
                         |v| _serde::export::Option::map(v, _serde::export::Into::into),
                     ),
                 }
@@ -347,7 +347,7 @@ fn fn_version_helpers(cont: &Container, _params: &Parameters, _deserializer: Opt
                 let version_number = i + 1;
                 quote! {
                     Some(#version_number) => _serde::export::Result::map(
-                        <#path as _serde::Deserialize<'de>>::next_value_versioned(map, _serde::export::Some(version_map)),
+                        <#path as _serde::Deserialize>::next_value_versioned(map, _serde::export::Some(version_map)),
                         _serde::export::Into::into,
                     ),
                 }
@@ -360,7 +360,7 @@ fn fn_version_helpers(cont: &Container, _params: &Parameters, _deserializer: Opt
             /// Get the next element in a sequence with versioning support
             fn next_element_versioned<S: _serde::de::SeqAccess<'de>>(
                 seq: &mut S,
-                version_map: Option<&_serde::de::VersionMap>,
+                version_map: _serde::export::Option<&_serde::de::VersionMap>,
             ) -> Result<Option<Self>, S::Error> {
                 match version_map {
                     Some(version_map) => {
@@ -377,7 +377,7 @@ fn fn_version_helpers(cont: &Container, _params: &Parameters, _deserializer: Opt
             /// Get the next map value with versioning support
             fn next_value_versioned<M: _serde::de::MapAccess<'de>>(
                 map: &mut M,
-                version_map: Option<&_serde::de::VersionMap>,
+                version_map: _serde::export::Option<&_serde::de::VersionMap>,
             ) -> Result<Self, M::Error> {
                 match version_map {
                     Some(version_map) => {
@@ -549,6 +549,14 @@ fn deserialize_tuple(
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
 
+    let (deserializer, let_deserializer) = match deserializer {
+        Some(deserializer) => (
+            Some(quote!(__deserializer)),
+            Some(quote!{ let __deserializer = #deserializer; }),
+        ),
+        None => (None, None),
+    };
+
     assert!(!cattrs.has_flatten());
 
     // If there are getters (implying private fields), construct the local type
@@ -596,13 +604,13 @@ fn deserialize_tuple(
         Some(
             if let Some(deserializer) = deserializer.as_ref() {
                 // We have a deserializer, the version_map comes from it
-                quote! { #deserializer.version_map().clone() }
+                quote! { _serde::de::Deserializer::version_map(#deserializer).clone() }
             } else if is_enum {
                 // In an enum, the version_map is in the parent visitor properties
                 quote! { self.version_map.clone() }
             } else {
                 // Use the default deserializer variable
-                quote! { __deserializer.version_map().clone() }
+                quote! { _serde::de::Deserializer::version_map(__deserializer).clone() }
             }
         )
     } else {
@@ -656,6 +664,7 @@ fn deserialize_tuple(
             }
         }
 
+        #let_deserializer
         #dispatch
     }
 }
@@ -784,7 +793,7 @@ fn deserialize_seq(
                     if cfg!(feature = "versioning") {
                         // Use the specialize next_element_versioned for the target type
                         let func =
-                            quote_spanned!(span=> <#field_ty as _serde::Deserialize<'de>>::next_element_versioned);
+                            quote_spanned!(span=> <#field_ty as _serde::Deserialize>::next_element_versioned);
                         quote!(try!(#func(&mut __seq, self.version_map.as_ref().map(std::ops::Deref::deref))))
                     } else {
                         let func =
@@ -1035,6 +1044,14 @@ fn deserialize_struct(
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
 
+    let (deserializer, let_deserializer) = match deserializer {
+        Some(deserializer) => (
+            Some(quote!(__deserializer)),
+            Some(quote!{ let __deserializer = #deserializer; }),
+        ),
+        None => (None, None),
+    };
+
     // If there are getters (implying private fields), construct the local type
     // and use an `Into` conversion to get the remote type. If there are no
     // getters then construct the target type directly.
@@ -1081,13 +1098,13 @@ fn deserialize_struct(
         Some(
             if let Some(deserializer) = deserializer.as_ref() {
                 // Comes from the deserializer
-                quote! { #deserializer.version_map().clone() }
+                quote! { _serde::de::Deserializer::version_map(#deserializer).clone() }
             } else if is_enum {
                 // Comes from the parent visitor member
                 quote! { self.version_map.clone() }
             } else {
                 // Comes from default deserialize variable
-                quote! { __deserializer.version_map().clone() }
+                quote! { _serde::de::Deserializer::version_map(__deserializer).clone() }
             }
         )
     } else {
@@ -1193,6 +1210,7 @@ fn deserialize_struct(
 
         #fields_stmt
 
+        #let_deserializer
         #dispatch
     }
 }
@@ -2575,7 +2593,7 @@ fn deserialize_map(
                     if cfg!(feature = "versioning") {
                         // Use specialized version of next_value_versioned
                         let func =
-                            quote_spanned!(span=> <#field_ty as _serde::Deserialize<'de>>::next_value_versioned);
+                            quote_spanned!(span=> <#field_ty as _serde::Deserialize>::next_value_versioned);
                         quote! {
                             try!(#func(&mut __map, self.version_map.as_ref().map(std::ops::Deref::deref)))
                         }
@@ -3227,7 +3245,7 @@ fn deserializer_token_stream(deserializer: Option<&TokenStream>) -> TokenStream 
 
 fn field_version_map() -> TokenStream {
     if cfg!(feature = "versioning") {
-        let result: TokenStream = quote! { version_map: Option<_serde::export::Arc<_serde::de::VersionMap>>, };
+        let result: TokenStream = quote! { version_map: _serde::export::Option<_serde::export::Arc<_serde::de::VersionMap>>, };
         result
     } else {
         TokenStream::new()
@@ -3237,7 +3255,7 @@ fn field_version_map() -> TokenStream {
 fn let_version_map(deserializer: Option<&TokenStream>) -> TokenStream {
     if cfg!(feature = "versioning") {
         let deserializer = deserializer_token_stream(deserializer);
-        let result: TokenStream = quote! { let __version_map = #deserializer.version_map(); };
+        let result: TokenStream = quote! { let __version_map = _serde::de::Deserializer::version_map(#deserializer); };
         result
     } else {
         TokenStream::new()
