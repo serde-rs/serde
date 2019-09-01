@@ -45,7 +45,7 @@ macro_rules! declare_tests_versions {
 
         declare_tests_versions! { $($tt)* }
     };
-    ($($tt:tt)*) => { }
+    () => { }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -170,6 +170,43 @@ impl<T> From<StructDefaultv1<T>> for StructDefault<T> {
     }
 }
 
+#[derive(PartialEq, Debug, Deserialize)]
+struct StructInStruct {
+    a: Struct,
+}
+
+#[derive(Deserialize)]
+#[serde(rename(deserialize = "Struct2"))]
+struct Struct2v1 {
+    a: u8,
+}
+
+#[derive(Deserialize)]
+#[serde(rename(deserialize = "Struct2"))]
+struct Struct2v2 {
+    b: u8,
+}
+
+#[derive(PartialEq, Debug, Deserialize)]
+#[serde(versions("Struct2v1", "Struct2v2"))]
+struct Struct2 {
+    c: u8
+}
+impl From<Struct2v1> for Struct2 {
+    fn from(v: Struct2v1) -> Self {
+        Self {
+            c: v.a
+        }
+    }
+}
+impl From<Struct2v2> for Struct2 {
+    fn from(v: Struct2v2) -> Self {
+        Self {
+            c: v.b
+        }
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////
 
 declare_tests_versions! {
@@ -280,6 +317,102 @@ declare_tests_versions! {
         StructDefault { c: 100, d: "default".to_string() } => &[
             Token::Struct { name: "StructDefault",  len: 2 },
             Token::StructEnd,
+        ],
+    }
+    test_versioned_struct_in_map ("Struct" => 1) {
+        StructInStruct { a: Struct { d: 1, e: 2, f: 0 } } => &[
+            Token::Map { len: Some(3) },
+            Token::Str("a"),
+                Token::Map { len: Some(3) },
+                    Token::Str("a"),
+                    Token::I32(1),
+
+                    Token::Str("b"),
+                    Token::I32(2),
+                Token::MapEnd,
+            Token::MapEnd,
+        ],
+        StructInStruct { a: Struct { d: 1, e: 2, f: 0 } } => &[
+            Token::Map { len: Some(3) },
+                Token::U32(0),
+                Token::Map { len: Some(3) },
+                    Token::U32(0),
+                    Token::I32(1),
+
+                    Token::U32(1),
+                    Token::I32(2),
+                Token::MapEnd,
+            Token::MapEnd,
+        ],
+        StructInStruct { a: Struct { d: 1, e: 2, f: 0 } } => &[
+            Token::Struct { name: "StructInStruct", len: 2 },
+                Token::Str("a"),
+                Token::Struct { name: "Struct", len: 2 },
+                    Token::Str("a"),
+                    Token::I32(1),
+
+                    Token::Str("b"),
+                    Token::I32(2),
+                Token::StructEnd,
+            Token::StructEnd,
+        ],
+        StructInStruct { a: Struct { d: 1, e: 2, f: 0 } } => &[
+            Token::Seq { len: Some(1) },
+                Token::Seq { len: Some(3) },
+                    Token::I32(1),
+                    Token::I32(2),
+                Token::SeqEnd,
+            Token::SeqEnd,
+        ],
+    }
+    test_versioned_struct2_v1 ("Struct2" => 1) {
+        Struct2 { c: 1 } => &[
+            Token::Map { len: Some(1) },
+                Token::Str("a"),
+                Token::I32(1),
+            Token::MapEnd,
+        ],
+        Struct2 { c: 1 } => &[
+            Token::Map { len: Some(1) },
+                Token::U32(0),
+                Token::I32(1),
+            Token::MapEnd,
+        ],
+        Struct2 { c: 1 } => &[
+            Token::Struct { name: "Struct2", len: 2 },
+                Token::Str("a"),
+                Token::I32(1),
+            Token::StructEnd,
+        ],
+        Struct2 { c: 1 } => &[
+            Token::Seq { len: Some(2) },
+                Token::I32(1),
+            Token::SeqEnd,
+        ],
+    }
+    test_versioned_struct2_v2 ("Struct2" => 2) {
+        Struct2 { c: 1 } => &[
+            Token::Map { len: Some(1) },
+                Token::Str("b"),
+                Token::I32(1),
+            Token::MapEnd,
+        ],
+        Struct2 { c: 1 } => &[
+            Token::Map { len: Some(1) },
+                Token::U32(0),
+                Token::I32(1),
+            Token::MapEnd,
+        ],
+        Struct2 { c: 1 } => &[
+            Token::Struct { name: "Struct2", len: 2 },
+                Token::Str("b"),
+                Token::I32(1),
+            Token::StructEnd,
+        ],
+        Struct2 { c: 1 } => &[
+            Token::Seq { len: Some(2) },
+                Token::I32(1),
+            Token::SeqEnd,
         ],
     }
 }
