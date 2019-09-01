@@ -1158,9 +1158,7 @@ fn test_atomics() {
         T: PartialEq + Debug,
     {
         let tokens = &[token];
-
         let mut de = serde_test::Deserializer::new(tokens);
-
         match A::deserialize(&mut de) {
             Ok(v) => {
                 let loaded = load(&v, Ordering::SeqCst);
