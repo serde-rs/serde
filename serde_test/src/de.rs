@@ -51,7 +51,7 @@ impl<'de> Deserializer<'de> {
     #[cfg(feature = "versioning")]
     pub fn new(tokens: &'de [Token]) -> Self {
         Deserializer {
-            tokens,
+            tokens: tokens,
             version_map: None,
         }
     }
@@ -63,7 +63,7 @@ impl<'de> Deserializer<'de> {
     ) -> Self {
         Deserializer {
             tokens: tokens,
-            version_map,
+            version_map: version_map,
         }
     }
 

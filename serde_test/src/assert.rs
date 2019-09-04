@@ -5,7 +5,6 @@ use ser::Serializer;
 use token::Token;
 
 use std::fmt::Debug;
-use std::mem::MaybeUninit;
 
 /// Runs both `assert_ser_tokens` and `assert_de_tokens`.
 ///
@@ -215,6 +214,17 @@ where
         panic!("{} remaining tokens", de.remaining());
     }
 }
+
+#[rustversion::before(1.38)]
+fn uninitialized<T>() -> T {
+    unsafe { std::mem::uninitialized::<T>() }
+}
+
+#[rustversion::not(before(1.38))]
+fn uninitialized<T>() -> T {
+    unsafe { std::mem::MaybeUninit::uninit().assume_init() }
+}
+
 fn internal_assert_de_in_place_tokens<'de, T>(value: &T, mut de: Deserializer<'de>)
 where
     T: Deserialize<'de> + PartialEq + Debug,
@@ -222,7 +232,7 @@ where
     // Do the same thing for deserialize_in_place. This isn't *great* because a
     // no-op impl of deserialize_in_place can technically succeed here. Still,
     // this should catch a lot of junk.
-    let mut val = unsafe { MaybeUninit::uninit().assume_init() };
+    let mut val = uninitialized::<T>();
     match T::deserialize_in_place(&mut de, &mut val) {
         Ok(()) => {
             assert_eq!(val, *value);

@@ -17,6 +17,7 @@ versioning = ["serde/versioning"]
 
 [dependencies]
 serde = { version = "1.0.60", path = "../serde" }
+rustversion = "0.1"
 
 [dev-dependencies]
 serde = { version = "1.0", path = "../serde" }
