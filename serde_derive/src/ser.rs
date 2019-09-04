@@ -723,6 +723,8 @@ fn serialize_adjacently_tagged_variant(
             where
                 __S: _serde::Serializer,
             {
+                // Some members of this tuple will be unused if they're `skip_serializing`
+                #[allow(unused_variables)]
                 let (#(#fields_ident,)*) = self.data;
                 #inner
             }
