@@ -560,24 +560,6 @@ pub trait Deserialize<'de>: Sized {
         *place = Deserialize::deserialize(deserializer)?;
         Ok(())
     }
-
-    /// Get the next element in a sequence with versioning support
-    #[cfg(feature = "versioning")]
-    fn next_element_versioned<S: SeqAccess<'de>>(
-        seq: &mut S,
-        _versions: Option<&VersionMap>,
-    ) -> Result<Option<Self>, S::Error> {
-        seq.next_element::<Self>()
-    }
-
-    /// Get the next map value with versioning support
-    #[cfg(feature = "versioning")]
-    fn next_value_versioned<M: MapAccess<'de>>(
-        map: &mut M,
-        _versions: Option<&VersionMap>,
-    ) -> Result<Self, M::Error> {
-        map.next_value::<Self>()
-    }
 }
 
 /// Map each type id to its current version. If a version is missing,
@@ -920,7 +902,9 @@ pub trait Deserializer<'de>: Sized {
 
     /// Get the version map if it exists
     #[cfg(feature = "versioning")]
-    fn version_map(&self) -> Option<crate::export::Arc<VersionMap>> { None }
+    fn version_map(&self) -> Option<crate::export::Arc<VersionMap>> {
+        None
+    }
 
     /// Require the `Deserializer` to figure out how to drive the visitor based
     /// on what data type is in the input.
