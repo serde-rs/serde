@@ -11,6 +11,8 @@ versioning = ["serde/versioning-derive", "serde_derive/versioning", "serde_test/
 
 [dependencies]
 serde = { path = "../serde" }
+serde_test = { path = "../serde_test", optional = true }
+serde_derive = { path = "../serde_derive", optional = true }
 
 [dev-dependencies]
 fnv = "1.0"
