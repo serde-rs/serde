@@ -157,8 +157,8 @@ pub fn assert_de_tokens<'de, T>(value: &T, tokens: &'de [Token])
 where
     T: Deserialize<'de> + PartialEq + Debug,
 {
-    internal_assert_de_tokens(value, Deserializer::new(tokens));
-    internal_assert_de_in_place_tokens(value, Deserializer::new(tokens));
+    let in_place = internal_assert_de_tokens(value, Deserializer::new(tokens));
+    internal_assert_de_in_place_tokens(value, in_place, Deserializer::new(tokens));
 }
 
 /// Asserts that the given `tokens` deserialize into `value`, using a specific version map
@@ -199,11 +199,11 @@ pub fn assert_de_tokens_versions<'de, T>(
     internal_assert_de_tokens(value, Deserializer::with_versions(tokens, version_map));
 }
 
-fn internal_assert_de_tokens<'de, T>(value: &T, mut de: Deserializer<'de>)
+fn internal_assert_de_tokens<'de, T>(value: &T, mut de: Deserializer<'de>) -> T
 where
     T: Deserialize<'de> + PartialEq + Debug,
 {
-    match T::deserialize(&mut de) {
+    let result = match T::deserialize(&mut de) {
         Ok(v) => {
             assert_eq!(v, *value);
             v
@@ -213,29 +213,20 @@ where
     if de.remaining() > 0 {
         panic!("{} remaining tokens", de.remaining());
     }
+
+    result
 }
 
-#[rustversion::before(1.38)]
-fn uninitialized<T>() -> T {
-    unsafe { std::mem::uninitialized::<T>() }
-}
-
-#[rustversion::not(before(1.38))]
-fn uninitialized<T>() -> T {
-    unsafe { std::mem::MaybeUninit::uninit().assume_init() }
-}
-
-fn internal_assert_de_in_place_tokens<'de, T>(value: &T, mut de: Deserializer<'de>)
+fn internal_assert_de_in_place_tokens<'de, T>(value: &T, mut in_place: T, mut de: Deserializer<'de>)
 where
     T: Deserialize<'de> + PartialEq + Debug,
 {
     // Do the same thing for deserialize_in_place. This isn't *great* because a
     // no-op impl of deserialize_in_place can technically succeed here. Still,
     // this should catch a lot of junk.
-    let mut val = uninitialized::<T>();
-    match T::deserialize_in_place(&mut de, &mut val) {
+    match T::deserialize_in_place(&mut de, &mut in_place) {
         Ok(()) => {
-            assert_eq!(val, *value);
+            assert_eq!(in_place, *value);
         }
         Err(e) => panic!("tokens failed to deserialize_in_place: {}", e),
     }
