@@ -9,7 +9,7 @@ matrix:
         - cargo build --no-default-features
         - cd "${TRAVIS_BUILD_DIR}/serde_test"
         - cargo build
-        - cargo test --features serde/derive,serde/rc
+        - cargo test --features serde/derive,serde/rc,serde/versioning
 
     - rust: beta
       script:
@@ -26,6 +26,7 @@ matrix:
         - cargo build --no-default-features --features alloc
         - cargo build --no-default-features --features rc,alloc
         - cargo test --features derive,rc,unstable
+        - cargo test --features derive,rc,versioning
         - cd "${TRAVIS_BUILD_DIR}/test_suite"
         - cargo test --features unstable
         - cd "${TRAVIS_BUILD_DIR}/test_suite/no_std"
