@@ -2979,7 +2979,6 @@ struct InPlaceTypeGenerics<'a>(&'a Parameters);
 impl<'a> ToTokens for DeTypeGenerics<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
-
         if self.0.borrowed.de_lifetime_def().is_some() {
             let def = syn::LifetimeDef {
                 attrs: Vec::new(),

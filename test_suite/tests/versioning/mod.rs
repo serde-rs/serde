@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use serde_test::{Token, assert_de_tokens_versions};
+use serde_test::{assert_de_tokens_versions, Token};
 
 fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
     #[derive(PartialEq, Debug, Deserialize)]
@@ -15,10 +15,10 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
         Token::I32(1),
         Token::Str("ignored"),
     ]
-        .into_iter()
-        .chain(ignorable_tokens.to_vec().into_iter())
-        .chain(vec![Token::MapEnd].into_iter())
-        .collect();
+    .into_iter()
+    .chain(ignorable_tokens.to_vec().into_iter())
+    .chain(vec![Token::MapEnd].into_iter())
+    .collect();
 
     let mut de = serde_test::Deserializer::new(&concated_tokens);
     let base = IgnoreBase::deserialize(&mut de).unwrap();
@@ -36,7 +36,7 @@ macro_rules! declare_tests_versions {
                 .into_iter().collect::<serde::de::VersionMap>();
             $(
                 // Test ser/de roundtripping
-                assert_de_tokens_versions(&$value, $tokens, Some(version_map.clone()));
+                assert_de_tokens_versions(&$value, $tokens, Some(&version_map));
 
                 // Test that the tokens are ignorable
                 assert_de_tokens_ignore($tokens);
@@ -89,9 +89,7 @@ struct StructSkipAll {
 }
 impl From<StructSkipAllv1> for StructSkipAll {
     fn from(v: StructSkipAllv1) -> Self {
-        Self {
-            b: v.a
-        }
+        Self { b: v.a }
     }
 }
 
@@ -100,42 +98,37 @@ impl From<StructSkipAllv1> for StructSkipAll {
 struct StructSkipDefaultv1 {
     #[serde(skip_deserializing)]
     a: i32,
-
 }
 impl Default for StructSkipDefaultv1 {
     fn default() -> Self {
-        Self { a:  16 }
+        Self { a: 16 }
     }
 }
 #[derive(PartialEq, Debug, Deserialize)]
 #[serde(versions("StructSkipDefaultv1"))]
 struct StructSkipDefault {
-    b: i32
+    b: i32,
 }
 impl From<StructSkipDefaultv1> for StructSkipDefault {
     fn from(v: StructSkipDefaultv1) -> Self {
-        Self {
-            b: v.a
-        }
+        Self { b: v.a }
     }
 }
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename = "StructSkipAllDenyUnknown")]
-struct StructSkipAllDenyUnknownv1{
+struct StructSkipAllDenyUnknownv1 {
     #[serde(skip_deserializing)]
     a: i32,
 }
 #[derive(PartialEq, Debug, Deserialize)]
 #[serde(versions("StructSkipAllDenyUnknownv1"))]
 struct StructSkipAllDenyUnknown {
-    b: i32
+    b: i32,
 }
 impl From<StructSkipAllDenyUnknownv1> for StructSkipAllDenyUnknown {
     fn from(v: StructSkipAllDenyUnknownv1) -> Self {
-        Self {
-            b: v.a
-        }
+        Self { b: v.a }
     }
 }
 
@@ -144,7 +137,6 @@ impl From<StructSkipAllDenyUnknownv1> for StructSkipAllDenyUnknown {
 struct StructDefaultv1<T> {
     a: i32,
     b: T,
-
 }
 impl Default for StructDefaultv1<String> {
     fn default() -> Self {
@@ -159,14 +151,11 @@ impl Default for StructDefaultv1<String> {
 #[serde(versions(version(default, type = "StructDefaultv1<T>")))]
 struct StructDefault<T> {
     c: i32,
-    d: T
+    d: T,
 }
 impl<T> From<StructDefaultv1<T>> for StructDefault<T> {
     fn from(v: StructDefaultv1<T>) -> Self {
-        Self {
-            c: v.a,
-            d: v.b,
-        }
+        Self { c: v.a, d: v.b }
     }
 }
 
@@ -190,20 +179,16 @@ struct Struct2v2 {
 #[derive(PartialEq, Debug, Deserialize)]
 #[serde(versions("Struct2v1", "Struct2v2"))]
 struct Struct2 {
-    c: u8
+    c: u8,
 }
 impl From<Struct2v1> for Struct2 {
     fn from(v: Struct2v1) -> Self {
-        Self {
-            c: v.a
-        }
+        Self { c: v.a }
     }
 }
 impl From<Struct2v2> for Struct2 {
     fn from(v: Struct2v2) -> Self {
-        Self {
-            c: v.b
-        }
+        Self { c: v.b }
     }
 }
 

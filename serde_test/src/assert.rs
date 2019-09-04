@@ -190,17 +190,19 @@ where
 /// # }
 /// ```
 #[cfg(feature = "versioning")]
-pub fn assert_de_tokens_versions<'de, T>(value: &T, tokens: &'de [Token], version_map: Option<serde::de::VersionMap>)
-    where
-        T: Deserialize<'de> + PartialEq + Debug,
+pub fn assert_de_tokens_versions<'de, T>(
+    value: &T,
+    tokens: &'de [Token],
+    version_map: Option<&'de serde::de::VersionMap>,
+) where
+    T: Deserialize<'de> + PartialEq + Debug,
 {
-    let version_map = version_map.map(serde::export::Arc::new);
-    internal_assert_de_tokens(value, Deserializer::with_versions(tokens, version_map.clone()));
+    internal_assert_de_tokens(value, Deserializer::with_versions(tokens, version_map));
 }
 
 fn internal_assert_de_tokens<'de, T>(value: &T, mut de: Deserializer<'de>)
-    where
-        T: Deserialize<'de> + PartialEq + Debug,
+where
+    T: Deserialize<'de> + PartialEq + Debug,
 {
     match T::deserialize(&mut de) {
         Ok(v) => {
@@ -214,8 +216,8 @@ fn internal_assert_de_tokens<'de, T>(value: &T, mut de: Deserializer<'de>)
     }
 }
 fn internal_assert_de_in_place_tokens<'de, T>(value: &T, mut de: Deserializer<'de>)
-    where
-        T: Deserialize<'de> + PartialEq + Debug,
+where
+    T: Deserialize<'de> + PartialEq + Debug,
 {
     // Do the same thing for deserialize_in_place. This isn't *great* because a
     // no-op impl of deserialize_in_place can technically succeed here. Still,

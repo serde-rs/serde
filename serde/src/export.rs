@@ -5,7 +5,6 @@ pub use lib::fmt::{self, Formatter};
 pub use lib::marker::PhantomData;
 pub use lib::option::Option::{self, None, Some};
 pub use lib::result::Result::{self, Err, Ok};
-pub use lib::Arc;
 
 pub use self::string::from_utf8_lossy;
 

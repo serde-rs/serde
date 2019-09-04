@@ -902,7 +902,7 @@ pub trait Deserializer<'de>: Sized {
 
     /// Get the version map if it exists
     #[cfg(feature = "versioning")]
-    fn version_map(&self) -> Option<crate::export::Arc<VersionMap>> {
+    fn version_map(&self) -> Option<&VersionMap> {
         None
     }
 
