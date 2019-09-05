@@ -250,6 +250,9 @@ pub mod export;
 #[doc(hidden)]
 pub mod private;
 
+#[cfg(not(feature = "std"))]
+mod std_error;
+
 // Re-export #[derive(Serialize, Deserialize)].
 //
 // The reason re-exporting is not enabled by default is that disabling it would
