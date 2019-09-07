@@ -16,6 +16,7 @@ pub const DESERIALIZE_WITH: Symbol = Symbol("deserialize_with");
 pub const FIELD_IDENTIFIER: Symbol = Symbol("field_identifier");
 pub const FLATTEN: Symbol = Symbol("flatten");
 pub const FROM: Symbol = Symbol("from");
+pub const FROM_STR: Symbol = Symbol("from_str");
 pub const GETTER: Symbol = Symbol("getter");
 pub const INTO: Symbol = Symbol("into");
 pub const OTHER: Symbol = Symbol("other");

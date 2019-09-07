@@ -1225,6 +1225,7 @@ impl Field {
 
         let mut type_from = Attr::none(cx, FROM);
         let mut type_try_from = Attr::none(cx, TRY_FROM);
+        let mut from_str = BoolAttr::none(cx, FROM_STR);
         let mut type_into = Attr::none(cx, INTO);
 
         let ident = match field.ident {
@@ -1409,6 +1410,11 @@ impl Field {
                         }
                     }
 
+                    // Parse `#[serde(from_str)]
+                    Meta(Path(ref word)) if word == FROM_STR => {
+                        from_str.set_true(word);
+                    }
+
                     // Parse `#[serde(into = "Type")]
                     Meta(NameValue(ref m)) if m.path == INTO => {
                         if let Ok(into_ty) = parse_lit_into_ty(cx, INTO, &m.lit) {
@@ -1446,6 +1452,7 @@ impl Field {
 
         let type_from = type_from.get();
         let type_try_from = type_try_from.get();
+        let from_str = from_str.get();
         let type_into = type_into.get();
 
         if type_from.is_some() && type_try_from.is_some() {
@@ -1454,6 +1461,19 @@ impl Field {
                 "#[serde(from = \"...\")] and #[serde(try_from = \"...\")] conflict with each other",
             );
         }
+        if type_from.is_some() && from_str {
+            cx.error_spanned_by(
+                field,
+                "#[serde(from = \"...\")] and #[serde(from_str)] conflict with each other",
+            );
+        }
+        if type_try_from.is_some() && from_str {
+            cx.error_spanned_by(
+                field,
+                "#[serde(try_from = \"...\")] and #[serde(from_str)] conflict with each other",
+            );
+        }
+
         if type_from.is_some() && deserialize_with.is_some() {
             cx.error_spanned_by(
                 field,
@@ -1464,6 +1484,12 @@ impl Field {
             cx.error_spanned_by(
                 field,
                 "#[serde(try_from = \"...\")] and #[serde(deserialize_with = \"...\")] conflict with each other",
+            );
+        }
+        if from_str && deserialize_with.is_some() {
+            cx.error_spanned_by(
+                field,
+                "#[serde(from_str)] and #[serde(deserialize_with = \"...\")] conflict with each other",
             );
         }
 
@@ -1493,6 +1519,16 @@ impl Field {
             generics.push(syn::GenericArgument::Type(underscore));
 
             let expr = get_generic_function_path(&["_serde", "private", "de", "deserialize_type_try_from"], generics);
+            deserialize_with.set_if_none(expr);
+        }
+
+        if from_str {
+            let mut generics = Punctuated::new();
+            let underscore: syn::Type = syn::TypeInfer{underscore_token: Token![_](Span::call_site())}.into();
+            generics.push(syn::GenericArgument::Type(underscore.clone()));
+            generics.push(syn::GenericArgument::Type(underscore));
+
+            let expr = get_generic_function_path(&["_serde", "private", "de", "deserialize_type_from_str"], generics);
             deserialize_with.set_if_none(expr);
         }
 
@@ -2093,30 +2129,30 @@ fn respan_token_tree(mut token: TokenTree, span: Span) -> TokenTree {
     token
 }
 
-fn get_generic_function_path(segments: &[&str], args: Punctuated<syn::GenericArgument, Token![,]>) -> syn::ExprPath {
-    let mut path = syn::Path {
-        leading_colon: None,
-        segments: segments[..segments.len()-1]
-            .iter()
-            .map(|name| Ident::new(name, Span::call_site()))
-            .map(syn::PathSegment::from)
-            .collect(),
-    };
-    path.segments
-        .push(syn::PathSegment {
-            ident: Ident::new(segments[segments.len()-1], Span::call_site()),
-            arguments: syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments {
-                colon2_token: Some(Token![::](Span::call_site())),
-                lt_token: Token![<](Span::call_site()),
-                args: args,
-                gt_token: Token![>](Span::call_site())
-            })
-        });
+        fn get_generic_function_path(segments: &[&str], args: Punctuated<syn::GenericArgument, Token![,]>) -> syn::ExprPath {
+            let mut path = syn::Path {
+                leading_colon: None,
+                segments: segments[..segments.len()-1]
+                    .iter()
+                    .map(|name| Ident::new(name, Span::call_site()))
+                    .map(syn::PathSegment::from)
+                    .collect(),
+            };
+            path.segments
+                .push(syn::PathSegment {
+                    ident: Ident::new(segments[segments.len()-1], Span::call_site()),
+                    arguments: syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments {
+                        colon2_token: Some(Token![::](Span::call_site())),
+                        lt_token: Token![<](Span::call_site()),
+                        args: args,
+                        gt_token: Token![>](Span::call_site())
+                    })
+                });
 
-    syn::ExprPath {
-        attrs: Vec::new(),
-        qself: None,
-        path: path,
-    }
-}
+            syn::ExprPath {
+                attrs: Vec::new(),
+                qself: None,
+                path: path,
+            }
+        }
 

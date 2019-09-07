@@ -206,6 +206,17 @@ where
         .map_err(::de::Error::custom)
 }
 
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub fn deserialize_type_from_str<'de: 'a, 'a, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    T: std::str::FromStr,
+    T::Err: std::fmt::Display,
+{
+    T::from_str(&<String as Deserialize>::deserialize(deserializer)?)
+        .map_err(::de::Error::custom)
+}
+
 pub mod size_hint {
     use lib::*;
 
