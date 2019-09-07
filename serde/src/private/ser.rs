@@ -1324,3 +1324,13 @@ where
         Ok(())
     }
 }
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub fn serialize_type_into<S, U, T>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+    T: Clone + Into<U>,
+    U: Serialize,
+{
+    U::serialize(&value.clone().into(), serializer)
+}

@@ -73,6 +73,10 @@ impl<'c, T> Attr<'c, T> {
             None => None,
         }
     }
+
+    fn is_some(&self) -> bool {
+        self.value.is_some()
+    }
 }
 
 struct BoolAttr<'c>(Attr<'c, ()>);
@@ -1219,6 +1223,11 @@ impl Field {
         let mut getter = Attr::none(cx, GETTER);
         let mut flatten = BoolAttr::none(cx, FLATTEN);
 
+        let mut type_from = Attr::none(cx, FROM);
+        let mut type_try_from = Attr::none(cx, TRY_FROM);
+        let mut from_str = BoolAttr::none(cx, FROM_STR);
+        let mut type_into = Attr::none(cx, INTO);
+
         let ident = match field.ident {
             Some(ref ident) => unraw(ident),
             None => index.to_string(),
@@ -1387,6 +1396,32 @@ impl Field {
                         flatten.set_true(word);
                     }
 
+                    // Parse `#[serde(from = "Type")]
+                    Meta(NameValue(ref m)) if m.path == FROM => {
+                        if let Ok(from_ty) = parse_lit_into_ty(cx, FROM, &m.lit) {
+                            type_from.set_opt(&m.path, Some(from_ty));
+                        }
+                    }
+
+                    // Parse `#[serde(try_from = "Type")]
+                    Meta(NameValue(ref m)) if m.path == TRY_FROM => {
+                        if let Ok(try_from_ty) = parse_lit_into_ty(cx, TRY_FROM, &m.lit) {
+                            type_try_from.set_opt(&m.path, Some(try_from_ty));
+                        }
+                    }
+
+                    // Parse `#[serde(from_str)]
+                    Meta(Path(ref word)) if word == FROM_STR => {
+                        from_str.set_true(word);
+                    }
+
+                    // Parse `#[serde(into = "Type")]
+                    Meta(NameValue(ref m)) if m.path == INTO => {
+                        if let Ok(into_ty) = parse_lit_into_ty(cx, INTO, &m.lit) {
+                            type_into.set_opt(&m.path, Some(into_ty));
+                        }
+                    }
+
                     Meta(ref meta_item) => {
                         let path = meta_item
                             .path()
@@ -1413,6 +1448,99 @@ impl Field {
             if skip_deserializing.0.value.is_some() {
                 default.set_if_none(Default::Default);
             }
+        }
+
+        let type_from = type_from.get();
+        let type_try_from = type_try_from.get();
+        let from_str = from_str.get();
+        let type_into = type_into.get();
+
+        if type_from.is_some() && type_try_from.is_some() {
+            cx.error_spanned_by(
+                field,
+                "#[serde(from = \"...\")] and #[serde(try_from = \"...\")] conflict with each other",
+            );
+        }
+        if type_from.is_some() && from_str {
+            cx.error_spanned_by(
+                field,
+                "#[serde(from = \"...\")] and #[serde(from_str)] conflict with each other",
+            );
+        }
+        if type_try_from.is_some() && from_str {
+            cx.error_spanned_by(
+                field,
+                "#[serde(try_from = \"...\")] and #[serde(from_str)] conflict with each other",
+            );
+        }
+
+        if type_from.is_some() && deserialize_with.is_some() {
+            cx.error_spanned_by(
+                field,
+                "#[serde(from = \"...\")] and #[serde(deserialize_with = \"...\")] conflict with each other",
+            );
+        }
+        if type_try_from.is_some() && deserialize_with.is_some() {
+            cx.error_spanned_by(
+                field,
+                "#[serde(try_from = \"...\")] and #[serde(deserialize_with = \"...\")] conflict with each other",
+            );
+        }
+        if from_str && deserialize_with.is_some() {
+            cx.error_spanned_by(
+                field,
+                "#[serde(from_str)] and #[serde(deserialize_with = \"...\")] conflict with each other",
+            );
+        }
+
+        if type_into.is_some() && serialize_with.is_some() {
+            cx.error_spanned_by(
+                field,
+                "#[serde(into = \"...\")] and #[serde(serialize_with = \"...\")] conflict with each other",
+            );
+        }
+
+        if let Some(type_from) = type_from {
+            let mut generics = Punctuated::<_, Token![,]>::new();
+            let underscore: syn::Type = syn::TypeInfer{underscore_token: Token![_](Span::call_site())}.into();
+            generics.push(syn::GenericArgument::Type(underscore.clone()));
+            generics.push(syn::GenericArgument::Type(type_from));
+            generics.push(syn::GenericArgument::Type(underscore));
+
+            let expr = get_generic_function_path(&["_serde", "private", "de", "deserialize_type_from"], generics);
+            deserialize_with.set_if_none(expr);
+        }
+
+        if let Some(type_try_from) = type_try_from {
+            let mut generics = Punctuated::new();
+            let underscore: syn::Type = syn::TypeInfer{underscore_token: Token![_](Span::call_site())}.into();
+            generics.push(syn::GenericArgument::Type(underscore.clone()));
+            generics.push(syn::GenericArgument::Type(type_try_from));
+            generics.push(syn::GenericArgument::Type(underscore));
+
+            let expr = get_generic_function_path(&["_serde", "private", "de", "deserialize_type_try_from"], generics);
+            deserialize_with.set_if_none(expr);
+        }
+
+        if from_str {
+            let mut generics = Punctuated::new();
+            let underscore: syn::Type = syn::TypeInfer{underscore_token: Token![_](Span::call_site())}.into();
+            generics.push(syn::GenericArgument::Type(underscore.clone()));
+            generics.push(syn::GenericArgument::Type(underscore));
+
+            let expr = get_generic_function_path(&["_serde", "private", "de", "deserialize_type_from_str"], generics);
+            deserialize_with.set_if_none(expr);
+        }
+
+        if let Some(type_into) = type_into {
+            let mut generics = Punctuated::new();
+            let underscore: syn::Type = syn::TypeInfer{underscore_token: Token![_](Span::call_site())}.into();
+            generics.push(syn::GenericArgument::Type(underscore.clone()));
+            generics.push(syn::GenericArgument::Type(type_into));
+            generics.push(syn::GenericArgument::Type(underscore));
+
+            let expr = get_generic_function_path(&["_serde", "private", "ser", "serialize_type_into"], generics);
+            serialize_with.set_if_none(expr);
         }
 
         let mut borrowed_lifetimes = borrowed_lifetimes.get().unwrap_or_default();
@@ -2000,3 +2128,31 @@ fn respan_token_tree(mut token: TokenTree, span: Span) -> TokenTree {
     token.set_span(span);
     token
 }
+
+        fn get_generic_function_path(segments: &[&str], args: Punctuated<syn::GenericArgument, Token![,]>) -> syn::ExprPath {
+            let mut path = syn::Path {
+                leading_colon: None,
+                segments: segments[..segments.len()-1]
+                    .iter()
+                    .map(|name| Ident::new(name, Span::call_site()))
+                    .map(syn::PathSegment::from)
+                    .collect(),
+            };
+            path.segments
+                .push(syn::PathSegment {
+                    ident: Ident::new(segments[segments.len()-1], Span::call_site()),
+                    arguments: syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments {
+                        colon2_token: Some(Token![::](Span::call_site())),
+                        lt_token: Token![<](Span::call_site()),
+                        args: args,
+                        gt_token: Token![>](Span::call_site())
+                    })
+                });
+
+            syn::ExprPath {
+                attrs: Vec::new(),
+                qself: None,
+                path: path,
+            }
+        }
+

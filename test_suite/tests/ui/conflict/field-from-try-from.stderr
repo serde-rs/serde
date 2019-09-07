@@ -1,0 +1,41 @@
+error: #[serde(from = "...")] and #[serde(try_from = "...")] conflict with each other
+ --> $DIR/field-from-try-from.rs:5:5
+  |
+5 | /     #[serde(from = "u64", try_from = "u64", from_str, deserialize_with = "de_unit")]
+6 | |     a: u8,
+  | |_________^
+
+error: #[serde(from = "...")] and #[serde(from_str)] conflict with each other
+ --> $DIR/field-from-try-from.rs:5:5
+  |
+5 | /     #[serde(from = "u64", try_from = "u64", from_str, deserialize_with = "de_unit")]
+6 | |     a: u8,
+  | |_________^
+
+error: #[serde(try_from = "...")] and #[serde(from_str)] conflict with each other
+ --> $DIR/field-from-try-from.rs:5:5
+  |
+5 | /     #[serde(from = "u64", try_from = "u64", from_str, deserialize_with = "de_unit")]
+6 | |     a: u8,
+  | |_________^
+
+error: #[serde(from = "...")] and #[serde(deserialize_with = "...")] conflict with each other
+ --> $DIR/field-from-try-from.rs:5:5
+  |
+5 | /     #[serde(from = "u64", try_from = "u64", from_str, deserialize_with = "de_unit")]
+6 | |     a: u8,
+  | |_________^
+
+error: #[serde(try_from = "...")] and #[serde(deserialize_with = "...")] conflict with each other
+ --> $DIR/field-from-try-from.rs:5:5
+  |
+5 | /     #[serde(from = "u64", try_from = "u64", from_str, deserialize_with = "de_unit")]
+6 | |     a: u8,
+  | |_________^
+
+error: #[serde(from_str)] and #[serde(deserialize_with = "...")] conflict with each other
+ --> $DIR/field-from-try-from.rs:5:5
+  |
+5 | /     #[serde(from = "u64", try_from = "u64", from_str, deserialize_with = "de_unit")]
+6 | |     a: u8,
+  | |_________^

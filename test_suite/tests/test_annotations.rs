@@ -7,6 +7,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
 use std::fmt;
 use std::marker::PhantomData;
+use std::str::FromStr;
 
 use serde_test::{
     assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_ser_tokens_error,
@@ -1618,6 +1619,158 @@ fn test_from_into_traits() {
     assert_de_tokens(&StructFromEnum(Some(2)), &[Token::Some, Token::U32(2)]);
     assert_de_tokens(&TryFromU32::Two, &[Token::U32(2)]);
     assert_de_tokens_error::<TryFromU32>(&[Token::U32(5)], "out of range");
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+struct TupleFieldFromSign (
+    #[serde(from = "i32", into = "i32")]
+    Sign,
+);
+
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+struct StructFieldTryFromSign {
+    #[serde(try_from = "i32", into = "i32")]
+    sign: StrictSign,
+}
+
+#[derive(Clone, Deserialize, PartialEq, Debug)]
+struct FromStrSign (    
+    #[serde(from_str)]
+    StrictSign,
+);
+
+#[derive(Clone, PartialEq, Debug)]
+enum Sign {
+    Negative,
+    Zero,
+    Positive,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+enum StrictSign {
+    Negative,
+    Positive,
+}
+
+impl From<i32> for Sign {
+    fn from(v: i32) -> Self {
+        match v {
+            _ if v < 0 => Sign::Negative,
+            _ if v > 0 => Sign::Positive,
+            _ => Sign::Zero,
+        }
+    }
+}
+
+impl TryFrom<i32> for StrictSign {
+    type Error = &'static str;
+    fn try_from(v: i32) -> Result<Self, Self::Error> {
+        match v {
+            _ if v < 0 => Ok(StrictSign::Negative),
+            _ if v > 0 => Ok(StrictSign::Positive),
+            _ => Err("zero has no sign")
+        }
+    }
+}
+
+impl FromStr for StrictSign {
+    type Err = &'static str;
+    fn from_str(text: &str) -> Result<Self, Self::Err> {
+        match text {
+            "-" => Ok(StrictSign::Negative),
+            "+" => Ok(StrictSign::Positive),
+            _ => Err("sign contained invalid characters")
+        }
+    }
+}
+
+impl Into<i32> for Sign {
+    fn into(self) -> i32 {
+        match self {
+            Sign::Negative => -1,
+            Sign::Zero => 0,
+            Sign::Positive => 1,
+        }
+    }
+}
+
+impl Into<i32> for StrictSign {
+    fn into(self) -> i32 {
+        match self {
+            StrictSign::Negative => -1,
+            StrictSign::Positive => 1,
+        }
+    }
+}
+
+#[test]
+fn test_from_into_field_traits() {
+    assert_ser_tokens(&TupleFieldFromSign(Sign::Negative), &[
+        Token::NewtypeStruct { name: "TupleFieldFromSign" },
+        Token::I32(-1),
+    ]);
+    assert_ser_tokens(&TupleFieldFromSign(Sign::Zero), &[
+        Token::NewtypeStruct { name: "TupleFieldFromSign" },
+        Token::I32(0),
+    ]);
+
+    assert_de_tokens(&TupleFieldFromSign(Sign::Negative), &[
+        Token::TupleStruct { name: "TupleFieldFromSign", len: 1 },
+        Token::I32(-3),
+        Token::TupleStructEnd,
+    ]);
+    assert_de_tokens(&TupleFieldFromSign(Sign::Positive), &[
+        Token::TupleStruct { name: "TupleFieldFromSign", len: 1 },
+        Token::I32(14),
+        Token::TupleStructEnd,
+    ]);
+
+    assert_ser_tokens(&StructFieldTryFromSign{sign: StrictSign::Negative}, &[
+        Token::Struct { name: "StructFieldTryFromSign", len: 1 },
+        Token::Str("sign"),
+        Token::I32(-1),
+        Token::StructEnd,
+    ]);
+    assert_ser_tokens(&StructFieldTryFromSign{sign: StrictSign::Positive}, &[
+        Token::Struct { name: "StructFieldTryFromSign", len: 1 },
+        Token::Str("sign"),
+        Token::I32(1),
+        Token::StructEnd,
+    ]);
+    assert_de_tokens(&StructFieldTryFromSign{ sign: StrictSign::Negative }, &[
+        Token::Struct { name: "StructFieldTryFromSign", len: 1 },
+        Token::Str("sign"),
+        Token::I32(-3),
+        Token::StructEnd,
+    ]);
+    assert_de_tokens(&StructFieldTryFromSign{ sign: StrictSign::Positive }, &[
+        Token::Struct { name: "StructFieldTryFromSign", len: 1 },
+        Token::Str("sign"),
+        Token::I32(14),
+        Token::StructEnd,
+    ]);
+    assert_de_tokens_error::<StructFieldTryFromSign>(&[
+        Token::Struct { name: "StructFieldTryFromSign", len: 1 },
+        Token::Str("sign"),
+        Token::I32(0),
+        Token::StructEnd,
+    ], "zero has no sign");
+
+    assert_de_tokens(&FromStrSign(StrictSign::Positive), &[
+        Token::TupleStruct { name: "FromStrSign", len: 1 },
+        Token::Str("+"),
+        Token::TupleStructEnd,
+    ]);
+    assert_de_tokens(&FromStrSign(StrictSign::Negative), &[
+        Token::TupleStruct { name: "FromStrSign", len: 1 },
+        Token::Str("-"),
+        Token::TupleStructEnd,
+    ]);
+    assert_de_tokens_error::<FromStrSign>(&[
+        Token::TupleStruct { name: "FromStrSign", len: 1 },
+        Token::Str("0"),
+        Token::StructEnd,
+    ], "sign contained invalid characters");
 }
 
 #[test]
