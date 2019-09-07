@@ -1620,6 +1620,93 @@ fn test_from_into_traits() {
     assert_de_tokens_error::<TryFromU32>(&[Token::U32(5)], "out of range");
 }
 
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+struct TupleFieldFromSign (
+    #[serde(from = "i32", into = "i32")]
+    Sign,
+);
+
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+struct StructFieldFromSign {
+    #[serde(try_from = "i32", into = "i32")]
+    sign: Sign,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+enum Sign {
+    Negative,
+    Zero,
+    Positive,
+}
+
+impl From<i32> for Sign {
+    fn from(v: i32) -> Sign {
+        match v {
+            _ if v < 0 => Sign::Negative,
+            _ if v == 0 => Sign::Zero,
+            _ => Sign::Positive
+        }
+    }
+}
+
+impl Into<i32> for Sign {
+    fn into(self) -> i32 {
+        match self {
+            Sign::Negative => -1,
+            Sign::Zero => 0,
+            Sign::Positive => 1,
+        }
+    }
+}
+
+#[test]
+fn test_from_into_field_traits() {
+    assert_ser_tokens(&TupleFieldFromSign(Sign::Negative), &[
+        Token::NewtypeStruct { name: "TupleFieldFromSign" },
+        Token::I32(-1),
+    ]);
+    assert_ser_tokens(&TupleFieldFromSign(Sign::Zero), &[
+        Token::NewtypeStruct { name: "TupleFieldFromSign" },
+        Token::I32(0),
+    ]);
+
+    assert_de_tokens(&TupleFieldFromSign(Sign::Negative), &[
+        Token::TupleStruct { name: "TupleFieldFromSign", len: 1 },
+        Token::I32(-3),
+        Token::TupleStructEnd,
+    ]);
+    assert_de_tokens(&TupleFieldFromSign(Sign::Positive), &[
+        Token::TupleStruct { name: "TupleFieldFromSign", len: 1 },
+        Token::I32(14),
+        Token::TupleStructEnd,
+    ]);
+
+    assert_ser_tokens(&StructFieldFromSign{sign: Sign::Negative}, &[
+        Token::Struct { name: "StructFieldFromSign", len: 1 },
+        Token::Str("sign"),
+        Token::I32(-1),
+        Token::StructEnd,
+    ]);
+    assert_ser_tokens(&StructFieldFromSign{sign: Sign::Zero}, &[
+        Token::Struct { name: "StructFieldFromSign", len: 1 },
+        Token::Str("sign"),
+        Token::I32(0),
+        Token::StructEnd,
+    ]);
+    assert_de_tokens(&StructFieldFromSign{ sign: Sign::Negative }, &[
+        Token::Struct { name: "StructFieldFromSign", len: 1 },
+        Token::Str("sign"),
+        Token::I32(-3),
+        Token::StructEnd,
+    ]);
+    assert_de_tokens(&StructFieldFromSign{ sign: Sign::Positive }, &[
+        Token::Struct { name: "StructFieldFromSign", len: 1 },
+        Token::Str("sign"),
+        Token::I32(14),
+        Token::StructEnd,
+    ]);
+}
+
 #[test]
 fn test_collect_other() {
     let mut extra = HashMap::new();

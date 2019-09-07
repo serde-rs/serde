@@ -427,3 +427,4 @@ fn check_from_and_try_from(cx: &Ctxt, cont: &mut Container) {
         );
     }
 }
+

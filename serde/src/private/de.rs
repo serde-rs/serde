@@ -184,6 +184,28 @@ where
     deserializer.deserialize_bytes(CowBytesVisitor)
 }
 
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub fn deserialize_type_from<'de: 'a, 'a, D, U, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    T: From<U>,
+    U: Deserialize<'de>
+{
+    Ok(T::from(U::deserialize(deserializer)?))
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub fn deserialize_type_try_from<'de: 'a, 'a, D, U, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    T: std::convert::TryFrom<U>,
+    T::Error: std::fmt::Display,
+    U: Deserialize<'de>
+{
+    T::try_from(U::deserialize(deserializer)?)
+        .map_err(::de::Error::custom)
+}
+
 pub mod size_hint {
     use lib::*;
 
