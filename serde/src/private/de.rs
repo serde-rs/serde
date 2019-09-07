@@ -194,12 +194,12 @@ where
     Ok(T::from(U::deserialize(deserializer)?))
 }
 
-#[cfg(any(feature = "std", feature = "alloc"))]
+#[cfg(all(any(feature = "std", feature = "alloc"), core_try_from))]
 pub fn deserialize_type_try_from<'de: 'a, 'a, D, U, T>(deserializer: D) -> Result<T, D::Error>
 where
     D: Deserializer<'de>,
-    T: std::convert::TryFrom<U>,
-    T::Error: std::fmt::Display,
+    T: ::lib::convert::TryFrom<U>,
+    T::Error: ::lib::fmt::Display,
     U: Deserialize<'de>
 {
     T::try_from(U::deserialize(deserializer)?)
@@ -210,8 +210,8 @@ where
 pub fn deserialize_type_from_str<'de: 'a, 'a, D, T>(deserializer: D) -> Result<T, D::Error>
 where
     D: Deserializer<'de>,
-    T: std::str::FromStr,
-    T::Err: std::fmt::Display,
+    T: ::lib::str::FromStr,
+    T::Err: ::lib::fmt::Display,
 {
     T::from_str(&<String as Deserialize>::deserialize(deserializer)?)
         .map_err(::de::Error::custom)
