@@ -608,6 +608,15 @@ fn serialize_internally_tagged_variant(
         }
         Style::Newtype => {
             let field = &variant.fields[0];
+            if field.attrs.skip_serializing() {
+                return quote_block! {
+                    let mut __struct = try!(_serde::Serializer::serialize_struct(
+                        __serializer, #type_name, 1));
+                    try!(_serde::ser::SerializeStruct::serialize_field(
+                        &mut __struct, #tag, #variant_name));
+                    _serde::ser::SerializeStruct::end(__struct)
+                };
+            }
             let mut field_expr = quote!(__field0);
             if let Some(path) = field.attrs.serialize_with() {
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
@@ -668,6 +677,15 @@ fn serialize_adjacently_tagged_variant(
             }
             Style::Newtype => {
                 let field = &variant.fields[0];
+                if field.attrs.skip_serializing() {
+                     return quote_block! {
+                        let mut __struct = try!(_serde::Serializer::serialize_struct(
+                            __serializer, #type_name, 1));
+                        try!(_serde::ser::SerializeStruct::serialize_field(
+                            &mut __struct, #tag, #variant_name));
+                        _serde::ser::SerializeStruct::end(__struct)
+                    };   
+                }
                 let mut field_expr = quote!(__field0);
                 if let Some(path) = field.attrs.serialize_with() {
                     field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
@@ -771,6 +789,11 @@ fn serialize_untagged_variant(
         }
         Style::Newtype => {
             let field = &variant.fields[0];
+            if field.attrs.skip_serializing() {
+                return quote_expr! {
+                    _serde::Serializer::serialize_unit(__serializer)
+                };
+            }
             let mut field_expr = quote!(__field0);
             if let Some(path) = field.attrs.serialize_with() {
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
@@ -835,12 +858,6 @@ fn serialize_tuple_variant(
             variant_index,
             variant_name,
         } => {
-            if len.to_string() == "0" {
-                return quote_expr! {
-                    _serde::Serializer::serialize_unit_variant(__serializer, #type_name, #variant_index, #variant_name)
-                }               
-            }
-
             quote_block! {
                 let #let_mut __serde_state = try!(_serde::Serializer::serialize_tuple_variant(
                     __serializer,
@@ -853,11 +870,6 @@ fn serialize_tuple_variant(
             }
         }
         TupleVariant::Untagged => {
-            if len.to_string() == "0" {
-                return quote_expr! {
-                    _serde::Serializer::serialize_unit(__serializer)
-                }               
-            }
             quote_block! {
                 let #let_mut __serde_state = try!(_serde::Serializer::serialize_tuple(
                     __serializer,

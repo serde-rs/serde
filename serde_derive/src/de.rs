@@ -1698,7 +1698,7 @@ fn deserialize_externally_tagged_variant(
                     attr::Default::Path(ref path) => quote!(
                         #path()
                     ),
-                    _ => unimplemented!(),
+                    attr::Default::None => unimplemented!(),
                 };
 
 
@@ -1857,6 +1857,21 @@ fn deserialize_untagged_newtype_variant(
     let field_ty = field.ty;
     match field.attrs.deserialize_with() {
         None => {
+            if field.attrs.skip_deserializing() {
+                let let_default = match field.attrs.default() {
+                    attr::Default::Default => quote!(
+                        _serde::export::Default::default()
+                    ),
+                    attr::Default::Path(ref path) => quote!(
+                        #path()
+                    ),
+                    attr::Default::None => unimplemented!(),
+                };
+
+                return quote_expr! {
+                    _serde::export::Ok(#this::#variant_ident(#let_default))
+                };
+            }
             let span = field.original.span();
             let func = quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize);
             quote_expr! {
