@@ -1,0 +1,5 @@
+error: unexpected end of input, expected literal
+ --> $DIR/cut_off.rs:4:17
+  |
+4 | #[serde(rename =)]
+  |                 ^
