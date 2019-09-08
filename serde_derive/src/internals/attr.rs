@@ -305,7 +305,12 @@ impl Container {
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
         let mut serde_path = Attr::none(cx, CRATE);
 
-        for meta_item in item.attrs.iter().filter_map(get_serde_meta_items).flatten() {
+        for meta_item in item
+            .attrs
+            .iter()
+            .flat_map(|attr| get_serde_meta_items(cx, attr))
+            .flatten()
+        {
             match meta_item {
                 // Parse `#[serde(rename = "foo")]`
                 Meta(NameValue(ref m)) if m.path == RENAME => {
@@ -891,7 +896,7 @@ impl Variant {
         for meta_item in variant
             .attrs
             .iter()
-            .filter_map(get_serde_meta_items)
+            .flat_map(|attr| get_serde_meta_items(cx, attr))
             .flatten()
         {
             match meta_item {
@@ -1210,7 +1215,7 @@ impl Field {
         for meta_item in field
             .attrs
             .iter()
-            .filter_map(get_serde_meta_items)
+            .flat_map(|attr| get_serde_meta_items(cx, attr))
             .flatten()
             .chain(variant_borrow)
         {
@@ -1599,17 +1604,21 @@ fn get_where_predicates(
     Ok((ser.at_most_one()?, de.at_most_one()?))
 }
 
-pub fn get_serde_meta_items(attr: &syn::Attribute) -> Option<Vec<syn::NestedMeta>> {
-    if attr.path == SERDE {
-        match attr.parse_meta() {
-            Ok(List(ref meta)) => Some(meta.nested.iter().cloned().collect()),
-            _ => {
-                // TODO: produce an error
-                None
-            }
+pub fn get_serde_meta_items(cx: &Ctxt, attr: &syn::Attribute) -> Result<Vec<syn::NestedMeta>, ()> {
+    if attr.path != SERDE {
+        return Ok(Vec::new());
+    }
+
+    match attr.parse_meta() {
+        Ok(List(ref meta)) => Ok(meta.nested.iter().cloned().collect()),
+        Ok(other) => {
+            cx.error_spanned_by(other, "expected #[serde(...)]");
+            Err(())
         }
-    } else {
-        None
+        Err(err) => {
+            cx.syn_error(err);
+            Err(())
+        }
     }
 }
 
