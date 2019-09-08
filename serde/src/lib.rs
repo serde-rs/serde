@@ -47,12 +47,12 @@
 //! - [Avro], a binary format used within Apache Hadoop, with support for schema
 //!   definition.
 //! - [JSON5], A superset of JSON including some productions from ES5.
+//! - [Postcard], a no\_std and embedded-systems friendly compact binary format.
 //! - [URL], the x-www-form-urlencoded format.
 //! - [Envy], a way to deserialize environment variables into Rust structs.
 //!   *(deserialization only)*
 //! - [Envy Store], a way to deserialize [AWS Parameter Store] parameters into
 //!   Rust structs. *(deserialization only)*
-//! - [Postcard], a `no_std` and embedded-systems friendly compact binary format.
 //!
 //! [JSON]: https://github.com/serde-rs/json
 //! [Bincode]: https://github.com/TyOverby/bincode
@@ -65,12 +65,12 @@
 //! [BSON]: https://github.com/zonyitoo/bson-rs
 //! [Avro]: https://github.com/flavray/avro-rs
 //! [JSON5]: https://github.com/callum-oakley/json5-rs
+//! [Postcard]: https://github.com/jamesmunns/postcard
 //! [URL]: https://github.com/nox/serde_urlencoded
 //! [Envy]: https://github.com/softprops/envy
 //! [Envy Store]: https://github.com/softprops/envy-store
 //! [Cargo]: http://doc.crates.io/manifest.html
 //! [AWS Parameter Store]: https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-paramstore.html
-//! [Postcard]: https://github.com/jamesmunns/postcard
 
 ////////////////////////////////////////////////////////////////////////////////
 
