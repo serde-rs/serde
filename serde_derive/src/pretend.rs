@@ -52,8 +52,8 @@ fn pretend_fields_used(cont: &Container) -> TokenStream {
     let type_ident = &cont.ident;
     let (_, ty_generics, _) = cont.generics.split_for_impl();
 
-    let patterns = match cont.data {
-        Data::Enum(ref variants) => variants
+    let patterns = match &cont.data {
+        Data::Enum(variants) => variants
             .iter()
             .filter_map(|variant| match variant.style {
                 Style::Struct => {
@@ -64,7 +64,7 @@ fn pretend_fields_used(cont: &Container) -> TokenStream {
                 _ => None,
             })
             .collect::<Vec<_>>(),
-        Data::Struct(Style::Struct, ref fields) => {
+        Data::Struct(Style::Struct, fields) => {
             let pat = struct_pattern(fields);
             vec![quote!(#type_ident #pat)]
         }
@@ -93,8 +93,8 @@ fn pretend_fields_used(cont: &Container) -> TokenStream {
 //     }
 //
 fn pretend_variants_used(cont: &Container) -> TokenStream {
-    let variants = match cont.data {
-        Data::Enum(ref variants) => variants,
+    let variants = match &cont.data {
+        Data::Enum(variants) => variants,
         Data::Struct(_, _) => {
             return quote!();
         }

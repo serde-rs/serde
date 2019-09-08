@@ -41,17 +41,17 @@ fn check_getter(cx: &Ctxt, cont: &Container) {
 
 /// Flattening has some restrictions we can test.
 fn check_flatten(cx: &Ctxt, cont: &Container) {
-    match cont.data {
-        Data::Enum(ref variants) => {
+    match &cont.data {
+        Data::Enum(variants) => {
             for variant in variants {
                 for field in &variant.fields {
                     check_flatten_field(cx, variant.style, field);
                 }
             }
         }
-        Data::Struct(style, ref fields) => {
+        Data::Struct(style, fields) => {
             for field in fields {
-                check_flatten_field(cx, style, field);
+                check_flatten_field(cx, *style, field);
             }
         }
     }
@@ -85,8 +85,8 @@ fn check_flatten_field(cx: &Ctxt, style: Style, field: &Field) {
 /// `field_identifier` all but possibly one variant must be unit variants. The
 /// last variant may be a newtype variant which is an implicit "other" case.
 fn check_identifier(cx: &Ctxt, cont: &Container) {
-    let variants = match cont.data {
-        Data::Enum(ref variants) => variants,
+    let variants = match &cont.data {
+        Data::Enum(variants) => variants,
         Data::Struct(_, _) => {
             return;
         }
@@ -169,8 +169,8 @@ fn check_identifier(cx: &Ctxt, cont: &Container) {
 /// Skip-(de)serializing attributes are not allowed on variants marked
 /// (de)serialize_with.
 fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
-    let variants = match cont.data {
-        Data::Enum(ref variants) => variants,
+    let variants = match &cont.data {
+        Data::Enum(variants) => variants,
         Data::Struct(_, _) => {
             return;
         }
@@ -246,13 +246,13 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
 /// duplicate keys in the serialized output and/or ambiguity in
 /// the to-be-deserialized input.
 fn check_internal_tag_field_name_conflict(cx: &Ctxt, cont: &Container) {
-    let variants = match cont.data {
-        Data::Enum(ref variants) => variants,
+    let variants = match &cont.data {
+        Data::Enum(variants) => variants,
         Data::Struct(_, _) => return,
     };
 
-    let tag = match *cont.attrs.tag() {
-        TagType::Internal { ref tag } => tag.as_str(),
+    let tag = match cont.attrs.tag() {
+        TagType::Internal { tag } => tag.as_str(),
         TagType::External | TagType::Adjacent { .. } | TagType::None => return,
     };
 
@@ -293,11 +293,8 @@ fn check_internal_tag_field_name_conflict(cx: &Ctxt, cont: &Container) {
 /// In the case of adjacently-tagged enums, the type and the
 /// contents tag must differ, for the same reason.
 fn check_adjacent_tag_conflict(cx: &Ctxt, cont: &Container) {
-    let (type_tag, content_tag) = match *cont.attrs.tag() {
-        TagType::Adjacent {
-            ref tag,
-            ref content,
-        } => (tag, content),
+    let (type_tag, content_tag) = match cont.attrs.tag() {
+        TagType::Adjacent { tag, content } => (tag, content),
         TagType::Internal { .. } | TagType::External | TagType::None => return,
     };
 
@@ -339,7 +336,7 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
         );
     }
 
-    let fields = match cont.data {
+    let fields = match &mut cont.data {
         Data::Enum(_) => {
             cx.error_spanned_by(
                 cont.original,
@@ -354,7 +351,7 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
             );
             return;
         }
-        Data::Struct(_, ref mut fields) => fields,
+        Data::Struct(_, fields) => fields,
     };
 
     let mut transparent_field = None;
@@ -392,14 +389,14 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
 }
 
 fn member_message(member: &Member) -> String {
-    match *member {
-        Member::Named(ref ident) => format!("`{}`", ident),
-        Member::Unnamed(ref i) => format!("#{}", i.index),
+    match member {
+        Member::Named(ident) => format!("`{}`", ident),
+        Member::Unnamed(i) => format!("#{}", i.index),
     }
 }
 
 fn allow_transparent(field: &Field, derive: Derive) -> bool {
-    if let Type::Path(ref ty) = *field.ty {
+    if let Type::Path(ty) = field.ty {
         if let Some(seg) = ty.path.segments.last() {
             if seg.ident == "PhantomData" {
                 return false;
