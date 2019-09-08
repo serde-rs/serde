@@ -1688,22 +1688,12 @@ fn deserialize_externally_tagged_variant(
                 _serde::export::Ok(#this::#variant_ident)
             }
         }
-        Style::Newtype => {
-            if variant.fields[0].attrs.skip_deserializing() {
-                let this = &params.this;
-                let let_default = match variant.fields[0].attrs.default() {
-                    attr::Default::Default => quote!(_serde::export::Default::default()),
-                    attr::Default::Path(ref path) => quote!(#path()),
-                    attr::Default::None => unimplemented!(),
-                };
-
-                return quote_block! {
-                    try!(_serde::de::VariantAccess::unit_variant(__variant));
-                    _serde::export::Ok(#this::#variant_ident(#let_default))
-                };
-            }
-            deserialize_externally_tagged_newtype_variant(variant_ident, params, &variant.fields[0])
-        }
+        Style::Newtype => deserialize_externally_tagged_newtype_variant(
+            variant_ident,
+            params,
+            &variant.fields[0],
+            cattrs,
+        ),
         Style::Tuple => {
             deserialize_tuple(Some(variant_ident), params, &variant.fields, cattrs, None)
         }
@@ -1730,14 +1720,18 @@ fn deserialize_internally_tagged_variant(
 
     let variant_ident = &variant.ident;
 
-    match variant.style {
+    match effective_style(variant) {
         Style::Unit => {
             let this = &params.this;
             let type_name = params.type_name();
             let variant_name = variant.ident.to_string();
+            let default = variant.fields.get(0).map(|field| {
+                let default = Expr(expr_is_missing(field, cattrs));
+                quote!((#default))
+            });
             quote_block! {
                 try!(_serde::Deserializer::deserialize_any(#deserializer, _serde::private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name)));
-                _serde::export::Ok(#this::#variant_ident)
+                _serde::export::Ok(#this::#variant_ident #default)
             }
         }
         Style::Newtype => deserialize_untagged_newtype_variant(
@@ -1775,17 +1769,21 @@ fn deserialize_untagged_variant(
 
     let variant_ident = &variant.ident;
 
-    match variant.style {
+    match effective_style(variant) {
         Style::Unit => {
             let this = &params.this;
             let type_name = params.type_name();
             let variant_name = variant.ident.to_string();
+            let default = variant.fields.get(0).map(|field| {
+                let default = Expr(expr_is_missing(field, cattrs));
+                quote!((#default))
+            });
             quote_expr! {
                 match _serde::Deserializer::deserialize_any(
                     #deserializer,
                     _serde::private::de::UntaggedUnitVisitor::new(#type_name, #variant_name)
                 ) {
-                    _serde::export::Ok(()) => _serde::export::Ok(#this::#variant_ident),
+                    _serde::export::Ok(()) => _serde::export::Ok(#this::#variant_ident #default),
                     _serde::export::Err(__err) => _serde::export::Err(__err),
                 }
             }
@@ -1818,8 +1816,19 @@ fn deserialize_externally_tagged_newtype_variant(
     variant_ident: &syn::Ident,
     params: &Parameters,
     field: &Field,
+    cattrs: &attr::Container,
 ) -> Fragment {
     let this = &params.this;
+
+    if field.attrs.skip_deserializing() {
+        let this = &params.this;
+        let default = Expr(expr_is_missing(field, cattrs));
+        return quote_block! {
+            try!(_serde::de::VariantAccess::unit_variant(__variant));
+            _serde::export::Ok(#this::#variant_ident(#default))
+        };
+    }
+
     match field.attrs.deserialize_with() {
         None => {
             let field_ty = field.ty;
@@ -1852,17 +1861,6 @@ fn deserialize_untagged_newtype_variant(
     let field_ty = field.ty;
     match field.attrs.deserialize_with() {
         None => {
-            if field.attrs.skip_deserializing() {
-                let let_default = match field.attrs.default() {
-                    attr::Default::Default => quote!(_serde::export::Default::default()),
-                    attr::Default::Path(ref path) => quote!(#path()),
-                    attr::Default::None => unimplemented!(),
-                };
-
-                return quote_expr! {
-                    _serde::export::Ok(#this::#variant_ident(#let_default))
-                };
-            }
             let span = field.original.span();
             let func = quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize);
             quote_expr! {
@@ -2901,6 +2899,13 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
                 return _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#name))
             }
         }
+    }
+}
+
+fn effective_style(variant: &Variant) -> Style {
+    match variant.style {
+        Style::Newtype if variant.fields[0].attrs.skip_deserializing() => Style::Unit,
+        other => other,
     }
 }
 
