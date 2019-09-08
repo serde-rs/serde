@@ -1431,14 +1431,12 @@ impl Field {
                     leading_colon: None,
                     segments: Punctuated::new(),
                 };
+                let span = Span::call_site();
+                path.segments.push(Ident::new("_serde", span).into());
+                path.segments.push(Ident::new("private", span).into());
+                path.segments.push(Ident::new("de", span).into());
                 path.segments
-                    .push(Ident::new("_serde", Span::call_site()).into());
-                path.segments
-                    .push(Ident::new("private", Span::call_site()).into());
-                path.segments
-                    .push(Ident::new("de", Span::call_site()).into());
-                path.segments
-                    .push(Ident::new("borrow_cow_str", Span::call_site()).into());
+                    .push(Ident::new("borrow_cow_str", span).into());
                 let expr = syn::ExprPath {
                     attrs: Vec::new(),
                     qself: None,
@@ -1450,14 +1448,12 @@ impl Field {
                     leading_colon: None,
                     segments: Punctuated::new(),
                 };
+                let span = Span::call_site();
+                path.segments.push(Ident::new("_serde", span).into());
+                path.segments.push(Ident::new("private", span).into());
+                path.segments.push(Ident::new("de", span).into());
                 path.segments
-                    .push(Ident::new("_serde", Span::call_site()).into());
-                path.segments
-                    .push(Ident::new("private", Span::call_site()).into());
-                path.segments
-                    .push(Ident::new("de", Span::call_site()).into());
-                path.segments
-                    .push(Ident::new("borrow_cow_bytes", Span::call_site()).into());
+                    .push(Ident::new("borrow_cow_bytes", span).into());
                 let expr = syn::ExprPath {
                     attrs: Vec::new(),
                     qself: None,
