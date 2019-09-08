@@ -104,6 +104,9 @@ struct StructSkipAllDenyUnknown {
     a: i32,
 }
 
+#[derive(Default, PartialEq, Debug)]
+struct NotDeserializable;
+
 #[derive(PartialEq, Debug, Deserialize)]
 enum Enum {
     #[allow(dead_code)]
@@ -117,6 +120,7 @@ enum Enum {
         b: i32,
         c: i32,
     },
+    SimpleWithSkipped(#[serde(skip_deserializing)] NotDeserializable),
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
@@ -728,6 +732,11 @@ declare_tests! {
             Token::I32(1),
         ],
     }
+    test_enum_simple_with_skipped {
+        Enum::SimpleWithSkipped(NotDeserializable) => &[
+            Token::UnitVariant { name: "Enum", variant: "SimpleWithSkipped" },
+        ],
+    }
     test_enum_seq {
         Enum::Seq(1, 2, 3) => &[
             Token::TupleVariant { name: "Enum", variant: "Seq", len: 3 },
@@ -1217,13 +1226,13 @@ declare_error_tests! {
         &[
             Token::UnitVariant { name: "Enum", variant: "Foo" },
         ],
-        "unknown variant `Foo`, expected one of `Unit`, `Simple`, `Seq`, `Map`",
+        "unknown variant `Foo`, expected one of `Unit`, `Simple`, `Seq`, `Map`, `SimpleWithSkipped`",
     }
     test_enum_skipped_variant<Enum> {
         &[
             Token::UnitVariant { name: "Enum", variant: "Skipped" },
         ],
-        "unknown variant `Skipped`, expected one of `Unit`, `Simple`, `Seq`, `Map`",
+        "unknown variant `Skipped`, expected one of `Unit`, `Simple`, `Seq`, `Map`, `SimpleWithSkipped`",
     }
     test_enum_skip_all<EnumSkipAll> {
         &[
@@ -1254,10 +1263,10 @@ declare_error_tests! {
     test_enum_out_of_range<Enum> {
         &[
             Token::Enum { name: "Enum" },
-            Token::U32(4),
+            Token::U32(5),
             Token::Unit,
         ],
-        "invalid value: integer `4`, expected variant index 0 <= i < 4",
+        "invalid value: integer `5`, expected variant index 0 <= i < 5",
     }
     test_short_tuple<(u8, u8, u8)> {
         &[
