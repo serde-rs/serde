@@ -32,8 +32,7 @@ fn check_getter(cx: &Ctxt, cont: &Container) {
             if cont.data.has_getter() && cont.attrs.remote().is_none() {
                 cx.error_spanned_by(
                     cont.original,
-                    "#[serde(getter = \"...\")] can only be used in structs \
-                     that have #[serde(remote = \"...\")]",
+                    "#[serde(getter = \"...\")] can only be used in structs that have #[serde(remote = \"...\")]",
                 );
             }
         }
@@ -183,8 +182,7 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
                 cx.error_spanned_by(
                     variant.original,
                     format!(
-                        "variant `{}` cannot have both #[serde(serialize_with)] and \
-                         #[serde(skip_serializing)]",
+                        "variant `{}` cannot have both #[serde(serialize_with)] and #[serde(skip_serializing)]",
                         variant.ident
                     ),
                 );
@@ -197,8 +195,7 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
                     cx.error_spanned_by(
                         variant.original,
                         format!(
-                            "variant `{}` cannot have both #[serde(serialize_with)] and \
-                             a field {} marked with #[serde(skip_serializing)]",
+                            "variant `{}` cannot have both #[serde(serialize_with)] and a field {} marked with #[serde(skip_serializing)]",
                             variant.ident, member
                         ),
                     );
@@ -208,8 +205,7 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
                     cx.error_spanned_by(
                         variant.original,
                         format!(
-                            "variant `{}` cannot have both #[serde(serialize_with)] and \
-                             a field {} marked with #[serde(skip_serializing_if)]",
+                            "variant `{}` cannot have both #[serde(serialize_with)] and a field {} marked with #[serde(skip_serializing_if)]",
                             variant.ident, member
                         ),
                     );
@@ -222,8 +218,7 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
                 cx.error_spanned_by(
                     variant.original,
                     format!(
-                        "variant `{}` cannot have both #[serde(deserialize_with)] and \
-                         #[serde(skip_deserializing)]",
+                        "variant `{}` cannot have both #[serde(deserialize_with)] and #[serde(skip_deserializing)]",
                         variant.ident
                     ),
                 );
@@ -236,8 +231,7 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
                     cx.error_spanned_by(
                         variant.original,
                         format!(
-                            "variant `{}` cannot have both #[serde(deserialize_with)] \
-                             and a field {} marked with #[serde(skip_deserializing)]",
+                            "variant `{}` cannot have both #[serde(deserialize_with)] and a field {} marked with #[serde(skip_deserializing)]",
                             variant.ident, member
                         ),
                     );

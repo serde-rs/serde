@@ -335,8 +335,7 @@ impl Container {
                                 Err(()) => cx.error_spanned_by(
                                     s,
                                     format!(
-                                        "unknown rename rule for #[serde(rename_all \
-                                         = {:?})]",
+                                        "unknown rename rule for #[serde(rename_all = {:?})]",
                                         s.value(),
                                     ),
                                 ),
@@ -355,8 +354,7 @@ impl Container {
                                     Err(()) => cx.error_spanned_by(
                                         ser,
                                         format!(
-                                            "unknown rename rule for #[serde(rename_all \
-                                             = {:?})]",
+                                            "unknown rename rule for #[serde(rename_all = {:?})]",
                                             ser.value(),
                                         ),
                                     ),
@@ -368,8 +366,7 @@ impl Container {
                                     Err(()) => cx.error_spanned_by(
                                         de,
                                         format!(
-                                            "unknown rename rule for #[serde(rename_all \
-                                             = {:?})]",
+                                            "unknown rename rule for #[serde(rename_all = {:?})]",
                                             de.value(),
                                         ),
                                     ),
@@ -396,22 +393,19 @@ impl Container {
                             }
                             syn::Fields::Unnamed(_) | syn::Fields::Unit => cx.error_spanned_by(
                                 fields,
-                                "#[serde(default)] can only be used on structs \
-                                 with named fields",
+                                "#[serde(default)] can only be used on structs with named fields",
                             ),
                         },
                         syn::Data::Enum(syn::DataEnum { ref enum_token, .. }) => cx
                             .error_spanned_by(
                                 enum_token,
-                                "#[serde(default)] can only be used on structs \
-                                 with named fields",
+                                "#[serde(default)] can only be used on structs with named fields",
                             ),
                         syn::Data::Union(syn::DataUnion {
                             ref union_token, ..
                         }) => cx.error_spanned_by(
                             union_token,
-                            "#[serde(default)] can only be used on structs \
-                             with named fields",
+                            "#[serde(default)] can only be used on structs with named fields",
                         ),
                     },
 
@@ -427,23 +421,20 @@ impl Container {
                                         syn::Fields::Unnamed(_) | syn::Fields::Unit => cx
                                             .error_spanned_by(
                                                 fields,
-                                                "#[serde(default = \"...\")] can only be used \
-                                                 on structs with named fields",
+                                                "#[serde(default = \"...\")] can only be used on structs with named fields",
                                             ),
                                     }
                                 }
                                 syn::Data::Enum(syn::DataEnum { ref enum_token, .. }) => cx
                                     .error_spanned_by(
                                         enum_token,
-                                        "#[serde(default = \"...\")] can only be used \
-                                         on structs with named fields",
+                                        "#[serde(default = \"...\")] can only be used on structs with named fields",
                                     ),
                                 syn::Data::Union(syn::DataUnion {
                                     ref union_token, ..
                                 }) => cx.error_spanned_by(
                                     union_token,
-                                    "#[serde(default = \"...\")] can only be used \
-                                     on structs with named fields",
+                                    "#[serde(default = \"...\")] can only be used on structs with named fields",
                                 ),
                             }
                         }
@@ -504,8 +495,7 @@ impl Container {
                                         syn::Fields::Unnamed(_) | syn::Fields::Unit => {
                                             cx.error_spanned_by(
                                                 fields,
-                                                "#[serde(tag = \"...\")] can only be used on enums \
-                                                and structs with named fields",
+                                                "#[serde(tag = \"...\")] can only be used on enums and structs with named fields",
                                             );
                                         }
                                     }
@@ -515,8 +505,7 @@ impl Container {
                                 }) => {
                                     cx.error_spanned_by(
                                         union_token,
-                                        "#[serde(tag = \"...\")] can only be used on enums \
-                                         and structs with named fields",
+                                        "#[serde(tag = \"...\")] can only be used on enums and structs with named fields",
                                     );
                                 }
                             }
@@ -734,8 +723,7 @@ fn decide_tag(
                             if fields.unnamed.len() != 1 {
                                 cx.error_spanned_by(
                                     variant,
-                                    "#[serde(tag = \"...\")] cannot be used with tuple \
-                                     variants",
+                                    "#[serde(tag = \"...\")] cannot be used with tuple variants",
                                 );
                                 break;
                             }
@@ -947,8 +935,7 @@ impl Variant {
                                 Err(()) => cx.error_spanned_by(
                                     s,
                                     format!(
-                                        "unknown rename rule for #[serde(rename_all \
-                                         = {:?})]",
+                                        "unknown rename rule for #[serde(rename_all = {:?})]",
                                         s.value()
                                     ),
                                 ),
@@ -967,8 +954,7 @@ impl Variant {
                                     Err(()) => cx.error_spanned_by(
                                         ser,
                                         format!(
-                                            "unknown rename rule for #[serde(rename_all \
-                                             = {:?})]",
+                                            "unknown rename rule for #[serde(rename_all = {:?})]",
                                             ser.value(),
                                         ),
                                     ),
@@ -980,8 +966,7 @@ impl Variant {
                                     Err(()) => cx.error_spanned_by(
                                         de,
                                         format!(
-                                            "unknown rename rule for #[serde(rename_all \
-                                             = {:?})]",
+                                            "unknown rename rule for #[serde(rename_all = {:?})]",
                                             de.value(),
                                         ),
                                     ),
@@ -1587,8 +1572,7 @@ where
                 cx.error_spanned_by(
                     meta,
                     format!(
-                        "malformed {0} attribute, expected `{0}(serialize = ..., \
-                         deserialize = ...)`",
+                        "malformed {0} attribute, expected `{0}(serialize = ..., deserialize = ...)`",
                         attr_name
                     ),
                 );
