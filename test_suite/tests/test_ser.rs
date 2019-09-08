@@ -313,8 +313,13 @@ declare_tests! {
         ],
     }
     test_enum {
-        Enum::Unit => &[Token::UnitVariant { name: "Enum", variant: "Unit" }],
-        Enum::One(42) => &[Token::NewtypeVariant { name: "Enum", variant: "One" }, Token::I32(42)],
+        Enum::Unit => &[
+            Token::UnitVariant { name: "Enum", variant: "Unit" },
+        ],
+        Enum::One(42) => &[
+            Token::NewtypeVariant { name: "Enum", variant: "One" },
+            Token::I32(42),
+        ],
         Enum::Seq(1, 2) => &[
             Token::TupleVariant { name: "Enum", variant: "Seq", len: 2 },
                 Token::I32(1),
@@ -330,7 +335,9 @@ declare_tests! {
                 Token::I32(2),
             Token::StructVariantEnd,
         ],
-        Enum::OneWithSkipped(NotSerializable) => &[Token::UnitVariant {name: "Enum", variant: "OneWithSkipped" }],
+        Enum::OneWithSkipped(NotSerializable) => &[
+            Token::UnitVariant { name: "Enum", variant: "OneWithSkipped" },
+        ],
     }
     test_box {
         Box::new(0i32) => &[Token::I32(0)],

@@ -1692,20 +1692,15 @@ fn deserialize_externally_tagged_variant(
             if variant.fields[0].attrs.skip_deserializing() {
                 let this = &params.this;
                 let let_default = match variant.fields[0].attrs.default() {
-                    attr::Default::Default => quote!(
-                        _serde::export::Default::default()
-                    ),
-                    attr::Default::Path(ref path) => quote!(
-                        #path()
-                    ),
+                    attr::Default::Default => quote!(_serde::export::Default::default()),
+                    attr::Default::Path(ref path) => quote!(#path()),
                     attr::Default::None => unimplemented!(),
                 };
-
 
                 return quote_block! {
                     try!(_serde::de::VariantAccess::unit_variant(__variant));
                     _serde::export::Ok(#this::#variant_ident(#let_default))
-                };   
+                };
             }
             deserialize_externally_tagged_newtype_variant(variant_ident, params, &variant.fields[0])
         }
@@ -1859,12 +1854,8 @@ fn deserialize_untagged_newtype_variant(
         None => {
             if field.attrs.skip_deserializing() {
                 let let_default = match field.attrs.default() {
-                    attr::Default::Default => quote!(
-                        _serde::export::Default::default()
-                    ),
-                    attr::Default::Path(ref path) => quote!(
-                        #path()
-                    ),
+                    attr::Default::Default => quote!(_serde::export::Default::default()),
+                    attr::Default::Path(ref path) => quote!(#path()),
                     attr::Default::None => unimplemented!(),
                 };
 
