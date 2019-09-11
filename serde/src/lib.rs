@@ -109,6 +109,7 @@
         // not practical
         needless_pass_by_value,
         similar_names,
+        too_many_lines,
         // preference
         doc_markdown,
     )
