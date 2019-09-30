@@ -2944,7 +2944,7 @@ fn wrap_deserialize_state_with(
     let wrapper_value = quote! {
         __DeserializeWith {
             seed: &mut self.seed,
-            phantom: _serde::export::PhantomData,
+            phantom: _serde::export::PhantomData::<#this #ty_generics>,
             lifetime: _serde::export::PhantomData,
         }
     };
