@@ -1247,6 +1247,27 @@ pub trait Serializer: Sized {
         len: usize,
     ) -> Result<Self::SerializeStructVariant, Self::Error>;
 
+    /// Serialize a value with a semantic tag for the given format.
+    ///
+    /// Tagged values are a mechanism supported by some data formats
+    /// to add additional information to serialized values and to
+    /// introduce user-defined subtypes.
+    ///
+    /// The default behavior is to ignore the tag and to serialize
+    /// just the value.
+    fn serialize_tagged_value<T: ?Sized, U: ?Sized>(
+        self,
+        _format: &'static str,
+        _tag: &U,
+        value: &T,
+    ) -> Result<Self::Ok, Self::Error>
+    where
+        T: Serialize,
+        U: Serialize,
+    {
+        value.serialize(self)
+    }
+
     /// Collect an iterator as a sequence.
     ///
     /// The default implementation serializes each item yielded by the iterator
