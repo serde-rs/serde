@@ -1937,7 +1937,7 @@ fn respan_token_stream(stream: TokenStream, span: Span) -> TokenStream {
 
 fn respan_token_tree(mut token: TokenTree, span: Span) -> TokenTree {
     if let TokenTree::Group(g) = &mut token {
-        *g = Group::new(g.delimiter(), respan_token_stream(g.stream().clone(), span));
+        *g = Group::new(g.delimiter(), respan_token_stream(g.stream(), span));
     }
     token.set_span(span);
     token
