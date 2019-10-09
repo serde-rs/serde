@@ -112,6 +112,8 @@
         too_many_lines,
         // preference
         doc_markdown,
+        // false positive
+        needless_doctest_main,
     )
 )]
 // Rustc lints.
