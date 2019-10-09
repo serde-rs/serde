@@ -1023,6 +1023,271 @@ fn test_internally_tagged_borrow() {
 }
 
 #[test]
+fn test_internally_tagged_enum_renamed() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Newtype(BTreeMap<String, String>);
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Struct {
+        f: u8,
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "type")]
+    enum InternallyTagged {
+        #[serde(rename = 1)]
+        A,
+        #[serde(rename = 2)]
+        B,
+        #[serde(rename = true)]
+        C,
+        #[serde(rename = false)]
+        D,
+        #[serde(rename = "abc")]
+        E,
+        #[serde(rename = 1)]
+        F(BTreeMap<String, String>),
+        #[serde(rename = 1)]
+        G(Newtype),
+        #[serde(rename = 1)]
+        H(Struct),
+        #[serde(rename = true)]
+        I(BTreeMap<String, String>),
+        #[serde(rename = true)]
+        J(Newtype),
+        #[serde(rename = true)]
+        K(Struct),
+        #[serde(rename = "abc")]
+        L(BTreeMap<String, String>),
+        #[serde(rename = "abc")]
+        M(Newtype),
+        #[serde(rename = "abc")]
+        N(Struct),
+        #[serde(rename = 1)]
+        O { a: u8 },
+        #[serde(rename = true)]
+        P { a: u8 },
+        #[serde(rename = "abc")]
+        Q { a: u8 },
+    }
+
+    assert_tokens(
+        &InternallyTagged::A,
+        &[
+            Token::Struct {
+                name: "InternallyTagged",
+                len: 1,
+            },
+            Token::Str("type"),
+            Token::U64(1),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::B,
+        &[
+            Token::Struct {
+                name: "InternallyTagged",
+                len: 1,
+            },
+            Token::Str("type"),
+            Token::U64(2),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::C,
+        &[
+            Token::Struct {
+                name: "InternallyTagged",
+                len: 1,
+            },
+            Token::Str("type"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::D,
+        &[
+            Token::Struct {
+                name: "InternallyTagged",
+                len: 1,
+            },
+            Token::Str("type"),
+            Token::Bool(false),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::E,
+        &[
+            Token::Struct {
+                name: "InternallyTagged",
+                len: 1,
+            },
+            Token::Str("type"),
+            Token::Str("abc"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::F(BTreeMap::new()),
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("type"),
+            Token::U64(1),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::G(Newtype(BTreeMap::new())),
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("type"),
+            Token::U64(1),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::H(Struct { f: 6 }),
+        &[
+            Token::Struct {
+                name: "Struct",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::U64(1),
+            Token::Str("f"),
+            Token::U8(6),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::I(BTreeMap::new()),
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("type"),
+            Token::Bool(true),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::J(Newtype(BTreeMap::new())),
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("type"),
+            Token::Bool(true),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::K(Struct { f: 6 }),
+        &[
+            Token::Struct {
+                name: "Struct",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::Bool(true),
+            Token::Str("f"),
+            Token::U8(6),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::L(BTreeMap::new()),
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("type"),
+            Token::Str("abc"),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::M(Newtype(BTreeMap::new())),
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("type"),
+            Token::Str("abc"),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::N(Struct { f: 6 }),
+        &[
+            Token::Struct {
+                name: "Struct",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::Str("abc"),
+            Token::Str("f"),
+            Token::U8(6),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::O { a: 1 },
+        &[
+            Token::Struct {
+                name: "InternallyTagged",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::U64(1),
+            Token::Str("a"),
+            Token::U8(1),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::P { a: 1 },
+        &[
+            Token::Struct {
+                name: "InternallyTagged",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::Bool(true),
+            Token::Str("a"),
+            Token::U8(1),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::Q { a: 1 },
+        &[
+            Token::Struct {
+                name: "InternallyTagged",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::Str("abc"),
+            Token::Str("a"),
+            Token::U8(1),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_adjacently_tagged_enum() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "t", content = "c")]

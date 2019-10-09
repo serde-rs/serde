@@ -491,7 +491,10 @@ fn serialize_externally_tagged_variant(
     cattrs: &attr::Container,
 ) -> Fragment {
     let type_name = cattrs.name().serialize_name();
-    let variant_name = variant.attrs.name().serialize_name();
+    let variant_name = match variant.attrs.name().serialize_name() {
+        attr::VariantNameType::Str(s) => s,
+        _ => unreachable!(), // check_variant_name prevents this case
+    };
 
     if let Some(path) = variant.attrs.serialize_with() {
         let ser = wrap_serialize_variant_with(params, path, variant);
@@ -589,7 +592,7 @@ fn serialize_internally_tagged_variant(
                 let mut __struct = try!(_serde::Serializer::serialize_struct(
                     __serializer, #type_name, 1));
                 try!(_serde::ser::SerializeStruct::serialize_field(
-                    &mut __struct, #tag, #variant_name));
+                    &mut __struct, #tag, &#variant_name));
                 _serde::ser::SerializeStruct::end(__struct)
             }
         }
@@ -679,7 +682,7 @@ fn serialize_adjacently_tagged_variant(
                 StructVariant::Untagged,
                 params,
                 &variant.fields,
-                &variant_name,
+                &variant_name.stringify(),
             ),
         }
     });
@@ -854,7 +857,7 @@ enum StructVariant<'a> {
     },
     InternallyTagged {
         tag: &'a str,
-        variant_name: String,
+        variant_name: attr::VariantNameType,
     },
     Untagged,
 }
@@ -923,7 +926,7 @@ fn serialize_struct_variant<'a>(
                 try!(_serde::ser::SerializeStruct::serialize_field(
                     &mut __serde_state,
                     #tag,
-                    #variant_name,
+                    &#variant_name,
                 ));
                 #(#serialize_fields)*
                 _serde::ser::SerializeStruct::end(__serde_state)

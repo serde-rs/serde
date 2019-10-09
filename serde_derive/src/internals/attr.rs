@@ -133,6 +133,132 @@ impl<'c, T> VecAttr<'c, T> {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord)]
+pub enum VariantNameType {
+    Str(String),
+    Bool(bool),
+    Int(u64),
+}
+
+impl VariantNameType {
+    pub fn stringify(&self) -> String {
+        match *self {
+            VariantNameType::Str(ref s) => s.clone(),
+            VariantNameType::Bool(true) => "true".to_owned(),
+            VariantNameType::Bool(false) => "false".to_owned(),
+            VariantNameType::Int(i) => format!("{}", i),
+        }
+    }
+
+    pub fn as_str(&self) -> Option<&str> {
+        match *self {
+            VariantNameType::Str(ref s) => Some(&s),
+            _ => None,
+        }
+    }
+
+    pub fn as_int(&self) -> Option<u64> {
+        match *self {
+            VariantNameType::Int(i) => Some(i),
+            _ => None,
+        }
+    }
+
+    pub fn as_bool(&self) -> Option<bool> {
+        match *self {
+            VariantNameType::Bool(b) => Some(b),
+            _ => None,
+        }
+    }
+}
+
+impl From<String> for VariantNameType {
+    fn from(src: String) -> VariantNameType {
+        VariantNameType::Str(src)
+    }
+}
+
+impl From<&str> for VariantNameType {
+    fn from(src: &str) -> VariantNameType {
+        VariantNameType::Str(String::from(src))
+    }
+}
+
+#[derive(Debug)]
+pub struct VariantName {
+    serialize: VariantNameType,
+    serialize_renamed: bool,
+    deserialize: VariantNameType,
+    deserialize_renamed: bool,
+    deserialize_aliases: Vec<VariantNameType>,
+}
+
+impl VariantName {
+    fn from_attrs(
+        source_name: String,
+        ser_name: Attr<VariantNameType>,
+        de_name: Attr<VariantNameType>,
+        de_aliases: Option<VecAttr<VariantNameType>>,
+    ) -> VariantName {
+        let deserialize_aliases = match de_aliases {
+            Some(de_aliases) => {
+                let mut alias_list = BTreeSet::new();
+                for alias_name in de_aliases.get() {
+                    alias_list.insert(alias_name);
+                }
+                alias_list.into_iter().collect()
+            }
+            None => Vec::new(),
+        };
+
+        let ser_name = ser_name.get();
+        let ser_renamed = ser_name.is_some();
+        let de_name = de_name.get();
+        let de_renamed = de_name.is_some();
+
+        VariantName {
+            serialize: ser_name.unwrap_or_else(|| VariantNameType::Str(source_name.clone())),
+            serialize_renamed: ser_renamed,
+            deserialize: de_name.unwrap_or(VariantNameType::Str(source_name)),
+            deserialize_renamed: de_renamed,
+            deserialize_aliases: deserialize_aliases,
+        }
+    }
+
+    /// Return the container name for the container when serializing.
+    pub fn serialize_name(&self) -> VariantNameType {
+        self.serialize.clone()
+    }
+
+    /// Return the container name for the container when deserializing.
+    pub fn deserialize_name(&self) -> VariantNameType {
+        self.deserialize.clone()
+    }
+
+    fn deserialize_aliases(&self) -> Vec<VariantNameType> {
+        let mut aliases = self.deserialize_aliases.clone();
+        let main_name = self.deserialize_name();
+        if !aliases.contains(&main_name) {
+            aliases.push(main_name);
+        }
+        aliases
+    }
+}
+
+impl ToTokens for VariantNameType {
+    fn to_tokens(&self, out: &mut TokenStream) {
+        match *self {
+            VariantNameType::Str(ref s) => s.to_tokens(out),
+            VariantNameType::Bool(b) => {
+                b.to_tokens(out);
+            },
+            VariantNameType::Int(i) => {
+                i.to_tokens(out);
+            }
+        }
+    }
+}
+
 pub struct Name {
     serialize: String,
     serialize_renamed: bool,
@@ -827,8 +953,11 @@ fn decide_identifier(
 
 /// Represents variant attribute information
 pub struct Variant {
-    name: Name,
+    name: VariantName,
     rename_all_rules: RenameAllRules,
+    // ser_renamed: bool,
+    // de_renamed: bool,
+    // rename_all: RenameRule,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     skip_deserializing: bool,
@@ -864,28 +993,28 @@ impl Variant {
             match &meta_item {
                 // Parse `#[serde(rename = "foo")]`
                 Meta(NameValue(m)) if m.path == RENAME => {
-                    if let Ok(s) = get_lit_str(cx, RENAME, &m.lit) {
-                        ser_name.set(&m.path, s.value());
-                        de_name.set_if_none(s.value());
-                        de_aliases.insert(&m.path, s.value());
+                    if let Ok(value) = get_lit_variant_name_type(cx, RENAME, RENAME, &m.lit) {
+                        ser_name.set(&m.path, value.clone());
+                        de_name.set_if_none(value.clone());
+                        de_aliases.insert(&m.path, value.clone());
                     }
                 }
 
                 // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
                 Meta(List(m)) if m.path == RENAME => {
-                    if let Ok((ser, de)) = get_multiple_renames(cx, &m.nested) {
-                        ser_name.set_opt(&m.path, ser.map(syn::LitStr::value));
+                    if let Ok((ser, de)) = get_multiple_renames_variant_name_type(cx, &m.nested) {
+                        ser_name.set_opt(&m.path, ser.clone());
                         for de_value in de {
-                            de_name.set_if_none(de_value.value());
-                            de_aliases.insert(&m.path, de_value.value());
+                            de_name.set_if_none(de_value.clone());
+                            de_aliases.insert(&m.path, de_value.clone());
                         }
                     }
                 }
 
                 // Parse `#[serde(alias = "foo")]`
                 Meta(NameValue(m)) if m.path == ALIAS => {
-                    if let Ok(s) = get_lit_str(cx, ALIAS, &m.lit) {
-                        de_aliases.insert(&m.path, s.value());
+                    if let Ok(value) = get_lit_variant_name_type(cx, ALIAS, ALIAS, &m.lit) {
+                        de_aliases.insert(&m.path, value.clone());
                     }
                 }
 
@@ -1039,7 +1168,7 @@ impl Variant {
         }
 
         Variant {
-            name: Name::from_attrs(unraw(&variant.ident), ser_name, de_name, Some(de_aliases)),
+            name: VariantName::from_attrs(unraw(&variant.ident), ser_name, de_name, None),
             rename_all_rules: RenameAllRules {
                 serialize: rename_all_ser_rule.get().unwrap_or(RenameRule::None),
                 deserialize: rename_all_de_rule.get().unwrap_or(RenameRule::None),
@@ -1055,20 +1184,23 @@ impl Variant {
         }
     }
 
-    pub fn name(&self) -> &Name {
+    pub fn name(&self) -> &VariantName {
         &self.name
     }
 
-    pub fn aliases(&self) -> Vec<String> {
+    pub fn aliases(&self) -> Vec<VariantNameType> {
         self.name.deserialize_aliases()
     }
-
     pub fn rename_by_rules(&mut self, rules: &RenameAllRules) {
         if !self.name.serialize_renamed {
-            self.name.serialize = rules.serialize.apply_to_variant(&self.name.serialize);
+            if let VariantNameType::Str(name) = &self.name.serialize {
+                self.name.serialize = VariantNameType::Str(rules.serialize.apply_to_variant(name));
+            }
         }
         if !self.name.deserialize_renamed {
-            self.name.deserialize = rules.deserialize.apply_to_variant(&self.name.deserialize);
+            if let VariantNameType::Str(name) = &self.name.deserialize {
+                self.name.deserialize = VariantNameType::Str(rules.deserialize.apply_to_variant(name));
+            }
         }
     }
 
@@ -1558,6 +1690,14 @@ fn get_multiple_renames<'a>(
     Ok((ser.at_most_one()?, de.get()))
 }
 
+fn get_multiple_renames_variant_name_type<'a>(
+    cx: &Ctxt,
+    items: &'a Punctuated<syn::NestedMeta, Token![,]>,
+) -> Result<(Option<VariantNameType>, Vec<VariantNameType>), ()> {
+    let (ser, de) = get_ser_and_de(cx, RENAME, items, get_lit_variant_name_type)?;
+    Ok((ser.at_most_one()?, de.get()))
+}
+
 fn get_where_predicates(
     cx: &Ctxt,
     items: &Punctuated<syn::NestedMeta, Token![,]>,
@@ -1613,6 +1753,29 @@ fn parse_lit_into_path(cx: &Ctxt, attr_name: Symbol, lit: &syn::Lit) -> Result<s
     parse_lit_str(string).map_err(|_| {
         cx.error_spanned_by(lit, format!("failed to parse path: {:?}", string.value()))
     })
+}
+
+fn get_lit_variant_name_type<'a>(
+    cx: &Ctxt,
+    attr_name: Symbol,
+    meta_item_name: Symbol,
+    lit: &'a syn::Lit,
+) -> Result<VariantNameType, ()> {
+    match *lit {
+        syn::Lit::Str(ref s) => Ok(VariantNameType::Str(s.value())),
+        syn::Lit::Int(ref i) => Ok(VariantNameType::Int(i.base10_parse::<u64>().map_err(|_| ())?)),
+        syn::Lit::Bool(ref b) => Ok(VariantNameType::Bool(b.value)),
+        _ => {
+            cx.error_spanned_by(
+                lit,
+                format!(
+                    "expected serde {} attribute to be a string: `{} = \"...\"`",
+                    attr_name, meta_item_name
+                ),
+            );
+            Err(())
+        }
+    }
 }
 
 fn parse_lit_into_expr_path(

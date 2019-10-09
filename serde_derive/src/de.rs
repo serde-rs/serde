@@ -1162,19 +1162,17 @@ fn prepare_enum_variant_enum(
         .iter()
         .enumerate()
         .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
-        .map(|(i, variant)| {
-            (
-                variant.attrs.name().deserialize_name(),
-                field_i(i),
-                variant.attrs.aliases(),
-            )
-        })
+        .map(|(i, variant)| (
+            variant.attrs.name().deserialize_name(),
+            field_i(i),
+            variant.attrs.aliases(),
+        ))
         .collect();
 
     let other_idx = variants.iter().position(|variant| variant.attrs.other());
 
     let variants_stmt = {
-        let variant_names = variant_names_idents.iter().map(|(name, _, _)| name);
+        let variant_names = variant_names_idents.iter().map(|(name, _, _)| name.stringify());
         quote! {
             const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
         }
@@ -1872,7 +1870,7 @@ fn deserialize_untagged_newtype_variant(
 }
 
 fn deserialize_generated_identifier(
-    fields: &[(String, Ident, Vec<String>)],
+    fields: &[(attr::VariantNameType, Ident, Vec<attr::VariantNameType>)],
     cattrs: &attr::Container,
     is_variant: bool,
     other_idx: Option<usize>,
@@ -1910,6 +1908,31 @@ fn deserialize_generated_identifier(
         None
     };
 
+    let serde_deserializer = if fields.is_empty() {
+        quote!(_serde::Deserializer::deserialize_identifier(__deserializer, __FieldVisitor))
+    } else {
+        let first_field_ident = &fields[0].0;
+        let same_variant_type = fields.iter().all(|f| {
+            match (&f.0, first_field_ident) {
+                (attr::VariantNameType::Bool(_), attr::VariantNameType::Bool(_)) => true,
+                (attr::VariantNameType::Int(_), attr::VariantNameType::Int(_)) => true,
+                (attr::VariantNameType::Str(_), attr::VariantNameType::Str(_)) => true,
+                _ => false
+            }
+        });
+
+        if same_variant_type {
+            match first_field_ident {
+                attr::VariantNameType::Bool(_) => quote!(_serde::Deserializer::deserialize_bool(__deserializer, __FieldVisitor)),
+                attr::VariantNameType::Int(_) => quote!(_serde::Deserializer::deserialize_u64(__deserializer, __FieldVisitor)),
+                attr::VariantNameType::Str(_) => quote!(_serde::Deserializer::deserialize_str(__deserializer, __FieldVisitor)),
+            }
+        }
+        else {
+            quote!(_serde::Deserializer::deserialize_any(__deserializer, __FieldVisitor))
+        }
+    };
+
     quote_block! {
         #[allow(non_camel_case_types)]
         enum __Field #lifetime {
@@ -1931,7 +1954,7 @@ fn deserialize_generated_identifier(
             where
                 __D: _serde::Deserializer<'de>,
             {
-                _serde::Deserializer::deserialize_identifier(__deserializer, __FieldVisitor)
+                #serde_deserializer
             }
         }
     }
@@ -2035,7 +2058,7 @@ fn deserialize_custom_identifier(
 
 fn deserialize_identifier(
     this: &TokenStream,
-    fields: &[(String, Ident, Vec<String>)],
+    fields: &[(attr::VariantNameType, Ident, Vec<attr::VariantNameType>)],
     is_variant: bool,
     fallthrough: Option<TokenStream>,
     collect_other_fields: bool,
@@ -2045,22 +2068,38 @@ fn deserialize_identifier(
         flat_fields.extend(aliases.iter().map(|alias| (alias, ident)))
     }
 
-    let field_strs = flat_fields.iter().map(|(name, _)| name);
-    let field_borrowed_strs = flat_fields.iter().map(|(name, _)| name);
+    let field_strs = flat_fields.iter().filter_map(|(name, _)| name.as_str());
+    let field_borrowed_strs = flat_fields.iter().filter_map(|(name, _)| name.as_str());
+    let field_ints = flat_fields.iter().filter_map(|(name, _)| name.as_int());
+    let field_bools = flat_fields.iter().filter_map(|(name, _)| name.as_bool());
     let field_bytes = flat_fields
         .iter()
-        .map(|(name, _)| Literal::byte_string(name.as_bytes()));
+        .map(|(name, _)| Literal::byte_string(name.stringify().as_bytes()));
     let field_borrowed_bytes = flat_fields
         .iter()
-        .map(|(name, _)| Literal::byte_string(name.as_bytes()));
+        .map(|(name, _)| Literal::byte_string(name.stringify().as_bytes()));
+
+    let constructors_strs: &Vec<_> = &flat_fields
+        .iter()
+        .filter_map(|(name, ident)| name.as_str().map(|_| ident))
+        .map(|ident| quote!(#this::#ident))
+        .collect();
+
+    let constructors_bools: &Vec<_> = &flat_fields
+        .iter()
+        .filter_map(|(name, ident)| name.as_bool().map(|_| ident))
+        .map(|ident| quote!(#this::#ident))
+        .collect();
+
+    let constructors_ints: &Vec<_> = &flat_fields
+        .iter()
+        .filter_map(|&(name, ident)| name.as_int().map(|_| ident))
+        .map(|ident| quote!(#this::#ident))
+        .collect();
 
     let constructors: &Vec<_> = &flat_fields
         .iter()
         .map(|(_, ident)| quote!(#this::#ident))
-        .collect();
-    let main_constructors: &Vec<_> = &fields
-        .iter()
-        .map(|(_, ident, _)| quote!(#this::#ident))
         .collect();
 
     let expecting = if is_variant {
@@ -2071,12 +2110,21 @@ fn deserialize_identifier(
 
     let index_expecting = if is_variant { "variant" } else { "field" };
 
-    let bytes_to_str = if fallthrough.is_some() || collect_other_fields {
-        None
+    let (bytes_to_str, _int_to_str, _bool_to_str) = if fallthrough.is_some() || collect_other_fields {
+        (None, None, None)
     } else {
-        Some(quote! {
-            let __value = &_serde::export::from_utf8_lossy(__value);
-        })
+        (
+            Some(quote! {
+                let __value = &_serde::export::from_utf8_lossy(__value);
+            }),
+            Some(quote! {
+                let __tmp_value = &_serde::export::from_int(__value);
+                let __value = &_serde::export::from_utf8_lossy(__tmp_value);
+            }),
+            Some(quote! {
+                let __value = &_serde::export::from_bool(__value);
+            }),
+        )
     };
 
     let (
@@ -2115,10 +2163,9 @@ fn deserialize_identifier(
         }
     };
 
-    let variant_indices = 0_u64..;
     let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
     let visit_other = if collect_other_fields {
-        quote! {
+        Some(quote! {
             fn visit_bool<__E>(self, __value: bool) -> _serde::export::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
@@ -2240,24 +2287,96 @@ fn deserialize_identifier(
                     }
                 }
             }
-        }
-    } else {
-        quote! {
+        })
+    } else if constructors_ints.is_empty() {
+        Some(quote! {
             fn visit_u64<__E>(self, __value: u64) -> _serde::export::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
                 match __value {
                     #(
-                        #variant_indices => _serde::export::Ok(#main_constructors),
+                        #field_ints => _serde::export::Ok(#constructors_ints),
                     )*
                     _ => _serde::export::Err(_serde::de::Error::invalid_value(
                         _serde::de::Unexpected::Unsigned(__value),
-                        &#fallthrough_msg,
-                    ))
+                        &#fallthrough_msg))
                 }
             }
-        }
+        })
+    } else {
+        None
+    };
+
+    let visit_bool = if constructors_bools.is_empty() {
+        None
+    } else {
+        // generate all arms to have an exhaustive patterns for bool
+        let missing_true_arm = !field_bools.clone().any(|b| b);
+        let missing_false_arm = !field_bools.clone().any(|b| !b);
+
+        let fallthrough_true_arm = if missing_true_arm {
+            quote!(true => _serde::export::Err(_serde::de::Error::unknown_variant("true", VARIANTS)),)
+        } else {
+            quote!()
+        };
+
+        let fallthrough_false_arm = if missing_false_arm {
+            quote!(false => _serde::export::Err(_serde::de::Error::unknown_variant("false", VARIANTS)),)
+        } else {
+            quote!()
+        };
+
+        Some(quote! {
+            fn visit_bool<__E>(self, __value: bool) -> _serde::export::Result<Self::Value, __E>
+            where __E: _serde::de::Error
+            {
+                match __value {
+                    #(
+                        #field_bools => _serde::export::Ok(#constructors_bools),
+                    )*
+                    #fallthrough_true_arm
+                    #fallthrough_false_arm
+                }
+            }
+        })
+    };
+
+    let visit_str_and_bytes = if constructors_strs.is_empty() {
+        None
+    } else {
+        Some(quote! {
+            fn visit_str<__E>(self, __value: &str) -> _serde::export::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                match __value {
+                    #(
+                        #field_strs => _serde::export::Ok(#constructors_strs),
+                    )*
+                    _ => {
+                        #value_as_str_content
+                        #fallthrough_arm
+                    }
+                }
+            }
+
+            fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::export::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                match __value {
+                    #(
+                        #field_bytes => _serde::export::Ok(#constructors_strs),
+                    )*
+                    _ => {
+                        #bytes_to_str
+                        #value_as_bytes_content
+                        #fallthrough_arm
+                    }
+                }
+            }
+        })
     };
 
     quote_block! {
@@ -2267,36 +2386,9 @@ fn deserialize_identifier(
 
         #visit_other
 
-        fn visit_str<__E>(self, __value: &str) -> _serde::export::Result<Self::Value, __E>
-        where
-            __E: _serde::de::Error,
-        {
-            match __value {
-                #(
-                    #field_strs => _serde::export::Ok(#constructors),
-                )*
-                _ => {
-                    #value_as_str_content
-                    #fallthrough_arm
-                }
-            }
-        }
+        #visit_bool
 
-        fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::export::Result<Self::Value, __E>
-        where
-            __E: _serde::de::Error,
-        {
-            match __value {
-                #(
-                    #field_bytes => _serde::export::Ok(#constructors),
-                )*
-                _ => {
-                    #bytes_to_str
-                    #value_as_bytes_content
-                    #fallthrough_arm
-                }
-            }
-        }
+        #visit_str_and_bytes
     }
 }
 
@@ -2314,11 +2406,13 @@ fn deserialize_struct_as_struct_visitor(
         .filter(|&(_, field)| !field.attrs.skip_deserializing())
         .map(|(i, field)| {
             (
-                field.attrs.name().deserialize_name(),
+                attr::VariantNameType::from(field.attrs.name().deserialize_name()),
                 field_i(i),
-                field.attrs.aliases(),
+                field.attrs.aliases().iter().map(|a| attr::VariantNameType::from(a.as_str())).collect(),
             )
         })
+        // !!!
+        // .map(|(i, field)| (attr::VariantNameType::from(field.attrs.name().deserialize_name()), field_i(i)))
         .collect();
 
     let fields_stmt = {
@@ -2347,9 +2441,9 @@ fn deserialize_struct_as_map_visitor(
         .filter(|&(_, field)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
         .map(|(i, field)| {
             (
-                field.attrs.name().deserialize_name(),
+                attr::VariantNameType::from(field.attrs.name().deserialize_name()),
                 field_i(i),
-                field.attrs.aliases(),
+                field.attrs.aliases().iter().map(|a| attr::VariantNameType::from(a.as_str())).collect(),
             )
         })
         .collect();
@@ -2591,15 +2685,16 @@ fn deserialize_struct_as_struct_in_place_visitor(
         .filter(|&(_, field)| !field.attrs.skip_deserializing())
         .map(|(i, field)| {
             (
-                field.attrs.name().deserialize_name(),
+                attr::VariantNameType::from(field.attrs.name().deserialize_name()),
                 field_i(i),
-                field.attrs.aliases(),
+                field.attrs.aliases().iter().map(|a| attr::VariantNameType::from(a.as_str())).collect(),
             )
         })
         .collect();
 
     let fields_stmt = {
-        let field_names = field_names_idents.iter().map(|(name, _, _)| name);
+        let field_names = field_names_idents.iter().map(|(name, _, _)| name.stringify());
+
         quote_block! {
             const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
         }
