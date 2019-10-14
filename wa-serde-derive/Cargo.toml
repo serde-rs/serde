@@ -1,0 +1,16 @@
+[package]
+name = "wa-serde-derive"
+version = "0.1.101"
+authors = ["David Tolnay <dtolnay@gmail.com>"]
+license = "MIT OR Apache-2.0"
+description = "serde_derive compiled to wasm"
+repository = "https://github.com/dtolnay/watt"
+include = ["src"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+watt = "0.1"
+
+[workspace]
