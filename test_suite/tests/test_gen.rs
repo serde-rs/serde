@@ -2,6 +2,7 @@
 // successfully when there are a variety of generics and non-(de)serializable
 // types involved.
 
+#![cfg(any())]
 #![deny(warnings)]
 #![cfg_attr(feature = "unstable", feature(non_ascii_idents))]
 #![allow(clippy::trivially_copy_pass_by_ref)]

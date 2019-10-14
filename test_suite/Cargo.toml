@@ -14,7 +14,9 @@ serde = { path = "../serde" }
 [dev-dependencies]
 fnv = "1.0"
 rustversion = "0.1"
-serde = { path = "../serde", features = ["rc", "derive"] }
-serde_derive = { path = "../serde_derive", features = ["deserialize_in_place"] }
+serde = { path = "../serde", features = ["rc"] }
+wa-serde-derive = { path = "../wa-serde-derive" }
 serde_test = { path = "../serde_test" }
 trybuild = "1.0"
+
+[workspace]

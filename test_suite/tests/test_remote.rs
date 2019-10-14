@@ -1,6 +1,6 @@
 #![allow(clippy::redundant_field_names)]
 
-use serde::{Deserialize, Serialize};
+use serde_derive::{Deserialize, Serialize};
 
 mod remote {
     pub struct Unit;

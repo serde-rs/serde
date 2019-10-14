@@ -2,6 +2,7 @@
 
 use serde::de::{self, MapAccess, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_derive::{Deserialize, Serialize};
 
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;

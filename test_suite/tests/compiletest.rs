@@ -1,3 +1,5 @@
+#![cfg(any())]
+
 #[cfg(not(target_os = "emscripten"))]
 #[rustversion::attr(not(nightly), ignore)]
 #[test]

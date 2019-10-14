@@ -23,6 +23,7 @@ use std::sync::atomic::{AtomicI64, AtomicU64};
 use fnv::FnvHasher;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer};
+use serde_derive::Deserialize;
 use serde_test::{assert_de_tokens, assert_de_tokens_error, Configure, Token};
 
 #[macro_use]
