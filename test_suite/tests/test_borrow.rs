@@ -5,6 +5,7 @@
 )]
 
 use serde::{Deserialize, Deserializer};
+use serde_derive::Deserialize;
 use serde_test::{assert_de_tokens, assert_de_tokens_error, Token};
 
 use std::borrow::Cow;

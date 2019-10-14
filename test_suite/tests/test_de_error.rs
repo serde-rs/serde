@@ -7,6 +7,7 @@
 
 use serde::de::IntoDeserializer;
 use serde::Deserialize;
+use serde_derive::Deserialize;
 use serde_test::{assert_de_tokens_error, Token};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ffi::{CStr, CString};

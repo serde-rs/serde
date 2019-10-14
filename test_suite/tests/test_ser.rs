@@ -22,7 +22,7 @@ use std::str;
 use std::sync::atomic::{AtomicI64, AtomicU64};
 
 use fnv::FnvHasher;
-use serde::Serialize;
+use serde_derive::Serialize;
 use serde_test::{assert_ser_tokens, assert_ser_tokens_error, Configure, Token};
 
 #[macro_use]

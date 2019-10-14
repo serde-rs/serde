@@ -2,7 +2,7 @@
 
 #![allow(clippy::derive_partial_eq_without_eq)]
 
-use serde::Deserialize;
+use serde_derive::Deserialize;
 use serde_test::{assert_de_tokens, Token};
 
 #[test]

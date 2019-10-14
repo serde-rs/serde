@@ -1,3 +1,5 @@
+#![cfg(any())]
+
 #[cfg_attr(target_os = "emscripten", ignore)]
 #[rustversion::attr(not(nightly), ignore)]
 #[cfg_attr(miri, ignore)]

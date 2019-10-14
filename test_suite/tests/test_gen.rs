@@ -2,6 +2,7 @@
 // successfully when there are a variety of generics and non-(de)serializable
 // types involved.
 
+#![cfg(any())]
 #![deny(warnings)]
 #![allow(
     unknown_lints,

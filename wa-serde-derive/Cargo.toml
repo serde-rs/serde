@@ -8,6 +8,7 @@ repository = "https://github.com/dtolnay/watt"
 include = ["src"]
 
 [lib]
+name = "serde_derive"
 proc-macro = true
 
 [dependencies]
