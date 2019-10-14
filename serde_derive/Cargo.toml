@@ -17,8 +17,7 @@ default = []
 deserialize_in_place = []
 
 [lib]
-name = "serde_derive"
-proc-macro = true
+crate-type = ["cdylib"]
 
 [dependencies]
 proc-macro2 = "1.0"
@@ -30,3 +29,8 @@ serde = { version = "1.0", path = "../serde" }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
+
+[workspace]
+
+[patch.crates-io]
+proc-macro2 = { git = "https://github.com/dtolnay/watt" }
