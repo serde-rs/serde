@@ -30,6 +30,10 @@ syn = { version = "1.0", features = ["visit"] }
 [dev-dependencies]
 serde = { version = "1.0", path = "../serde" }
 
+[profile.release]
+opt-level = 'z'
+codegen-units = 1
+
 [workspace]
 
 [patch.crates-io]
