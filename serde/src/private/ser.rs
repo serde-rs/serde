@@ -1032,7 +1032,7 @@ impl<'a, M> FlatMapSerializer<'a, M>
 where
     M: SerializeMap + 'a,
 {
-    fn bad_type(self, what: Unsupported) -> M::Error {
+    fn bad_type(what: Unsupported) -> M::Error {
         ser::Error::custom(format_args!(
             "can only flatten structs and maps (got {})",
             what
@@ -1057,59 +1057,59 @@ where
     type SerializeStructVariant = FlatMapSerializeStructVariantAsMapValue<'a, M>;
 
     fn serialize_bool(self, _: bool) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::Boolean))
+        Err(Self::bad_type(Unsupported::Boolean))
     }
 
     fn serialize_i8(self, _: i8) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::Integer))
+        Err(Self::bad_type(Unsupported::Integer))
     }
 
     fn serialize_i16(self, _: i16) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::Integer))
+        Err(Self::bad_type(Unsupported::Integer))
     }
 
     fn serialize_i32(self, _: i32) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::Integer))
+        Err(Self::bad_type(Unsupported::Integer))
     }
 
     fn serialize_i64(self, _: i64) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::Integer))
+        Err(Self::bad_type(Unsupported::Integer))
     }
 
     fn serialize_u8(self, _: u8) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::Integer))
+        Err(Self::bad_type(Unsupported::Integer))
     }
 
     fn serialize_u16(self, _: u16) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::Integer))
+        Err(Self::bad_type(Unsupported::Integer))
     }
 
     fn serialize_u32(self, _: u32) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::Integer))
+        Err(Self::bad_type(Unsupported::Integer))
     }
 
     fn serialize_u64(self, _: u64) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::Integer))
+        Err(Self::bad_type(Unsupported::Integer))
     }
 
     fn serialize_f32(self, _: f32) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::Float))
+        Err(Self::bad_type(Unsupported::Float))
     }
 
     fn serialize_f64(self, _: f64) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::Float))
+        Err(Self::bad_type(Unsupported::Float))
     }
 
     fn serialize_char(self, _: char) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::Char))
+        Err(Self::bad_type(Unsupported::Char))
     }
 
     fn serialize_str(self, _: &str) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::String))
+        Err(Self::bad_type(Unsupported::String))
     }
 
     fn serialize_bytes(self, _: &[u8]) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::ByteArray))
+        Err(Self::bad_type(Unsupported::ByteArray))
     }
 
     fn serialize_none(self) -> Result<Self::Ok, Self::Error> {
@@ -1124,11 +1124,11 @@ where
     }
 
     fn serialize_unit(self) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::Unit))
+        Err(Self::bad_type(Unsupported::Unit))
     }
 
     fn serialize_unit_struct(self, _: &'static str) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::UnitStruct))
+        Err(Self::bad_type(Unsupported::UnitStruct))
     }
 
     fn serialize_unit_variant(
@@ -1137,7 +1137,7 @@ where
         _: u32,
         _: &'static str,
     ) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::Enum))
+        Err(Self::bad_type(Unsupported::Enum))
     }
 
     fn serialize_newtype_struct<T: ?Sized>(
@@ -1166,11 +1166,11 @@ where
     }
 
     fn serialize_seq(self, _: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
-        Err(self.bad_type(Unsupported::Sequence))
+        Err(Self::bad_type(Unsupported::Sequence))
     }
 
     fn serialize_tuple(self, _: usize) -> Result<Self::SerializeTuple, Self::Error> {
-        Err(self.bad_type(Unsupported::Tuple))
+        Err(Self::bad_type(Unsupported::Tuple))
     }
 
     fn serialize_tuple_struct(
@@ -1178,7 +1178,7 @@ where
         _: &'static str,
         _: usize,
     ) -> Result<Self::SerializeTupleStruct, Self::Error> {
-        Err(self.bad_type(Unsupported::TupleStruct))
+        Err(Self::bad_type(Unsupported::TupleStruct))
     }
 
     fn serialize_tuple_variant(
@@ -1188,7 +1188,7 @@ where
         _: &'static str,
         _: usize,
     ) -> Result<Self::SerializeTupleVariant, Self::Error> {
-        Err(self.bad_type(Unsupported::Enum))
+        Err(Self::bad_type(Unsupported::Enum))
     }
 
     fn serialize_map(self, _: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
