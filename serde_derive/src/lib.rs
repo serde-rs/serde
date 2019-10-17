@@ -43,6 +43,7 @@
         items_after_statements,
         match_same_arms,
         module_name_repetitions,
+        must_use_candidate,
         similar_names,
         single_match_else,
         too_many_lines,

@@ -156,6 +156,7 @@
         empty_line_after_outer_attr,
         missing_docs_in_private_items,
         module_name_repetitions,
+        must_use_candidate,
         redundant_field_names,
         use_debug,
         use_self

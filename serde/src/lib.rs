@@ -114,6 +114,8 @@
         doc_markdown,
         // false positive
         needless_doctest_main,
+        // noisy
+        must_use_candidate,
     )
 )]
 // Rustc lints.
