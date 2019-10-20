@@ -14,7 +14,6 @@ use std::fmt::Debug;
 /// # use serde::{Serialize, Deserialize};
 /// # use serde_test::{assert_tokens, Token};
 /// #
-/// # fn main() {
 /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
 /// struct S {
 ///     a: u8,
@@ -30,7 +29,6 @@ use std::fmt::Debug;
 ///     Token::U8(0),
 ///     Token::StructEnd,
 /// ]);
-/// # }
 /// ```
 pub fn assert_tokens<'de, T>(value: &T, tokens: &'de [Token])
 where
@@ -46,7 +44,6 @@ where
 /// # use serde::{Serialize, Deserialize};
 /// # use serde_test::{assert_ser_tokens, Token};
 /// #
-/// # fn main() {
 /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
 /// struct S {
 ///     a: u8,
@@ -62,7 +59,6 @@ where
 ///     Token::U8(0),
 ///     Token::StructEnd,
 /// ]);
-/// # }
 /// ```
 pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token])
 where
@@ -144,7 +140,6 @@ where
 /// # use serde::{Serialize, Deserialize};
 /// # use serde_test::{assert_de_tokens, Token};
 /// #
-/// # fn main() {
 /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
 /// struct S {
 ///     a: u8,
@@ -160,7 +155,6 @@ where
 ///     Token::U8(0),
 ///     Token::StructEnd,
 /// ]);
-/// # }
 /// ```
 pub fn assert_de_tokens<'de, T>(value: &T, tokens: &'de [Token])
 where
@@ -214,7 +208,6 @@ where
 /// # use serde::{Serialize, Deserialize};
 /// # use serde_test::{assert_de_tokens_error, Token};
 /// #
-/// # fn main() {
 /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
 /// #[serde(deny_unknown_fields)]
 /// struct S {
@@ -229,7 +222,6 @@ where
 ///     ],
 ///     "unknown field `x`, expected `a` or `b`",
 /// );
-/// # }
 /// ```
 pub fn assert_de_tokens_error<'de, T>(tokens: &'de [Token], error: &str)
 where

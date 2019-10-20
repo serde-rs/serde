@@ -44,6 +44,9 @@ struct Struct {
     c: i32,
 }
 
+#[derive(PartialEq, Debug)]
+struct NotSerializable;
+
 #[derive(Serialize, PartialEq, Debug)]
 enum Enum {
     Unit,
@@ -64,6 +67,7 @@ enum Enum {
         _a: i32,
         _b: i32,
     },
+    OneWithSkipped(#[serde(skip_serializing)] NotSerializable),
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -309,8 +313,13 @@ declare_tests! {
         ],
     }
     test_enum {
-        Enum::Unit => &[Token::UnitVariant { name: "Enum", variant: "Unit" }],
-        Enum::One(42) => &[Token::NewtypeVariant { name: "Enum", variant: "One" }, Token::I32(42)],
+        Enum::Unit => &[
+            Token::UnitVariant { name: "Enum", variant: "Unit" },
+        ],
+        Enum::One(42) => &[
+            Token::NewtypeVariant { name: "Enum", variant: "One" },
+            Token::I32(42),
+        ],
         Enum::Seq(1, 2) => &[
             Token::TupleVariant { name: "Enum", variant: "Seq", len: 2 },
                 Token::I32(1),
@@ -325,6 +334,9 @@ declare_tests! {
                 Token::Str("b"),
                 Token::I32(2),
             Token::StructVariantEnd,
+        ],
+        Enum::OneWithSkipped(NotSerializable) => &[
+            Token::UnitVariant { name: "Enum", variant: "OneWithSkipped" },
         ],
     }
     test_box {

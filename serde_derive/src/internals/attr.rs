@@ -1,15 +1,16 @@
+use internals::symbol::*;
 use internals::Ctxt;
 use proc_macro2::{Group, Span, TokenStream, TokenTree};
 use quote::ToTokens;
 use std::borrow::Cow;
-use std::collections::{BTreeSet, HashSet};
+use std::collections::BTreeSet;
 use std::str::FromStr;
 use syn;
 use syn::parse::{self, Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::Ident;
-use syn::Meta::{List, NameValue, Word};
-use syn::NestedMeta::{Literal, Meta};
+use syn::Meta::{List, NameValue, Path};
+use syn::NestedMeta::{Lit, Meta};
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
 // are `attr::Container::from_ast`, `attr::Variant::from_ast`, and
@@ -23,13 +24,13 @@ pub use internals::case::RenameRule;
 
 struct Attr<'c, T> {
     cx: &'c Ctxt,
-    name: &'static str,
+    name: Symbol,
     tokens: TokenStream,
     value: Option<T>,
 }
 
 impl<'c, T> Attr<'c, T> {
-    fn none(cx: &'c Ctxt, name: &'static str) -> Self {
+    fn none(cx: &'c Ctxt, name: Symbol) -> Self {
         Attr {
             cx: cx,
             name: name,
@@ -77,7 +78,7 @@ impl<'c, T> Attr<'c, T> {
 struct BoolAttr<'c>(Attr<'c, ()>);
 
 impl<'c> BoolAttr<'c> {
-    fn none(cx: &'c Ctxt, name: &'static str) -> Self {
+    fn none(cx: &'c Ctxt, name: Symbol) -> Self {
         BoolAttr(Attr::none(cx, name))
     }
 
@@ -92,13 +93,13 @@ impl<'c> BoolAttr<'c> {
 
 struct VecAttr<'c, T> {
     cx: &'c Ctxt,
-    name: &'static str,
+    name: Symbol,
     first_dup_tokens: TokenStream,
     values: Vec<T>,
 }
 
 impl<'c, T> VecAttr<'c, T> {
-    fn none(cx: &'c Ctxt, name: &'static str) -> Self {
+    fn none(cx: &'c Ctxt, name: Symbol) -> Self {
         VecAttr {
             cx: cx,
             name: name,
@@ -289,363 +290,339 @@ impl Identifier {
 impl Container {
     /// Extract out the `#[serde(...)]` attributes from an item.
     pub fn from_ast(cx: &Ctxt, item: &syn::DeriveInput) -> Self {
-        let mut ser_name = Attr::none(cx, "rename");
-        let mut de_name = Attr::none(cx, "rename");
-        let mut transparent = BoolAttr::none(cx, "transparent");
-        let mut deny_unknown_fields = BoolAttr::none(cx, "deny_unknown_fields");
-        let mut default = Attr::none(cx, "default");
-        let mut rename_all_ser_rule = Attr::none(cx, "rename_all");
-        let mut rename_all_de_rule = Attr::none(cx, "rename_all");
-        let mut ser_bound = Attr::none(cx, "bound");
-        let mut de_bound = Attr::none(cx, "bound");
-        let mut untagged = BoolAttr::none(cx, "untagged");
-        let mut internal_tag = Attr::none(cx, "tag");
-        let mut content = Attr::none(cx, "content");
-        let mut type_from = Attr::none(cx, "from");
-        let mut type_try_from = Attr::none(cx, "try_from");
-        let mut type_into = Attr::none(cx, "into");
-        let mut remote = Attr::none(cx, "remote");
-        let mut field_identifier = BoolAttr::none(cx, "field_identifier");
-        let mut variant_identifier = BoolAttr::none(cx, "variant_identifier");
-        let mut serde_path = Attr::none(cx, "crate");
-        let mut deserialize_state = Attr::none(cx, "deserialize_state");
-        let mut serialize_state = Attr::none(cx, "serialize_state");
-        let mut de_parameters = Attr::none(cx, "de_parameters");
-        let mut ser_parameters = Attr::none(cx, "ser_parameters");
+        let mut ser_name = Attr::none(cx, RENAME);
+        let mut de_name = Attr::none(cx, RENAME);
+        let mut transparent = BoolAttr::none(cx, TRANSPARENT);
+        let mut deny_unknown_fields = BoolAttr::none(cx, DENY_UNKNOWN_FIELDS);
+        let mut default = Attr::none(cx, DEFAULT);
+        let mut rename_all_ser_rule = Attr::none(cx, RENAME_ALL);
+        let mut rename_all_de_rule = Attr::none(cx, RENAME_ALL);
+        let mut ser_bound = Attr::none(cx, BOUND);
+        let mut de_bound = Attr::none(cx, BOUND);
+        let mut untagged = BoolAttr::none(cx, UNTAGGED);
+        let mut internal_tag = Attr::none(cx, TAG);
+        let mut content = Attr::none(cx, CONTENT);
+        let mut type_from = Attr::none(cx, FROM);
+        let mut type_try_from = Attr::none(cx, TRY_FROM);
+        let mut type_into = Attr::none(cx, INTO);
+        let mut remote = Attr::none(cx, REMOTE);
+        let mut field_identifier = BoolAttr::none(cx, FIELD_IDENTIFIER);
+        let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
+        let mut serde_path = Attr::none(cx, CRATE);
+        let mut deserialize_state = Attr::none(cx, DESERIALIZE_STATE);
+        let mut serialize_state = Attr::none(cx, SERIALIZE_STATE);
+        let mut de_parameters = Attr::none(cx, DE_PARAMETERS);
+        let mut ser_parameters = Attr::none(cx, SER_PARAMETERS);
 
-        for meta_items in item.attrs.iter().filter_map(get_serde_meta_items) {
-            for meta_item in meta_items {
-                match meta_item {
-                    // Parse `#[serde(rename = "foo")]`
-                    Meta(NameValue(ref m)) if m.ident == "rename" => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
-                            ser_name.set(&m.ident, s.value());
-                            de_name.set(&m.ident, s.value());
+        for meta_item in item
+            .attrs
+            .iter()
+            .flat_map(|attr| get_serde_meta_items(cx, attr))
+            .flatten()
+        {
+            match &meta_item {
+                // Parse `#[serde(rename = "foo")]`
+                Meta(NameValue(m)) if m.path == RENAME => {
+                    if let Ok(s) = get_lit_str(cx, RENAME, &m.lit) {
+                        ser_name.set(&m.path, s.value());
+                        de_name.set(&m.path, s.value());
+                    }
+                }
+
+                // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
+                Meta(List(m)) if m.path == RENAME => {
+                    if let Ok((ser, de)) = get_renames(cx, &m.nested) {
+                        ser_name.set_opt(&m.path, ser.map(syn::LitStr::value));
+                        de_name.set_opt(&m.path, de.map(syn::LitStr::value));
+                    }
+                }
+
+                // Parse `#[serde(rename_all = "foo")]`
+                Meta(NameValue(m)) if m.path == RENAME_ALL => {
+                    if let Ok(s) = get_lit_str(cx, RENAME_ALL, &m.lit) {
+                        match RenameRule::from_str(&s.value()) {
+                            Ok(rename_rule) => {
+                                rename_all_ser_rule.set(&m.path, rename_rule);
+                                rename_all_de_rule.set(&m.path, rename_rule);
+                            }
+                            Err(()) => cx.error_spanned_by(
+                                s,
+                                format!(
+                                    "unknown rename rule for #[serde(rename_all = {:?})]",
+                                    s.value(),
+                                ),
+                            ),
                         }
                     }
+                }
 
-                    // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
-                    Meta(List(ref m)) if m.ident == "rename" => {
-                        if let Ok((ser, de)) = get_renames(cx, &m.nested) {
-                            ser_name.set_opt(&m.ident, ser.map(syn::LitStr::value));
-                            de_name.set_opt(&m.ident, de.map(syn::LitStr::value));
-                        }
-                    }
-
-                    // Parse `#[serde(rename_all = "foo")]`
-                    Meta(NameValue(ref m)) if m.ident == "rename_all" => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
-                            match RenameRule::from_str(&s.value()) {
-                                Ok(rename_rule) => {
-                                    rename_all_ser_rule.set(&m.ident, rename_rule);
-                                    rename_all_de_rule.set(&m.ident, rename_rule);
-                                }
+                // Parse `#[serde(rename_all(serialize = "foo", deserialize = "bar"))]`
+                Meta(List(m)) if m.path == RENAME_ALL => {
+                    if let Ok((ser, de)) = get_renames(cx, &m.nested) {
+                        if let Some(ser) = ser {
+                            match RenameRule::from_str(&ser.value()) {
+                                Ok(rename_rule) => rename_all_ser_rule.set(&m.path, rename_rule),
                                 Err(()) => cx.error_spanned_by(
-                                    s,
+                                    ser,
                                     format!(
-                                        "unknown rename rule for #[serde(rename_all \
-                                         = {:?})]",
-                                        s.value(),
+                                        "unknown rename rule for #[serde(rename_all = {:?})]",
+                                        ser.value(),
+                                    ),
+                                ),
+                            }
+                        }
+                        if let Some(de) = de {
+                            match RenameRule::from_str(&de.value()) {
+                                Ok(rename_rule) => rename_all_de_rule.set(&m.path, rename_rule),
+                                Err(()) => cx.error_spanned_by(
+                                    de,
+                                    format!(
+                                        "unknown rename rule for #[serde(rename_all = {:?})]",
+                                        de.value(),
                                     ),
                                 ),
                             }
                         }
                     }
+                }
 
-                    // Parse `#[serde(rename_all(serialize = "foo", deserialize = "bar"))]`
-                    Meta(List(ref m)) if m.ident == "rename_all" => {
-                        if let Ok((ser, de)) = get_renames(cx, &m.nested) {
-                            if let Some(ser) = ser {
-                                match RenameRule::from_str(&ser.value()) {
-                                    Ok(rename_rule) => {
-                                        rename_all_ser_rule.set(&m.ident, rename_rule)
-                                    }
-                                    Err(()) => cx.error_spanned_by(
-                                        ser,
-                                        format!(
-                                            "unknown rename rule for #[serde(rename_all \
-                                             = {:?})]",
-                                            ser.value(),
-                                        ),
-                                    ),
-                                }
-                            }
-                            if let Some(de) = de {
-                                match RenameRule::from_str(&de.value()) {
-                                    Ok(rename_rule) => {
-                                        rename_all_de_rule.set(&m.ident, rename_rule)
-                                    }
-                                    Err(()) => cx.error_spanned_by(
-                                        de,
-                                        format!(
-                                            "unknown rename rule for #[serde(rename_all \
-                                             = {:?})]",
-                                            de.value(),
-                                        ),
-                                    ),
-                                }
-                            }
+                // Parse `#[serde(transparent)]`
+                Meta(Path(word)) if word == TRANSPARENT => {
+                    transparent.set_true(word);
+                }
+
+                // Parse `#[serde(deny_unknown_fields)]`
+                Meta(Path(word)) if word == DENY_UNKNOWN_FIELDS => {
+                    deny_unknown_fields.set_true(word);
+                }
+
+                // Parse `#[serde(default)]`
+                Meta(Path(word)) if word == DEFAULT => match &item.data {
+                    syn::Data::Struct(syn::DataStruct { fields, .. }) => match fields {
+                        syn::Fields::Named(_) => {
+                            default.set(word, Default::Default);
                         }
-                    }
-
-                    // Parse `#[serde(transparent)]`
-                    Meta(Word(ref word)) if word == "transparent" => {
-                        transparent.set_true(word);
-                    }
-
-                    // Parse `#[serde(deny_unknown_fields)]`
-                    Meta(Word(ref word)) if word == "deny_unknown_fields" => {
-                        deny_unknown_fields.set_true(word);
-                    }
-
-                    // Parse `#[serde(default)]`
-                    Meta(Word(ref word)) if word == "default" => match item.data {
-                        syn::Data::Struct(syn::DataStruct { ref fields, .. }) => match *fields {
-                            syn::Fields::Named(_) => {
-                                default.set(word, Default::Default);
-                            }
-                            syn::Fields::Unnamed(_) | syn::Fields::Unit => cx.error_spanned_by(
-                                fields,
-                                "#[serde(default)] can only be used on structs \
-                                 with named fields",
-                            ),
-                        },
-                        syn::Data::Enum(syn::DataEnum { ref enum_token, .. }) => cx
-                            .error_spanned_by(
-                                enum_token,
-                                "#[serde(default)] can only be used on structs \
-                                 with named fields",
-                            ),
-                        syn::Data::Union(syn::DataUnion {
-                            ref union_token, ..
-                        }) => cx.error_spanned_by(
-                            union_token,
-                            "#[serde(default)] can only be used on structs \
-                             with named fields",
+                        syn::Fields::Unnamed(_) | syn::Fields::Unit => cx.error_spanned_by(
+                            fields,
+                            "#[serde(default)] can only be used on structs with named fields",
                         ),
                     },
+                    syn::Data::Enum(syn::DataEnum { enum_token, .. }) => cx.error_spanned_by(
+                        enum_token,
+                        "#[serde(default)] can only be used on structs with named fields",
+                    ),
+                    syn::Data::Union(syn::DataUnion { union_token, .. }) => cx.error_spanned_by(
+                        union_token,
+                        "#[serde(default)] can only be used on structs with named fields",
+                    ),
+                },
 
-                    // Parse `#[serde(default = "...")]`
-                    Meta(NameValue(ref m)) if m.ident == "default" => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
-                            match item.data {
-                                syn::Data::Struct(syn::DataStruct { ref fields, .. }) => {
-                                    match *fields {
-                                        syn::Fields::Named(_) => {
-                                            default.set(&m.ident, Default::Path(path));
-                                        }
-                                        syn::Fields::Unnamed(_) | syn::Fields::Unit => cx
-                                            .error_spanned_by(
-                                                fields,
-                                                "#[serde(default = \"...\")] can only be used \
-                                                 on structs with named fields",
-                                            ),
+                // Parse `#[serde(default = "...")]`
+                Meta(NameValue(m)) if m.path == DEFAULT => {
+                    if let Ok(path) = parse_lit_into_expr_path(cx, DEFAULT, &m.lit) {
+                        match &item.data {
+                            syn::Data::Struct(syn::DataStruct { fields, .. }) => {
+                                match fields {
+                                    syn::Fields::Named(_) => {
+                                        default.set(&m.path, Default::Path(path));
                                     }
+                                    syn::Fields::Unnamed(_) | syn::Fields::Unit => cx
+                                        .error_spanned_by(
+                                            fields,
+                                            "#[serde(default = \"...\")] can only be used on structs with named fields",
+                                        ),
                                 }
-                                syn::Data::Enum(syn::DataEnum { ref enum_token, .. }) => cx
-                                    .error_spanned_by(
-                                        enum_token,
-                                        "#[serde(default = \"...\")] can only be used \
-                                         on structs with named fields",
-                                    ),
-                                syn::Data::Union(syn::DataUnion {
-                                    ref union_token, ..
-                                }) => cx.error_spanned_by(
-                                    union_token,
-                                    "#[serde(default = \"...\")] can only be used \
-                                     on structs with named fields",
+                            }
+                            syn::Data::Enum(syn::DataEnum { enum_token, .. }) => cx
+                                .error_spanned_by(
+                                    enum_token,
+                                    "#[serde(default = \"...\")] can only be used on structs with named fields",
                                 ),
-                            }
-                        }
-                    }
-
-                    // Parse `#[serde(bound = "T: SomeBound")]`
-                    Meta(NameValue(ref m)) if m.ident == "bound" => {
-                        if let Ok(where_predicates) =
-                            parse_lit_into_where(cx, &m.ident, &m.ident, &m.lit)
-                        {
-                            ser_bound.set(&m.ident, where_predicates.clone());
-                            de_bound.set(&m.ident, where_predicates);
-                        }
-                    }
-
-                    // Parse `#[serde(bound(serialize = "...", deserialize = "..."))]`
-                    Meta(List(ref m)) if m.ident == "bound" => {
-                        if let Ok((ser, de)) = get_where_predicates(cx, &m.nested) {
-                            ser_bound.set_opt(&m.ident, ser);
-                            de_bound.set_opt(&m.ident, de);
-                        }
-                    }
-
-                    // Parse `#[serde(untagged)]`
-                    Meta(Word(ref word)) if word == "untagged" => match item.data {
-                        syn::Data::Enum(_) => {
-                            untagged.set_true(word);
-                        }
-                        syn::Data::Struct(syn::DataStruct {
-                            ref struct_token, ..
-                        }) => {
-                            cx.error_spanned_by(
-                                struct_token,
-                                "#[serde(untagged)] can only be used on enums",
-                            );
-                        }
-                        syn::Data::Union(syn::DataUnion {
-                            ref union_token, ..
-                        }) => {
-                            cx.error_spanned_by(
+                            syn::Data::Union(syn::DataUnion {
+                                union_token, ..
+                            }) => cx.error_spanned_by(
                                 union_token,
-                                "#[serde(untagged)] can only be used on enums",
-                            );
-                        }
-                    },
-
-                    // Parse `#[serde(tag = "type")]`
-                    Meta(NameValue(ref m)) if m.ident == "tag" => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
-                            match item.data {
-                                syn::Data::Enum(_) => {
-                                    internal_tag.set(&m.ident, s.value());
-                                }
-                                syn::Data::Struct(syn::DataStruct { ref fields, .. }) => {
-                                    match *fields {
-                                        syn::Fields::Named(_) => {
-                                            internal_tag.set(&m.ident, s.value());
-                                        }
-                                        syn::Fields::Unnamed(_) | syn::Fields::Unit => {
-                                            cx.error_spanned_by(
-                                                fields,
-                                                "#[serde(tag = \"...\")] can only be used on enums \
-                                                and structs with named fields",
-                                            );
-                                        }
-                                    }
-                                }
-                                syn::Data::Union(syn::DataUnion {
-                                    ref union_token, ..
-                                }) => {
-                                    cx.error_spanned_by(
-                                        union_token,
-                                        "#[serde(tag = \"...\")] can only be used on enums \
-                                         and structs with named fields",
-                                    );
-                                }
-                            }
+                                "#[serde(default = \"...\")] can only be used on structs with named fields",
+                            ),
                         }
                     }
+                }
 
-                    // Parse `#[serde(content = "c")]`
-                    Meta(NameValue(ref m)) if m.ident == "content" => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
-                            match item.data {
-                                syn::Data::Enum(_) => {
-                                    content.set(&m.ident, s.value());
-                                }
-                                syn::Data::Struct(syn::DataStruct {
-                                    ref struct_token, ..
-                                }) => {
-                                    cx.error_spanned_by(
-                                        struct_token,
-                                        "#[serde(content = \"...\")] can only be used on enums",
-                                    );
-                                }
-                                syn::Data::Union(syn::DataUnion {
-                                    ref union_token, ..
-                                }) => {
-                                    cx.error_spanned_by(
-                                        union_token,
-                                        "#[serde(content = \"...\")] can only be used on enums",
-                                    );
-                                }
-                            }
-                        }
+                // Parse `#[serde(bound = "T: SomeBound")]`
+                Meta(NameValue(m)) if m.path == BOUND => {
+                    if let Ok(where_predicates) = parse_lit_into_where(cx, BOUND, BOUND, &m.lit) {
+                        ser_bound.set(&m.path, where_predicates.clone());
+                        de_bound.set(&m.path, where_predicates);
                     }
+                }
 
-                    // Parse `#[serde(from = "Type")]
-                    Meta(NameValue(ref m)) if m.ident == "from" => {
-                        if let Ok(from_ty) = parse_lit_into_ty(cx, &m.ident, &m.lit) {
-                            type_from.set_opt(&m.ident, Some(from_ty));
-                        }
+                // Parse `#[serde(bound(serialize = "...", deserialize = "..."))]`
+                Meta(List(m)) if m.path == BOUND => {
+                    if let Ok((ser, de)) = get_where_predicates(cx, &m.nested) {
+                        ser_bound.set_opt(&m.path, ser);
+                        de_bound.set_opt(&m.path, de);
                     }
+                }
 
-                    // Parse `#[serde(try_from = "Type")]
-                    Meta(NameValue(ref m)) if m.ident == "try_from" => {
-                        if let Ok(try_from_ty) = parse_lit_into_ty(cx, &m.ident, &m.lit) {
-                            type_try_from.set_opt(&m.ident, Some(try_from_ty));
-                        }
+                // Parse `#[serde(untagged)]`
+                Meta(Path(word)) if word == UNTAGGED => match item.data {
+                    syn::Data::Enum(_) => {
+                        untagged.set_true(word);
                     }
-
-                    // Parse `#[serde(into = "Type")]
-                    Meta(NameValue(ref m)) if m.ident == "into" => {
-                        if let Ok(into_ty) = parse_lit_into_ty(cx, &m.ident, &m.lit) {
-                            type_into.set_opt(&m.ident, Some(into_ty));
-                        }
-                    }
-
-                    // Parse `#[serde(remote = "...")]`
-                    Meta(NameValue(ref m)) if m.ident == "remote" => {
-                        if let Ok(path) = parse_lit_into_path(cx, &m.ident, &m.lit) {
-                            if is_primitive_path(&path, "Self") {
-                                remote.set(&m.ident, item.ident.clone().into());
-                            } else {
-                                remote.set(&m.ident, path);
-                            }
-                        }
-                    }
-
-                    // Parse `#[serde(field_identifier)]`
-                    Meta(Word(ref word)) if word == "field_identifier" => {
-                        field_identifier.set_true(word);
-                    }
-
-                    // Parse `#[serde(variant_identifier)]`
-                    Meta(Word(ref word)) if word == "variant_identifier" => {
-                        variant_identifier.set_true(word);
-                    }
-
-                    // Parse `#[serde(crate = "foo")]`
-                    Meta(NameValue(ref m)) if m.ident == "crate" => {
-                        if let Ok(path) = parse_lit_into_path(cx, &m.ident, &m.lit) {
-                            serde_path.set(&m.ident, path)
-                        }
-                    }
-
-                    // Parse `#[serde(deserialize_state = "...")]`
-                    Meta(NameValue(ref m)) if m.ident == "deserialize_state" => {
-                        if let Ok(path) = parse_lit_into_ty(cx, &m.ident, &m.lit) {
-                            deserialize_state.set(&m.ident, path);
-                        }
-                    }
-
-                    // Parse `#[serde(serialize_state = "...")]`
-                    Meta(NameValue(ref m)) if m.ident == "serialize_state" => {
-                        if let Ok(path) = parse_lit_into_ty(cx, &m.ident, &m.lit) {
-                            serialize_state.set(&m.ident, path);
-                        }
-                    }
-
-                    Meta(NameValue(ref m)) if m.ident == "de_parameters" => {
-                        if let Ok(path) = parse_lit_into_generics(cx, &m.ident, &m.lit) {
-                            de_parameters.set(&m.ident, path);
-                        }
-                    }
-
-                    Meta(NameValue(ref m)) if m.ident == "ser_parameters" => {
-                        if let Ok(path) = parse_lit_into_generics(cx, &m.ident, &m.lit) {
-                            ser_parameters.set(&m.ident, path);
-                        }
-                    }
-
-                    Meta(ref meta_item) => {
+                    syn::Data::Struct(syn::DataStruct { struct_token, .. }) => {
                         cx.error_spanned_by(
-                            meta_item.name(),
-                            format!("unknown serde container attribute `{}`", meta_item.name()),
+                            struct_token,
+                            "#[serde(untagged)] can only be used on enums",
                         );
                     }
-
-                    Literal(ref lit) => {
-                        cx.error_spanned_by(lit, "unexpected literal in serde container attribute");
+                    syn::Data::Union(syn::DataUnion { union_token, .. }) => {
+                        cx.error_spanned_by(
+                            union_token,
+                            "#[serde(untagged)] can only be used on enums",
+                        );
                     }
+                },
+
+                // Parse `#[serde(tag = "type")]`
+                Meta(NameValue(m)) if m.path == TAG => {
+                    if let Ok(s) = get_lit_str(cx, TAG, &m.lit) {
+                        match &item.data {
+                            syn::Data::Enum(_) => {
+                                internal_tag.set(&m.path, s.value());
+                            }
+                            syn::Data::Struct(syn::DataStruct { fields, .. }) => match fields {
+                                syn::Fields::Named(_) => {
+                                    internal_tag.set(&m.path, s.value());
+                                }
+                                syn::Fields::Unnamed(_) | syn::Fields::Unit => {
+                                    cx.error_spanned_by(
+                                            fields,
+                                            "#[serde(tag = \"...\")] can only be used on enums and structs with named fields",
+                                        );
+                                }
+                            },
+                            syn::Data::Union(syn::DataUnion { union_token, .. }) => {
+                                cx.error_spanned_by(
+                                    union_token,
+                                    "#[serde(tag = \"...\")] can only be used on enums and structs with named fields",
+                                );
+                            }
+                        }
+                    }
+                }
+
+                // Parse `#[serde(content = "c")]`
+                Meta(NameValue(m)) if m.path == CONTENT => {
+                    if let Ok(s) = get_lit_str(cx, CONTENT, &m.lit) {
+                        match &item.data {
+                            syn::Data::Enum(_) => {
+                                content.set(&m.path, s.value());
+                            }
+                            syn::Data::Struct(syn::DataStruct { struct_token, .. }) => {
+                                cx.error_spanned_by(
+                                    struct_token,
+                                    "#[serde(content = \"...\")] can only be used on enums",
+                                );
+                            }
+                            syn::Data::Union(syn::DataUnion { union_token, .. }) => {
+                                cx.error_spanned_by(
+                                    union_token,
+                                    "#[serde(content = \"...\")] can only be used on enums",
+                                );
+                            }
+                        }
+                    }
+                }
+
+                // Parse `#[serde(from = "Type")]
+                Meta(NameValue(m)) if m.path == FROM => {
+                    if let Ok(from_ty) = parse_lit_into_ty(cx, FROM, &m.lit) {
+                        type_from.set_opt(&m.path, Some(from_ty));
+                    }
+                }
+
+                // Parse `#[serde(try_from = "Type")]
+                Meta(NameValue(m)) if m.path == TRY_FROM => {
+                    if let Ok(try_from_ty) = parse_lit_into_ty(cx, TRY_FROM, &m.lit) {
+                        type_try_from.set_opt(&m.path, Some(try_from_ty));
+                    }
+                }
+
+                // Parse `#[serde(into = "Type")]
+                Meta(NameValue(m)) if m.path == INTO => {
+                    if let Ok(into_ty) = parse_lit_into_ty(cx, INTO, &m.lit) {
+                        type_into.set_opt(&m.path, Some(into_ty));
+                    }
+                }
+
+                // Parse `#[serde(remote = "...")]`
+                Meta(NameValue(m)) if m.path == REMOTE => {
+                    if let Ok(path) = parse_lit_into_path(cx, REMOTE, &m.lit) {
+                        if is_primitive_path(&path, "Self") {
+                            remote.set(&m.path, item.ident.clone().into());
+                        } else {
+                            remote.set(&m.path, path);
+                        }
+                    }
+                }
+
+                // Parse `#[serde(field_identifier)]`
+                Meta(Path(word)) if word == FIELD_IDENTIFIER => {
+                    field_identifier.set_true(word);
+                }
+
+                // Parse `#[serde(variant_identifier)]`
+                Meta(Path(word)) if word == VARIANT_IDENTIFIER => {
+                    variant_identifier.set_true(word);
+                }
+
+                // Parse `#[serde(crate = "foo")]`
+                Meta(NameValue(m)) if m.path == CRATE => {
+                    if let Ok(path) = parse_lit_into_path(cx, CRATE, &m.lit) {
+                        serde_path.set(&m.path, path)
+                    }
+                }
+
+                // Parse `#[serde(deserialize_state = "...")]`
+                Meta(NameValue(ref m)) if m.path == DESERIALIZE_STATE => {
+                    if let Ok(path) = parse_lit_into_ty(cx, DESERIALIZE_STATE, &m.lit) {
+                        deserialize_state.set(&m.path, path);
+                    }
+                }
+
+                // Parse `#[serde(serialize_state = "...")]`
+                Meta(NameValue(ref m)) if m.path == SERIALIZE_STATE => {
+                    if let Ok(path) = parse_lit_into_ty(cx, SERIALIZE_STATE, &m.lit) {
+                        serialize_state.set(&m.path, path);
+                    }
+                }
+
+                Meta(NameValue(ref m)) if m.path == DE_PARAMETERS => {
+                    if let Ok(path) = parse_lit_into_generics(cx, DE_PARAMETERS, &m.lit) {
+                        de_parameters.set(&m.path, path);
+                    }
+                }
+
+                Meta(NameValue(ref m)) if m.path == SER_PARAMETERS => {
+                    if let Ok(path) = parse_lit_into_generics(cx, SER_PARAMETERS, &m.lit) {
+                        ser_parameters.set(&m.path, path);
+                    }
+                }
+
+                Meta(meta_item) => {
+                    let path = meta_item
+                        .path()
+                        .into_token_stream()
+                        .to_string()
+                        .replace(' ', "");
+                    cx.error_spanned_by(
+                        meta_item.path(),
+                        format!("unknown serde container attribute `{}`", path),
+                    );
+                }
+
+                Lit(lit) => {
+                    cx.error_spanned_by(lit, "unexpected literal in serde container attribute");
                 }
             }
         }
@@ -778,16 +755,15 @@ fn decide_tag(
         (Some(_), None, None) => TagType::None,
         (None, Some((_, tag)), None) => {
             // Check that there are no tuple variants.
-            if let syn::Data::Enum(ref data) = item.data {
+            if let syn::Data::Enum(data) = &item.data {
                 for variant in &data.variants {
-                    match variant.fields {
+                    match &variant.fields {
                         syn::Fields::Named(_) | syn::Fields::Unit => {}
-                        syn::Fields::Unnamed(ref fields) => {
+                        syn::Fields::Unnamed(fields) => {
                             if fields.unnamed.len() != 1 {
                                 cx.error_spanned_by(
                                     variant,
-                                    "#[serde(tag = \"...\")] cannot be used with tuple \
-                                     variants",
+                                    "#[serde(tag = \"...\")] cannot be used with tuple variants",
                                 );
                                 break;
                             }
@@ -871,54 +847,30 @@ fn decide_identifier(
             );
             Identifier::No
         }
-        (&syn::Data::Enum(_), Some(_), None) => Identifier::Field,
-        (&syn::Data::Enum(_), None, Some(_)) => Identifier::Variant,
-        (
-            &syn::Data::Struct(syn::DataStruct {
-                ref struct_token, ..
-            }),
-            Some(_),
-            None,
-        ) => {
+        (syn::Data::Enum(_), Some(_), None) => Identifier::Field,
+        (syn::Data::Enum(_), None, Some(_)) => Identifier::Variant,
+        (syn::Data::Struct(syn::DataStruct { struct_token, .. }), Some(_), None) => {
             cx.error_spanned_by(
                 struct_token,
                 "#[serde(field_identifier)] can only be used on an enum",
             );
             Identifier::No
         }
-        (
-            &syn::Data::Union(syn::DataUnion {
-                ref union_token, ..
-            }),
-            Some(_),
-            None,
-        ) => {
+        (syn::Data::Union(syn::DataUnion { union_token, .. }), Some(_), None) => {
             cx.error_spanned_by(
                 union_token,
                 "#[serde(field_identifier)] can only be used on an enum",
             );
             Identifier::No
         }
-        (
-            &syn::Data::Struct(syn::DataStruct {
-                ref struct_token, ..
-            }),
-            None,
-            Some(_),
-        ) => {
+        (syn::Data::Struct(syn::DataStruct { struct_token, .. }), None, Some(_)) => {
             cx.error_spanned_by(
                 struct_token,
                 "#[serde(variant_identifier)] can only be used on an enum",
             );
             Identifier::No
         }
-        (
-            &syn::Data::Union(syn::DataUnion {
-                ref union_token, ..
-            }),
-            None,
-            Some(_),
-        ) => {
+        (syn::Data::Union(syn::DataUnion { union_token, .. }), None, Some(_)) => {
             cx.error_spanned_by(
                 union_token,
                 "#[serde(variant_identifier)] can only be used on an enum",
@@ -944,200 +896,199 @@ pub struct Variant {
 
 impl Variant {
     pub fn from_ast(cx: &Ctxt, variant: &syn::Variant) -> Self {
-        let mut ser_name = Attr::none(cx, "rename");
-        let mut de_name = Attr::none(cx, "rename");
-        let mut de_aliases = VecAttr::none(cx, "rename");
-        let mut skip_deserializing = BoolAttr::none(cx, "skip_deserializing");
-        let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
-        let mut rename_all_ser_rule = Attr::none(cx, "rename_all");
-        let mut rename_all_de_rule = Attr::none(cx, "rename_all");
-        let mut ser_bound = Attr::none(cx, "bound");
-        let mut de_bound = Attr::none(cx, "bound");
-        let mut other = BoolAttr::none(cx, "other");
-        let mut serialize_with = Attr::none(cx, "serialize_with");
-        let mut deserialize_with = Attr::none(cx, "deserialize_with");
-        let mut borrow = Attr::none(cx, "borrow");
+        let mut ser_name = Attr::none(cx, RENAME);
+        let mut de_name = Attr::none(cx, RENAME);
+        let mut de_aliases = VecAttr::none(cx, RENAME);
+        let mut skip_deserializing = BoolAttr::none(cx, SKIP_DESERIALIZING);
+        let mut skip_serializing = BoolAttr::none(cx, SKIP_SERIALIZING);
+        let mut rename_all_ser_rule = Attr::none(cx, RENAME_ALL);
+        let mut rename_all_de_rule = Attr::none(cx, RENAME_ALL);
+        let mut ser_bound = Attr::none(cx, BOUND);
+        let mut de_bound = Attr::none(cx, BOUND);
+        let mut other = BoolAttr::none(cx, OTHER);
+        let mut serialize_with = Attr::none(cx, SERIALIZE_WITH);
+        let mut deserialize_with = Attr::none(cx, DESERIALIZE_WITH);
+        let mut borrow = Attr::none(cx, BORROW);
 
-        for meta_items in variant.attrs.iter().filter_map(get_serde_meta_items) {
-            for meta_item in meta_items {
-                match meta_item {
-                    // Parse `#[serde(rename = "foo")]`
-                    Meta(NameValue(ref m)) if m.ident == "rename" => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
-                            ser_name.set(&m.ident, s.value());
-                            de_name.set_if_none(s.value());
-                            de_aliases.insert(&m.ident, s.value());
+        for meta_item in variant
+            .attrs
+            .iter()
+            .flat_map(|attr| get_serde_meta_items(cx, attr))
+            .flatten()
+        {
+            match &meta_item {
+                // Parse `#[serde(rename = "foo")]`
+                Meta(NameValue(m)) if m.path == RENAME => {
+                    if let Ok(s) = get_lit_str(cx, RENAME, &m.lit) {
+                        ser_name.set(&m.path, s.value());
+                        de_name.set_if_none(s.value());
+                        de_aliases.insert(&m.path, s.value());
+                    }
+                }
+
+                // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
+                Meta(List(m)) if m.path == RENAME => {
+                    if let Ok((ser, de)) = get_multiple_renames(cx, &m.nested) {
+                        ser_name.set_opt(&m.path, ser.map(syn::LitStr::value));
+                        for de_value in de {
+                            de_name.set_if_none(de_value.value());
+                            de_aliases.insert(&m.path, de_value.value());
                         }
                     }
+                }
 
-                    // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
-                    Meta(List(ref m)) if m.ident == "rename" => {
-                        if let Ok((ser, de)) = get_multiple_renames(cx, &m.nested) {
-                            ser_name.set_opt(&m.ident, ser.map(syn::LitStr::value));
-                            for de_value in de {
-                                de_name.set_if_none(de_value.value());
-                                de_aliases.insert(&m.ident, de_value.value());
+                // Parse `#[serde(alias = "foo")]`
+                Meta(NameValue(m)) if m.path == ALIAS => {
+                    if let Ok(s) = get_lit_str(cx, ALIAS, &m.lit) {
+                        de_aliases.insert(&m.path, s.value());
+                    }
+                }
+
+                // Parse `#[serde(rename_all = "foo")]`
+                Meta(NameValue(m)) if m.path == RENAME_ALL => {
+                    if let Ok(s) = get_lit_str(cx, RENAME_ALL, &m.lit) {
+                        match RenameRule::from_str(&s.value()) {
+                            Ok(rename_rule) => {
+                                rename_all_ser_rule.set(&m.path, rename_rule);
+                                rename_all_de_rule.set(&m.path, rename_rule);
+                            }
+                            Err(()) => cx.error_spanned_by(
+                                s,
+                                format!(
+                                    "unknown rename rule for #[serde(rename_all = {:?})]",
+                                    s.value()
+                                ),
+                            ),
+                        }
+                    }
+                }
+
+                // Parse `#[serde(rename_all(serialize = "foo", deserialize = "bar"))]`
+                Meta(List(m)) if m.path == RENAME_ALL => {
+                    if let Ok((ser, de)) = get_renames(cx, &m.nested) {
+                        if let Some(ser) = ser {
+                            match RenameRule::from_str(&ser.value()) {
+                                Ok(rename_rule) => rename_all_ser_rule.set(&m.path, rename_rule),
+                                Err(()) => cx.error_spanned_by(
+                                    ser,
+                                    format!(
+                                        "unknown rename rule for #[serde(rename_all = {:?})]",
+                                        ser.value(),
+                                    ),
+                                ),
                             }
                         }
-                    }
-
-                    // Parse `#[serde(alias = "foo")]`
-                    Meta(NameValue(ref m)) if m.ident == "alias" => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
-                            de_aliases.insert(&m.ident, s.value());
-                        }
-                    }
-
-                    // Parse `#[serde(rename_all = "foo")]`
-                    Meta(NameValue(ref m)) if m.ident == "rename_all" => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
-                            match RenameRule::from_str(&s.value()) {
-                                Ok(rename_rule) => {
-                                    rename_all_ser_rule.set(&m.ident, rename_rule);
-                                    rename_all_de_rule.set(&m.ident, rename_rule);
-                                }
+                        if let Some(de) = de {
+                            match RenameRule::from_str(&de.value()) {
+                                Ok(rename_rule) => rename_all_de_rule.set(&m.path, rename_rule),
                                 Err(()) => cx.error_spanned_by(
-                                    s,
+                                    de,
                                     format!(
-                                        "unknown rename rule for #[serde(rename_all \
-                                         = {:?})]",
-                                        s.value()
+                                        "unknown rename rule for #[serde(rename_all = {:?})]",
+                                        de.value(),
                                     ),
                                 ),
                             }
                         }
                     }
+                }
 
-                    // Parse `#[serde(rename_all(serialize = "foo", deserialize = "bar"))]`
-                    Meta(List(ref m)) if m.ident == "rename_all" => {
-                        if let Ok((ser, de)) = get_renames(cx, &m.nested) {
-                            if let Some(ser) = ser {
-                                match RenameRule::from_str(&ser.value()) {
-                                    Ok(rename_rule) => {
-                                        rename_all_ser_rule.set(&m.ident, rename_rule)
-                                    }
-                                    Err(()) => cx.error_spanned_by(
-                                        ser,
-                                        format!(
-                                            "unknown rename rule for #[serde(rename_all \
-                                             = {:?})]",
-                                            ser.value(),
-                                        ),
-                                    ),
-                                }
-                            }
-                            if let Some(de) = de {
-                                match RenameRule::from_str(&de.value()) {
-                                    Ok(rename_rule) => {
-                                        rename_all_de_rule.set(&m.ident, rename_rule)
-                                    }
-                                    Err(()) => cx.error_spanned_by(
-                                        de,
-                                        format!(
-                                            "unknown rename rule for #[serde(rename_all \
-                                             = {:?})]",
-                                            de.value(),
-                                        ),
-                                    ),
-                                }
-                            }
-                        }
+                // Parse `#[serde(skip)]`
+                Meta(Path(word)) if word == SKIP => {
+                    skip_serializing.set_true(word);
+                    skip_deserializing.set_true(word);
+                }
+
+                // Parse `#[serde(skip_deserializing)]`
+                Meta(Path(word)) if word == SKIP_DESERIALIZING => {
+                    skip_deserializing.set_true(word);
+                }
+
+                // Parse `#[serde(skip_serializing)]`
+                Meta(Path(word)) if word == SKIP_SERIALIZING => {
+                    skip_serializing.set_true(word);
+                }
+
+                // Parse `#[serde(other)]`
+                Meta(Path(word)) if word == OTHER => {
+                    other.set_true(word);
+                }
+
+                // Parse `#[serde(bound = "T: SomeBound")]`
+                Meta(NameValue(m)) if m.path == BOUND => {
+                    if let Ok(where_predicates) = parse_lit_into_where(cx, BOUND, BOUND, &m.lit) {
+                        ser_bound.set(&m.path, where_predicates.clone());
+                        de_bound.set(&m.path, where_predicates);
                     }
+                }
 
-                    // Parse `#[serde(skip)]`
-                    Meta(Word(ref word)) if word == "skip" => {
-                        skip_serializing.set_true(word);
-                        skip_deserializing.set_true(word);
+                // Parse `#[serde(bound(serialize = "...", deserialize = "..."))]`
+                Meta(List(m)) if m.path == BOUND => {
+                    if let Ok((ser, de)) = get_where_predicates(cx, &m.nested) {
+                        ser_bound.set_opt(&m.path, ser);
+                        de_bound.set_opt(&m.path, de);
                     }
+                }
 
-                    // Parse `#[serde(skip_deserializing)]`
-                    Meta(Word(ref word)) if word == "skip_deserializing" => {
-                        skip_deserializing.set_true(word);
+                // Parse `#[serde(with = "...")]`
+                Meta(NameValue(m)) if m.path == WITH => {
+                    if let Ok(path) = parse_lit_into_expr_path(cx, WITH, &m.lit) {
+                        let mut ser_path = path.clone();
+                        ser_path
+                            .path
+                            .segments
+                            .push(Ident::new("serialize", Span::call_site()).into());
+                        serialize_with.set(&m.path, ser_path);
+                        let mut de_path = path;
+                        de_path
+                            .path
+                            .segments
+                            .push(Ident::new("deserialize", Span::call_site()).into());
+                        deserialize_with.set(&m.path, de_path);
                     }
+                }
 
-                    // Parse `#[serde(skip_serializing)]`
-                    Meta(Word(ref word)) if word == "skip_serializing" => {
-                        skip_serializing.set_true(word);
+                // Parse `#[serde(serialize_with = "...")]`
+                Meta(NameValue(m)) if m.path == SERIALIZE_WITH => {
+                    if let Ok(path) = parse_lit_into_expr_path(cx, SERIALIZE_WITH, &m.lit) {
+                        serialize_with.set(&m.path, path);
                     }
+                }
 
-                    // Parse `#[serde(other)]`
-                    Meta(Word(ref word)) if word == "other" => {
-                        other.set_true(word);
+                // Parse `#[serde(deserialize_with = "...")]`
+                Meta(NameValue(m)) if m.path == DESERIALIZE_WITH => {
+                    if let Ok(path) = parse_lit_into_expr_path(cx, DESERIALIZE_WITH, &m.lit) {
+                        deserialize_with.set(&m.path, path);
                     }
+                }
 
-                    // Parse `#[serde(bound = "T: SomeBound")]`
-                    Meta(NameValue(ref m)) if m.ident == "bound" => {
-                        if let Ok(where_predicates) =
-                            parse_lit_into_where(cx, &m.ident, &m.ident, &m.lit)
-                        {
-                            ser_bound.set(&m.ident, where_predicates.clone());
-                            de_bound.set(&m.ident, where_predicates);
-                        }
+                // Defer `#[serde(borrow)]` and `#[serde(borrow = "'a + 'b")]`
+                Meta(m) if m.path() == BORROW => match &variant.fields {
+                    syn::Fields::Unnamed(fields) if fields.unnamed.len() == 1 => {
+                        borrow.set(m.path(), m.clone());
                     }
-
-                    // Parse `#[serde(bound(serialize = "...", deserialize = "..."))]`
-                    Meta(List(ref m)) if m.ident == "bound" => {
-                        if let Ok((ser, de)) = get_where_predicates(cx, &m.nested) {
-                            ser_bound.set_opt(&m.ident, ser);
-                            de_bound.set_opt(&m.ident, de);
-                        }
-                    }
-
-                    // Parse `#[serde(with = "...")]`
-                    Meta(NameValue(ref m)) if m.ident == "with" => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
-                            let mut ser_path = path.clone();
-                            ser_path
-                                .path
-                                .segments
-                                .push(Ident::new("serialize", Span::call_site()).into());
-                            serialize_with.set(&m.ident, ser_path);
-                            let mut de_path = path;
-                            de_path
-                                .path
-                                .segments
-                                .push(Ident::new("deserialize", Span::call_site()).into());
-                            deserialize_with.set(&m.ident, de_path);
-                        }
-                    }
-
-                    // Parse `#[serde(serialize_with = "...")]`
-                    Meta(NameValue(ref m)) if m.ident == "serialize_with" => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
-                            serialize_with.set(&m.ident, path);
-                        }
-                    }
-
-                    // Parse `#[serde(deserialize_with = "...")]`
-                    Meta(NameValue(ref m)) if m.ident == "deserialize_with" => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
-                            deserialize_with.set(&m.ident, path);
-                        }
-                    }
-
-                    // Defer `#[serde(borrow)]` and `#[serde(borrow = "'a + 'b")]`
-                    Meta(ref m) if m.name() == "borrow" => match variant.fields {
-                        syn::Fields::Unnamed(ref fields) if fields.unnamed.len() == 1 => {
-                            borrow.set(m.name(), m.clone());
-                        }
-                        _ => {
-                            cx.error_spanned_by(
-                                variant,
-                                "#[serde(borrow)] may only be used on newtype variants",
-                            );
-                        }
-                    },
-
-                    Meta(ref meta_item) => {
+                    _ => {
                         cx.error_spanned_by(
-                            meta_item.name(),
-                            format!("unknown serde variant attribute `{}`", meta_item.name()),
+                            variant,
+                            "#[serde(borrow)] may only be used on newtype variants",
                         );
                     }
+                },
 
-                    Literal(ref lit) => {
-                        cx.error_spanned_by(lit, "unexpected literal in serde variant attribute");
-                    }
+                Meta(meta_item) => {
+                    let path = meta_item
+                        .path()
+                        .into_token_stream()
+                        .to_string()
+                        .replace(' ', "");
+                    cx.error_spanned_by(
+                        meta_item.path(),
+                        format!("unknown serde variant attribute `{}`", path),
+                    );
+                }
+
+                Lit(lit) => {
+                    cx.error_spanned_by(lit, "unexpected literal in serde variant attribute");
                 }
             }
         }
@@ -1243,7 +1194,7 @@ pub enum Default {
 
 impl Default {
     pub fn is_none(&self) -> bool {
-        match *self {
+        match self {
             Default::None => true,
             Default::Default | Default::Path(_) => false,
         }
@@ -1259,248 +1210,250 @@ impl Field {
         attrs: Option<&Variant>,
         container_default: &Default,
     ) -> Self {
-        let mut ser_name = Attr::none(cx, "rename");
-        let mut de_name = Attr::none(cx, "rename");
-        let mut de_aliases = VecAttr::none(cx, "rename");
-        let mut skip_serializing = BoolAttr::none(cx, "skip_serializing");
-        let mut skip_deserializing = BoolAttr::none(cx, "skip_deserializing");
-        let mut skip_serializing_if = Attr::none(cx, "skip_serializing_if");
-        let mut default = Attr::none(cx, "default");
-        let mut serialize_with = Attr::none(cx, "serialize_with");
-        let mut deserialize_with = Attr::none(cx, "deserialize_with");
-        let mut ser_bound = Attr::none(cx, "bound");
-        let mut de_bound = Attr::none(cx, "bound");
-        let mut borrowed_lifetimes = Attr::none(cx, "borrow");
-        let mut getter = Attr::none(cx, "getter");
-        let mut flatten = BoolAttr::none(cx, "flatten");
-        let mut deserialize_state_with = Attr::none(cx, "deserialize_state_with");
-        let mut deserialize_state = BoolAttr::none(cx, "deserialize_state");
-        let mut serialize_state_with = Attr::none(cx, "serialize_state_with");
-        let mut serialize_state = BoolAttr::none(cx, "serialize_state");
+        let mut ser_name = Attr::none(cx, RENAME);
+        let mut de_name = Attr::none(cx, RENAME);
+        let mut de_aliases = VecAttr::none(cx, RENAME);
+        let mut skip_serializing = BoolAttr::none(cx, SKIP_SERIALIZING);
+        let mut skip_deserializing = BoolAttr::none(cx, SKIP_DESERIALIZING);
+        let mut skip_serializing_if = Attr::none(cx, SKIP_SERIALIZING_IF);
+        let mut default = Attr::none(cx, DEFAULT);
+        let mut serialize_with = Attr::none(cx, SERIALIZE_WITH);
+        let mut deserialize_with = Attr::none(cx, DESERIALIZE_WITH);
+        let mut ser_bound = Attr::none(cx, BOUND);
+        let mut de_bound = Attr::none(cx, BOUND);
+        let mut borrowed_lifetimes = Attr::none(cx, BORROW);
+        let mut getter = Attr::none(cx, GETTER);
+        let mut flatten = BoolAttr::none(cx, FLATTEN);
+        let mut deserialize_state_with = Attr::none(cx, DESERIALIZE_STATE_WITH);
+        let mut deserialize_state = BoolAttr::none(cx, DESERIALIZE_STATE);
+        let mut serialize_state_with = Attr::none(cx, SERIALIZE_STATE_WITH);
+        let mut serialize_state = BoolAttr::none(cx, SERIALIZE_WITH);
 
-        let ident = match field.ident {
-            Some(ref ident) => unraw(ident),
+        let ident = match &field.ident {
+            Some(ident) => unraw(ident),
             None => index.to_string(),
         };
 
         let variant_borrow = attrs
             .and_then(|variant| variant.borrow.as_ref())
-            .map(|borrow| vec![Meta(borrow.clone())]);
+            .map(|borrow| Meta(borrow.clone()));
 
-        for meta_items in field
+        for meta_item in field
             .attrs
             .iter()
-            .filter_map(get_serde_meta_items)
+            .flat_map(|attr| get_serde_meta_items(cx, attr))
+            .flatten()
             .chain(variant_borrow)
         {
-            for meta_item in meta_items {
-                match meta_item {
-                    // Parse `#[serde(rename = "foo")]`
-                    Meta(NameValue(ref m)) if m.ident == "rename" => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
-                            ser_name.set(&m.ident, s.value());
-                            de_name.set_if_none(s.value());
-                            de_aliases.insert(&m.ident, s.value());
+            match &meta_item {
+                // Parse `#[serde(rename = "foo")]`
+                Meta(NameValue(m)) if m.path == RENAME => {
+                    if let Ok(s) = get_lit_str(cx, RENAME, &m.lit) {
+                        ser_name.set(&m.path, s.value());
+                        de_name.set_if_none(s.value());
+                        de_aliases.insert(&m.path, s.value());
+                    }
+                }
+
+                // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
+                Meta(List(m)) if m.path == RENAME => {
+                    if let Ok((ser, de)) = get_multiple_renames(cx, &m.nested) {
+                        ser_name.set_opt(&m.path, ser.map(syn::LitStr::value));
+                        for de_value in de {
+                            de_name.set_if_none(de_value.value());
+                            de_aliases.insert(&m.path, de_value.value());
                         }
                     }
+                }
 
-                    // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
-                    Meta(List(ref m)) if m.ident == "rename" => {
-                        if let Ok((ser, de)) = get_multiple_renames(cx, &m.nested) {
-                            ser_name.set_opt(&m.ident, ser.map(syn::LitStr::value));
-                            for de_value in de {
-                                de_name.set_if_none(de_value.value());
-                                de_aliases.insert(&m.ident, de_value.value());
-                            }
-                        }
+                // Parse `#[serde(alias = "foo")]`
+                Meta(NameValue(m)) if m.path == ALIAS => {
+                    if let Ok(s) = get_lit_str(cx, ALIAS, &m.lit) {
+                        de_aliases.insert(&m.path, s.value());
                     }
+                }
 
-                    // Parse `#[serde(alias = "foo")]`
-                    Meta(NameValue(ref m)) if m.ident == "alias" => {
-                        if let Ok(s) = get_lit_str(cx, &m.ident, &m.ident, &m.lit) {
-                            de_aliases.insert(&m.ident, s.value());
-                        }
+                // Parse `#[serde(default)]`
+                Meta(Path(word)) if word == DEFAULT => {
+                    default.set(word, Default::Default);
+                }
+
+                // Parse `#[serde(default = "...")]`
+                Meta(NameValue(m)) if m.path == DEFAULT => {
+                    if let Ok(path) = parse_lit_into_expr_path(cx, DEFAULT, &m.lit) {
+                        default.set(&m.path, Default::Path(path));
                     }
+                }
 
-                    // Parse `#[serde(default)]`
-                    Meta(Word(ref word)) if word == "default" => {
-                        default.set(word, Default::Default);
+                // Parse `#[serde(skip_serializing)]`
+                Meta(Path(word)) if word == SKIP_SERIALIZING => {
+                    skip_serializing.set_true(word);
+                }
+
+                // Parse `#[serde(skip_deserializing)]`
+                Meta(Path(word)) if word == SKIP_DESERIALIZING => {
+                    skip_deserializing.set_true(word);
+                }
+
+                // Parse `#[serde(skip)]`
+                Meta(Path(word)) if word == SKIP => {
+                    skip_serializing.set_true(word);
+                    skip_deserializing.set_true(word);
+                }
+
+                // Parse `#[serde(skip_serializing_if = "...")]`
+                Meta(NameValue(m)) if m.path == SKIP_SERIALIZING_IF => {
+                    if let Ok(path) = parse_lit_into_expr_path(cx, SKIP_SERIALIZING_IF, &m.lit) {
+                        skip_serializing_if.set(&m.path, path);
                     }
+                }
 
-                    // Parse `#[serde(default = "...")]`
-                    Meta(NameValue(ref m)) if m.ident == "default" => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
-                            default.set(&m.ident, Default::Path(path));
-                        }
+                // Parse `#[serde(serialize_with = "...")]`
+                Meta(NameValue(m)) if m.path == SERIALIZE_WITH => {
+                    if let Ok(path) = parse_lit_into_expr_path(cx, SERIALIZE_WITH, &m.lit) {
+                        serialize_with.set(&m.path, path);
                     }
+                }
 
-                    // Parse `#[serde(skip_serializing)]`
-                    Meta(Word(ref word)) if word == "skip_serializing" => {
-                        skip_serializing.set_true(word);
+                // Parse `#[serde(deserialize_with = "...")]`
+                Meta(NameValue(m)) if m.path == DESERIALIZE_WITH => {
+                    if let Ok(path) = parse_lit_into_expr_path(cx, DESERIALIZE_WITH, &m.lit) {
+                        deserialize_with.set(&m.path, path);
                     }
+                }
 
-                    // Parse `#[serde(skip_deserializing)]`
-                    Meta(Word(ref word)) if word == "skip_deserializing" => {
-                        skip_deserializing.set_true(word);
+                // Parse `#[serde(with = "...")]`
+                Meta(NameValue(m)) if m.path == WITH => {
+                    if let Ok(path) = parse_lit_into_expr_path(cx, WITH, &m.lit) {
+                        let mut ser_path = path.clone();
+                        ser_path
+                            .path
+                            .segments
+                            .push(Ident::new("serialize", Span::call_site()).into());
+                        serialize_with.set(&m.path, ser_path);
+                        let mut de_path = path;
+                        de_path
+                            .path
+                            .segments
+                            .push(Ident::new("deserialize", Span::call_site()).into());
+                        deserialize_with.set(&m.path, de_path);
                     }
+                }
 
-                    // Parse `#[serde(skip)]`
-                    Meta(Word(ref word)) if word == "skip" => {
-                        skip_serializing.set_true(word);
-                        skip_deserializing.set_true(word);
+                // Parse `#[serde(bound = "T: SomeBound")]`
+                Meta(NameValue(m)) if m.path == BOUND => {
+                    if let Ok(where_predicates) = parse_lit_into_where(cx, BOUND, BOUND, &m.lit) {
+                        ser_bound.set(&m.path, where_predicates.clone());
+                        de_bound.set(&m.path, where_predicates);
                     }
+                }
 
-                    // Parse `#[serde(skip_serializing_if = "...")]`
-                    Meta(NameValue(ref m)) if m.ident == "skip_serializing_if" => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
-                            skip_serializing_if.set(&m.ident, path);
-                        }
+                // Parse `#[serde(bound(serialize = "...", deserialize = "..."))]`
+                Meta(List(m)) if m.path == BOUND => {
+                    if let Ok((ser, de)) = get_where_predicates(cx, &m.nested) {
+                        ser_bound.set_opt(&m.path, ser);
+                        de_bound.set_opt(&m.path, de);
                     }
+                }
 
-                    // Parse `#[serde(serialize_with = "...")]`
-                    Meta(NameValue(ref m)) if m.ident == "serialize_with" => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
-                            serialize_with.set(&m.ident, path);
-                        }
+                // Parse `#[serde(borrow)]`
+                Meta(Path(word)) if word == BORROW => {
+                    if let Ok(borrowable) = borrowable_lifetimes(cx, &ident, field) {
+                        borrowed_lifetimes.set(word, borrowable);
                     }
+                }
 
-                    // Parse `#[serde(deserialize_with = "...")]`
-                    Meta(NameValue(ref m)) if m.ident == "deserialize_with" => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
-                            deserialize_with.set(&m.ident, path);
-                        }
-                    }
-
-                    // Parse `#[serde(with = "...")]`
-                    Meta(NameValue(ref m)) if m.ident == "with" => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
-                            let mut ser_path = path.clone();
-                            ser_path
-                                .path
-                                .segments
-                                .push(Ident::new("serialize", Span::call_site()).into());
-                            serialize_with.set(&m.ident, ser_path);
-                            let mut de_path = path;
-                            de_path
-                                .path
-                                .segments
-                                .push(Ident::new("deserialize", Span::call_site()).into());
-                            deserialize_with.set(&m.ident, de_path);
-                        }
-                    }
-
-                    // Parse `#[serde(bound = "T: SomeBound")]`
-                    Meta(NameValue(ref m)) if m.ident == "bound" => {
-                        if let Ok(where_predicates) =
-                            parse_lit_into_where(cx, &m.ident, &m.ident, &m.lit)
-                        {
-                            ser_bound.set(&m.ident, where_predicates.clone());
-                            de_bound.set(&m.ident, where_predicates);
-                        }
-                    }
-
-                    // Parse `#[serde(bound(serialize = "...", deserialize = "..."))]`
-                    Meta(List(ref m)) if m.ident == "bound" => {
-                        if let Ok((ser, de)) = get_where_predicates(cx, &m.nested) {
-                            ser_bound.set_opt(&m.ident, ser);
-                            de_bound.set_opt(&m.ident, de);
-                        }
-                    }
-
-                    // Parse `#[serde(borrow)]`
-                    Meta(Word(ref word)) if word == "borrow" => {
+                // Parse `#[serde(borrow = "'a + 'b")]`
+                Meta(NameValue(m)) if m.path == BORROW => {
+                    if let Ok(lifetimes) = parse_lit_into_lifetimes(cx, BORROW, &m.lit) {
                         if let Ok(borrowable) = borrowable_lifetimes(cx, &ident, field) {
-                            borrowed_lifetimes.set(word, borrowable);
-                        }
-                    }
-
-                    // Parse `#[serde(borrow = "'a + 'b")]`
-                    Meta(NameValue(ref m)) if m.ident == "borrow" => {
-                        if let Ok(lifetimes) = parse_lit_into_lifetimes(cx, &m.ident, &m.lit) {
-                            if let Ok(borrowable) = borrowable_lifetimes(cx, &ident, field) {
-                                for lifetime in &lifetimes {
-                                    if !borrowable.contains(lifetime) {
-                                        cx.error_spanned_by(
-                                            field,
-                                            format!(
-                                                "field `{}` does not have lifetime {}",
-                                                ident, lifetime
-                                            ),
-                                        );
-                                    }
+                            for lifetime in &lifetimes {
+                                if !borrowable.contains(lifetime) {
+                                    cx.error_spanned_by(
+                                        field,
+                                        format!(
+                                            "field `{}` does not have lifetime {}",
+                                            ident, lifetime
+                                        ),
+                                    );
                                 }
-                                borrowed_lifetimes.set(&m.ident, lifetimes);
                             }
+                            borrowed_lifetimes.set(&m.path, lifetimes);
                         }
                     }
+                }
 
-                    // Parse `#[serde(getter = "...")]`
-                    Meta(NameValue(ref m)) if m.ident == "getter" => {
-                        if let Ok(path) = parse_lit_into_expr_path(cx, &m.ident, &m.lit) {
-                            getter.set(&m.ident, path);
-                        }
+                // Parse `#[serde(getter = "...")]`
+                Meta(NameValue(m)) if m.path == GETTER => {
+                    if let Ok(path) = parse_lit_into_expr_path(cx, GETTER, &m.lit) {
+                        getter.set(&m.path, path);
                     }
+                }
 
-                    // Parse `#[serde(flatten)]`
-                    Meta(Word(ref word)) if word == "flatten" => {
-                        flatten.set_true(word);
-                    }
+                // Parse `#[serde(flatten)]`
+                Meta(Path(word)) if word == FLATTEN => {
+                    flatten.set_true(word);
+                }
 
-                    // Parse `#[serde(deserialize_state_with = "...")]`
-                    Meta(NameValue(ref m)) if m.ident == "deserialize_state_with" => {
-                        if let Ok(path) = parse_lit_into_path(cx, &m.ident, &m.lit) {
-                            deserialize_state_with.set(&m.ident, path);
-                        }
+                // Parse `#[serde(deserialize_state_with = "...")]`
+                Meta(NameValue(ref m)) if m.path ==  DESERIALIZE_STATE_WITH => {
+                    if let Ok(path) = parse_lit_into_path(cx, DESERIALIZE_STATE_WITH, &m.lit) {
+                        deserialize_state_with.set(&m.path, path);
                     }
+                }
 
-                    // Parse `#[serde(deserialize_state_)]`
-                    Meta(Word(ref name)) if name == "deserialize_state" => {
-                        deserialize_state.set_true(name);
-                    }
+                // Parse `#[serde(deserialize_state_)]`
+                Meta(Path(ref name)) if name == DESERIALIZE_STATE => {
+                    deserialize_state.set_true(name);
+                }
 
-                    // Parse `#[serde(serialize_state_with = "...")]`
-                    Meta(NameValue(ref m)) if m.ident == "serialize_state_with" => {
-                        if let Ok(path) = parse_lit_into_path(cx, &m.ident, &m.lit) {
-                            serialize_state_with.set(&m.ident, path);
-                        }
+                // Parse `#[serde(serialize_state_with = "...")]`
+                Meta(NameValue(ref m)) if m.path == SERIALIZE_STATE_WITH => {
+                    if let Ok(path) = parse_lit_into_path(cx, SERIALIZE_STATE_WITH, &m.lit) {
+                        serialize_state_with.set(&m.path, path);
                     }
+                }
 
-                    // Parse `#[serde(serialize_state)]`
-                    Meta(Word(ref name)) if name == "serialize_state" => {
-                        serialize_state.set_true(name);
-                    }
+                // Parse `#[serde(serialize_state)]`
+                Meta(Path(ref name)) if name == SERIALIZE_STATE => {
+                    serialize_state.set_true(name);
+                }
 
-                    // Parse `#[serde(state)]`
-                    Meta(Word(ref name)) if name == "state" => {
-                        serialize_state.set_true(name);
-                        deserialize_state.set_true(name);
-                    }
+                // Parse `#[serde(state)]`
+                Meta(Path(ref name)) if name == STATE => {
+                    serialize_state.set_true(name);
+                    deserialize_state.set_true(name);
+                }
 
-                    Meta(NameValue(ref m)) if m.ident == "state_with" => {
-                        if let Ok(path) = parse_lit_into_path(cx, &m.ident, &m.lit) {
-                            let mut ser_path = path.clone();
-                            ser_path
-                                .segments
-                                .push(syn::Ident::new("serialize", Span::call_site()).into());
-                            serialize_state_with.set(&m.ident, ser_path);
-                            let mut de_path = path;
-                            de_path
-                                .segments
-                                .push(syn::Ident::new("deserialize", Span::call_site()).into());
-                            deserialize_state_with.set(&m.ident, de_path);
-                        }
+                Meta(NameValue(ref m)) if m.path == STATE_WITH => {
+                    if let Ok(path) = parse_lit_into_path(cx, STATE_WITH, &m.lit) {
+                        let mut ser_path = path.clone();
+                        ser_path
+                            .segments
+                            .push(syn::Ident::new("serialize", Span::call_site()).into());
+                        serialize_state_with.set(&m.path, ser_path);
+                        let mut de_path = path;
+                        de_path
+                            .segments
+                            .push(syn::Ident::new("deserialize", Span::call_site()).into());
+                        deserialize_state_with.set(&m.path, de_path);
                     }
+                }
 
-                    Meta(ref meta_item) => {
-                        cx.error_spanned_by(
-                            meta_item.name(),
-                            format!("unknown serde field attribute `{}`", meta_item.name()),
-                        );
-                    }
+                Meta(meta_item) => {
+                    let path = meta_item
+                        .path()
+                        .into_token_stream()
+                        .to_string()
+                        .replace(' ', "");
+                    cx.error_spanned_by(
+                        meta_item.path(),
+                        format!("unknown serde field attribute `{}`", path),
+                    );
+                }
 
-                    Literal(ref lit) => {
-                        cx.error_spanned_by(lit, "unexpected literal in serde field attribute");
-                    }
+                Lit(lit) => {
+                    cx.error_spanned_by(lit, "unexpected literal in serde field attribute");
                 }
             }
         }
@@ -1530,14 +1483,12 @@ impl Field {
                     leading_colon: None,
                     segments: Punctuated::new(),
                 };
+                let span = Span::call_site();
+                path.segments.push(Ident::new("_serde", span).into());
+                path.segments.push(Ident::new("private", span).into());
+                path.segments.push(Ident::new("de", span).into());
                 path.segments
-                    .push(Ident::new("_serde", Span::call_site()).into());
-                path.segments
-                    .push(Ident::new("private", Span::call_site()).into());
-                path.segments
-                    .push(Ident::new("de", Span::call_site()).into());
-                path.segments
-                    .push(Ident::new("borrow_cow_str", Span::call_site()).into());
+                    .push(Ident::new("borrow_cow_str", span).into());
                 let expr = syn::ExprPath {
                     attrs: Vec::new(),
                     qself: None,
@@ -1549,14 +1500,12 @@ impl Field {
                     leading_colon: None,
                     segments: Punctuated::new(),
                 };
+                let span = Span::call_site();
+                path.segments.push(Ident::new("_serde", span).into());
+                path.segments.push(Ident::new("private", span).into());
+                path.segments.push(Ident::new("de", span).into());
                 path.segments
-                    .push(Ident::new("_serde", Span::call_site()).into());
-                path.segments
-                    .push(Ident::new("private", Span::call_site()).into());
-                path.segments
-                    .push(Ident::new("de", Span::call_site()).into());
-                path.segments
-                    .push(Ident::new("borrow_cow_bytes", Span::call_site()).into());
+                    .push(Ident::new("borrow_cow_bytes", span).into());
                 let expr = syn::ExprPath {
                     attrs: Vec::new(),
                     qself: None,
@@ -1682,29 +1631,28 @@ type SerAndDe<T> = (Option<T>, Option<T>);
 
 fn get_ser_and_de<'a, 'b, T, F>(
     cx: &'b Ctxt,
-    attr_name: &'static str,
+    attr_name: Symbol,
     metas: &'a Punctuated<syn::NestedMeta, Token![,]>,
     f: F,
 ) -> Result<(VecAttr<'b, T>, VecAttr<'b, T>), ()>
 where
     T: 'a,
-    F: Fn(&Ctxt, &Ident, &Ident, &'a syn::Lit) -> Result<T, ()>,
+    F: Fn(&Ctxt, Symbol, Symbol, &'a syn::Lit) -> Result<T, ()>,
 {
     let mut ser_meta = VecAttr::none(cx, attr_name);
     let mut de_meta = VecAttr::none(cx, attr_name);
-    let attr_name = Ident::new(attr_name, Span::call_site());
 
     for meta in metas {
-        match *meta {
-            Meta(NameValue(ref meta)) if meta.ident == "serialize" => {
-                if let Ok(v) = f(cx, &attr_name, &meta.ident, &meta.lit) {
-                    ser_meta.insert(&meta.ident, v);
+        match meta {
+            Meta(NameValue(meta)) if meta.path == SERIALIZE => {
+                if let Ok(v) = f(cx, attr_name, SERIALIZE, &meta.lit) {
+                    ser_meta.insert(&meta.path, v);
                 }
             }
 
-            Meta(NameValue(ref meta)) if meta.ident == "deserialize" => {
-                if let Ok(v) = f(cx, &attr_name, &meta.ident, &meta.lit) {
-                    de_meta.insert(&meta.ident, v);
+            Meta(NameValue(meta)) if meta.path == DESERIALIZE => {
+                if let Ok(v) = f(cx, attr_name, DESERIALIZE, &meta.lit) {
+                    de_meta.insert(&meta.path, v);
                 }
             }
 
@@ -1712,8 +1660,7 @@ where
                 cx.error_spanned_by(
                     meta,
                     format!(
-                        "malformed {0} attribute, expected `{0}(serialize = ..., \
-                         deserialize = ...)`",
+                        "malformed {0} attribute, expected `{0}(serialize = ..., deserialize = ...)`",
                         attr_name
                     ),
                 );
@@ -1729,47 +1676,55 @@ fn get_renames<'a>(
     cx: &Ctxt,
     items: &'a Punctuated<syn::NestedMeta, Token![,]>,
 ) -> Result<SerAndDe<&'a syn::LitStr>, ()> {
-    let (ser, de) = try!(get_ser_and_de(cx, "rename", items, get_lit_str));
-    Ok((try!(ser.at_most_one()), try!(de.at_most_one())))
+    let (ser, de) = get_ser_and_de(cx, RENAME, items, get_lit_str2)?;
+    Ok((ser.at_most_one()?, de.at_most_one()?))
 }
 
 fn get_multiple_renames<'a>(
     cx: &Ctxt,
     items: &'a Punctuated<syn::NestedMeta, Token![,]>,
 ) -> Result<(Option<&'a syn::LitStr>, Vec<&'a syn::LitStr>), ()> {
-    let (ser, de) = try!(get_ser_and_de(cx, "rename", items, get_lit_str));
-    Ok((try!(ser.at_most_one()), de.get()))
+    let (ser, de) = get_ser_and_de(cx, RENAME, items, get_lit_str2)?;
+    Ok((ser.at_most_one()?, de.get()))
 }
 
 fn get_where_predicates(
     cx: &Ctxt,
     items: &Punctuated<syn::NestedMeta, Token![,]>,
 ) -> Result<SerAndDe<Vec<syn::WherePredicate>>, ()> {
-    let (ser, de) = try!(get_ser_and_de(cx, "bound", items, parse_lit_into_where));
-    Ok((try!(ser.at_most_one()), try!(de.at_most_one())))
+    let (ser, de) = get_ser_and_de(cx, BOUND, items, parse_lit_into_where)?;
+    Ok((ser.at_most_one()?, de.at_most_one()?))
 }
 
-pub fn get_serde_meta_items(attr: &syn::Attribute) -> Option<Vec<syn::NestedMeta>> {
-    if attr.path.segments.len() == 1 && attr.path.segments[0].ident == "serde" {
-        match attr.interpret_meta() {
-            Some(List(ref meta)) => Some(meta.nested.iter().cloned().collect()),
-            _ => {
-                // TODO: produce an error
-                None
-            }
+pub fn get_serde_meta_items(cx: &Ctxt, attr: &syn::Attribute) -> Result<Vec<syn::NestedMeta>, ()> {
+    if attr.path != SERDE {
+        return Ok(Vec::new());
+    }
+
+    match attr.parse_meta() {
+        Ok(List(meta)) => Ok(meta.nested.into_iter().collect()),
+        Ok(other) => {
+            cx.error_spanned_by(other, "expected #[serde(...)]");
+            Err(())
         }
-    } else {
-        None
+        Err(err) => {
+            cx.syn_error(err);
+            Err(())
+        }
     }
 }
 
-fn get_lit_str<'a>(
+fn get_lit_str<'a>(cx: &Ctxt, attr_name: Symbol, lit: &'a syn::Lit) -> Result<&'a syn::LitStr, ()> {
+    get_lit_str2(cx, attr_name, attr_name, lit)
+}
+
+fn get_lit_str2<'a>(
     cx: &Ctxt,
-    attr_name: &Ident,
-    meta_item_name: &Ident,
+    attr_name: Symbol,
+    meta_item_name: Symbol,
     lit: &'a syn::Lit,
 ) -> Result<&'a syn::LitStr, ()> {
-    if let syn::Lit::Str(ref lit) = *lit {
+    if let syn::Lit::Str(lit) = lit {
         Ok(lit)
     } else {
         cx.error_spanned_by(
@@ -1783,8 +1738,8 @@ fn get_lit_str<'a>(
     }
 }
 
-fn parse_lit_into_path(cx: &Ctxt, attr_name: &Ident, lit: &syn::Lit) -> Result<syn::Path, ()> {
-    let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
+fn parse_lit_into_path(cx: &Ctxt, attr_name: Symbol, lit: &syn::Lit) -> Result<syn::Path, ()> {
+    let string = get_lit_str(cx, attr_name, lit)?;
     parse_lit_str(string).map_err(|_| {
         cx.error_spanned_by(lit, format!("failed to parse path: {:?}", string.value()))
     })
@@ -1792,10 +1747,10 @@ fn parse_lit_into_path(cx: &Ctxt, attr_name: &Ident, lit: &syn::Lit) -> Result<s
 
 fn parse_lit_into_expr_path(
     cx: &Ctxt,
-    attr_name: &Ident,
+    attr_name: Symbol,
     lit: &syn::Lit,
 ) -> Result<syn::ExprPath, ()> {
-    let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
+    let string = get_lit_str(cx, attr_name, lit)?;
     parse_lit_str(string).map_err(|_| {
         cx.error_spanned_by(lit, format!("failed to parse path: {:?}", string.value()))
     })
@@ -1803,11 +1758,11 @@ fn parse_lit_into_expr_path(
 
 fn parse_lit_into_where(
     cx: &Ctxt,
-    attr_name: &Ident,
-    meta_item_name: &Ident,
+    attr_name: Symbol,
+    meta_item_name: Symbol,
     lit: &syn::Lit,
 ) -> Result<Vec<syn::WherePredicate>, ()> {
-    let string = try!(get_lit_str(cx, attr_name, meta_item_name, lit));
+    let string = get_lit_str2(cx, attr_name, meta_item_name, lit)?;
     if string.value().is_empty() {
         return Ok(Vec::new());
     }
@@ -1819,8 +1774,8 @@ fn parse_lit_into_where(
         .map_err(|err| cx.error_spanned_by(lit, err))
 }
 
-fn parse_lit_into_ty(cx: &Ctxt, attr_name: &Ident, lit: &syn::Lit) -> Result<syn::Type, ()> {
-    let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
+fn parse_lit_into_ty(cx: &Ctxt, attr_name: Symbol, lit: &syn::Lit) -> Result<syn::Type, ()> {
+    let string = get_lit_str(cx, attr_name, lit)?;
 
     parse_lit_str(string).map_err(|_| {
         cx.error_spanned_by(
@@ -1834,10 +1789,10 @@ fn parse_lit_into_ty(cx: &Ctxt, attr_name: &Ident, lit: &syn::Lit) -> Result<syn
 // lifetimes separated by `+`.
 fn parse_lit_into_lifetimes(
     cx: &Ctxt,
-    attr_name: &Ident,
+    attr_name: Symbol,
     lit: &syn::Lit,
 ) -> Result<BTreeSet<syn::Lifetime>, ()> {
-    let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
+    let string = get_lit_str(cx, attr_name, lit)?;
     if string.value().is_empty() {
         cx.error_spanned_by(lit, "at least one lifetime must be borrowed");
         return Err(());
@@ -1878,10 +1833,10 @@ fn is_implicitly_borrowed_reference(ty: &syn::Type) -> bool {
 
 fn parse_lit_into_generics(
     cx: &Ctxt,
-    attr_name: &syn::Ident,
+    attr_name: Symbol,
     lit: &syn::Lit,
 ) -> Result<Vec<syn::GenericParam>, ()> {
-    let string = try!(get_lit_str(cx, attr_name, attr_name, lit));
+    let string = try!(get_lit_str(cx, attr_name, lit));
     if string.value().is_empty() {
         cx.error_spanned_by(lit, "at least one identifier must be defined");
         return Err(());
@@ -1895,13 +1850,7 @@ fn parse_lit_into_generics(
     }
 
     if let Ok(Generics(identifiers)) = parse_lit_str(string) {
-        let mut set = HashSet::new();
-        for ident in identifiers {
-            if !set.insert(ident.clone()) {
-                cx.error_spanned_by(&ident, format!("duplicate parameter `{:?}`", ident));
-            }
-        }
-        return Ok(set.into_iter().collect());
+        return Ok(identifiers.into_iter().collect());
     }
     Err(cx.error_spanned_by(
         lit,
@@ -1932,20 +1881,20 @@ fn parse_lit_into_generics(
 //         cow: Cow<'a, str>,
 //     }
 fn is_cow(ty: &syn::Type, elem: fn(&syn::Type) -> bool) -> bool {
-    let path = match *ty {
-        syn::Type::Path(ref ty) => &ty.path,
+    let path = match ty {
+        syn::Type::Path(ty) => &ty.path,
         _ => {
             return false;
         }
     };
     let seg = match path.segments.last() {
-        Some(seg) => seg.into_value(),
+        Some(seg) => seg,
         None => {
             return false;
         }
     };
-    let args = match seg.arguments {
-        syn::PathArguments::AngleBracketed(ref bracketed) => &bracketed.args,
+    let args = match &seg.arguments {
+        syn::PathArguments::AngleBracketed(bracketed) => &bracketed.args,
         _ => {
             return false;
         }
@@ -1953,34 +1902,34 @@ fn is_cow(ty: &syn::Type, elem: fn(&syn::Type) -> bool) -> bool {
     seg.ident == "Cow"
         && args.len() == 2
         && match (&args[0], &args[1]) {
-            (&syn::GenericArgument::Lifetime(_), &syn::GenericArgument::Type(ref arg)) => elem(arg),
+            (syn::GenericArgument::Lifetime(_), syn::GenericArgument::Type(arg)) => elem(arg),
             _ => false,
         }
 }
 
 fn is_option(ty: &syn::Type, elem: fn(&syn::Type) -> bool) -> bool {
-    let path = match *ty {
-        syn::Type::Path(ref ty) => &ty.path,
+    let path = match ty {
+        syn::Type::Path(ty) => &ty.path,
         _ => {
             return false;
         }
     };
     let seg = match path.segments.last() {
-        Some(seg) => seg.into_value(),
+        Some(seg) => seg,
         None => {
             return false;
         }
     };
-    let args = match seg.arguments {
-        syn::PathArguments::AngleBracketed(ref bracketed) => &bracketed.args,
+    let args = match &seg.arguments {
+        syn::PathArguments::AngleBracketed(bracketed) => &bracketed.args,
         _ => {
             return false;
         }
     };
     seg.ident == "Option"
         && args.len() == 1
-        && match args[0] {
-            syn::GenericArgument::Type(ref arg) => elem(arg),
+        && match &args[0] {
+            syn::GenericArgument::Type(arg) => elem(arg),
             _ => false,
         }
 }
@@ -2006,8 +1955,8 @@ fn is_option(ty: &syn::Type, elem: fn(&syn::Type) -> bool) -> bool {
 //         r: &'a str,
 //     }
 fn is_reference(ty: &syn::Type, elem: fn(&syn::Type) -> bool) -> bool {
-    match *ty {
-        syn::Type::Reference(ref ty) => ty.mutability.is_none() && elem(&ty.elem),
+    match ty {
+        syn::Type::Reference(ty) => ty.mutability.is_none() && elem(&ty.elem),
         _ => false,
     }
 }
@@ -2017,15 +1966,15 @@ fn is_str(ty: &syn::Type) -> bool {
 }
 
 fn is_slice_u8(ty: &syn::Type) -> bool {
-    match *ty {
-        syn::Type::Slice(ref ty) => is_primitive_type(&ty.elem, "u8"),
+    match ty {
+        syn::Type::Slice(ty) => is_primitive_type(&ty.elem, "u8"),
         _ => false,
     }
 }
 
 fn is_primitive_type(ty: &syn::Type, primitive: &str) -> bool {
-    match *ty {
-        syn::Type::Path(ref ty) => ty.qself.is_none() && is_primitive_path(&ty.path, primitive),
+    match ty {
+        syn::Type::Path(ty) => ty.qself.is_none() && is_primitive_path(&ty.path, primitive),
         _ => false,
     }
 }
@@ -2063,40 +2012,40 @@ fn borrowable_lifetimes(
 }
 
 fn collect_lifetimes(ty: &syn::Type, out: &mut BTreeSet<syn::Lifetime>) {
-    match *ty {
-        syn::Type::Slice(ref ty) => {
+    match ty {
+        syn::Type::Slice(ty) => {
             collect_lifetimes(&ty.elem, out);
         }
-        syn::Type::Array(ref ty) => {
+        syn::Type::Array(ty) => {
             collect_lifetimes(&ty.elem, out);
         }
-        syn::Type::Ptr(ref ty) => {
+        syn::Type::Ptr(ty) => {
             collect_lifetimes(&ty.elem, out);
         }
-        syn::Type::Reference(ref ty) => {
+        syn::Type::Reference(ty) => {
             out.extend(ty.lifetime.iter().cloned());
             collect_lifetimes(&ty.elem, out);
         }
-        syn::Type::Tuple(ref ty) => {
+        syn::Type::Tuple(ty) => {
             for elem in &ty.elems {
                 collect_lifetimes(elem, out);
             }
         }
-        syn::Type::Path(ref ty) => {
-            if let Some(ref qself) = ty.qself {
+        syn::Type::Path(ty) => {
+            if let Some(qself) = &ty.qself {
                 collect_lifetimes(&qself.ty, out);
             }
             for seg in &ty.path.segments {
-                if let syn::PathArguments::AngleBracketed(ref bracketed) = seg.arguments {
+                if let syn::PathArguments::AngleBracketed(bracketed) = &seg.arguments {
                     for arg in &bracketed.args {
-                        match *arg {
-                            syn::GenericArgument::Lifetime(ref lifetime) => {
+                        match arg {
+                            syn::GenericArgument::Lifetime(lifetime) => {
                                 out.insert(lifetime.clone());
                             }
-                            syn::GenericArgument::Type(ref ty) => {
+                            syn::GenericArgument::Type(ty) => {
                                 collect_lifetimes(ty, out);
                             }
-                            syn::GenericArgument::Binding(ref binding) => {
+                            syn::GenericArgument::Binding(binding) => {
                                 collect_lifetimes(&binding.ty, out);
                             }
                             syn::GenericArgument::Constraint(_)
@@ -2106,10 +2055,10 @@ fn collect_lifetimes(ty: &syn::Type, out: &mut BTreeSet<syn::Lifetime>) {
                 }
             }
         }
-        syn::Type::Paren(ref ty) => {
+        syn::Type::Paren(ty) => {
             collect_lifetimes(&ty.elem, out);
         }
-        syn::Type::Group(ref ty) => {
+        syn::Type::Group(ty) => {
             collect_lifetimes(&ty.elem, out);
         }
         syn::Type::BareFn(_)
@@ -2118,7 +2067,8 @@ fn collect_lifetimes(ty: &syn::Type, out: &mut BTreeSet<syn::Lifetime>) {
         | syn::Type::ImplTrait(_)
         | syn::Type::Infer(_)
         | syn::Type::Macro(_)
-        | syn::Type::Verbatim(_) => {}
+        | syn::Type::Verbatim(_)
+        | _ => {}
     }
 }
 
@@ -2126,12 +2076,12 @@ fn parse_lit_str<T>(s: &syn::LitStr) -> parse::Result<T>
 where
     T: Parse,
 {
-    let tokens = try!(spanned_tokens(s));
+    let tokens = spanned_tokens(s)?;
     syn::parse2(tokens)
 }
 
 fn spanned_tokens(s: &syn::LitStr) -> parse::Result<TokenStream> {
-    let stream = try!(syn::parse_str(&s.value()));
+    let stream = syn::parse_str(&s.value())?;
     Ok(respan_token_stream(stream, s.span()))
 }
 
@@ -2143,8 +2093,8 @@ fn respan_token_stream(stream: TokenStream, span: Span) -> TokenStream {
 }
 
 fn respan_token_tree(mut token: TokenTree, span: Span) -> TokenTree {
-    if let TokenTree::Group(ref mut g) = token {
-        *g = Group::new(g.delimiter(), respan_token_stream(g.stream().clone(), span));
+    if let TokenTree::Group(g) = &mut token {
+        *g = Group::new(g.delimiter(), respan_token_stream(g.stream(), span));
     }
     token.set_span(span);
     token

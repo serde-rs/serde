@@ -17,8 +17,8 @@ pub fn without_defaults(generics: &syn::Generics) -> syn::Generics {
         params: generics
             .params
             .iter()
-            .map(|param| match *param {
-                syn::GenericParam::Type(ref param) => syn::GenericParam::Type(syn::TypeParam {
+            .map(|param| match param {
+                syn::GenericParam::Type(param) => syn::GenericParam::Type(syn::TypeParam {
                     eq_token: None,
                     default: None,
                     ..param.clone()
@@ -63,8 +63,8 @@ pub fn with_where_predicates_from_variants(
     generics: &syn::Generics,
     from_variant: fn(&attr::Variant) -> Option<&[syn::WherePredicate]>,
 ) -> syn::Generics {
-    let variants = match cont.data {
-        Data::Enum(ref variants) => variants,
+    let variants = match &cont.data {
+        Data::Enum(variants) => variants,
         Data::Struct(_, _) => {
             return generics.clone();
         }
@@ -114,8 +114,8 @@ pub fn with_bound(
     }
     impl<'ast> Visit<'ast> for FindTyParams<'ast> {
         fn visit_field(&mut self, field: &'ast syn::Field) {
-            if let syn::Type::Path(ref ty) = field.ty {
-                if let Some(Pair::Punctuated(ref t, _)) = ty.path.segments.first() {
+            if let syn::Type::Path(ty) = &field.ty {
+                if let Some(Pair::Punctuated(t, _)) = ty.path.segments.pairs().next() {
                     if self.all_type_params.contains(&t.ident) {
                         self.associated_type_usage.push(ty);
                     }
@@ -126,7 +126,7 @@ pub fn with_bound(
 
         fn visit_path(&mut self, path: &'ast syn::Path) {
             if let Some(seg) = path.segments.last() {
-                if seg.into_value().ident == "PhantomData" {
+                if seg.ident == "PhantomData" {
                     // Hardcoded exception, because PhantomData<T> implements
                     // Serialize and Deserialize whether or not T implements it.
                     return;
@@ -160,8 +160,8 @@ pub fn with_bound(
         relevant_type_params: HashSet::new(),
         associated_type_usage: Vec::new(),
     };
-    match cont.data {
-        Data::Enum(ref variants) => {
+    match &cont.data {
+        Data::Enum(variants) => {
             for variant in variants.iter() {
                 let relevant_fields = variant
                     .fields
@@ -172,7 +172,7 @@ pub fn with_bound(
                 }
             }
         }
-        Data::Struct(_, ref fields) => {
+        Data::Struct(_, fields) => {
             for field in fields.iter().filter(|field| filter(&field.attrs, None)) {
                 visitor.visit_field(field.original);
             }
@@ -255,11 +255,11 @@ pub fn with_lifetime_bound(generics: &syn::Generics, lifetime: &str) -> syn::Gen
     let params = Some(syn::GenericParam::Lifetime(def))
         .into_iter()
         .chain(generics.params.iter().cloned().map(|mut param| {
-            match param {
-                syn::GenericParam::Lifetime(ref mut param) => {
+            match &mut param {
+                syn::GenericParam::Lifetime(param) => {
                     param.bounds.push(bound.clone());
                 }
-                syn::GenericParam::Type(ref mut param) => {
+                syn::GenericParam::Type(param) => {
                     param
                         .bounds
                         .push(syn::TypeParamBound::Lifetime(bound.clone()));
@@ -291,14 +291,14 @@ fn type_of_item(cont: &Container) -> syn::Type {
                             .generics
                             .params
                             .iter()
-                            .map(|param| match *param {
-                                syn::GenericParam::Type(ref param) => {
+                            .map(|param| match param {
+                                syn::GenericParam::Type(param) => {
                                     syn::GenericArgument::Type(syn::Type::Path(syn::TypePath {
                                         qself: None,
                                         path: param.ident.clone().into(),
                                     }))
                                 }
-                                syn::GenericParam::Lifetime(ref param) => {
+                                syn::GenericParam::Lifetime(param) => {
                                     syn::GenericArgument::Lifetime(param.lifetime.clone())
                                 }
                                 syn::GenericParam::Const(_) => {

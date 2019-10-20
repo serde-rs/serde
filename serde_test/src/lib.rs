@@ -144,11 +144,11 @@
 //! # }
 //! ```
 
-#![doc(html_root_url = "https://docs.rs/serde_test/1.0.98")]
+#![doc(html_root_url = "https://docs.rs/serde_test/1.0.101")]
 #![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 // Ignored clippy lints
-#![cfg_attr(feature = "cargo-clippy", allow(float_cmp))]
+#![cfg_attr(feature = "cargo-clippy", allow(float_cmp, needless_doctest_main))]
 // Ignored clippy_pedantic lints
 #![cfg_attr(
     feature = "cargo-clippy",
@@ -156,6 +156,7 @@
         empty_line_after_outer_attr,
         missing_docs_in_private_items,
         module_name_repetitions,
+        must_use_candidate,
         redundant_field_names,
         use_debug,
         use_self

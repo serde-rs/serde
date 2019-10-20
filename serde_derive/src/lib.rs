@@ -13,7 +13,7 @@
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
-#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.98")]
+#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.101")]
 #![allow(unknown_lints, bare_trait_objects)]
 #![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
@@ -43,8 +43,10 @@
         items_after_statements,
         match_same_arms,
         module_name_repetitions,
+        must_use_candidate,
         similar_names,
         single_match_else,
+        too_many_lines,
         unseparated_literal_suffix,
         use_self,
     )

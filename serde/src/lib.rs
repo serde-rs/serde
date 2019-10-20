@@ -47,6 +47,7 @@
 //! - [Avro], a binary format used within Apache Hadoop, with support for schema
 //!   definition.
 //! - [JSON5], A superset of JSON including some productions from ES5.
+//! - [Postcard], a no\_std and embedded-systems friendly compact binary format.
 //! - [URL], the x-www-form-urlencoded format.
 //! - [Envy], a way to deserialize environment variables into Rust structs.
 //!   *(deserialization only)*
@@ -64,6 +65,7 @@
 //! [BSON]: https://github.com/zonyitoo/bson-rs
 //! [Avro]: https://github.com/flavray/avro-rs
 //! [JSON5]: https://github.com/callum-oakley/json5-rs
+//! [Postcard]: https://github.com/jamesmunns/postcard
 //! [URL]: https://github.com/nox/serde_urlencoded
 //! [Envy]: https://github.com/softprops/envy
 //! [Envy Store]: https://github.com/softprops/envy-store
@@ -73,7 +75,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Serde types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/serde/1.0.98")]
+#![doc(html_root_url = "https://docs.rs/serde/1.0.101")]
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
 // Unstable functionality only if the user asks for it. For tracking and
@@ -81,7 +83,7 @@
 //
 //    https://github.com/serde-rs/serde/issues/812
 #![cfg_attr(feature = "unstable", feature(specialization, never_type))]
-#![allow(unknown_lints, bare_trait_objects)]
+#![allow(unknown_lints, bare_trait_objects, deprecated)]
 #![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 // Ignored clippy and clippy_pedantic lints
@@ -107,8 +109,13 @@
         // not practical
         needless_pass_by_value,
         similar_names,
+        too_many_lines,
         // preference
         doc_markdown,
+        // false positive
+        needless_doctest_main,
+        // noisy
+        must_use_candidate,
     )
 )]
 // Rustc lints.
@@ -247,6 +254,9 @@ pub mod export;
 // Helpers used by generated code and doc tests. Not public API.
 #[doc(hidden)]
 pub mod private;
+
+#[cfg(not(feature = "std"))]
+mod std_error;
 
 // Re-export #[derive(Serialize, Deserialize)].
 //

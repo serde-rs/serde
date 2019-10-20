@@ -427,7 +427,7 @@ impl<'s, 'a> ser::SerializeStruct for &'s mut Serializer<'a> {
     where
         T: Serialize,
     {
-        try!(key.serialize(&mut **self));
+        key.serialize(&mut **self)?;
         value.serialize(&mut **self)
     }
 
@@ -449,7 +449,7 @@ impl<'s, 'a> ser::SerializeStructVariant for Variant<'s, 'a> {
     where
         T: Serialize,
     {
-        try!(key.serialize(&mut *self.ser));
+        key.serialize(&mut *self.ser)?;
         value.serialize(&mut *self.ser)
     }
 

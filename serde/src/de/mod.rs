@@ -125,6 +125,13 @@ mod utf8;
 
 pub use self::ignored_any::IgnoredAny;
 
+#[cfg(feature = "std")]
+#[doc(no_inline)]
+pub use std::error::Error as StdError;
+#[cfg(not(feature = "std"))]
+#[doc(no_inline)]
+pub use std_error::Error as StdError;
+
 ////////////////////////////////////////////////////////////////////////////////
 
 macro_rules! declare_error_trait {
@@ -288,7 +295,7 @@ macro_rules! declare_error_trait {
 }
 
 #[cfg(feature = "std")]
-declare_error_trait!(Error: Sized + error::Error);
+declare_error_trait!(Error: Sized + StdError);
 
 #[cfg(not(feature = "std"))]
 declare_error_trait!(Error: Sized + Debug + Display);
@@ -787,7 +794,7 @@ where
 ///
 /// The role of this trait is to define the deserialization half of the [Serde
 /// data model], which is a way to categorize every Rust data type into one of
-/// 29 possible types. Each method of the `Serializer` trait corresponds to one
+/// 29 possible types. Each method of the `Deserializer` trait corresponds to one
 /// of the types of the data model.
 ///
 /// Implementations of `Deserialize` map themselves into this data model by

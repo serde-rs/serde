@@ -1,0 +1,11 @@
+error: expected #[serde(...)]
+ --> $DIR/not_list.rs:4:3
+  |
+4 | #[serde]
+  |   ^^^^^
+
+error: expected #[serde(...)]
+ --> $DIR/not_list.rs:5:3
+  |
+5 | #[serde = "?"]
+  |   ^^^^^^^^^^^
