@@ -1,12 +1,12 @@
-# serde_state &emsp; [![Build Status]][travis] [![Latest Version]][crates.io] [![serde: rustc 1.13+]][Rust 1.13] [![serde_derive: rustc 1.31+]][Rust 1.31]
+# serde_state &emsp; [![Build Status]][travis] [![Latest Version]][crates.io] [![serde: rustc 1.19+]][Rust 1.19] [![serde_derive: rustc 1.31+]][Rust 1.31]
 
 [Build Status]: https://api.travis-ci.org/Marwes/serde_state.svg?branch=master
 [travis]: https://travis-ci.org/Marwes/serde_state
 [Latest Version]: https://img.shields.io/crates/v/serde_state.svg
 [crates.io]: https://crates.io/crates/serde_state
-[serde: rustc 1.13+]: https://img.shields.io/badge/serde-rustc_1.13+-lightgray.svg
+[serde: rustc 1.19+]: https://img.shields.io/badge/serde-rustc_1.19+-lightgray.svg
 [serde_derive: rustc 1.31+]: https://img.shields.io/badge/serde_derive-rustc_1.31+-lightgray.svg
-[Rust 1.13]: https://blog.rust-lang.org/2016/11/10/Rust-1.13.html
+[Rust 1.19]: https://blog.rust-lang.org/2017/07/20/Rust-1.19.html
 [Rust 1.31]: https://blog.rust-lang.org/2018/12/06/Rust-1.31-and-rust-2018.html
 
 
