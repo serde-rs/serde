@@ -29,8 +29,9 @@ fn main() {
         println!("cargo:rustc-cfg=core_reverse");
     }
 
-    // CString::into_boxed_c_str stabilized in Rust 1.20:
+    // CString::into_boxed_c_str and PathBuf::into_boxed_path stabilized in Rust 1.20:
     // https://doc.rust-lang.org/std/ffi/struct.CString.html#method.into_boxed_c_str
+    // https://doc.rust-lang.org/std/path/struct.PathBuf.html#method.into_boxed_path
     if minor >= 20 {
         println!("cargo:rustc-cfg=de_boxed_c_str");
     }

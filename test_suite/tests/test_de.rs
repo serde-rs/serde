@@ -907,6 +907,20 @@ declare_tests! {
             Token::ByteBuf(b"/usr/local/lib"),
         ],
     }
+    test_boxed_path {
+        PathBuf::from("/usr/local/lib").into_boxed_path() => &[
+            Token::Str("/usr/local/lib"),
+        ],
+        PathBuf::from("/usr/local/lib").into_boxed_path() => &[
+            Token::String("/usr/local/lib"),
+        ],
+        PathBuf::from("/usr/local/lib").into_boxed_path() => &[
+            Token::Bytes(b"/usr/local/lib"),
+        ],
+        PathBuf::from("/usr/local/lib").into_boxed_path() => &[
+            Token::ByteBuf(b"/usr/local/lib"),
+        ],
+    }
     test_cstring {
         CString::new("abc").unwrap() => &[
             Token::Bytes(b"abc"),

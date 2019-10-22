@@ -1610,6 +1610,9 @@ impl<'de> Deserialize<'de> for PathBuf {
     }
 }
 
+#[cfg(all(feature = "std", de_boxed_c_str))]
+forwarded_impl!((), Box<Path>, PathBuf::into_boxed_path);
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // If this were outside of the serde crate, it would just use:
