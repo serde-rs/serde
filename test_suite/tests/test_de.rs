@@ -889,10 +889,22 @@ declare_tests! {
         Path::new("/usr/local/lib") => &[
             Token::BorrowedStr("/usr/local/lib"),
         ],
+        Path::new("/usr/local/lib") => &[
+            Token::BorrowedBytes(b"/usr/local/lib"),
+        ],
     }
     test_path_buf {
         PathBuf::from("/usr/local/lib") => &[
+            Token::Str("/usr/local/lib"),
+        ],
+        PathBuf::from("/usr/local/lib") => &[
             Token::String("/usr/local/lib"),
+        ],
+        PathBuf::from("/usr/local/lib") => &[
+            Token::Bytes(b"/usr/local/lib"),
+        ],
+        PathBuf::from("/usr/local/lib") => &[
+            Token::ByteBuf(b"/usr/local/lib"),
         ],
     }
     test_cstring {
