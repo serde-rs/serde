@@ -34,6 +34,7 @@ fn main() {
     // https://doc.rust-lang.org/std/path/struct.PathBuf.html#method.into_boxed_path
     if minor >= 20 {
         println!("cargo:rustc-cfg=de_boxed_c_str");
+        println!("cargo:rustc-cfg=de_boxed_path");
     }
 
     // From<Box<T>> for Rc<T> / Arc<T> stabilized in Rust 1.21:
