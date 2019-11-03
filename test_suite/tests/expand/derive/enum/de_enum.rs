@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 enum DeEnum<B, C, D> {
     Unit,
     Seq(i8, B, C, D),
