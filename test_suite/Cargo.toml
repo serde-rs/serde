@@ -4,6 +4,7 @@ version = "0.0.0"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 edition = "2018"
 publish = false
+build = "build.rs"
 
 [features]
 unstable = ["serde/unstable"]
