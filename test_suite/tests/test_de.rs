@@ -137,6 +137,12 @@ enum EnumOther {
     Other,
 }
 
+#[derive(PartialEq, Debug, Deserialize)]
+#[serde(untagged)]
+enum EnumUntaggedUnit {
+    Unit,
+}
+
 #[derive(PartialEq, Debug)]
 struct IgnoredAny;
 
@@ -787,6 +793,9 @@ declare_tests! {
             Token::Str("Foo"),
             Token::Unit,
         ],
+    }
+    test_enum_untagged_unit_from_none {
+        UntaggedUnit::Unit => &[Token::None],
     }
     test_box {
         Box::new(0i32) => &[Token::I32(0)],
