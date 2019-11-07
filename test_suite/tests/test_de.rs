@@ -795,7 +795,7 @@ declare_tests! {
         ],
     }
     test_enum_untagged_unit_from_none {
-        UntaggedUnit::Unit => &[Token::None],
+        EnumUntaggedUnit::Unit => &[Token::None],
     }
     test_box {
         Box::new(0i32) => &[Token::I32(0)],
