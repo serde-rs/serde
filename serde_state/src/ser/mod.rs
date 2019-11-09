@@ -12,11 +12,10 @@ mod seed_impls;
 pub use self::seed_impls::{Seeded, Unseeded};
 
 pub use serde::ser::*;
-/// Placeholder
-pub trait SerializeState<Seed: ?Sized> {
-
-    /// Placeholder
-    fn serialize_state<S>(&self, serializer: S, seed: &Seed) -> Result<S::Ok, S::Error>
+/// Stateful variant of serdeäs `Serialize` trait
+pub trait SerializeState<State: ?Sized> {
+    /// Serializes `self`
+    fn serialize_state<S>(&self, serializer: S, state: &State) -> Result<S::Ok, S::Error>
     where
         S: Serializer;
 }

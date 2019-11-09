@@ -1396,7 +1396,7 @@ impl Field {
                 }
 
                 // Parse `#[serde(deserialize_state_with = "...")]`
-                Meta(NameValue(ref m)) if m.path ==  DESERIALIZE_STATE_WITH => {
+                Meta(NameValue(ref m)) if m.path == DESERIALIZE_STATE_WITH => {
                     if let Ok(path) = parse_lit_into_path(cx, DESERIALIZE_STATE_WITH, &m.lit) {
                         deserialize_state_with.set(&m.path, path);
                     }
@@ -1836,7 +1836,7 @@ fn parse_lit_into_generics(
     attr_name: Symbol,
     lit: &syn::Lit,
 ) -> Result<Vec<syn::GenericParam>, ()> {
-    let string = try!(get_lit_str(cx, attr_name, lit));
+    let string = get_lit_str(cx, attr_name, lit)?;
     if string.value().is_empty() {
         cx.error_spanned_by(lit, "at least one identifier must be defined");
         return Err(());
