@@ -290,7 +290,7 @@ pub trait Serialize {
 ///  - **newtype_variant**
 ///    - For example the `E::N` in `enum E { N(u8) }`.
 ///  - **seq**
-///    - A variably sized heterogeneous sequence of values, for example
+///    - A variably sized homogeneous sequence of values, for example
 ///      `Vec<T>` or `HashSet<T>`. When serializing, the length may or may not
 ///      be known before iterating through all the data. When deserializing,
 ///      the length is determined by looking at the serialized data.
