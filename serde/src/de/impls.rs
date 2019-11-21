@@ -82,7 +82,7 @@ impl<'de> Deserialize<'de> for bool {
 ////////////////////////////////////////////////////////////////////////////////
 
 macro_rules! visit_integer_method {
-    ($src_ty:ident, $method:ident, $from_method:ident, $group:ident, $group_ty:ident) => {
+    ($src_ty:ident, $method:ident, $from_method:ident, $group:ident $(, $err_msg:expr )?) => {
         #[inline]
         fn $method<E>(self, v: $src_ty) -> Result<Self::Value, E>
         where
@@ -90,9 +90,17 @@ macro_rules! visit_integer_method {
         {
             match FromPrimitive::$from_method(v) {
                 Some(v) => Ok(v),
-                None => Err(Error::invalid_value(Unexpected::$group(v as $group_ty), &self)),
+                None => visit_integer_method!(@ERR self, $group, v $(, $err_msg)?),
             }
         }
+    };
+
+    (@ERR $self:ident, $group:ident, $v: ident, $msg:expr) => {
+        Err(Error::invalid_value(Unexpected::$group($msg), &$self))
+    };
+
+    (@ERR $self:ident, $group:ident, $v:ident) => {
+        Err(Error::invalid_value(Unexpected::$group($v as _), &$self))
     }
 }
 
@@ -136,19 +144,19 @@ macro_rules! impl_deserialize_num {
     };
 
     (integer $ty:ident) => {
-        visit_integer_method!(i8, visit_i8, from_i8, Signed, i64);
-        visit_integer_method!(i16, visit_i16, from_i16, Signed, i64);
-        visit_integer_method!(i32, visit_i32, from_i32, Signed, i64);
-        visit_integer_method!(i64, visit_i64, from_i64, Signed, i64);
+        visit_integer_method!(i8, visit_i8, from_i8, Signed);
+        visit_integer_method!(i16, visit_i16, from_i16, Signed);
+        visit_integer_method!(i32, visit_i32, from_i32, Signed);
+        visit_integer_method!(i64, visit_i64, from_i64, Signed);
 
-        visit_integer_method!(u8, visit_u8, from_u8, Unsigned, u64);
-        visit_integer_method!(u16, visit_u16, from_u16, Unsigned, u64);
-        visit_integer_method!(u32, visit_u32, from_u32, Unsigned, u64);
-        visit_integer_method!(u64, visit_u64, from_u64, Unsigned, u64);
+        visit_integer_method!(u8, visit_u8, from_u8, Unsigned);
+        visit_integer_method!(u16, visit_u16, from_u16, Unsigned);
+        visit_integer_method!(u32, visit_u32, from_u32, Unsigned);
+        visit_integer_method!(u64, visit_u64, from_u64, Unsigned);
 
         serde_if_integer128! {
-            visit_integer_method!(i128, visit_i128, from_i128, Signed128, i128);
-            visit_integer_method!(u128, visit_u128, from_u128, Unsigned128, u128);
+            visit_integer_method!(i128, visit_i128, from_i128, Other, "`i128`");
+            visit_integer_method!(u128, visit_u128, from_u128, Other, "`u128`");
         }
     };
 
