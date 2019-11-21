@@ -90,17 +90,17 @@ macro_rules! visit_integer_method {
         {
             match FromPrimitive::$from_method(v) {
                 Some(v) => Ok(v),
-                None => visit_integer_method!(@ERR self, $group, v $(, $err_msg)*),
+                None => visit_integer_method!(ERR self, $group, v $(, $err_msg)*),
             }
         }
     };
 
-    (@ERR $self:ident, $group:ident, $v: ident, $msg:expr) => {
-        Err(Error::invalid_value(Unexpected::$group($msg), &$self))
+    (ERR $this:ident, $group:ident, $v: ident, $msg:expr) => {
+        Err(Error::invalid_value(Unexpected::$group($msg), &$this))
     };
 
-    (@ERR $self:ident, $group:ident, $v:ident) => {
-        Err(Error::invalid_value(Unexpected::$group($v as _), &$self))
+    (ERR $this:ident, $group:ident, $v:ident) => {
+        Err(Error::invalid_value(Unexpected::$group($v as _), &$this))
     }
 }
 
