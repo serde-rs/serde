@@ -337,9 +337,17 @@ pub enum Unexpected<'a> {
     /// was not expected.
     Unsigned(u64),
 
+    /// The input contained an unsigned integer `u128` was not expected.
+    #[cfg(integer128)]
+    Unsigned128(u128),
+
     /// The input contained a signed integer `i8`, `i16`, `i32` or `i64` that
     /// was not expected.
     Signed(i64),
+
+    /// The input contained an unsigned integer `i128` was not expected.
+    #[cfg(integer128)]
+    Signed128(i128),
 
     /// The input contained a floating point `f32` or `f64` that was not
     /// expected.
@@ -398,7 +406,9 @@ impl<'a> fmt::Display for Unexpected<'a> {
         match *self {
             Bool(b) => write!(formatter, "boolean `{}`", b),
             Unsigned(i) => write!(formatter, "integer `{}`", i),
+            Unsigned128(i) => write!(formatter, "integer `{}`", i),
             Signed(i) => write!(formatter, "integer `{}`", i),
+            Signed128(i) => write!(formatter, "integer `{}`", i),
             Float(f) => write!(formatter, "floating point `{}`", f),
             Char(c) => write!(formatter, "character `{}`", c),
             Str(s) => write!(formatter, "string {:?}", s),

@@ -145,6 +145,11 @@ macro_rules! impl_deserialize_num {
         visit_integer_method!(u16, visit_u16, from_u16, Unsigned, u64);
         visit_integer_method!(u32, visit_u32, from_u32, Unsigned, u64);
         visit_integer_method!(u64, visit_u64, from_u64, Unsigned, u64);
+
+        serde_if_integer128! {
+            visit_integer_method!(i128, visit_i128, from_i128, Signed128, i128);
+            visit_integer_method!(u128, visit_u128, from_u128, Unsigned128, u128);
+        }
     };
 
     (float $ty:ident) => {
@@ -169,89 +174,8 @@ impl_deserialize_num!(f32, deserialize_f32, integer, float);
 impl_deserialize_num!(f64, deserialize_f64, integer, float);
 
 serde_if_integer128! {
-    impl<'de> Deserialize<'de> for i128 {
-        #[inline]
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            struct PrimitiveVisitor;
-
-            impl<'de> Visitor<'de> for PrimitiveVisitor {
-                type Value = i128;
-
-                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                    formatter.write_str("i128")
-                }
-
-                impl_deserialize_num!(integer i128);
-
-                #[inline]
-                fn visit_i128<E>(self, v: i128) -> Result<Self::Value, E>
-                where
-                    E: Error,
-                {
-                    Ok(v)
-                }
-
-                #[inline]
-                fn visit_u128<E>(self, v: u128) -> Result<Self::Value, E>
-                where
-                    E: Error,
-                {
-                    if v <= i128::max_value() as u128 {
-                        Ok(v as i128)
-                    } else {
-                        Err(Error::invalid_value(Unexpected::Other("u128"), &self))
-                    }
-                }
-            }
-
-            deserializer.deserialize_i128(PrimitiveVisitor)
-        }
-    }
-
-    impl<'de> Deserialize<'de> for u128 {
-        #[inline]
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            struct PrimitiveVisitor;
-
-            impl<'de> Visitor<'de> for PrimitiveVisitor {
-                type Value = u128;
-
-                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                    formatter.write_str("u128")
-                }
-
-                impl_deserialize_num!(integer u128);
-
-                #[inline]
-                fn visit_i128<E>(self, v: i128) -> Result<Self::Value, E>
-                where
-                    E: Error,
-                {
-                    if v >= 0 {
-                        Ok(v as u128)
-                    } else {
-                        Err(Error::invalid_value(Unexpected::Other("i128"), &self))
-                    }
-                }
-
-                #[inline]
-                fn visit_u128<E>(self, v: u128) -> Result<Self::Value, E>
-                where
-                    E: Error,
-                {
-                    Ok(v)
-                }
-            }
-
-            deserializer.deserialize_u128(PrimitiveVisitor)
-        }
-    }
+    impl_deserialize_num!(i128, deserialize_i128, integer);
+    impl_deserialize_num!(u128, deserialize_u128, integer);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
