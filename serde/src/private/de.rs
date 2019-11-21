@@ -239,11 +239,15 @@ mod content {
         U16(u16),
         U32(u32),
         U64(u64),
+        #[cfg(integer128)]
+        U128(u128),
 
         I8(i8),
         I16(i16),
         I32(i32),
         I64(i64),
+        #[cfg(integer128)]
+        I128(i128),
 
         F32(f32),
         F64(f64),
@@ -282,10 +286,14 @@ mod content {
                 Content::U16(n) => Unexpected::Unsigned(n as u64),
                 Content::U32(n) => Unexpected::Unsigned(n as u64),
                 Content::U64(n) => Unexpected::Unsigned(n),
+                #[cfg(integer128)]
+                Content::U128(_) => Unexpected::Other("unexpected `u128`"),
                 Content::I8(n) => Unexpected::Signed(n as i64),
                 Content::I16(n) => Unexpected::Signed(n as i64),
                 Content::I32(n) => Unexpected::Signed(n as i64),
                 Content::I64(n) => Unexpected::Signed(n),
+                #[cfg(integer128)]
+                Content::I128(_) => Unexpected::Other("unexpected `i128`"),
                 Content::F32(f) => Unexpected::Float(f as f64),
                 Content::F64(f) => Unexpected::Float(f),
                 Content::Char(c) => Unexpected::Char(c),
@@ -514,6 +522,22 @@ mod content {
             Err(de::Error::custom(
                 "untagged and internally tagged enums do not support enum input",
             ))
+        }
+
+        serde_if_integer128! {
+            fn visit_i128<F>(self, value: i128) -> Result<Self::Value, F>
+            where
+                F: de::Error,
+            {
+                Ok(Content::I128(value))
+            }
+
+            fn visit_u128<F>(self, value: u128) -> Result<Self::Value, F>
+            where
+                F: de::Error,
+            {
+                Ok(Content::U128(value))
+            }
         }
     }
 
@@ -807,6 +831,26 @@ mod content {
                 .visit_enum(visitor)
                 .map(TagOrContent::Content)
         }
+
+        serde_if_integer128! {
+            fn visit_i128<F>(self, value: i128) -> Result<Self::Value, F>
+            where
+                F: de::Error,
+            {
+                ContentVisitor::new()
+                    .visit_i128(value)
+                    .map(TagOrContent::Content)
+            }
+
+            fn visit_u128<F>(self, value: u128) -> Result<Self::Value, F>
+            where
+                F: de::Error,
+            {
+                ContentVisitor::new()
+                    .visit_u128(value)
+                    .map(TagOrContent::Content)
+            }
+        }
     }
 
     /// Used by generated code to deserialize an internally tagged enum.
@@ -1029,10 +1073,14 @@ mod content {
                 Content::U16(v) => visitor.visit_u16(v),
                 Content::U32(v) => visitor.visit_u32(v),
                 Content::U64(v) => visitor.visit_u64(v),
+                #[cfg(integer128)]
+                Content::U128(v) => visitor.visit_u128(v),
                 Content::I8(v) => visitor.visit_i8(v),
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
+                #[cfg(integer128)]
+                Content::I128(v) => visitor.visit_i128(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1085,10 +1133,14 @@ mod content {
                 Content::U16(v) => visitor.visit_u16(v),
                 Content::U32(v) => visitor.visit_u32(v),
                 Content::U64(v) => visitor.visit_u64(v),
+                #[cfg(integer128)]
+                Content::U128(v) => visitor.visit_u128(v),
                 Content::I8(v) => visitor.visit_i8(v),
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
+                #[cfg(integer128)]
+                Content::I128(v) => visitor.visit_i128(v),
                 Content::F32(v) => visitor.visit_f32(v),
                 Content::F64(v) => visitor.visit_f64(v),
                 Content::Char(v) => visitor.visit_char(v),
@@ -1432,6 +1484,22 @@ mod content {
             drop(self);
             visitor.visit_unit()
         }
+
+        serde_if_integer128! {
+            fn deserialize_u128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+            where
+                V: Visitor<'de>,
+            {
+                self.deserialize_integer(visitor)
+            }
+
+            fn deserialize_i128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+            where
+                V: Visitor<'de>,
+            {
+                self.deserialize_integer(visitor)
+            }
+        }
     }
 
     impl<'de, E> ContentDeserializer<'de, E> {
@@ -1740,10 +1808,14 @@ mod content {
                 Content::U16(v) => visitor.visit_u16(v),
                 Content::U32(v) => visitor.visit_u32(v),
                 Content::U64(v) => visitor.visit_u64(v),
+                #[cfg(integer128)]
+                Content::U128(v) => visitor.visit_u128(v),
                 Content::I8(v) => visitor.visit_i8(v),
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
+                #[cfg(integer128)]
+                Content::I128(v) => visitor.visit_i128(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1802,10 +1874,14 @@ mod content {
                 Content::U16(v) => visitor.visit_u16(v),
                 Content::U32(v) => visitor.visit_u32(v),
                 Content::U64(v) => visitor.visit_u64(v),
+                #[cfg(integer128)]
+                Content::U128(v) => visitor.visit_u128(v),
                 Content::I8(v) => visitor.visit_i8(v),
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
+                #[cfg(integer128)]
+                Content::I128(v) => visitor.visit_i128(v),
                 Content::F32(v) => visitor.visit_f32(v),
                 Content::F64(v) => visitor.visit_f64(v),
                 Content::Char(v) => visitor.visit_char(v),
@@ -2134,6 +2210,22 @@ mod content {
             V: Visitor<'de>,
         {
             visitor.visit_unit()
+        }
+
+        serde_if_integer128! {
+            fn deserialize_u128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+            where
+                V: Visitor<'de>,
+            {
+                self.deserialize_integer(visitor)
+            }
+
+            fn deserialize_i128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+            where
+                V: Visitor<'de>,
+            {
+                self.deserialize_integer(visitor)
+            }
         }
     }
 
@@ -2776,6 +2868,13 @@ where
         deserialize_tuple_struct(&'static str, usize)
         deserialize_identifier()
         deserialize_ignored_any()
+    }
+
+    serde_if_integer128! {
+        forward_to_deserialize_other! {
+            deserialize_i128()
+            deserialize_u128()
+        }
     }
 }
 
