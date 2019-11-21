@@ -82,7 +82,7 @@ impl<'de> Deserialize<'de> for bool {
 ////////////////////////////////////////////////////////////////////////////////
 
 macro_rules! visit_integer_method {
-    ($src_ty:ident, $method:ident, $from_method:ident, $group:ident $(, $err_msg:expr )?) => {
+    ($src_ty:ident, $method:ident, $from_method:ident, $group:ident $(, $err_msg:expr )*) => {
         #[inline]
         fn $method<E>(self, v: $src_ty) -> Result<Self::Value, E>
         where
@@ -90,7 +90,7 @@ macro_rules! visit_integer_method {
         {
             match FromPrimitive::$from_method(v) {
                 Some(v) => Ok(v),
-                None => visit_integer_method!(@ERR self, $group, v $(, $err_msg)?),
+                None => visit_integer_method!(@ERR self, $group, v $(, $err_msg)*),
             }
         }
     };
