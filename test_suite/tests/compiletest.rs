@@ -1,4 +1,4 @@
-#[cfg(not(target_os = "emscripten"))]
+#[cfg_attr(target_os = "emscripten", ignore)]
 #[rustversion::attr(not(nightly), ignore)]
 #[test]
 fn ui() {
