@@ -1273,9 +1273,15 @@ enum StructTrait {
 impl StructTrait {
     fn serialize_field(&self, span: Span) -> TokenStream {
         match *self {
-            StructTrait::SerializeMap => quote_spanned!(span=> _serde::ser::SerializeMap::serialize_entry),
-            StructTrait::SerializeStruct => quote_spanned!(span=> _serde::ser::SerializeStruct::serialize_field),
-            StructTrait::SerializeStructVariant => quote_spanned!(span=> _serde::ser::SerializeStructVariant::serialize_field),
+            StructTrait::SerializeMap => {
+                quote_spanned!(span=> _serde::ser::SerializeMap::serialize_entry)
+            }
+            StructTrait::SerializeStruct => {
+                quote_spanned!(span=> _serde::ser::SerializeStruct::serialize_field)
+            }
+            StructTrait::SerializeStructVariant => {
+                quote_spanned!(span=> _serde::ser::SerializeStructVariant::serialize_field)
+            }
         }
     }
 
@@ -1301,9 +1307,15 @@ enum TupleTrait {
 impl TupleTrait {
     fn serialize_element(&self, span: Span) -> TokenStream {
         match *self {
-            TupleTrait::SerializeTuple => quote_spanned!(span=> _serde::ser::SerializeTuple::serialize_element),
-            TupleTrait::SerializeTupleStruct => quote_spanned!(span=> _serde::ser::SerializeTupleStruct::serialize_field),
-            TupleTrait::SerializeTupleVariant => quote_spanned!(span=> _serde::ser::SerializeTupleVariant::serialize_field),
+            TupleTrait::SerializeTuple => {
+                quote_spanned!(span=> _serde::ser::SerializeTuple::serialize_element)
+            }
+            TupleTrait::SerializeTupleStruct => {
+                quote_spanned!(span=> _serde::ser::SerializeTupleStruct::serialize_field)
+            }
+            TupleTrait::SerializeTupleVariant => {
+                quote_spanned!(span=> _serde::ser::SerializeTupleVariant::serialize_field)
+            }
         }
     }
 }
