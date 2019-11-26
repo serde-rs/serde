@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 enum DeEnum<B, C, D> {
