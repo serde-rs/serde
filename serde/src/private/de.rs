@@ -1267,6 +1267,7 @@ mod content {
         {
             match self.content {
                 Content::Unit => visitor.visit_unit(),
+                Content::None => visitor.visit_none(),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1986,6 +1987,7 @@ mod content {
         {
             match *self.content {
                 Content::Unit => visitor.visit_unit(),
+                Content::None => visitor.visit_none(),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
