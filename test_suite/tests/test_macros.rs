@@ -690,6 +690,7 @@ fn test_internally_tagged_enum() {
         C(BTreeMap<String, String>),
         D(Newtype),
         E(Struct),
+        F { f: () },
     }
 
     assert_tokens(
@@ -788,6 +789,23 @@ fn test_internally_tagged_enum() {
             Token::Str("E"),
             Token::U8(6),
             Token::SeqEnd,
+        ],
+    );
+
+    // Serializes to unit, deserializes from either depending on format's
+    // preference.
+    assert_de_tokens(
+        &InternallyTagged::F { unit: () },
+        &[
+            Token::Struct {
+                name: "InternallyTagged",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::Str("F"),
+            Token::Str("f"),
+            Token::None,
+            Token::StructEnd,
         ],
     );
 
@@ -1029,6 +1047,7 @@ fn test_adjacently_tagged_enum() {
         Newtype(T),
         Tuple(u8, u8),
         Struct { f: u8 },
+        StructWithUnit { u: () },
     }
 
     // unit with no content
@@ -1223,6 +1242,30 @@ fn test_adjacently_tagged_enum() {
             Token::StructEnd,
             Token::Str("t"),
             Token::Str("Struct"),
+            Token::StructEnd,
+        ],
+    );
+
+    // Struct containing unit, with tag first.
+    // Serializes to unit, deserializes from either depending on format's
+    // preference.
+    assert_de_tokens(
+        &AdjacentlyTagged::StructWithUnit::<u8> { u: () },
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Str("t"),
+            Token::Str("StructWithUnit"),
+            Token::Str("c"),
+            Token::Struct {
+                name: "StructWithUnit",
+                len: 1,
+            },
+            Token::Str("u"),
+            Token::None,
+            Token::StructEnd,
             Token::StructEnd,
         ],
     );
