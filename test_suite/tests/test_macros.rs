@@ -795,7 +795,7 @@ fn test_internally_tagged_enum() {
     // Serializes to unit, deserializes from either depending on format's
     // preference.
     assert_de_tokens(
-        &InternallyTagged::F { unit: () },
+        &InternallyTagged::F { f: () },
         &[
             Token::Struct {
                 name: "InternallyTagged",
