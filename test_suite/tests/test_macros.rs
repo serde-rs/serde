@@ -821,7 +821,7 @@ fn test_internally_tagged_enum() {
             Token::Str("Z"),
             Token::MapEnd,
         ],
-        "unknown variant `Z`, expected one of `A`, `B`, `C`, `D`, `E`",
+        "unknown variant `Z`, expected one of `A`, `B`, `C`, `D`, `E`, `F`",
     );
 }
 
