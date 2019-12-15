@@ -112,6 +112,14 @@ impl RenameRule {
             ScreamingKebabCase => ScreamingSnakeCase.apply_to_field(field).replace('_', "-"),
         }
     }
+
+    /// Returns the `RenameRule` if it is not `None`, `rule_b` otherwise.
+    pub fn or(&self, rule_b: &Self) -> Self {
+        match self {
+            None => *rule_b,
+            _ => *self,
+        }
+    }
 }
 
 pub struct ParseError<'a> {

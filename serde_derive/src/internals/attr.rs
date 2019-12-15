@@ -193,9 +193,21 @@ impl Name {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct RenameAllRules {
     serialize: RenameRule,
     deserialize: RenameRule,
+}
+
+impl RenameAllRules {
+    /// Returns a new `RenameAllRules` with the individual rules of `self` and
+    /// `other_rules` joined by `RenameRules::or`.
+    pub fn or(&self, other_rules: &Self) -> Self {
+        Self {
+            serialize: self.serialize.or(&other_rules.serialize),
+            deserialize: self.deserialize.or(&other_rules.deserialize),
+        }
+    }
 }
 
 /// Represents struct or enum attribute information.
@@ -205,6 +217,7 @@ pub struct Container {
     deny_unknown_fields: bool,
     default: Default,
     rename_all_rules: RenameAllRules,
+    rename_all_fields_rules: RenameAllRules,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     tag: TagType,
@@ -288,6 +301,8 @@ impl Container {
         let mut default = Attr::none(cx, DEFAULT);
         let mut rename_all_ser_rule = Attr::none(cx, RENAME_ALL);
         let mut rename_all_de_rule = Attr::none(cx, RENAME_ALL);
+        let mut rename_all_fields_ser_rule = Attr::none(cx, RENAME_ALL_FIELDS);
+        let mut rename_all_fields_de_rule = Attr::none(cx, RENAME_ALL_FIELDS);
         let mut ser_bound = Attr::none(cx, BOUND);
         let mut de_bound = Attr::none(cx, BOUND);
         let mut untagged = BoolAttr::none(cx, UNTAGGED);
@@ -339,6 +354,44 @@ impl Container {
                                     cx.error_spanned_by(de, err);
                                 }
                             }
+                        }
+                    }
+                } else if meta.path == RENAME_ALL_FIELDS {
+                    // #[serde(rename_all_fields = "foo")]
+                    // #[serde(rename_all_fields(serialize = "foo", deserialize = "bar"))]
+                    let one_name = meta.input.peek(Token![=]);
+                    let (ser, de) = get_renames(cx, RENAME_ALL_FIELDS, &meta)?;
+
+                    match item.data {
+                        syn::Data::Enum(_) => {
+                            if let Some(ser) = ser {
+                                match RenameRule::from_str(&ser.value()) {
+                                    Ok(rename_rule) => {
+                                        rename_all_fields_ser_rule.set(&meta.path, rename_rule);
+                                    }
+                                    Err(err) => cx.error_spanned_by(ser, err),
+                                }
+                            }
+                            if let Some(de) = de {
+                                match RenameRule::from_str(&de.value()) {
+                                    Ok(rename_rule) => {
+                                        rename_all_fields_de_rule.set(&meta.path, rename_rule);
+                                    }
+                                    Err(err) => {
+                                        if !one_name {
+                                            cx.error_spanned_by(de, err);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        syn::Data::Struct(_) => {
+                            let msg = "#[serde(rename_all_fields)] can only be used on enums";
+                            cx.error_spanned_by(&meta.path, msg);
+                        }
+                        syn::Data::Union(_) => {
+                            let msg = "#[serde(rename_all_fields)] can only be used on enums";
+                            cx.error_spanned_by(&meta.path, msg);
                         }
                     }
                 } else if meta.path == TRANSPARENT {
@@ -528,6 +581,10 @@ impl Container {
                 serialize: rename_all_ser_rule.get().unwrap_or(RenameRule::None),
                 deserialize: rename_all_de_rule.get().unwrap_or(RenameRule::None),
             },
+            rename_all_fields_rules: RenameAllRules {
+                serialize: rename_all_fields_ser_rule.get().unwrap_or(RenameRule::None),
+                deserialize: rename_all_fields_de_rule.get().unwrap_or(RenameRule::None),
+            },
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
             tag: decide_tag(cx, item, untagged, internal_tag, content),
@@ -549,6 +606,10 @@ impl Container {
 
     pub fn rename_all_rules(&self) -> &RenameAllRules {
         &self.rename_all_rules
+    }
+
+    pub fn rename_all_fields_rules(&self) -> &RenameAllRules {
+        &self.rename_all_fields_rules
     }
 
     pub fn transparent(&self) -> bool {
