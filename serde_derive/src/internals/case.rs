@@ -59,8 +59,8 @@ impl RenameRule {
     }
 
     /// Apply a renaming rule to an enum variant, returning the version expected in the source.
-    pub fn apply_to_variant(&self, variant: &str) -> String {
-        match *self {
+    pub fn apply_to_variant(self, variant: &str) -> String {
+        match self {
             None | PascalCase => variant.to_owned(),
             LowerCase => variant.to_ascii_lowercase(),
             UpperCase => variant.to_ascii_uppercase(),
@@ -84,8 +84,8 @@ impl RenameRule {
     }
 
     /// Apply a renaming rule to a struct field, returning the version expected in the source.
-    pub fn apply_to_field(&self, field: &str) -> String {
-        match *self {
+    pub fn apply_to_field(self, field: &str) -> String {
+        match self {
             None | LowerCase | SnakeCase => field.to_owned(),
             UpperCase => field.to_ascii_uppercase(),
             PascalCase => {
@@ -114,10 +114,10 @@ impl RenameRule {
     }
 
     /// Returns the `RenameRule` if it is not `None`, `rule_b` otherwise.
-    pub fn or(&self, rule_b: &Self) -> Self {
+    pub fn or(self, rule_b: Self) -> Self {
         match self {
-            None => *rule_b,
-            _ => *self,
+            None => rule_b,
+            _ => self,
         }
     }
 }

@@ -89,7 +89,7 @@ impl<'a> Container<'a> {
                             has_flatten = true;
                         }
                         field.attrs.rename_by_rules(
-                            &variant
+                            variant
                                 .attrs
                                 .rename_all_rules()
                                 .or(attrs.rename_all_fields_rules()),
