@@ -1,4 +1,5 @@
 #![allow(clippy::decimal_literal_representation, clippy::unreadable_literal)]
+#![cfg_attr(feature = "unstable", feature(never_type))]
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::default::Default;
