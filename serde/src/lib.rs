@@ -115,6 +115,7 @@
         // false positive
         needless_doctest_main,
         // noisy
+        missing_errors_doc,
         must_use_candidate,
     )
 )]
