@@ -91,6 +91,9 @@ impl<'a> Container<'a> {
                         field
                             .attrs
                             .rename_by_rules(variant.attrs.rename_all_rules());
+                        if attrs.allow_duplicates() || variant.attrs.allow_duplicates() {
+                            field.attrs.mark_allow_duplicates();
+                        }
                     }
                 }
             }
@@ -100,6 +103,9 @@ impl<'a> Container<'a> {
                         has_flatten = true;
                     }
                     field.attrs.rename_by_rules(attrs.rename_all_rules());
+                    if attrs.allow_duplicates() {
+                        field.attrs.mark_allow_duplicates();
+                    }
                 }
             }
         }

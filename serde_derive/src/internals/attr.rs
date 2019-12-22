@@ -222,6 +222,7 @@ pub struct Container {
     identifier: Identifier,
     has_flatten: bool,
     serde_path: Option<syn::Path>,
+    allow_duplicates: bool,
 }
 
 /// Styles of representing an enum.
@@ -304,6 +305,7 @@ impl Container {
         let mut field_identifier = BoolAttr::none(cx, FIELD_IDENTIFIER);
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
         let mut serde_path = Attr::none(cx, CRATE);
+        let mut allow_duplicates = BoolAttr::none(cx, ALLOW_DUPLICATES);
 
         for meta_item in item
             .attrs
@@ -574,6 +576,11 @@ impl Container {
                     }
                 }
 
+                // Parse `#[serde(allow_duplicates)]`
+                Meta(Path(word)) if word == ALLOW_DUPLICATES => {
+                    allow_duplicates.set_true(word);
+                }
+
                 Meta(meta_item) => {
                     let path = meta_item
                         .path()
@@ -611,6 +618,7 @@ impl Container {
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
             has_flatten: false,
             serde_path: serde_path.get(),
+            allow_duplicates: allow_duplicates.get(),
         }
     }
 
@@ -681,6 +689,10 @@ impl Container {
     pub fn serde_path(&self) -> Cow<syn::Path> {
         self.custom_serde_path()
             .map_or_else(|| Cow::Owned(parse_quote!(_serde)), Cow::Borrowed)
+    }
+
+    pub fn allow_duplicates(&self) -> bool {
+        self.allow_duplicates
     }
 }
 
@@ -837,6 +849,7 @@ pub struct Variant {
     serialize_with: Option<syn::ExprPath>,
     deserialize_with: Option<syn::ExprPath>,
     borrow: Option<syn::Meta>,
+    allow_duplicates: bool,
 }
 
 impl Variant {
@@ -854,6 +867,7 @@ impl Variant {
         let mut serialize_with = Attr::none(cx, SERIALIZE_WITH);
         let mut deserialize_with = Attr::none(cx, DESERIALIZE_WITH);
         let mut borrow = Attr::none(cx, BORROW);
+        let mut allow_duplicates = BoolAttr::none(cx, ALLOW_DUPLICATES);
 
         for meta_item in variant
             .attrs
@@ -1020,6 +1034,11 @@ impl Variant {
                     }
                 },
 
+                // Parse `#[serde(allow_duplicates)]`
+                Meta(Path(word)) if word == ALLOW_DUPLICATES => {
+                    allow_duplicates.set_true(word);
+                }
+
                 Meta(meta_item) => {
                     let path = meta_item
                         .path()
@@ -1052,6 +1071,7 @@ impl Variant {
             serialize_with: serialize_with.get(),
             deserialize_with: deserialize_with.get(),
             borrow: borrow.get(),
+            allow_duplicates: allow_duplicates.get(),
         }
     }
 
@@ -1103,6 +1123,10 @@ impl Variant {
     pub fn deserialize_with(&self) -> Option<&syn::ExprPath> {
         self.deserialize_with.as_ref()
     }
+
+    pub fn allow_duplicates(&self) -> bool {
+        self.allow_duplicates
+    }
 }
 
 /// Represents field attribute information
@@ -1120,6 +1144,7 @@ pub struct Field {
     getter: Option<syn::ExprPath>,
     flatten: bool,
     transparent: bool,
+    allow_duplicates: bool,
 }
 
 /// Represents the default to use for a field when deserializing.
@@ -1164,6 +1189,7 @@ impl Field {
         let mut borrowed_lifetimes = Attr::none(cx, BORROW);
         let mut getter = Attr::none(cx, GETTER);
         let mut flatten = BoolAttr::none(cx, FLATTEN);
+        let mut allow_duplicates = BoolAttr::none(cx, ALLOW_DUPLICATES);
 
         let ident = match &field.ident {
             Some(ident) => unraw(ident),
@@ -1331,6 +1357,11 @@ impl Field {
                     flatten.set_true(word);
                 }
 
+                // Parse `#[serde(allow_duplicates)]`
+                Meta(Path(word)) if word == ALLOW_DUPLICATES => {
+                    allow_duplicates.set_true(word);
+                }
+
                 Meta(meta_item) => {
                     let path = meta_item
                         .path()
@@ -1424,6 +1455,7 @@ impl Field {
             getter: getter.get(),
             flatten: flatten.get(),
             transparent: false,
+            allow_duplicates: allow_duplicates.get(),
         }
     }
 
@@ -1494,6 +1526,14 @@ impl Field {
 
     pub fn mark_transparent(&mut self) {
         self.transparent = true;
+    }
+
+    pub fn allow_duplicates(&self) -> bool {
+        self.allow_duplicates
+    }
+
+    pub fn mark_allow_duplicates(&mut self) {
+        self.allow_duplicates = true;
     }
 }
 

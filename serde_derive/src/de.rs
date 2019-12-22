@@ -2427,11 +2427,18 @@ fn deserialize_map(
                     })
                 }
             };
-            quote! {
-                __Field::#name => {
+            let duplicate_field_check = if field.attrs.allow_duplicates() {
+                quote! { }
+            } else {
+                quote! {
                     if _serde::export::Option::is_some(&#name) {
                         return _serde::export::Err(<__A::Error as _serde::de::Error>::duplicate_field(#deser_name));
                     }
+                }
+            };
+            quote! {
+                __Field::#name => {
+                    #duplicate_field_check
                     #name = _serde::export::Some(#visit);
                 }
             }
@@ -2665,11 +2672,18 @@ fn deserialize_map_in_place(
                     })
                 }
             };
-            quote! {
-                __Field::#name => {
+            let duplicate_field_check = if field.attrs.allow_duplicates() {
+                quote! { }
+            } else {
+                quote! {
                     if #name {
                         return _serde::export::Err(<__A::Error as _serde::de::Error>::duplicate_field(#deser_name));
                     }
+                }
+            };
+            quote! {
+                __Field::#name => {
+                    #duplicate_field_check
                     #visit;
                     #name = true;
                 }

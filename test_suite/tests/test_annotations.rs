@@ -952,6 +952,36 @@ fn test_skip_struct() {
     );
 }
 
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct AllowDuplicatesStruct {
+    a: i32,
+    #[serde(allow_duplicates)]
+    b: i32,
+}
+
+#[test]
+fn test_allow_duplicates_struct() {
+    assert_de_tokens(
+        &AllowDuplicatesStruct { a: 1, b: 3 },
+        &[
+            Token::Struct {
+                name: "AllowDuplicatesStruct",
+                len: 4,
+            },
+            Token::Str("a"),
+            Token::I8(1),
+            Token::Str("b"),
+            Token::I8(1),
+            Token::Str("b"),
+            Token::I8(2),
+            Token::Str("b"),
+            Token::I8(3),
+            Token::StructEnd,
+        ],
+    );
+}
+
 #[derive(Debug, PartialEq, Serialize)]
 enum SkipSerializingEnum<'a, B, C>
 where
