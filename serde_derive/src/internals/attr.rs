@@ -1,3 +1,6 @@
+use internals::extended_meta::Meta::{List, NameValue, Path};
+use internals::extended_meta::NestedMeta::{self, Lit, Meta};
+use internals::extended_meta::{self, MetaListInner};
 use internals::symbol::*;
 use internals::Ctxt;
 use proc_macro2::{Group, Span, TokenStream, TokenTree};
@@ -9,8 +12,6 @@ use syn;
 use syn::parse::{self, Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::Ident;
-use syn::Meta::{List, NameValue, Path};
-use syn::NestedMeta::{Lit, Meta};
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
 // are `attr::Container::from_ast`, `attr::Variant::from_ast`, and
@@ -833,7 +834,7 @@ pub struct Variant {
     other: bool,
     serialize_with: Option<syn::ExprPath>,
     deserialize_with: Option<syn::ExprPath>,
-    borrow: Option<syn::Meta>,
+    borrow: Option<extended_meta::Meta>,
 }
 
 impl Variant {
@@ -1499,7 +1500,7 @@ type SerAndDe<T> = (Option<T>, Option<T>);
 fn get_ser_and_de<'a, 'b, T, F>(
     cx: &'b Ctxt,
     attr_name: Symbol,
-    metas: &'a Punctuated<syn::NestedMeta, Token![,]>,
+    metas: &'a Punctuated<NestedMeta, Token![,]>,
     f: F,
 ) -> Result<(VecAttr<'b, T>, VecAttr<'b, T>), ()>
 where
@@ -1541,7 +1542,7 @@ where
 
 fn get_renames<'a>(
     cx: &Ctxt,
-    items: &'a Punctuated<syn::NestedMeta, Token![,]>,
+    items: &'a Punctuated<NestedMeta, Token![,]>,
 ) -> Result<SerAndDe<&'a syn::LitStr>, ()> {
     let (ser, de) = get_ser_and_de(cx, RENAME, items, get_lit_str2)?;
     Ok((ser.at_most_one()?, de.at_most_one()?))
@@ -1549,7 +1550,7 @@ fn get_renames<'a>(
 
 fn get_multiple_renames<'a>(
     cx: &Ctxt,
-    items: &'a Punctuated<syn::NestedMeta, Token![,]>,
+    items: &'a Punctuated<NestedMeta, Token![,]>,
 ) -> Result<(Option<&'a syn::LitStr>, Vec<&'a syn::LitStr>), ()> {
     let (ser, de) = get_ser_and_de(cx, RENAME, items, get_lit_str2)?;
     Ok((ser.at_most_one()?, de.get()))
@@ -1557,23 +1558,19 @@ fn get_multiple_renames<'a>(
 
 fn get_where_predicates(
     cx: &Ctxt,
-    items: &Punctuated<syn::NestedMeta, Token![,]>,
+    items: &Punctuated<NestedMeta, Token![,]>,
 ) -> Result<SerAndDe<Vec<syn::WherePredicate>>, ()> {
     let (ser, de) = get_ser_and_de(cx, BOUND, items, parse_lit_into_where)?;
     Ok((ser.at_most_one()?, de.at_most_one()?))
 }
 
-pub fn get_serde_meta_items(cx: &Ctxt, attr: &syn::Attribute) -> Result<Vec<syn::NestedMeta>, ()> {
+pub fn get_serde_meta_items(cx: &Ctxt, attr: &syn::Attribute) -> Result<Vec<NestedMeta>, ()> {
     if attr.path != SERDE {
         return Ok(Vec::new());
     }
 
-    match attr.parse_meta() {
-        Ok(List(meta)) => Ok(meta.nested.into_iter().collect()),
-        Ok(other) => {
-            cx.error_spanned_by(other, "expected #[serde(...)]");
-            Err(())
-        }
+    match attr.parse_args_with(MetaListInner::parse_terminated) {
+        Ok(meta) => Ok(meta.into_iter().collect()),
         Err(err) => {
             cx.syn_error(err);
             Err(())
