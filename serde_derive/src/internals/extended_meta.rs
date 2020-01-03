@@ -38,7 +38,13 @@ pub enum NestedMeta {
 pub struct MetaNameValue {
     pub path: Path,
     pub eq_token: Eq,
-    pub lit: Lit,
+    pub value: MetaValue,
+}
+
+#[derive(Clone)]
+pub enum MetaValue {
+    Lit(Lit),
+    Path(Path),
 }
 
 mod parsing {
@@ -107,6 +113,18 @@ mod parsing {
         }
     }
 
+    impl Parse for MetaValue {
+        fn parse(input: ParseStream) -> Result<Self> {
+            if input.peek(Lit) {
+                input.parse().map(MetaValue::Lit)
+            } else if input.peek(Ident::peek_any) {
+                input.parse().map(MetaValue::Path)
+            } else {
+                Err(input.error("expected literal or path"))
+            }
+        }
+    }
+
     pub fn parse_meta_after_path(path: Path, input: ParseStream) -> Result<Meta> {
         if input.peek(Paren) {
             parse_meta_list_after_path(path, input).map(Meta::List)
@@ -130,7 +148,7 @@ mod parsing {
         Ok(MetaNameValue {
             path,
             eq_token: input.parse()?,
-            lit: input.parse()?,
+            value: input.parse()?,
         })
     }
 }
@@ -172,7 +190,16 @@ mod printing {
         fn to_tokens(&self, tokens: &mut TokenStream) {
             self.path.to_tokens(tokens);
             self.eq_token.to_tokens(tokens);
-            self.lit.to_tokens(tokens);
+            self.value.to_tokens(tokens);
+        }
+    }
+
+    impl ToTokens for MetaValue {
+        fn to_tokens(&self, tokens: &mut TokenStream) {
+            match self {
+                MetaValue::Lit(lit) => lit.to_tokens(tokens),
+                MetaValue::Path(path) => path.to_tokens(tokens),
+            }
         }
     }
 }
