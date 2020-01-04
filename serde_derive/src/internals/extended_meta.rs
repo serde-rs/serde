@@ -1,4 +1,4 @@
-use proc_macro2::TokenTree;
+use proc_macro2::{TokenStream, TokenTree};
 use syn::parse::{Parse, Result};
 use syn::punctuated::Punctuated;
 use syn::token::{Comma, Eq, Paren};
@@ -40,7 +40,7 @@ pub enum NestedMeta {
 pub struct MetaNameValue {
     pub path: Path,
     pub eq_token: Eq,
-    pub value: TokenTree,
+    pub value: TokenStream,
 }
 
 impl MetaNameValue {
@@ -138,8 +138,16 @@ mod parsing {
         Ok(MetaNameValue {
             path,
             eq_token: input.parse()?,
-            value: input.parse()?,
+            value: input.call(parse_token_stream_without_comma)?,
         })
+    }
+
+    fn parse_token_stream_without_comma(input: ParseStream) -> Result<TokenStream> {
+        let mut stream = TokenStream::new();
+        while !input.peek(Comma) && !input.is_empty() {
+            stream.extend(Some(input.parse::<TokenTree>()?));
+        }
+        Ok(stream)
     }
 }
 
