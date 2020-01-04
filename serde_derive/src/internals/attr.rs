@@ -1,6 +1,6 @@
 use internals::extended_meta::Meta::{List, NameValue, Path};
 use internals::extended_meta::NestedMeta::{self, Lit, Meta};
-use internals::extended_meta::{self, MetaListInner, MetaValue};
+use internals::extended_meta::{self, MetaListInner};
 use internals::symbol::*;
 use internals::Ctxt;
 use proc_macro2::{Group, Span, TokenStream, TokenTree};
@@ -1509,7 +1509,7 @@ fn get_ser_and_de<'a, 'b, T, F>(
 ) -> Result<(VecAttr<'b, T>, VecAttr<'b, T>), ()>
 where
     T: 'a,
-    F: Fn(&Ctxt, Symbol, Symbol, &'a MetaValue) -> Result<T, ()>,
+    F: Fn(&Ctxt, Symbol, Symbol, &'a syn::Expr) -> Result<T, ()>,
 {
     let mut ser_meta = VecAttr::none(cx, attr_name);
     let mut de_meta = VecAttr::none(cx, attr_name);
@@ -1585,7 +1585,7 @@ pub fn get_serde_meta_items(cx: &Ctxt, attr: &syn::Attribute) -> Result<Vec<Nest
 fn get_lit_str<'a>(
     cx: &Ctxt,
     attr_name: Symbol,
-    value: &'a MetaValue,
+    value: &'a syn::Expr,
 ) -> Result<&'a syn::LitStr, ()> {
     get_lit_str2(cx, attr_name, attr_name, value)
 }
@@ -1594,9 +1594,13 @@ fn get_lit_str2<'a>(
     cx: &Ctxt,
     attr_name: Symbol,
     meta_item_name: Symbol,
-    value: &'a MetaValue,
+    value: &'a syn::Expr,
 ) -> Result<&'a syn::LitStr, ()> {
-    if let MetaValue::Lit(syn::Lit::Str(lit)) = value {
+    if let syn::Expr::Lit(syn::ExprLit {
+        lit: syn::Lit::Str(lit),
+        ..
+    }) = value
+    {
         Ok(lit)
     } else {
         cx.error_spanned_by(
@@ -1610,7 +1614,7 @@ fn get_lit_str2<'a>(
     }
 }
 
-fn parse_value_into_path(cx: &Ctxt, attr_name: Symbol, value: &MetaValue) -> Result<syn::Path, ()> {
+fn parse_value_into_path(cx: &Ctxt, attr_name: Symbol, value: &syn::Expr) -> Result<syn::Path, ()> {
     let string = get_lit_str(cx, attr_name, value)?;
     parse_lit_str(string).map_err(|_| {
         cx.error_spanned_by(value, format!("failed to parse path: {:?}", string.value()))
@@ -1620,7 +1624,7 @@ fn parse_value_into_path(cx: &Ctxt, attr_name: Symbol, value: &MetaValue) -> Res
 fn parse_value_into_expr_path(
     cx: &Ctxt,
     attr_name: Symbol,
-    value: &MetaValue,
+    value: &syn::Expr,
 ) -> Result<syn::ExprPath, ()> {
     let string = get_lit_str(cx, attr_name, value)?;
     parse_lit_str(string).map_err(|_| {
@@ -1632,7 +1636,7 @@ fn parse_value_into_where(
     cx: &Ctxt,
     attr_name: Symbol,
     meta_item_name: Symbol,
-    value: &MetaValue,
+    value: &syn::Expr,
 ) -> Result<Vec<syn::WherePredicate>, ()> {
     let string = get_lit_str2(cx, attr_name, meta_item_name, value)?;
     if string.value().is_empty() {
@@ -1646,7 +1650,7 @@ fn parse_value_into_where(
         .map_err(|err| cx.error_spanned_by(value, err))
 }
 
-fn parse_value_into_ty(cx: &Ctxt, attr_name: Symbol, value: &MetaValue) -> Result<syn::Type, ()> {
+fn parse_value_into_ty(cx: &Ctxt, attr_name: Symbol, value: &syn::Expr) -> Result<syn::Type, ()> {
     let string = get_lit_str(cx, attr_name, value)?;
 
     parse_lit_str(string).map_err(|_| {
@@ -1662,7 +1666,7 @@ fn parse_value_into_ty(cx: &Ctxt, attr_name: Symbol, value: &MetaValue) -> Resul
 fn parse_value_into_lifetimes(
     cx: &Ctxt,
     attr_name: Symbol,
-    value: &MetaValue,
+    value: &syn::Expr,
 ) -> Result<BTreeSet<syn::Lifetime>, ()> {
     let string = get_lit_str(cx, attr_name, value)?;
     if string.value().is_empty() {

@@ -1,6 +1,6 @@
 use syn::punctuated::Punctuated;
 use syn::token::{Comma, Eq, Paren};
-use syn::{Lit, Path};
+use syn::{Expr, Lit, Path};
 
 #[derive(Clone)]
 pub enum Meta {
@@ -38,13 +38,7 @@ pub enum NestedMeta {
 pub struct MetaNameValue {
     pub path: Path,
     pub eq_token: Eq,
-    pub value: MetaValue,
-}
-
-#[derive(Clone)]
-pub enum MetaValue {
-    Lit(Lit),
-    Path(Path),
+    pub value: Expr,
 }
 
 mod parsing {
@@ -109,18 +103,6 @@ mod parsing {
                 input.parse().map(NestedMeta::Meta)
             } else {
                 Err(input.error("expected identifier or literal"))
-            }
-        }
-    }
-
-    impl Parse for MetaValue {
-        fn parse(input: ParseStream) -> Result<Self> {
-            if input.peek(Lit) {
-                input.parse().map(MetaValue::Lit)
-            } else if input.peek(Ident::peek_any) {
-                input.parse().map(MetaValue::Path)
-            } else {
-                Err(input.error("expected literal or path"))
             }
         }
     }
@@ -191,15 +173,6 @@ mod printing {
             self.path.to_tokens(tokens);
             self.eq_token.to_tokens(tokens);
             self.value.to_tokens(tokens);
-        }
-    }
-
-    impl ToTokens for MetaValue {
-        fn to_tokens(&self, tokens: &mut TokenStream) {
-            match self {
-                MetaValue::Lit(lit) => lit.to_tokens(tokens),
-                MetaValue::Path(path) => path.to_tokens(tokens),
-            }
         }
     }
 }
