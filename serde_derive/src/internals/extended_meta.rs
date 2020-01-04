@@ -1,6 +1,8 @@
+use proc_macro2::TokenTree;
+use syn::parse::{Parse, Result};
 use syn::punctuated::Punctuated;
 use syn::token::{Comma, Eq, Paren};
-use syn::{Expr, Lit, Path};
+use syn::{Lit, Path};
 
 #[derive(Clone)]
 pub enum Meta {
@@ -38,7 +40,13 @@ pub enum NestedMeta {
 pub struct MetaNameValue {
     pub path: Path,
     pub eq_token: Eq,
-    pub value: Expr,
+    pub value: TokenTree,
+}
+
+impl MetaNameValue {
+    pub fn parse_value<T: Parse>(&self) -> Result<T> {
+        syn::parse2(self.value.clone().into())
+    }
 }
 
 mod parsing {
