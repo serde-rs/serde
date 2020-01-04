@@ -138,11 +138,11 @@ mod parsing {
         Ok(MetaNameValue {
             path,
             eq_token: input.parse()?,
-            value: input.call(parse_token_stream_without_comma)?,
+            value: input.call(parse_token_stream_until_comma)?,
         })
     }
 
-    fn parse_token_stream_without_comma(input: ParseStream) -> Result<TokenStream> {
+    fn parse_token_stream_until_comma(input: ParseStream) -> Result<TokenStream> {
         let mut stream = TokenStream::new();
         while !input.peek(Comma) && !input.is_empty() {
             stream.extend(Some(input.parse::<TokenTree>()?));
