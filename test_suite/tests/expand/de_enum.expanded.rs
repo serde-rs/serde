@@ -436,86 +436,82 @@ const _IMPL_DESERIALIZE_FOR_DeEnum: () = {
                                 where
                                     __A: _serde::de::SeqAccess<'de>,
                                 {
-                                    let __field0 = match match _serde::de::SeqAccess::next_element::<
-                                        i8,
-                                    >(
-                                        &mut __seq
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    } {
-                                        _serde::export::Some(__value) => __value,
-                                        _serde::export::None => {
-                                            return _serde::export::Err(
+                                    let __field0 =
+                                        match match _serde::de::SeqAccess::next_element::<i8>(
+                                            &mut __seq,
+                                        ) {
+                                            _serde::export::Ok(__val) => __val,
+                                            _serde::export::Err(__err) => {
+                                                return _serde::export::Err(__err);
+                                            }
+                                        } {
+                                            _serde::export::Some(__value) => __value,
+                                            _serde::export::None => {
+                                                return _serde::export::Err(
                                                 _serde::de::Error::invalid_length(
                                                     0usize,
                                                     &"tuple variant DeEnum::Seq with 4 elements",
                                                 ),
                                             );
-                                        }
-                                    };
-                                    let __field1 = match match _serde::de::SeqAccess::next_element::<
-                                        B,
-                                    >(
-                                        &mut __seq
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    } {
-                                        _serde::export::Some(__value) => __value,
-                                        _serde::export::None => {
-                                            return _serde::export::Err(
+                                            }
+                                        };
+                                    let __field1 =
+                                        match match _serde::de::SeqAccess::next_element::<B>(
+                                            &mut __seq,
+                                        ) {
+                                            _serde::export::Ok(__val) => __val,
+                                            _serde::export::Err(__err) => {
+                                                return _serde::export::Err(__err);
+                                            }
+                                        } {
+                                            _serde::export::Some(__value) => __value,
+                                            _serde::export::None => {
+                                                return _serde::export::Err(
                                                 _serde::de::Error::invalid_length(
                                                     1usize,
                                                     &"tuple variant DeEnum::Seq with 4 elements",
                                                 ),
                                             );
-                                        }
-                                    };
-                                    let __field2 = match match _serde::de::SeqAccess::next_element::<
-                                        C,
-                                    >(
-                                        &mut __seq
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    } {
-                                        _serde::export::Some(__value) => __value,
-                                        _serde::export::None => {
-                                            return _serde::export::Err(
+                                            }
+                                        };
+                                    let __field2 =
+                                        match match _serde::de::SeqAccess::next_element::<C>(
+                                            &mut __seq,
+                                        ) {
+                                            _serde::export::Ok(__val) => __val,
+                                            _serde::export::Err(__err) => {
+                                                return _serde::export::Err(__err);
+                                            }
+                                        } {
+                                            _serde::export::Some(__value) => __value,
+                                            _serde::export::None => {
+                                                return _serde::export::Err(
                                                 _serde::de::Error::invalid_length(
                                                     2usize,
                                                     &"tuple variant DeEnum::Seq with 4 elements",
                                                 ),
                                             );
-                                        }
-                                    };
-                                    let __field3 = match match _serde::de::SeqAccess::next_element::<
-                                        D,
-                                    >(
-                                        &mut __seq
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    } {
-                                        _serde::export::Some(__value) => __value,
-                                        _serde::export::None => {
-                                            return _serde::export::Err(
+                                            }
+                                        };
+                                    let __field3 =
+                                        match match _serde::de::SeqAccess::next_element::<D>(
+                                            &mut __seq,
+                                        ) {
+                                            _serde::export::Ok(__val) => __val,
+                                            _serde::export::Err(__err) => {
+                                                return _serde::export::Err(__err);
+                                            }
+                                        } {
+                                            _serde::export::Some(__value) => __value,
+                                            _serde::export::None => {
+                                                return _serde::export::Err(
                                                 _serde::de::Error::invalid_length(
                                                     3usize,
                                                     &"tuple variant DeEnum::Seq with 4 elements",
                                                 ),
                                             );
-                                        }
-                                    };
+                                            }
+                                        };
                                     _serde::export::Ok(DeEnum::Seq(
                                         __field0, __field1, __field2, __field3,
                                     ))
@@ -647,86 +643,82 @@ const _IMPL_DESERIALIZE_FOR_DeEnum: () = {
                                 where
                                     __A: _serde::de::SeqAccess<'de>,
                                 {
-                                    let __field0 = match match _serde::de::SeqAccess::next_element::<
-                                        i8,
-                                    >(
-                                        &mut __seq
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    } {
-                                        _serde::export::Some(__value) => __value,
-                                        _serde::export::None => {
-                                            return _serde::export::Err(
+                                    let __field0 =
+                                        match match _serde::de::SeqAccess::next_element::<i8>(
+                                            &mut __seq,
+                                        ) {
+                                            _serde::export::Ok(__val) => __val,
+                                            _serde::export::Err(__err) => {
+                                                return _serde::export::Err(__err);
+                                            }
+                                        } {
+                                            _serde::export::Some(__value) => __value,
+                                            _serde::export::None => {
+                                                return _serde::export::Err(
                                                 _serde::de::Error::invalid_length(
                                                     0usize,
                                                     &"struct variant DeEnum::Map with 4 elements",
                                                 ),
                                             );
-                                        }
-                                    };
-                                    let __field1 = match match _serde::de::SeqAccess::next_element::<
-                                        B,
-                                    >(
-                                        &mut __seq
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    } {
-                                        _serde::export::Some(__value) => __value,
-                                        _serde::export::None => {
-                                            return _serde::export::Err(
+                                            }
+                                        };
+                                    let __field1 =
+                                        match match _serde::de::SeqAccess::next_element::<B>(
+                                            &mut __seq,
+                                        ) {
+                                            _serde::export::Ok(__val) => __val,
+                                            _serde::export::Err(__err) => {
+                                                return _serde::export::Err(__err);
+                                            }
+                                        } {
+                                            _serde::export::Some(__value) => __value,
+                                            _serde::export::None => {
+                                                return _serde::export::Err(
                                                 _serde::de::Error::invalid_length(
                                                     1usize,
                                                     &"struct variant DeEnum::Map with 4 elements",
                                                 ),
                                             );
-                                        }
-                                    };
-                                    let __field2 = match match _serde::de::SeqAccess::next_element::<
-                                        C,
-                                    >(
-                                        &mut __seq
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    } {
-                                        _serde::export::Some(__value) => __value,
-                                        _serde::export::None => {
-                                            return _serde::export::Err(
+                                            }
+                                        };
+                                    let __field2 =
+                                        match match _serde::de::SeqAccess::next_element::<C>(
+                                            &mut __seq,
+                                        ) {
+                                            _serde::export::Ok(__val) => __val,
+                                            _serde::export::Err(__err) => {
+                                                return _serde::export::Err(__err);
+                                            }
+                                        } {
+                                            _serde::export::Some(__value) => __value,
+                                            _serde::export::None => {
+                                                return _serde::export::Err(
                                                 _serde::de::Error::invalid_length(
                                                     2usize,
                                                     &"struct variant DeEnum::Map with 4 elements",
                                                 ),
                                             );
-                                        }
-                                    };
-                                    let __field3 = match match _serde::de::SeqAccess::next_element::<
-                                        D,
-                                    >(
-                                        &mut __seq
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    } {
-                                        _serde::export::Some(__value) => __value,
-                                        _serde::export::None => {
-                                            return _serde::export::Err(
+                                            }
+                                        };
+                                    let __field3 =
+                                        match match _serde::de::SeqAccess::next_element::<D>(
+                                            &mut __seq,
+                                        ) {
+                                            _serde::export::Ok(__val) => __val,
+                                            _serde::export::Err(__err) => {
+                                                return _serde::export::Err(__err);
+                                            }
+                                        } {
+                                            _serde::export::Some(__value) => __value,
+                                            _serde::export::None => {
+                                                return _serde::export::Err(
                                                 _serde::de::Error::invalid_length(
                                                     3usize,
                                                     &"struct variant DeEnum::Map with 4 elements",
                                                 ),
                                             );
-                                        }
-                                    };
+                                            }
+                                        };
                                     _serde::export::Ok(DeEnum::Map {
                                         a: __field0,
                                         b: __field1,
@@ -939,86 +931,82 @@ const _IMPL_DESERIALIZE_FOR_DeEnum: () = {
                                 where
                                     __A: _serde::de::SeqAccess<'de>,
                                 {
-                                    let __field0 = match match _serde::de::SeqAccess::next_element::<
-                                        i8,
-                                    >(
-                                        &mut __seq
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    } {
-                                        _serde::export::Some(__value) => __value,
-                                        _serde::export::None => {
-                                            return _serde::export::Err(
+                                    let __field0 =
+                                        match match _serde::de::SeqAccess::next_element::<i8>(
+                                            &mut __seq,
+                                        ) {
+                                            _serde::export::Ok(__val) => __val,
+                                            _serde::export::Err(__err) => {
+                                                return _serde::export::Err(__err);
+                                            }
+                                        } {
+                                            _serde::export::Some(__value) => __value,
+                                            _serde::export::None => {
+                                                return _serde::export::Err(
                                                 _serde::de::Error::invalid_length(
                                                     0usize,
                                                     &"tuple variant DeEnum::_Seq2 with 4 elements",
                                                 ),
                                             );
-                                        }
-                                    };
-                                    let __field1 = match match _serde::de::SeqAccess::next_element::<
-                                        B,
-                                    >(
-                                        &mut __seq
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    } {
-                                        _serde::export::Some(__value) => __value,
-                                        _serde::export::None => {
-                                            return _serde::export::Err(
+                                            }
+                                        };
+                                    let __field1 =
+                                        match match _serde::de::SeqAccess::next_element::<B>(
+                                            &mut __seq,
+                                        ) {
+                                            _serde::export::Ok(__val) => __val,
+                                            _serde::export::Err(__err) => {
+                                                return _serde::export::Err(__err);
+                                            }
+                                        } {
+                                            _serde::export::Some(__value) => __value,
+                                            _serde::export::None => {
+                                                return _serde::export::Err(
                                                 _serde::de::Error::invalid_length(
                                                     1usize,
                                                     &"tuple variant DeEnum::_Seq2 with 4 elements",
                                                 ),
                                             );
-                                        }
-                                    };
-                                    let __field2 = match match _serde::de::SeqAccess::next_element::<
-                                        C,
-                                    >(
-                                        &mut __seq
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    } {
-                                        _serde::export::Some(__value) => __value,
-                                        _serde::export::None => {
-                                            return _serde::export::Err(
+                                            }
+                                        };
+                                    let __field2 =
+                                        match match _serde::de::SeqAccess::next_element::<C>(
+                                            &mut __seq,
+                                        ) {
+                                            _serde::export::Ok(__val) => __val,
+                                            _serde::export::Err(__err) => {
+                                                return _serde::export::Err(__err);
+                                            }
+                                        } {
+                                            _serde::export::Some(__value) => __value,
+                                            _serde::export::None => {
+                                                return _serde::export::Err(
                                                 _serde::de::Error::invalid_length(
                                                     2usize,
                                                     &"tuple variant DeEnum::_Seq2 with 4 elements",
                                                 ),
                                             );
-                                        }
-                                    };
-                                    let __field3 = match match _serde::de::SeqAccess::next_element::<
-                                        D,
-                                    >(
-                                        &mut __seq
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    } {
-                                        _serde::export::Some(__value) => __value,
-                                        _serde::export::None => {
-                                            return _serde::export::Err(
+                                            }
+                                        };
+                                    let __field3 =
+                                        match match _serde::de::SeqAccess::next_element::<D>(
+                                            &mut __seq,
+                                        ) {
+                                            _serde::export::Ok(__val) => __val,
+                                            _serde::export::Err(__err) => {
+                                                return _serde::export::Err(__err);
+                                            }
+                                        } {
+                                            _serde::export::Some(__value) => __value,
+                                            _serde::export::None => {
+                                                return _serde::export::Err(
                                                 _serde::de::Error::invalid_length(
                                                     3usize,
                                                     &"tuple variant DeEnum::_Seq2 with 4 elements",
                                                 ),
                                             );
-                                        }
-                                    };
+                                            }
+                                        };
                                     _serde::export::Ok(DeEnum::_Seq2(
                                         __field0, __field1, __field2, __field3,
                                     ))
@@ -1150,86 +1138,82 @@ const _IMPL_DESERIALIZE_FOR_DeEnum: () = {
                                 where
                                     __A: _serde::de::SeqAccess<'de>,
                                 {
-                                    let __field0 = match match _serde::de::SeqAccess::next_element::<
-                                        i8,
-                                    >(
-                                        &mut __seq
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    } {
-                                        _serde::export::Some(__value) => __value,
-                                        _serde::export::None => {
-                                            return _serde::export::Err(
+                                    let __field0 =
+                                        match match _serde::de::SeqAccess::next_element::<i8>(
+                                            &mut __seq,
+                                        ) {
+                                            _serde::export::Ok(__val) => __val,
+                                            _serde::export::Err(__err) => {
+                                                return _serde::export::Err(__err);
+                                            }
+                                        } {
+                                            _serde::export::Some(__value) => __value,
+                                            _serde::export::None => {
+                                                return _serde::export::Err(
                                                 _serde::de::Error::invalid_length(
                                                     0usize,
                                                     &"struct variant DeEnum::_Map2 with 4 elements",
                                                 ),
                                             );
-                                        }
-                                    };
-                                    let __field1 = match match _serde::de::SeqAccess::next_element::<
-                                        B,
-                                    >(
-                                        &mut __seq
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    } {
-                                        _serde::export::Some(__value) => __value,
-                                        _serde::export::None => {
-                                            return _serde::export::Err(
+                                            }
+                                        };
+                                    let __field1 =
+                                        match match _serde::de::SeqAccess::next_element::<B>(
+                                            &mut __seq,
+                                        ) {
+                                            _serde::export::Ok(__val) => __val,
+                                            _serde::export::Err(__err) => {
+                                                return _serde::export::Err(__err);
+                                            }
+                                        } {
+                                            _serde::export::Some(__value) => __value,
+                                            _serde::export::None => {
+                                                return _serde::export::Err(
                                                 _serde::de::Error::invalid_length(
                                                     1usize,
                                                     &"struct variant DeEnum::_Map2 with 4 elements",
                                                 ),
                                             );
-                                        }
-                                    };
-                                    let __field2 = match match _serde::de::SeqAccess::next_element::<
-                                        C,
-                                    >(
-                                        &mut __seq
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    } {
-                                        _serde::export::Some(__value) => __value,
-                                        _serde::export::None => {
-                                            return _serde::export::Err(
+                                            }
+                                        };
+                                    let __field2 =
+                                        match match _serde::de::SeqAccess::next_element::<C>(
+                                            &mut __seq,
+                                        ) {
+                                            _serde::export::Ok(__val) => __val,
+                                            _serde::export::Err(__err) => {
+                                                return _serde::export::Err(__err);
+                                            }
+                                        } {
+                                            _serde::export::Some(__value) => __value,
+                                            _serde::export::None => {
+                                                return _serde::export::Err(
                                                 _serde::de::Error::invalid_length(
                                                     2usize,
                                                     &"struct variant DeEnum::_Map2 with 4 elements",
                                                 ),
                                             );
-                                        }
-                                    };
-                                    let __field3 = match match _serde::de::SeqAccess::next_element::<
-                                        D,
-                                    >(
-                                        &mut __seq
-                                    ) {
-                                        _serde::export::Ok(__val) => __val,
-                                        _serde::export::Err(__err) => {
-                                            return _serde::export::Err(__err);
-                                        }
-                                    } {
-                                        _serde::export::Some(__value) => __value,
-                                        _serde::export::None => {
-                                            return _serde::export::Err(
+                                            }
+                                        };
+                                    let __field3 =
+                                        match match _serde::de::SeqAccess::next_element::<D>(
+                                            &mut __seq,
+                                        ) {
+                                            _serde::export::Ok(__val) => __val,
+                                            _serde::export::Err(__err) => {
+                                                return _serde::export::Err(__err);
+                                            }
+                                        } {
+                                            _serde::export::Some(__value) => __value,
+                                            _serde::export::None => {
+                                                return _serde::export::Err(
                                                 _serde::de::Error::invalid_length(
                                                     3usize,
                                                     &"struct variant DeEnum::_Map2 with 4 elements",
                                                 ),
                                             );
-                                        }
-                                    };
+                                            }
+                                        };
                                     _serde::export::Ok(DeEnum::_Map2 {
                                         a: __field0,
                                         b: __field1,

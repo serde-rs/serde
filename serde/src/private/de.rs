@@ -239,11 +239,15 @@ mod content {
         U16(u16),
         U32(u32),
         U64(u64),
+        #[cfg(integer128)]
+        U128(u128),
 
         I8(i8),
         I16(i16),
         I32(i32),
         I64(i64),
+        #[cfg(integer128)]
+        I128(i128),
 
         F32(f32),
         F64(f64),
@@ -278,14 +282,18 @@ mod content {
         fn unexpected(&self) -> Unexpected {
             match *self {
                 Content::Bool(b) => Unexpected::Bool(b),
-                Content::U8(n) => Unexpected::Unsigned(n as u64),
-                Content::U16(n) => Unexpected::Unsigned(n as u64),
-                Content::U32(n) => Unexpected::Unsigned(n as u64),
-                Content::U64(n) => Unexpected::Unsigned(n),
-                Content::I8(n) => Unexpected::Signed(n as i64),
-                Content::I16(n) => Unexpected::Signed(n as i64),
-                Content::I32(n) => Unexpected::Signed(n as i64),
-                Content::I64(n) => Unexpected::Signed(n),
+                Content::U8(n) => Unexpected::from(n as u64),
+                Content::U16(n) => Unexpected::from(n as u64),
+                Content::U32(n) => Unexpected::from(n as u64),
+                Content::U64(n) => Unexpected::from(n as u64),
+                #[cfg(integer128)]
+                Content::U128(n) => Unexpected::Unsigned(n),
+                Content::I8(n) => Unexpected::from(n as i64),
+                Content::I16(n) => Unexpected::from(n as i64),
+                Content::I32(n) => Unexpected::from(n as i64),
+                Content::I64(n) => Unexpected::from(n as i64),
+                #[cfg(integer128)]
+                Content::I128(n) => Unexpected::Signed(n),
                 Content::F32(f) => Unexpected::Float(f as f64),
                 Content::F64(f) => Unexpected::Float(f),
                 Content::Char(c) => Unexpected::Char(c),
@@ -1029,10 +1037,14 @@ mod content {
                 Content::U16(v) => visitor.visit_u16(v),
                 Content::U32(v) => visitor.visit_u32(v),
                 Content::U64(v) => visitor.visit_u64(v),
+                #[cfg(integer128)]
+                Content::U128(v) => visitor.visit_u128(v),
                 Content::I8(v) => visitor.visit_i8(v),
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
+                #[cfg(integer128)]
+                Content::I128(v) => visitor.visit_i128(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1085,10 +1097,14 @@ mod content {
                 Content::U16(v) => visitor.visit_u16(v),
                 Content::U32(v) => visitor.visit_u32(v),
                 Content::U64(v) => visitor.visit_u64(v),
+                #[cfg(integer128)]
+                Content::U128(v) => visitor.visit_u128(v),
                 Content::I8(v) => visitor.visit_i8(v),
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
+                #[cfg(integer128)]
+                Content::I128(v) => visitor.visit_i128(v),
                 Content::F32(v) => visitor.visit_f32(v),
                 Content::F64(v) => visitor.visit_f64(v),
                 Content::Char(v) => visitor.visit_char(v),
@@ -1802,10 +1818,14 @@ mod content {
                 Content::U16(v) => visitor.visit_u16(v),
                 Content::U32(v) => visitor.visit_u32(v),
                 Content::U64(v) => visitor.visit_u64(v),
+                #[cfg(integer128)]
+                Content::U128(v) => visitor.visit_u128(v),
                 Content::I8(v) => visitor.visit_i8(v),
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
+                #[cfg(integer128)]
+                Content::I128(v) => visitor.visit_i128(v),
                 Content::F32(v) => visitor.visit_f32(v),
                 Content::F64(v) => visitor.visit_f64(v),
                 Content::Char(v) => visitor.visit_char(v),

@@ -335,11 +335,21 @@ pub enum Unexpected<'a> {
 
     /// The input contained an unsigned integer `u8`, `u16`, `u32` or `u64` that
     /// was not expected.
+    #[cfg(not(integer128))]
     Unsigned(u64),
+    /// The input contained an unsigned integer `u8`, `u16`, `u32`, `u64` or `u128` that
+    /// was not expected.
+    #[cfg(integer128)]
+    Unsigned(u128),
 
     /// The input contained a signed integer `i8`, `i16`, `i32` or `i64` that
     /// was not expected.
+    #[cfg(not(integer128))]
     Signed(i64),
+    /// The input contained a signed integer `i8`, `i16`, `i32`, `i64`, or `i128` that
+    /// was not expected.
+    #[cfg(integer128)]
+    Signed(i128),
 
     /// The input contained a floating point `f32` or `f64` that was not
     /// expected.
@@ -390,6 +400,34 @@ pub enum Unexpected<'a> {
     /// The message should be a noun or noun phrase, not capitalized and without
     /// a period. An example message is "unoriginal superhero".
     Other(&'a str),
+}
+
+#[cfg(integer128)]
+impl<'a> From<i64> for Unexpected<'a> {
+    fn from(v: i64) -> Self {
+        Self::Signed(v as i128)
+    }
+}
+
+#[cfg(not(integer128))]
+impl<'a> From<i64> for Unexpected<'a> {
+    fn from(v: u64) -> Self {
+        Self::Signed(v)
+    }
+}
+
+#[cfg(integer128)]
+impl<'a> From<u64> for Unexpected<'a> {
+    fn from(v: u64) -> Self {
+        Self::Unsigned(v as u128)
+    }
+}
+
+#[cfg(not(integer128))]
+impl<'a> From<u64> for Unexpected<'a> {
+    fn from(v: u64) -> Self {
+        Self::Unsigned(v)
+    }
 }
 
 impl<'a> fmt::Display for Unexpected<'a> {
@@ -1341,7 +1379,7 @@ pub trait Visitor<'de>: Sized {
     where
         E: Error,
     {
-        Err(Error::invalid_type(Unexpected::Signed(v), &self))
+        Err(Error::invalid_type(Unexpected::from(v), &self))
     }
 
     serde_if_integer128! {
@@ -1353,8 +1391,7 @@ pub trait Visitor<'de>: Sized {
         where
             E: Error,
         {
-            let _ = v;
-            Err(Error::invalid_type(Unexpected::Other("i128"), &self))
+            Err(Error::invalid_type(Unexpected::Signed(v), &self))
         }
     }
 
@@ -1401,7 +1438,7 @@ pub trait Visitor<'de>: Sized {
     where
         E: Error,
     {
-        Err(Error::invalid_type(Unexpected::Unsigned(v), &self))
+        Err(Error::invalid_type(Unexpected::from(v), &self))
     }
 
     serde_if_integer128! {
@@ -1413,8 +1450,7 @@ pub trait Visitor<'de>: Sized {
         where
             E: Error,
         {
-            let _ = v;
-            Err(Error::invalid_type(Unexpected::Other("u128"), &self))
+            Err(Error::invalid_type(Unexpected::Unsigned(v), &self))
         }
     }
 
