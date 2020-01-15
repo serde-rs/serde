@@ -6,7 +6,8 @@
     allow(
         cognitive_complexity,
         redundant_field_names,
-        trivially_copy_pass_by_ref
+        trivially_copy_pass_by_ref,
+        wildcard_in_or_patterns
     )
 )]
 

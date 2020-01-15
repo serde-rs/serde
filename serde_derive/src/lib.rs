@@ -28,6 +28,7 @@
         too_many_arguments,
         trivially_copy_pass_by_ref,
         used_underscore_binding,
+        wildcard_in_or_patterns,
     )
 )]
 // Ignored clippy_pedantic lints
