@@ -633,8 +633,7 @@ impl Serialize for SystemTime {
 #[cfg(feature = "std")]
 macro_rules! serialize_display_bounded_length {
     ($value:expr, $max:expr, $serializer:expr) => {{
-        #[allow(deprecated)]
-        let mut buffer: [u8; $max] = unsafe { mem::uninitialized() };
+        let mut buffer: [u8; $max] = [0u8; $max];
         let remaining_len = {
             let mut remaining = &mut buffer[..];
             write!(remaining, "{}", $value).unwrap();
@@ -646,7 +645,7 @@ macro_rules! serialize_display_bounded_length {
         // write! only provides fmt::Formatter to Display implementations, which
         // has methods write_str and write_char but no method to write arbitrary
         // bytes. Therefore `written` must be valid UTF-8.
-        let written_str = unsafe { str::from_utf8_unchecked(written) };
+        let written_str = str::from_utf8(written).expect("must be valid UTF-8");
         $serializer.serialize_str(written_str)
     }};
 }
