@@ -112,6 +112,7 @@
         too_many_lines,
         // preference
         doc_markdown,
+        unseparated_literal_suffix,
         // false positive
         needless_doctest_main,
         // noisy
