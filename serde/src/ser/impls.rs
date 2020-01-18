@@ -633,7 +633,7 @@ impl Serialize for SystemTime {
 #[cfg(feature = "std")]
 macro_rules! serialize_display_bounded_length {
     ($value:expr, $max:expr, $serializer:expr) => {{
-        let mut buffer: [u8; $max] = [0u8; $max];
+        let mut buffer = [0u8; $max];
         let remaining_len = {
             let mut remaining = &mut buffer[..];
             write!(remaining, "{}", $value).unwrap();
