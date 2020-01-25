@@ -870,9 +870,9 @@ fn serialize_struct_variant<'a>(
     }
 
     let struct_trait = match context {
-        StructVariant::ExternallyTagged { .. } => (StructTrait::SerializeStructVariant),
+        StructVariant::ExternallyTagged { .. } => StructTrait::SerializeStructVariant,
         StructVariant::InternallyTagged { .. } | StructVariant::Untagged => {
-            (StructTrait::SerializeStruct)
+            StructTrait::SerializeStruct
         }
     };
 
