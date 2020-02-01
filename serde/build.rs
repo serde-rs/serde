@@ -110,6 +110,11 @@ fn has_atomic(n: u8, default: bool) -> bool {
         None => return default,
     };
 
+    let explicit_value = match explicit_value.into_string() {
+        Ok(explicit_value) => explicit_value,
+        Err(_) => return default,
+    };
+
     /* needs setting to 0 or empty to disable atomicN, everything else means has_atomicN */
     explicit_value != "0" && explicit_value != ""
 }
