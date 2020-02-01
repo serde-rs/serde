@@ -81,20 +81,37 @@ fn main() {
         // Whitelist of archs that support std::sync::atomic module. Ideally we
         // would use #[cfg(target_has_atomic = "...")] but it is not stable yet.
         // Instead this is based on rustc's src/librustc_target/spec/*.rs.
-        let has_atomic64 = target.starts_with("x86_64")
+        let fallback_atomic64 = target.starts_with("x86_64")
             || target.starts_with("i686")
             || target.starts_with("aarch64")
             || target.starts_with("powerpc64")
             || target.starts_with("sparc64")
             || target.starts_with("mips64el");
-        let has_atomic32 = has_atomic64 || emscripten;
-        if has_atomic64 {
+        let fallback_atomic32 = fallback_atomic64 || emscripten;
+        if has_atomic(64, fallback_atomic64) {
             println!("cargo:rustc-cfg=std_atomic64");
         }
-        if has_atomic32 {
+        if has_atomic(32, fallback_atomic32) {
             println!("cargo:rustc-cfg=std_atomic");
         }
     }
+}
+
+fn has_atomic(n: u8, default: bool) -> bool {
+    let target = env::var_os("TARGET").unwrap()
+                                      .into_string().unwrap()
+                                      .replace("-", "_");
+    let name = format!("serde_has_atomic{}_{}", n, target).to_uppercase();
+
+    println!("cargo:rerun-if-env-changed={}", name);
+
+    let explicit_value = match env::var_os(name) {
+        Some(explicit_value) => explicit_value,
+        None => return default,
+    };
+
+    /* needs setting to 0 or empty to disable atomicN, everything else means has_atomicN */
+    explicit_value != "0" && explicit_value != ""
 }
 
 fn rustc_minor_version() -> Option<u32> {
