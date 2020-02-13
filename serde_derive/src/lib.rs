@@ -47,6 +47,7 @@
         must_use_candidate,
         similar_names,
         single_match_else,
+        struct_excessive_bools,
         too_many_lines,
         unseparated_literal_suffix,
         use_self,
