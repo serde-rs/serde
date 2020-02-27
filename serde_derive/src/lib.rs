@@ -51,6 +51,7 @@
         too_many_lines,
         unseparated_literal_suffix,
         use_self,
+        wildcard_imports,
     )
 )]
 // The `quote!` macro requires deep recursion.

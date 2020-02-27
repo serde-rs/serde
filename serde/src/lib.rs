@@ -106,6 +106,9 @@
         type_complexity,
         use_self,
         zero_prefixed_literal,
+        // correctly used
+        enum_glob_use,
+        wildcard_imports,
         // not practical
         needless_pass_by_value,
         similar_names,
