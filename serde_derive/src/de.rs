@@ -310,12 +310,7 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
 
     let code = match &cont.data {
         Data::Struct(Style::Struct, fields) => {
-            if let Some(code) = deserialize_struct_in_place(None, params, fields, &cont.attrs, None)
-            {
-                code
-            } else {
-                return None;
-            }
+            deserialize_struct_in_place(None, params, fields, &cont.attrs, None)?
         }
         Data::Struct(Style::Tuple, fields) | Data::Struct(Style::Newtype, fields) => {
             deserialize_tuple_in_place(None, params, fields, &cont.attrs, None)
