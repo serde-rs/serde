@@ -26,6 +26,9 @@ serde_derive = { version = "1.0", path = "../serde_derive" }
 [package.metadata.playground]
 features = ["derive", "rc"]
 
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
 
 ### FEATURES #################################################################
 

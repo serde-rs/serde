@@ -21,3 +21,6 @@ syn = { version = "1.0", default-features = false, features = ["derive", "parsin
 [badges]
 travis-ci = { repository = "serde-rs/serde" }
 appveyor = { repository = "serde-rs/serde" }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
