@@ -1,6 +1,6 @@
 [package]
 name = "serde"
-version = "1.0.104" # remember to update html_root_url and serde_derive dependency
+version = "1.0.105" # remember to update html_root_url and serde_derive dependency
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "A generic serialization/deserialization framework"
@@ -18,7 +18,7 @@ travis-ci = { repository = "serde-rs/serde" }
 appveyor = { repository = "serde-rs/serde" }
 
 [dependencies]
-serde_derive = { version = "=1.0.104", optional = true, path = "../serde_derive" }
+serde_derive = { version = "=1.0.105", optional = true, path = "../serde_derive" }
 
 [dev-dependencies]
 serde_derive = { version = "1.0", path = "../serde_derive" }
