@@ -53,9 +53,10 @@ where
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub fn borrow_cow_str<'de: 'a, 'a, D>(deserializer: D) -> Result<Cow<'a, str>, D::Error>
+pub fn borrow_cow_str<'de: 'a, 'a, D, R>(deserializer: D) -> Result<R, D::Error>
 where
     D: Deserializer<'de>,
+    R: From<Cow<'a, str>>,
 {
     struct CowStrVisitor;
 
@@ -121,13 +122,14 @@ where
         }
     }
 
-    deserializer.deserialize_str(CowStrVisitor)
+    deserializer.deserialize_str(CowStrVisitor).map(From::from)
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub fn borrow_cow_bytes<'de: 'a, 'a, D>(deserializer: D) -> Result<Cow<'a, [u8]>, D::Error>
+pub fn borrow_cow_bytes<'de: 'a, 'a, D, R>(deserializer: D) -> Result<R, D::Error>
 where
     D: Deserializer<'de>,
+    R: From<Cow<'a, [u8]>>,
 {
     struct CowBytesVisitor;
 
@@ -181,7 +183,7 @@ where
         }
     }
 
-    deserializer.deserialize_bytes(CowBytesVisitor)
+    deserializer.deserialize_bytes(CowBytesVisitor).map(From::from)
 }
 
 pub mod size_hint {
