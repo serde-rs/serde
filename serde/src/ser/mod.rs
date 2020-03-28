@@ -1359,10 +1359,7 @@ pub trait Serializer: Sized {
     where
         T: Display,
     {
-        use lib::fmt::Write;
-        let mut string = String::new();
-        write!(string, "{}", value).unwrap();
-        self.serialize_str(&string)
+        self.serialize_str(&value.to_string())
     }
 
     /// Serialize a string produced by an implementation of `Display`.
