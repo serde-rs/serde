@@ -29,6 +29,7 @@ pub fn wrap_in_const(
     };
 
     quote! {
+        #[doc(hidden)]
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
         const #dummy_const: () = {
             #use_serde
