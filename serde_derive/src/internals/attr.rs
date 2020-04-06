@@ -32,8 +32,8 @@ struct Attr<'c, T> {
 impl<'c, T> Attr<'c, T> {
     fn none(cx: &'c Ctxt, name: Symbol) -> Self {
         Attr {
-            cx: cx,
-            name: name,
+            cx,
+            name,
             tokens: TokenStream::new(),
             value: None,
         }
@@ -101,8 +101,8 @@ struct VecAttr<'c, T> {
 impl<'c, T> VecAttr<'c, T> {
     fn none(cx: &'c Ctxt, name: Symbol) -> Self {
         VecAttr {
-            cx: cx,
-            name: name,
+            cx,
+            name,
             first_dup_tokens: TokenStream::new(),
             values: Vec::new(),
         }
@@ -176,7 +176,7 @@ impl Name {
             serialize_renamed: ser_renamed,
             deserialize: de_name.unwrap_or(source_name),
             deserialize_renamed: de_renamed,
-            deserialize_aliases: deserialize_aliases,
+            deserialize_aliases,
         }
     }
 
@@ -716,7 +716,7 @@ fn decide_tag(
                     }
                 }
             }
-            TagType::Internal { tag: tag }
+            TagType::Internal { tag }
         }
         (Some((untagged_tokens, _)), Some((tag_tokens, _)), None) => {
             cx.error_spanned_by(
@@ -747,10 +747,7 @@ fn decide_tag(
             );
             TagType::External
         }
-        (None, Some((_, tag)), Some((_, content))) => TagType::Adjacent {
-            tag: tag,
-            content: content,
-        },
+        (None, Some((_, tag)), Some((_, content))) => TagType::Adjacent { tag, content },
         (Some((untagged_tokens, _)), Some((tag_tokens, _)), Some((content_tokens, _))) => {
             cx.error_spanned_by(
                 untagged_tokens,
@@ -1383,7 +1380,7 @@ impl Field {
                 let expr = syn::ExprPath {
                     attrs: Vec::new(),
                     qself: None,
-                    path: path,
+                    path,
                 };
                 deserialize_with.set_if_none(expr);
             } else if is_cow(&field.ty, is_slice_u8) {
@@ -1400,7 +1397,7 @@ impl Field {
                 let expr = syn::ExprPath {
                     attrs: Vec::new(),
                     qself: None,
-                    path: path,
+                    path,
                 };
                 deserialize_with.set_if_none(expr);
             }
@@ -1420,7 +1417,7 @@ impl Field {
             deserialize_with: deserialize_with.get(),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
-            borrowed_lifetimes: borrowed_lifetimes,
+            borrowed_lifetimes,
             getter: getter.get(),
             flatten: flatten.get(),
             transparent: false,

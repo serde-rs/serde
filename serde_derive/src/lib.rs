@@ -21,7 +21,6 @@
     clippy::cognitive_complexity,
     clippy::enum_variant_names,
     clippy::needless_pass_by_value,
-    clippy::redundant_field_names,
     clippy::too_many_arguments,
     clippy::trivially_copy_pass_by_ref,
     clippy::used_underscore_binding,

@@ -134,11 +134,11 @@ impl Parameters {
         let has_getter = cont.data.has_getter();
 
         Parameters {
-            local: local,
-            this: this,
-            generics: generics,
-            borrowed: borrowed,
-            has_getter: has_getter,
+            local,
+            this,
+            generics,
+            borrowed,
+            has_getter,
         }
     }
 

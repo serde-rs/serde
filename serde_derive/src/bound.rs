@@ -156,7 +156,7 @@ pub fn with_bound(
         .collect();
 
     let mut visitor = FindTyParams {
-        all_type_params: all_type_params,
+        all_type_params,
         relevant_type_params: HashSet::new(),
         associated_type_usage: Vec::new(),
     };
@@ -271,7 +271,7 @@ pub fn with_lifetime_bound(generics: &syn::Generics, lifetime: &str) -> syn::Gen
         .collect();
 
     syn::Generics {
-        params: params,
+        params,
         ..generics.clone()
     }
 }

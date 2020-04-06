@@ -106,10 +106,10 @@ impl Parameters {
         let generics = build_generics(cont);
 
         Parameters {
-            self_var: self_var,
-            this: this,
-            generics: generics,
-            is_remote: is_remote,
+            self_var,
+            this,
+            generics,
+            is_remote,
         }
     }
 
@@ -538,17 +538,17 @@ fn serialize_externally_tagged_variant(
         }
         Style::Tuple => serialize_tuple_variant(
             TupleVariant::ExternallyTagged {
-                type_name: type_name,
-                variant_index: variant_index,
-                variant_name: variant_name,
+                type_name,
+                variant_index,
+                variant_name,
             },
             params,
             &variant.fields,
         ),
         Style::Struct => serialize_struct_variant(
             StructVariant::ExternallyTagged {
-                variant_index: variant_index,
-                variant_name: variant_name,
+                variant_index,
+                variant_name,
             },
             params,
             &variant.fields,
@@ -614,10 +614,7 @@ fn serialize_internally_tagged_variant(
             }
         }
         Style::Struct => serialize_struct_variant(
-            StructVariant::InternallyTagged {
-                tag: tag,
-                variant_name: variant_name,
-            },
+            StructVariant::InternallyTagged { tag, variant_name },
             params,
             &variant.fields,
             &type_name,
