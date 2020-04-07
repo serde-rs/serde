@@ -313,7 +313,7 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
             deserialize_struct_in_place(None, params, fields, &cont.attrs, None)?
         }
         Data::Struct(Style::Tuple, fields) | Data::Struct(Style::Newtype, fields) => {
-            deserialize_tuple_in_place(None, params, fields, &cont.attrs, None)
+            deserialize_tuple_in_place(None, params, fields, &cont.attrs, None)?
         }
         Data::Enum(_) | Data::Struct(Style::Unit, _) => {
             return None;
@@ -435,8 +435,6 @@ fn deserialize_tuple(
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
 
-    assert!(!cattrs.has_flatten());
-
     // If there are getters (implying private fields), construct the local type
     // and use an `Into` conversion to get the remote type. If there are no
     // getters then construct the target type directly.
@@ -529,13 +527,17 @@ fn deserialize_tuple_in_place(
     fields: &[Field],
     cattrs: &attr::Container,
     deserializer: Option<TokenStream>,
-) -> Fragment {
+) -> Option<Fragment> {
     let this = &params.this;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
 
-    assert!(!cattrs.has_flatten());
+    // for now we do not support in_place deserialization for structs that
+    // are represented as a seq
+    if cattrs.has_flatten() {
+        return None;
+    }
 
     let is_enum = variant_ident.is_some();
     let expecting = match variant_ident {
@@ -583,7 +585,7 @@ fn deserialize_tuple_in_place(
     let in_place_ty_generics = de_ty_generics.in_place();
     let place_life = place_lifetime();
 
-    quote_block! {
+    Some(quote_block! {
         struct __Visitor #in_place_impl_generics #where_clause {
             place: &#place_life mut #this #ty_generics,
             lifetime: _serde::export::PhantomData<&#delife ()>,
@@ -608,7 +610,7 @@ fn deserialize_tuple_in_place(
         }
 
         #dispatch
-    }
+    })
 }
 
 fn deserialize_seq(
@@ -639,22 +641,37 @@ fn deserialize_seq(
                 let #var = #default;
             }
         } else {
-            let visit = match field.attrs.deserialize_with() {
+            let mut visit = match field.attrs.deserialize_with() {
                 None => {
                     let field_ty = field.ty;
                     let span = field.original.span();
-                    let func =
-                        quote_spanned!(span=> _serde::de::SeqAccess::next_element::<#field_ty>);
-                    quote!(try!(#func(&mut __seq)))
+                    if field.attrs.flatten() {
+                        let func = quote_spanned!(span=> _serde::de::value::SeqAccessDeserializer::new);
+                        let deserializer = quote!(#func(&mut __seq));
+                        let func = quote_spanned!(span=> _serde::de::Deserialize::deserialize);
+                        quote!(try!(#func(#deserializer)))
+                    } else {
+                        let func = quote_spanned!(span=> _serde::de::SeqAccess::next_element::<#field_ty>);
+                        quote!(try!(#func(&mut __seq)))
+                    }
                 }
                 Some(path) => {
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
-                    quote!({
-                        #wrapper
-                        _serde::export::Option::map(
-                            try!(_serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)),
-                            |__wrap| __wrap.value)
-                    })
+                    if field.attrs.flatten() {
+                        quote!({
+                            #wrapper
+                            <#wrapper_ty as _serde::de::Deserialize>::deserialize(
+                                _serde::de::value::SeqAccessDeserializer::new(&mut __seq),
+                            )?.value
+                        })
+                    } else {
+                        quote!({
+                            #wrapper
+                            _serde::export::Option::map(
+                                try!(_serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)),
+                                |__wrap| __wrap.value)
+                        })
+                    }
                 }
             };
             let value_if_none = match field.attrs.default() {
@@ -664,16 +681,19 @@ fn deserialize_seq(
                     return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
                 ),
             };
-            let assign = quote! {
-                let #var = match #visit {
-                    _serde::export::Some(__value) => __value,
-                    _serde::export::None => {
-                        #value_if_none
+
+            if !field.attrs.flatten() {
+                visit = quote! {
+                    match #visit {
+                        _serde::export::Some(__value) => __value,
+                        _serde::export::None => {
+                            #value_if_none
+                        }
                     }
                 };
-            };
+            }
             index_in_seq += 1;
-            assign
+            quote!(let #var = #visit;)
         }
     });
 
@@ -960,7 +980,7 @@ fn deserialize_struct(
     // untagged struct variants do not get a visit_seq method. The same applies to
     // structs that only have a map representation.
     let visit_seq = match *untagged {
-        Untagged::No if !cattrs.has_flatten() => Some(quote! {
+        Untagged::No => Some(quote! {
             #[inline]
             fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
             where
