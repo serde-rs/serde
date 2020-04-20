@@ -2472,7 +2472,7 @@ mod content {
         where
             M: MapAccess<'de>,
         {
-            while let Some(_) = try!(access.next_entry::<IgnoredAny, IgnoredAny>()) {}
+            while try!(access.next_entry::<IgnoredAny, IgnoredAny>()).is_some() {}
             Ok(())
         }
     }
