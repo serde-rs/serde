@@ -183,7 +183,9 @@ where
         }
     }
 
-    deserializer.deserialize_bytes(CowBytesVisitor).map(From::from)
+    deserializer
+        .deserialize_bytes(CowBytesVisitor)
+        .map(From::from)
 }
 
 pub mod size_hint {

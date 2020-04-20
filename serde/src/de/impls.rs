@@ -90,10 +90,13 @@ macro_rules! visit_integer_method {
         {
             match FromPrimitive::$from_method(v) {
                 Some(v) => Ok(v),
-                None => Err(Error::invalid_value(Unexpected::$group(v as $group_ty), &self)),
+                None => Err(Error::invalid_value(
+                    Unexpected::$group(v as $group_ty),
+                    &self,
+                )),
             }
         }
-    }
+    };
 }
 
 macro_rules! visit_float_method {
@@ -105,7 +108,7 @@ macro_rules! visit_float_method {
         {
             Ok(v as Self::Value)
         }
-    }
+    };
 }
 
 macro_rules! impl_deserialize_num {
