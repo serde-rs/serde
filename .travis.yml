@@ -63,10 +63,14 @@ matrix:
         - cd "${TRAVIS_BUILD_DIR}/serde"
         - cargo build --no-default-features --features alloc
 
-    - rust: nightly
-      name: Clippy
+    - name: Clippy
+      install:
+        - CLIPPY_NIGHTLY=nightly-$(curl -s https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu/clippy)
+        - echo "Latest nightly with Clippy is $CLIPPY_NIGHTLY"
+        - rustup set profile minimal
+        - rustup default "$CLIPPY_NIGHTLY"
+        - rustup component add clippy
       script:
-        - rustup component add clippy || travis_terminate 0
         - cargo clippy -- -D clippy::all
         - cd "${TRAVIS_BUILD_DIR}/serde"
         - cargo clippy --features rc,unstable -- -D clippy::all
@@ -96,8 +100,7 @@ matrix:
         - cargo web test --target=wasm32-unknown-emscripten --nodejs
 
   allow_failures:
-    - rust: nightly
-      name: Clippy
+    - name: Clippy
     - rust: nightly
       name: Emscripten
 
