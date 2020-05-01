@@ -222,6 +222,7 @@ pub struct Container {
     identifier: Identifier,
     has_flatten: bool,
     serde_path: Option<syn::Path>,
+    is_packed: bool,
 }
 
 /// Styles of representing an enum.
@@ -592,6 +593,27 @@ impl Container {
             }
         }
 
+        use proc_macro2::Delimiter;
+        let is_packed = item.attrs.iter().any(|attr| {
+            match attr.style {
+                syn::AttrStyle::Outer => attr
+                        .path
+                        .get_ident()
+                        .map_or(false, |ident| *ident == "repr")
+                    && syn::parse2::<Group>(attr.tokens.clone())
+                        .ok()
+                        .filter(|g| g.delimiter() == Delimiter::Parenthesis)
+                        .map(|g| g.stream().to_string())
+                        .map_or(false, |repr| {
+                            let repr = repr.trim();
+                            repr == "packed"
+                                || repr.starts_with("packed(")
+                                || repr.starts_with("packed ")
+                        }),
+                _ => false
+            }
+        });
+
         Container {
             name: Name::from_attrs(unraw(&item.ident), ser_name, de_name, None),
             transparent: transparent.get(),
@@ -611,6 +633,7 @@ impl Container {
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
             has_flatten: false,
             serde_path: serde_path.get(),
+            is_packed,
         }
     }
 
@@ -660,6 +683,10 @@ impl Container {
 
     pub fn remote(&self) -> Option<&syn::Path> {
         self.remote.as_ref()
+    }
+
+    pub fn is_packed(&self) -> bool {
+        self.is_packed
     }
 
     pub fn identifier(&self) -> Identifier {
