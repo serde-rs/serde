@@ -87,6 +87,9 @@ struct Parameters {
 
     /// Type has a `serde(remote = "...")` attribute.
     is_remote: bool,
+
+    /// Type has a repr(packed) attribute.
+    is_packed: bool,
 }
 
 impl Parameters {
@@ -103,6 +106,8 @@ impl Parameters {
             None => cont.ident.clone().into(),
         };
 
+        let is_packed = cont.attrs.is_packed();
+
         let generics = build_generics(cont);
 
         Parameters {
@@ -110,6 +115,7 @@ impl Parameters {
             this,
             generics,
             is_remote,
+            is_packed,
         }
     }
 
@@ -1238,9 +1244,19 @@ fn mut_if(is_mut: bool) -> Option<TokenStream> {
 fn get_member(params: &Parameters, field: &Field, member: &Member) -> TokenStream {
     let self_var = &params.self_var;
     match (params.is_remote, field.attrs.getter()) {
-        (false, None) => quote!(&#self_var.#member),
+        (false, None) => {
+            if params.is_packed {
+                quote!(&{let copy = #self_var.#member; copy })
+            } else {
+                quote!(&#self_var.#member)
+            }
+        }
         (true, None) => {
-            let inner = quote!(&#self_var.#member);
+            let inner = if params.is_packed {
+                quote!(&{let copy = #self_var.#member; copy })
+            } else {
+                quote!(&#self_var.#member)
+            };
             let ty = field.ty;
             quote!(_serde::private::ser::constrain::<#ty>(#inner))
         }
