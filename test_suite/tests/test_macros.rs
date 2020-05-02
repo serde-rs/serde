@@ -1734,6 +1734,64 @@ fn test_rename_all() {
         serialize_seq: bool,
     }
 
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(prefix_all = "PREFIX_")]
+    struct Prefixed {
+        serialize: bool,
+        serialize_seq: bool,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(prefix_all = "PREFIX_", rename_all = "camelCase")]
+    struct PrefixedCamelCase {
+        serialize: bool,
+        serialize_seq: bool,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(
+        prefix_all(serialize = "SER_", deserialize = "DE_"),
+        rename_all = "camelCase"
+    )]
+    struct PrefixedSerAndDeCamelCase {
+        serialize: bool,
+        serialize_seq: bool,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(prefix_all(serialize = "SER_"), rename_all = "camelCase")]
+    struct PrefixedSerOnlyCamelCase {
+        serialize: bool,
+        serialize_seq: bool,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(prefix_all = "PREFIX_")]
+    enum PrefixedEnum {
+        TheVariant,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(prefix_all = "PREFIX_", rename_all = "kebab-case")]
+    enum PrefixedKebabCaseEnum {
+        TheVariant,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(
+        prefix_all(serialize = "SER_", deserialize = "DE_"),
+        rename_all = "kebab-case"
+    )]
+    enum PrefixedSerAndDeKebabCaseEnum {
+        TheVariant,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(prefix_all(serialize = "SER_"), rename_all = "kebab-case")]
+    enum PrefixedSerOnlyKebabCaseEnum {
+        TheVariant,
+    }
+
     assert_tokens(
         &E::Serialize {
             serialize: true,
@@ -1822,6 +1880,154 @@ fn test_rename_all() {
             Token::Bool(true),
             Token::StructEnd,
         ],
+    );
+
+    assert_tokens(
+        &Prefixed {
+            serialize: true,
+            serialize_seq: true,
+        },
+        &[
+            Token::Struct {
+                name: "Prefixed",
+                len: 2,
+            },
+            Token::Str("PREFIX_serialize"),
+            Token::Bool(true),
+            Token::Str("PREFIX_serialize_seq"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &PrefixedCamelCase {
+            serialize: true,
+            serialize_seq: true,
+        },
+        &[
+            Token::Struct {
+                name: "PrefixedCamelCase",
+                len: 2,
+            },
+            Token::Str("PREFIX_serialize"),
+            Token::Bool(true),
+            Token::Str("PREFIX_serializeSeq"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &PrefixedSerAndDeCamelCase {
+            serialize: true,
+            serialize_seq: true,
+        },
+        &[
+            Token::Struct {
+                name: "PrefixedSerAndDeCamelCase",
+                len: 2,
+            },
+            Token::Str("DE_serialize"),
+            Token::Bool(true),
+            Token::Str("DE_serializeSeq"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_ser_tokens(
+        &PrefixedSerAndDeCamelCase {
+            serialize: true,
+            serialize_seq: true,
+        },
+        &[
+            Token::Struct {
+                name: "PrefixedSerAndDeCamelCase",
+                len: 2,
+            },
+            Token::Str("SER_serialize"),
+            Token::Bool(true),
+            Token::Str("SER_serializeSeq"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &PrefixedSerOnlyCamelCase {
+            serialize: true,
+            serialize_seq: true,
+        },
+        &[
+            Token::Struct {
+                name: "PrefixedSerOnlyCamelCase",
+                len: 2,
+            },
+            Token::Str("serialize"),
+            Token::Bool(true),
+            Token::Str("serializeSeq"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_ser_tokens(
+        &PrefixedSerOnlyCamelCase {
+            serialize: true,
+            serialize_seq: true,
+        },
+        &[
+            Token::Struct {
+                name: "PrefixedSerOnlyCamelCase",
+                len: 2,
+            },
+            Token::Str("SER_serialize"),
+            Token::Bool(true),
+            Token::Str("SER_serializeSeq"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &PrefixedEnum::TheVariant,
+        &[Token::UnitVariant {
+            name: "PrefixedEnum",
+            variant: "PREFIX_TheVariant",
+        }],
+    );
+
+    assert_tokens(
+        &PrefixedKebabCaseEnum::TheVariant,
+        &[Token::UnitVariant {
+            name: "PrefixedKebabCaseEnum",
+            variant: "PREFIX_the-variant",
+        }],
+    );
+
+    assert_de_tokens(
+        &PrefixedSerAndDeKebabCaseEnum::TheVariant,
+        &[Token::UnitVariant {
+            name: "PrefixedSerAndDeKebabCaseEnum",
+            variant: "DE_the-variant",
+        }],
+    );
+
+    assert_ser_tokens(
+        &PrefixedSerAndDeKebabCaseEnum::TheVariant,
+        &[Token::UnitVariant {
+            name: "PrefixedSerAndDeKebabCaseEnum",
+            variant: "SER_the-variant",
+        }],
+    );
+
+    assert_de_tokens(
+        &PrefixedSerOnlyKebabCaseEnum::TheVariant,
+        &[Token::UnitVariant {
+            name: "PrefixedSerOnlyKebabCaseEnum",
+            variant: "the-variant",
+        }],
     );
 }
 

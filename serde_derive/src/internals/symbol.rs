@@ -19,6 +19,7 @@ pub const FROM: Symbol = Symbol("from");
 pub const GETTER: Symbol = Symbol("getter");
 pub const INTO: Symbol = Symbol("into");
 pub const OTHER: Symbol = Symbol("other");
+pub const PREFIX_ALL: Symbol = Symbol("prefix_all");
 pub const REMOTE: Symbol = Symbol("remote");
 pub const RENAME: Symbol = Symbol("rename");
 pub const RENAME_ALL: Symbol = Symbol("rename_all");

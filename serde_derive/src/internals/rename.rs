@@ -7,11 +7,11 @@ use std::ascii::AsciiExt;
 
 use std::str::FromStr;
 
-use self::RenameRule::*;
+use self::ConvertCase::*;
 
 /// The different possible ways to change case of fields in a struct, or variants in an enum.
 #[derive(Copy, Clone, PartialEq)]
-pub enum RenameRule {
+pub enum ConvertCase {
     /// Don't apply a default rename rule.
     None,
     /// Rename direct children to "lowercase" style.
@@ -35,7 +35,49 @@ pub enum RenameRule {
     ScreamingKebabCase,
 }
 
+/// The container-level rename rules to apply to a field
+#[derive(Clone, PartialEq, Default)]
+pub struct RenameRule {
+    prefix: Option<String>,
+    convert_case: ConvertCase,
+}
+
 impl RenameRule {
+    pub fn new(prefix: Option<String>, convert_case: ConvertCase) -> Self {
+        RenameRule {
+            prefix,
+            convert_case,
+        }
+    }
+
+    /// Apply a renaming rule to an enum variant, returning the version expected in the source.
+    pub fn apply_to_variant(&self, variant: &str) -> String {
+        let variant = self.convert_case.apply_to_variant(variant);
+        if let Some(prefix) = &self.prefix {
+            let mut result = String::with_capacity(prefix.len() + variant.len());
+            result.push_str(prefix);
+            result.push_str(&variant);
+            result
+        } else {
+            variant
+        }
+    }
+
+    /// Apply a renaming rule to a struct field, returning the version expected in the source.
+    pub fn apply_to_field(&self, field: &str) -> String {
+        let field = self.convert_case.apply_to_field(field);
+        if let Some(prefix) = &self.prefix {
+            let mut result = String::with_capacity(prefix.len() + field.len());
+            result.push_str(prefix);
+            result.push_str(&field);
+            result
+        } else {
+            field
+        }
+    }
+}
+
+impl ConvertCase {
     /// Apply a renaming rule to an enum variant, returning the version expected in the source.
     pub fn apply_to_variant(&self, variant: &str) -> String {
         match *self {
@@ -92,7 +134,13 @@ impl RenameRule {
     }
 }
 
-impl FromStr for RenameRule {
+impl Default for ConvertCase {
+    fn default() -> ConvertCase {
+        None
+    }
+}
+
+impl FromStr for ConvertCase {
     type Err = ();
 
     fn from_str(rename_all_str: &str) -> Result<Self, Self::Err> {

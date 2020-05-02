@@ -20,7 +20,7 @@ use syn::NestedMeta::{Lit, Meta};
 // user will see errors simultaneously for all bad attributes in the crate
 // rather than just the first.
 
-pub use internals::case::RenameRule;
+pub use internals::rename::{ConvertCase, RenameRule};
 
 struct Attr<'c, T> {
     cx: &'c Ctxt,
@@ -290,8 +290,10 @@ impl Container {
         let mut transparent = BoolAttr::none(cx, TRANSPARENT);
         let mut deny_unknown_fields = BoolAttr::none(cx, DENY_UNKNOWN_FIELDS);
         let mut default = Attr::none(cx, DEFAULT);
-        let mut rename_all_ser_rule = Attr::none(cx, RENAME_ALL);
-        let mut rename_all_de_rule = Attr::none(cx, RENAME_ALL);
+        let mut ser_prefix_all = Attr::none(cx, PREFIX_ALL);
+        let mut de_prefix_all = Attr::none(cx, PREFIX_ALL);
+        let mut ser_rename_all = Attr::none(cx, RENAME_ALL);
+        let mut de_rename_all = Attr::none(cx, RENAME_ALL);
         let mut ser_bound = Attr::none(cx, BOUND);
         let mut de_bound = Attr::none(cx, BOUND);
         let mut untagged = BoolAttr::none(cx, UNTAGGED);
@@ -312,6 +314,26 @@ impl Container {
             .flatten()
         {
             match &meta_item {
+                // Parse `#[serde(prefix_all = "foo")]`
+                Meta(NameValue(m)) if m.path == PREFIX_ALL => {
+                    if let Ok(s) = get_lit_str(cx, PREFIX_ALL, &m.lit) {
+                        ser_prefix_all.set(&m.path, s.value());
+                        de_prefix_all.set(&m.path, s.value());
+                    }
+                }
+
+                // Parse `#[serde(prefix_all(serialize = "foo", deserialize = "bar"))]`
+                Meta(List(m)) if m.path == PREFIX_ALL => {
+                    if let Ok((ser, de)) = get_prefixes(cx, &m.nested) {
+                        if let Some(ser) = ser {
+                            ser_prefix_all.set(&m.path, ser.value());
+                        }
+                        if let Some(de) = de {
+                            de_prefix_all.set(&m.path, de.value());
+                        }
+                    }
+                }
+
                 // Parse `#[serde(rename = "foo")]`
                 Meta(NameValue(m)) if m.path == RENAME => {
                     if let Ok(s) = get_lit_str(cx, RENAME, &m.lit) {
@@ -331,10 +353,10 @@ impl Container {
                 // Parse `#[serde(rename_all = "foo")]`
                 Meta(NameValue(m)) if m.path == RENAME_ALL => {
                     if let Ok(s) = get_lit_str(cx, RENAME_ALL, &m.lit) {
-                        match RenameRule::from_str(&s.value()) {
+                        match ConvertCase::from_str(&s.value()) {
                             Ok(rename_rule) => {
-                                rename_all_ser_rule.set(&m.path, rename_rule);
-                                rename_all_de_rule.set(&m.path, rename_rule);
+                                de_rename_all.set(&m.path, rename_rule);
+                                ser_rename_all.set(&m.path, rename_rule);
                             }
                             Err(()) => cx.error_spanned_by(
                                 s,
@@ -351,8 +373,8 @@ impl Container {
                 Meta(List(m)) if m.path == RENAME_ALL => {
                     if let Ok((ser, de)) = get_renames(cx, &m.nested) {
                         if let Some(ser) = ser {
-                            match RenameRule::from_str(&ser.value()) {
-                                Ok(rename_rule) => rename_all_ser_rule.set(&m.path, rename_rule),
+                            match ConvertCase::from_str(&ser.value()) {
+                                Ok(rename_rule) => ser_rename_all.set(&m.path, rename_rule),
                                 Err(()) => cx.error_spanned_by(
                                     ser,
                                     format!(
@@ -363,8 +385,8 @@ impl Container {
                             }
                         }
                         if let Some(de) = de {
-                            match RenameRule::from_str(&de.value()) {
-                                Ok(rename_rule) => rename_all_de_rule.set(&m.path, rename_rule),
+                            match ConvertCase::from_str(&de.value()) {
+                                Ok(rename_rule) => de_rename_all.set(&m.path, rename_rule),
                                 Err(()) => cx.error_spanned_by(
                                     de,
                                     format!(
@@ -598,8 +620,14 @@ impl Container {
             deny_unknown_fields: deny_unknown_fields.get(),
             default: default.get().unwrap_or(Default::None),
             rename_all_rules: RenameAllRules {
-                serialize: rename_all_ser_rule.get().unwrap_or(RenameRule::None),
-                deserialize: rename_all_de_rule.get().unwrap_or(RenameRule::None),
+                serialize: RenameRule::new(
+                    ser_prefix_all.get(),
+                    ser_rename_all.get().unwrap_or(ConvertCase::None),
+                ),
+                deserialize: RenameRule::new(
+                    de_prefix_all.get(),
+                    de_rename_all.get().unwrap_or(ConvertCase::None),
+                ),
             },
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
@@ -843,8 +871,10 @@ impl Variant {
         let mut de_aliases = VecAttr::none(cx, RENAME);
         let mut skip_deserializing = BoolAttr::none(cx, SKIP_DESERIALIZING);
         let mut skip_serializing = BoolAttr::none(cx, SKIP_SERIALIZING);
-        let mut rename_all_ser_rule = Attr::none(cx, RENAME_ALL);
-        let mut rename_all_de_rule = Attr::none(cx, RENAME_ALL);
+        let mut ser_prefix_all = Attr::none(cx, PREFIX_ALL);
+        let mut de_prefix_all = Attr::none(cx, PREFIX_ALL);
+        let mut ser_rename_all = Attr::none(cx, RENAME_ALL);
+        let mut de_rename_all = Attr::none(cx, RENAME_ALL);
         let mut ser_bound = Attr::none(cx, BOUND);
         let mut de_bound = Attr::none(cx, BOUND);
         let mut other = BoolAttr::none(cx, OTHER);
@@ -859,6 +889,26 @@ impl Variant {
             .flatten()
         {
             match &meta_item {
+                // Parse `#[serde(prefix_all = "foo")]`
+                Meta(NameValue(m)) if m.path == PREFIX_ALL => {
+                    if let Ok(s) = get_lit_str(cx, PREFIX_ALL, &m.lit) {
+                        ser_prefix_all.set(&m.path, s.value());
+                        de_prefix_all.set(&m.path, s.value());
+                    }
+                }
+
+                // Parse `#[serde(prefix_all(serialize = "foo", deserialize = "bar"))]`
+                Meta(List(m)) if m.path == PREFIX_ALL => {
+                    if let Ok((ser, de)) = get_prefixes(cx, &m.nested) {
+                        if let Some(ser) = ser {
+                            ser_prefix_all.set(&m.path, ser.value());
+                        }
+                        if let Some(de) = de {
+                            de_prefix_all.set(&m.path, de.value());
+                        }
+                    }
+                }
+
                 // Parse `#[serde(rename = "foo")]`
                 Meta(NameValue(m)) if m.path == RENAME => {
                     if let Ok(s) = get_lit_str(cx, RENAME, &m.lit) {
@@ -889,10 +939,10 @@ impl Variant {
                 // Parse `#[serde(rename_all = "foo")]`
                 Meta(NameValue(m)) if m.path == RENAME_ALL => {
                     if let Ok(s) = get_lit_str(cx, RENAME_ALL, &m.lit) {
-                        match RenameRule::from_str(&s.value()) {
+                        match ConvertCase::from_str(&s.value()) {
                             Ok(rename_rule) => {
-                                rename_all_ser_rule.set(&m.path, rename_rule);
-                                rename_all_de_rule.set(&m.path, rename_rule);
+                                ser_rename_all.set(&m.path, rename_rule);
+                                de_rename_all.set(&m.path, rename_rule);
                             }
                             Err(()) => cx.error_spanned_by(
                                 s,
@@ -909,8 +959,8 @@ impl Variant {
                 Meta(List(m)) if m.path == RENAME_ALL => {
                     if let Ok((ser, de)) = get_renames(cx, &m.nested) {
                         if let Some(ser) = ser {
-                            match RenameRule::from_str(&ser.value()) {
-                                Ok(rename_rule) => rename_all_ser_rule.set(&m.path, rename_rule),
+                            match ConvertCase::from_str(&ser.value()) {
+                                Ok(rename_rule) => ser_rename_all.set(&m.path, rename_rule),
                                 Err(()) => cx.error_spanned_by(
                                     ser,
                                     format!(
@@ -921,8 +971,8 @@ impl Variant {
                             }
                         }
                         if let Some(de) = de {
-                            match RenameRule::from_str(&de.value()) {
-                                Ok(rename_rule) => rename_all_de_rule.set(&m.path, rename_rule),
+                            match ConvertCase::from_str(&de.value()) {
+                                Ok(rename_rule) => de_rename_all.set(&m.path, rename_rule),
                                 Err(()) => cx.error_spanned_by(
                                     de,
                                     format!(
@@ -1038,8 +1088,14 @@ impl Variant {
         Variant {
             name: Name::from_attrs(unraw(&variant.ident), ser_name, de_name, Some(de_aliases)),
             rename_all_rules: RenameAllRules {
-                serialize: rename_all_ser_rule.get().unwrap_or(RenameRule::None),
-                deserialize: rename_all_de_rule.get().unwrap_or(RenameRule::None),
+                serialize: RenameRule::new(
+                    ser_prefix_all.get(),
+                    ser_rename_all.get().unwrap_or(ConvertCase::None),
+                ),
+                deserialize: RenameRule::new(
+                    de_prefix_all.get(),
+                    de_rename_all.get().unwrap_or(ConvertCase::None),
+                ),
             },
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
@@ -1537,6 +1593,14 @@ where
     }
 
     Ok((ser_meta, de_meta))
+}
+
+fn get_prefixes<'a>(
+    cx: &Ctxt,
+    items: &'a Punctuated<syn::NestedMeta, Token![,]>,
+) -> Result<SerAndDe<&'a syn::LitStr>, ()> {
+    let (ser, de) = get_ser_and_de(cx, PREFIX_ALL, items, get_lit_str2)?;
+    Ok((ser.at_most_one()?, de.at_most_one()?))
 }
 
 fn get_renames<'a>(
