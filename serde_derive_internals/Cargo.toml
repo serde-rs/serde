@@ -18,9 +18,5 @@ proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version = "1.0", default-features = false, features = ["derive", "parsing", "printing", "clone-impls"] }
 
-[badges]
-travis-ci = { repository = "serde-rs/serde" }
-appveyor = { repository = "serde-rs/serde" }
-
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

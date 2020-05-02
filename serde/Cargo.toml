@@ -13,10 +13,6 @@ readme = "crates-io.md"
 include = ["Cargo.toml", "build.rs", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 build = "build.rs"
 
-[badges]
-travis-ci = { repository = "serde-rs/serde" }
-appveyor = { repository = "serde-rs/serde" }
-
 [dependencies]
 serde_derive = { version = "=1.0.106", optional = true, path = "../serde_derive" }
 

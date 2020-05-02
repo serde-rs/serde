@@ -11,10 +11,6 @@ keywords = ["serde", "serialization", "no_std"]
 readme = "crates-io.md"
 include = ["Cargo.toml", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 
-[badges]
-travis-ci = { repository = "serde-rs/serde" }
-appveyor = { repository = "serde-rs/serde" }
-
 [features]
 default = []
 deserialize_in_place = []

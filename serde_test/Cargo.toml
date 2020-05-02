@@ -18,9 +18,5 @@ serde = { version = "1.0.60", path = "../serde" }
 serde = { version = "1.0", path = "../serde" }
 serde_derive = { version = "1.0", path = "../serde_derive" }
 
-[badges]
-travis-ci = { repository = "serde-rs/serde" }
-appveyor = { repository = "serde-rs/serde" }
-
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
