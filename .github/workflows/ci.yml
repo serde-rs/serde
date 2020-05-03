@@ -1,0 +1,128 @@
+name: test
+
+on:
+  push:
+  pull_request:
+  schedule: [cron: "40 1 * * *"]
+
+jobs:
+  stable:
+    name: Rust stable
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cd serde && cargo build --features rc
+      - run: cd serde && cargo build --no-default-features
+      - run: cd serde_test && cargo build
+      - run: cd serde_test && cargo test --features serde/derive,serde/rc
+
+  beta:
+    name: Rust beta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@beta
+      - run: cd serde && cargo build --features rc
+      - run: cd test_suite && cargo test
+
+  nightly:
+    name: Rust nightly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@nightly
+      - run: cd serde && cargo build
+      - run: cd serde && cargo build --no-default-features
+      - run: cd serde && cargo build --no-default-features --features alloc
+      - run: cd serde && cargo build --no-default-features --features rc,alloc
+      - run: cd serde && cargo test --features derive,rc,unstable
+      - run: cd test_suite && cargo test --features unstable
+      - run: cd test_suite/no_std && cargo build
+
+  msrv:
+    name: Rust 1.13.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@1.13.0
+      - run: cd serde && cargo build --features rc
+      - run: cd serde && cargo build --no-default-features
+      - run: cd serde_test && cargo build
+
+  build:
+    name: Rust ${{matrix.rust}}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [1.19.0, 1.20.0, 1.21.0, 1.25.0, 1.26.0, 1.34.0]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{matrix.rust}}
+      - run: cd serde && cargo build --no-default-features
+      - run: cd serde && cargo build
+
+  more:
+    name: Rust ${{matrix.rust}}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [1.27.0, 1.28.0]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{matrix.rust}}
+        # Work around failing to parse manifest because editions are unstable.
+      - run: sed -i /test_suite/d Cargo.toml
+      - run: cd serde && cargo build --no-default-features
+      - run: cd serde && cargo build
+
+  alloc:
+    name: Rust 1.36.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@1.36.0
+      - run: cd serde && cargo build --no-default-features --features alloc
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@clippy
+        # The need for -Aredundant_field_names here is a Clippy bug.
+        # https://github.com/rust-lang/rust-clippy/issues/5356
+      - run: cargo clippy -- -D clippy::all -A clippy::redundant_field_names
+      - run: cd serde && cargo clippy --features rc,unstable -- -D clippy::all -A clippy::redundant_field_names
+      - run: cd serde_derive && cargo clippy -- -D clippy::all
+      - run: cd serde_test && cargo clippy -- -D clippy::all -A clippy::redundant_field_names
+      - run: cd test_suite && cargo clippy --tests --features unstable -- -D clippy::all -A clippy::redundant_field_names
+      - run: cd test_suite/no_std && cargo clippy -- -D clippy::all -A clippy::redundant_field_names
+
+  emscripten:
+    name: Emscripten
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 9
+      - name: Install cargo-web
+        run: |
+          CARGO_WEB_RELEASE=$(curl -L -s -H Accept:application/json https://github.com/koute/cargo-web/releases/latest)
+          CARGO_WEB_VERSION=$(echo "${CARGO_WEB_RELEASE}" | jq -r .tag_name)
+          CARGO_WEB_URL="https://github.com/koute/cargo-web/releases/download/${CARGO_WEB_VERSION}/cargo-web-x86_64-unknown-linux-gnu.gz"
+          mkdir -p ~/.cargo/bin
+          curl -L "${CARGO_WEB_URL}" | gzip -d > ~/.cargo/bin/cargo-web
+          chmod +x ~/.cargo/bin/cargo-web
+      - run: cd test_suite && cargo web test --target=asmjs-unknown-emscripten --nodejs
+        continue-on-error: true
+      - run: cd test_suite && cargo web test --target=wasm32-unknown-emscripten --nodejs
+        continue-on-error: true
