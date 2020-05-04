@@ -45,7 +45,7 @@ pub struct MetaNameValue {
 
 impl MetaNameValue {
     pub fn parse_value<T: Parse>(&self) -> Result<T> {
-        syn::parse2(self.value.clone().into())
+        syn::parse2(self.value.clone())
     }
 }
 
@@ -127,9 +127,10 @@ mod parsing {
 
     fn parse_meta_list_after_path(path: Path, input: ParseStream) -> Result<MetaList> {
         let content;
+        let paren_token = parenthesized!(content in input);
         Ok(MetaList {
             path,
-            paren_token: parenthesized!(content in input),
+            paren_token,
             nested: content.parse_terminated(NestedMeta::parse)?,
         })
     }
