@@ -1,7 +1,7 @@
-# Serde &emsp; [![Build Status]][travis] [![Latest Version]][crates.io] [![serde: rustc 1.13+]][Rust 1.13] [![serde_derive: rustc 1.31+]][Rust 1.31]
+# Serde &emsp; [![Build Status]][actions] [![Latest Version]][crates.io] [![serde: rustc 1.13+]][Rust 1.13] [![serde_derive: rustc 1.31+]][Rust 1.31]
 
-[Build Status]: https://api.travis-ci.org/serde-rs/serde.svg?branch=master
-[travis]: https://travis-ci.org/serde-rs/serde
+[Build Status]: https://img.shields.io/github/workflow/status/serde-rs/serde/CI/master
+[actions]: https://github.com/serde-rs/serde/actions?query=branch%3Amaster
 [Latest Version]: https://img.shields.io/crates/v/serde.svg
 [crates.io]: https://crates.io/crates/serde
 [serde: rustc 1.13+]: https://img.shields.io/badge/serde-rustc_1.13+-lightgray.svg
