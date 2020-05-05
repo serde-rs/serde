@@ -14,6 +14,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
       - run: cd test_suite && cargo test --features unstable
 
+  windows:
+    name: Test suite (windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@nightly
+      - run: cd test_suite && cargo test --features unstable -- --skip ui --exact
+
   stable:
     name: Rust stable
     runs-on: ubuntu-latest
@@ -35,8 +43,12 @@ jobs:
       - run: cd test_suite && cargo test
 
   nightly:
-    name: Rust nightly
-    runs-on: ubuntu-latest
+    name: Rust nightly ${{matrix.os == 'windows' && '(windows)' || ''}}
+    runs-on: ${{matrix.os}}-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu, windows]
     steps:
       - uses: actions/checkout@v2
       - uses: dtolnay/rust-toolchain@nightly
@@ -46,6 +58,7 @@ jobs:
       - run: cd serde && cargo build --no-default-features --features rc,alloc
       - run: cd serde && cargo test --features derive,rc,unstable
       - run: cd test_suite/no_std && cargo build
+        if: matrix.os != 'windows'
 
   msrv:
     name: Rust 1.13.0
