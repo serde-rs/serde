@@ -6,6 +6,14 @@ on:
   schedule: [cron: "40 1 * * *"]
 
 jobs:
+  test:
+    name: Test suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@nightly
+      - run: cd test_suite && cargo test --features unstable
+
   stable:
     name: Rust stable
     runs-on: ubuntu-latest
@@ -37,7 +45,6 @@ jobs:
       - run: cd serde && cargo build --no-default-features --features alloc
       - run: cd serde && cargo build --no-default-features --features rc,alloc
       - run: cd serde && cargo test --features derive,rc,unstable
-      - run: cd test_suite && cargo test --features unstable
       - run: cd test_suite/no_std && cargo build
 
   msrv:
