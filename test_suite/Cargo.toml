@@ -7,6 +7,7 @@ publish = false
 build = "build.rs"
 
 [features]
+expandtest = []
 unstable = ["serde/unstable"]
 
 [dependencies]

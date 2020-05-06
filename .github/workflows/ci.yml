@@ -60,18 +60,6 @@ jobs:
       - run: cd test_suite/no_std && cargo build
         if: matrix.os != 'windows'
 
-  macro:
-    name: Macro test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dtolnay/rust-toolchain@nightly
-      - name: Download cargo-expand
-        run: |
-          curl -sSo ~/.cargo/bin/cargo-expand https://github.com/dtolnay/cargo-expand/releases/download/0.6.0/cargo-expand
-          chmod +x ~/.cargo/bin/cargo-expand
-      - run: cd test_suite && cargo test --test expandtest
-
   msrv:
     name: Rust 1.13.0
     runs-on: ubuntu-latest
