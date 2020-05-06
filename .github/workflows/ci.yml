@@ -138,3 +138,18 @@ jobs:
         continue-on-error: true
       - run: cd test_suite && cargo web test --target=wasm32-unknown-emscripten --nodejs
         continue-on-error: true
+
+  clippy:
+    name: Clippy ${{matrix.dir}}
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@clippy
+        # The need for -Aredundant_field_names here is a Clippy bug.
+        # https://github.com/rust-lang/rust-clippy/issues/5356
+      - run: cd serde && cargo clippy --features rc,unstable -- -D clippy::all -A clippy::redundant_field_names
+      - run: cd serde_derive && cargo clippy -- -D clippy::all
+      - run: cd serde_test && cargo clippy -- -D clippy::all -A clippy::redundant_field_names
+      - run: cd test_suite && cargo clippy --tests --features unstable -- -D clippy::all -A clippy::redundant_field_names
+      - run: cd test_suite/no_std && cargo clippy -- -D clippy::all -A clippy::redundant_field_names
