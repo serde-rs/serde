@@ -1379,53 +1379,37 @@ fn deserialize_adjacently_tagged_enum(
         }
     };
 
-    fn maybe_optional(variant: &Variant) -> bool {
-        match variant.style {
-            Style::Unit => true,
-            Style::Newtype => variant.attrs.deserialize_with().is_none(),
-            Style::Struct | Style::Tuple => false,
-        }
-    }
+    let arms = variants
+        .iter()
+        .enumerate()
+        .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
+        .filter_map(|(i, variant)| {
+            let variant_index = field_i(i);
+            let variant_ident = &variant.ident;
 
-    let mut missing_content = quote! {
-        _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#content))
-    };
-    if variants.iter().any(maybe_optional) {
-        let fallthrough = if variants.iter().all(maybe_optional) {
-            None
-        } else {
-            Some(quote! {
-                _ => #missing_content
-            })
-        };
-        let arms = variants
-            .iter()
-            .enumerate()
-            .filter(|&(_, variant)| !variant.attrs.skip_deserializing() && maybe_optional(variant))
-            .map(|(i, variant)| {
-                let variant_index = field_i(i);
-                let variant_ident = &variant.ident;
-                match variant.style {
-                    Style::Unit => quote! {
-                        __Field::#variant_index => _serde::export::Ok(#this::#variant_ident),
-                    },
-                    Style::Newtype => {
-                        let span = variant.original.span();
-                        let func = quote_spanned!(span=> _serde::private::de::missing_field);
-                        quote! {
-                            __Field::#variant_index => #func(#content).map(#this::#variant_ident),
-                        }
-                    },
-                    _ => unreachable!(),
+            let arm = match variant.style {
+                Style::Unit => quote! {
+                    _serde::export::Ok(#this::#variant_ident)
+                },
+                Style::Newtype if variant.attrs.deserialize_with().is_none() => {
+                    let span = variant.original.span();
+                    let func = quote_spanned!(span=> _serde::private::de::missing_field);
+                    quote! {
+                        #func(#content).map(#this::#variant_ident)
+                    }
                 }
-            });
-        missing_content = quote! {
-            match __field {
-                #(#arms)*
-                #fallthrough
-            }
-        };
-    }
+                _ => return None,
+            };
+            Some(quote! {
+                __Field::#variant_index => #arm,
+            })
+        });
+    let missing_content = quote! {
+        match __field {
+            #(#arms)*
+            _ => _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#content))
+        }
+    };
 
     // Advance the map by one key, returning early in case of error.
     let next_key = quote! {
