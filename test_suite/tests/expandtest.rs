@@ -1,5 +1,5 @@
 #[cfg_attr(target_os = "emscripten", ignore)]
-#[cfg_attr(not(cargo_expand), ignore)]
+#[cfg_attr(not(expandtest), ignore)]
 #[rustversion::attr(not(nightly), ignore)]
 #[test]
 fn expandtest() {

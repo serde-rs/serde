@@ -12,11 +12,14 @@ unstable = ["serde/unstable"]
 [dependencies]
 serde = { path = "../serde" }
 
+[build-dependencies]
+toolchain_find = "0.1"
+
 [dev-dependencies]
 fnv = "1.0"
+macrotest = "=1.0.0"
 rustversion = "1.0"
 serde = { path = "../serde", features = ["rc", "derive"] }
 serde_derive = { path = "../serde_derive", features = ["deserialize_in_place"] }
 serde_test = { path = "../serde_test" }
 trybuild = "1.0"
-macrotest = "=1.0.0"
