@@ -14,7 +14,7 @@ serde = { path = "../serde" }
 
 [dev-dependencies]
 fnv = "1.0"
-rustversion = "0.1"
+rustversion = "1.0"
 serde = { path = "../serde", features = ["rc", "derive"] }
 serde_derive = { path = "../serde_derive", features = ["deserialize_in_place"] }
 serde_test = { path = "../serde_test" }
