@@ -22,9 +22,7 @@ jobs:
           - dir: test_suite/no_std
     steps:
       - uses: actions/checkout@v2
-      - uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: clippy
+      - uses: dtolnay/rust-toolchain@clippy
         # The need for -Aredundant_field_names here is a Clippy bug.
         # https://github.com/rust-lang/rust-clippy/issues/5356
       - name: cargo clippy ${{matrix.features && format('--features {0}', matrix.features)}}

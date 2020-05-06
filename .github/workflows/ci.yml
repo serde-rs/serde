@@ -104,21 +104,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.36.0
       - run: cd serde && cargo build --no-default-features --features alloc
 
-  clippy:
-    name: Clippy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dtolnay/rust-toolchain@clippy
-        # The need for -Aredundant_field_names here is a Clippy bug.
-        # https://github.com/rust-lang/rust-clippy/issues/5356
-      - run: cargo clippy -- -D clippy::all -A clippy::redundant_field_names
-      - run: cd serde && cargo clippy --features rc,unstable -- -D clippy::all -A clippy::redundant_field_names
-      - run: cd serde_derive && cargo clippy -- -D clippy::all
-      - run: cd serde_test && cargo clippy -- -D clippy::all -A clippy::redundant_field_names
-      - run: cd test_suite && cargo clippy --tests --features unstable -- -D clippy::all -A clippy::redundant_field_names
-      - run: cd test_suite/no_std && cargo clippy -- -D clippy::all -A clippy::redundant_field_names
-
   emscripten:
     name: Emscripten
     runs-on: ubuntu-latest
