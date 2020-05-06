@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 struct NamedUnit;
+#[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_SERIALIZE_FOR_NamedUnit: () = {
-    #[allow(unknown_lints)]
-    #[allow(rust_2018_idioms)]
+    #[allow(rust_2018_idioms, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl _serde::Serialize for NamedUnit {
@@ -15,10 +15,10 @@ const _IMPL_SERIALIZE_FOR_NamedUnit: () = {
         }
     }
 };
+#[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_NamedUnit: () = {
-    #[allow(unknown_lints)]
-    #[allow(rust_2018_idioms)]
+    #[allow(rust_2018_idioms, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'de> _serde::Deserialize<'de> for NamedUnit {

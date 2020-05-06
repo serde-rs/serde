@@ -2,10 +2,10 @@ use serde::{Deserialize, Serialize};
 pub struct GenericStruct<T> {
     x: T,
 }
+#[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_SERIALIZE_FOR_GenericStruct: () = {
-    #[allow(unknown_lints)]
-    #[allow(rust_2018_idioms)]
+    #[allow(rust_2018_idioms, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<T> _serde::Serialize for GenericStruct<T>
@@ -36,10 +36,10 @@ const _IMPL_SERIALIZE_FOR_GenericStruct: () = {
         }
     }
 };
+#[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_GenericStruct: () = {
-    #[allow(unknown_lints)]
-    #[allow(rust_2018_idioms)]
+    #[allow(rust_2018_idioms, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'de, T> _serde::Deserialize<'de> for GenericStruct<T>
@@ -398,10 +398,10 @@ const _IMPL_DESERIALIZE_FOR_GenericStruct: () = {
     }
 };
 pub struct GenericNewTypeStruct<T>(T);
+#[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_SERIALIZE_FOR_GenericNewTypeStruct: () = {
-    #[allow(unknown_lints)]
-    #[allow(rust_2018_idioms)]
+    #[allow(rust_2018_idioms, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<T> _serde::Serialize for GenericNewTypeStruct<T>
@@ -420,10 +420,10 @@ const _IMPL_SERIALIZE_FOR_GenericNewTypeStruct: () = {
         }
     }
 };
+#[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_GenericNewTypeStruct: () = {
-    #[allow(unknown_lints)]
-    #[allow(rust_2018_idioms)]
+    #[allow(rust_2018_idioms, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'de, T> _serde::Deserialize<'de> for GenericNewTypeStruct<T>

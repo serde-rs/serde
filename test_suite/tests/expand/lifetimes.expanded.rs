@@ -5,10 +5,10 @@ enum Lifetimes<'a> {
     LifetimeMap { a: &'a i32 },
     NoLifetimeMap { a: i32 },
 }
+#[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_SERIALIZE_FOR_Lifetimes: () = {
-    #[allow(unknown_lints)]
-    #[allow(rust_2018_idioms)]
+    #[allow(rust_2018_idioms, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'a> _serde::Serialize for Lifetimes<'a> {
@@ -89,10 +89,10 @@ const _IMPL_SERIALIZE_FOR_Lifetimes: () = {
         }
     }
 };
+#[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_Lifetimes: () = {
-    #[allow(unknown_lints)]
-    #[allow(rust_2018_idioms)]
+    #[allow(rust_2018_idioms, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'de, 'a> _serde::Deserialize<'de> for Lifetimes<'a> {

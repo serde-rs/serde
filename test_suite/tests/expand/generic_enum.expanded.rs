@@ -5,10 +5,10 @@ pub enum GenericEnum<T, U> {
     Seq(T, U),
     Map { x: T, y: U },
 }
+#[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_SERIALIZE_FOR_GenericEnum: () = {
-    #[allow(unknown_lints)]
-    #[allow(rust_2018_idioms)]
+    #[allow(rust_2018_idioms, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<T, U> _serde::Serialize for GenericEnum<T, U>
@@ -108,10 +108,10 @@ const _IMPL_SERIALIZE_FOR_GenericEnum: () = {
         }
     }
 };
+#[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_GenericEnum: () = {
-    #[allow(unknown_lints)]
-    #[allow(rust_2018_idioms)]
+    #[allow(rust_2018_idioms, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'de, T, U> _serde::Deserialize<'de> for GenericEnum<T, U>

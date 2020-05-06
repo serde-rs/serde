@@ -8,10 +8,10 @@ impl AssociatedType for i32 {
 struct DefaultTyParam<T: AssociatedType<X = i32> = i32> {
     phantom: PhantomData<T>,
 }
+#[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_SERIALIZE_FOR_DefaultTyParam: () = {
-    #[allow(unknown_lints)]
-    #[allow(rust_2018_idioms)]
+    #[allow(rust_2018_idioms, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<T: AssociatedType<X = i32>> _serde::Serialize for DefaultTyParam<T> {
@@ -43,10 +43,10 @@ const _IMPL_SERIALIZE_FOR_DefaultTyParam: () = {
         }
     }
 };
+#[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_DefaultTyParam: () = {
-    #[allow(unknown_lints)]
-    #[allow(rust_2018_idioms)]
+    #[allow(rust_2018_idioms, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'de, T: AssociatedType<X = i32>> _serde::Deserialize<'de> for DefaultTyParam<T> {

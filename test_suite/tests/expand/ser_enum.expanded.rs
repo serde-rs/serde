@@ -10,10 +10,10 @@ where
     _Seq2(i8, B, &'a C, &'a mut D),
     _Map2 { a: i8, b: B, c: &'a C, d: &'a mut D },
 }
+#[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_SERIALIZE_FOR_SerEnum: () = {
-    #[allow(unknown_lints)]
-    #[allow(rust_2018_idioms)]
+    #[allow(rust_2018_idioms, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'a, B: 'a, C: 'a, D> _serde::Serialize for SerEnum<'a, B, C, D>
