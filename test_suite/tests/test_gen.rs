@@ -691,6 +691,16 @@ fn test_gen() {
         #[serde(flatten, skip_deserializing)]
         flat: T,
     }
+
+    // https://github.com/serde-rs/serde/issues/1804
+    #[derive(Serialize, Deserialize)]
+    enum Message {
+        #[serde(skip)]
+        #[allow(dead_code)]
+        String(String),
+        #[serde(other)]
+        Unknown,
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
