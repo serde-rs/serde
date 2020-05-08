@@ -1153,10 +1153,13 @@ fn prepare_enum_variant_enum(
     variants: &[Variant],
     cattrs: &attr::Container,
 ) -> (TokenStream, Stmts) {
-    let variant_names_idents: Vec<_> = variants
+    let mut deserialized_variants = variants
         .iter()
         .enumerate()
-        .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
+        .filter(|&(_, variant)| !variant.attrs.skip_deserializing());
+
+    let variant_names_idents: Vec<_> = deserialized_variants
+        .clone()
         .map(|(i, variant)| {
             (
                 variant.attrs.name().deserialize_name(),
@@ -1166,7 +1169,7 @@ fn prepare_enum_variant_enum(
         })
         .collect();
 
-    let other_idx = variants.iter().position(|variant| variant.attrs.other());
+    let other_idx = deserialized_variants.position(|(_, variant)| variant.attrs.other());
 
     let variants_stmt = {
         let variant_names = variant_names_idents.iter().map(|(name, _, _)| name);
