@@ -45,10 +45,6 @@ impl<'a, 'b> Serializer for &'a mut fmt::Formatter<'b> {
         serialize_unit_struct: &'static str,
     }
 
-    fn serialize_unit(self) -> fmt::Result {
-        Ok(())
-    }
-
     fn serialize_unit_variant(
         self,
         _name: &'static str,
@@ -70,6 +66,10 @@ impl<'a, 'b> Serializer for &'a mut fmt::Formatter<'b> {
     where
         T: Serialize,
     {
+        Err(fmt::Error)
+    }
+
+    fn serialize_unit(self) -> fmt::Result {
         Err(fmt::Error)
     }
 
