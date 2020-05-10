@@ -701,6 +701,13 @@ fn test_gen() {
         #[serde(other)]
         Unknown,
     }
+
+    #[derive(Serialize)]
+    #[repr(packed)]
+    struct Packed {
+        x: u8,
+        y: u16,
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
