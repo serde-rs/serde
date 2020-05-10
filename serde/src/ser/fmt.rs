@@ -17,6 +17,23 @@ macro_rules! fmt_primitives {
     };
 }
 
+/// ```edition2018
+/// use serde::Serialize;
+/// use std::fmt::{self, Display};
+///
+/// #[derive(Serialize)]
+/// #[serde(rename_all = "kebab-case")]
+/// pub enum MessageType {
+///     StartRequest,
+///     EndRequest,
+/// }
+///
+/// impl Display for MessageType {
+///     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+///         self.serialize(f)
+///     }
+/// }
+/// ```
 impl<'a, 'b> Serializer for &'a mut fmt::Formatter<'b> {
     type Ok = ();
     type Error = fmt::Error;
