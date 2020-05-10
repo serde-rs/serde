@@ -1377,7 +1377,8 @@ fn deserialize_adjacently_tagged_enum(
         }
     };
 
-    let arms = variants
+    let mut missing_content_fallthrough = quote!();
+    let missing_content_arms = variants
         .iter()
         .enumerate()
         .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
@@ -1396,7 +1397,12 @@ fn deserialize_adjacently_tagged_enum(
                         #func(#content).map(#this::#variant_ident)
                     }
                 }
-                _ => return None,
+                _ => {
+                    missing_content_fallthrough = quote! {
+                        _ => _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#content))
+                    };
+                    return None;
+                }
             };
             Some(quote! {
                 __Field::#variant_index => #arm,
@@ -1404,8 +1410,8 @@ fn deserialize_adjacently_tagged_enum(
         });
     let missing_content = quote! {
         match __field {
-            #(#arms)*
-            _ => _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#content))
+            #(#missing_content_arms)*
+            #missing_content_fallthrough
         }
     };
 
