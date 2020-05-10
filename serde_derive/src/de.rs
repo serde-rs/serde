@@ -1377,8 +1377,11 @@ fn deserialize_adjacently_tagged_enum(
         }
     };
 
+    let mut missing_content = quote! {
+        _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#content))
+    };
     let mut missing_content_fallthrough = quote!();
-    let missing_content_arms = variants
+    let mut missing_content_arms = variants
         .iter()
         .enumerate()
         .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
@@ -1398,22 +1401,23 @@ fn deserialize_adjacently_tagged_enum(
                     }
                 }
                 _ => {
-                    missing_content_fallthrough = quote! {
-                        _ => _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#content))
-                    };
+                    missing_content_fallthrough = quote!(_ => #missing_content);
                     return None;
                 }
             };
             Some(quote! {
                 __Field::#variant_index => #arm,
             })
-        });
-    let missing_content = quote! {
-        match __field {
-            #(#missing_content_arms)*
-            #missing_content_fallthrough
-        }
-    };
+        })
+        .peekable();
+    if missing_content_arms.peek().is_some() {
+        missing_content = quote! {
+            match __field {
+                #(#missing_content_arms)*
+                #missing_content_fallthrough
+            }
+        };
+    }
 
     // Advance the map by one key, returning early in case of error.
     let next_key = quote! {
