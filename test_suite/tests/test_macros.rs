@@ -1145,6 +1145,20 @@ fn test_adjacently_tagged_enum() {
         ],
     );
 
+    // optional newtype with no content field
+    assert_de_tokens(
+        &AdjacentlyTagged::Newtype::<Option<u8>>(None),
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 1,
+            },
+            Token::Str("t"),
+            Token::Str("Newtype"),
+            Token::StructEnd,
+        ],
+    );
+
     // tuple with tag first
     assert_tokens(
         &AdjacentlyTagged::Tuple::<u8>(1, 1),
