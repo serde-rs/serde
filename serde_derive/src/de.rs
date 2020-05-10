@@ -1381,7 +1381,7 @@ fn deserialize_adjacently_tagged_enum(
         _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#content))
     };
     let mut missing_content_fallthrough = quote!();
-    let mut missing_content_arms = variants
+    let missing_content_arms = variants
         .iter()
         .enumerate()
         .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
@@ -1409,8 +1409,8 @@ fn deserialize_adjacently_tagged_enum(
                 __Field::#variant_index => #arm,
             })
         })
-        .peekable();
-    if missing_content_arms.peek().is_some() {
+        .collect::<Vec<_>>();
+    if !missing_content_arms.is_empty() {
         missing_content = quote! {
             match __field {
                 #(#missing_content_arms)*
