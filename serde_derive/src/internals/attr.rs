@@ -594,12 +594,11 @@ impl Container {
         }
 
         use proc_macro2::Delimiter;
-        let is_packed = item.attrs.iter().any(|attr| {
-            match attr.style {
-                syn::AttrStyle::Outer => attr
-                        .path
-                        .get_ident()
-                        .map_or(false, |ident| *ident == "repr")
+        let is_packed = item.attrs.iter().any(|attr| match attr.style {
+            syn::AttrStyle::Outer => {
+                attr.path
+                    .get_ident()
+                    .map_or(false, |ident| *ident == "repr")
                     && syn::parse2::<Group>(attr.tokens.clone())
                         .ok()
                         .filter(|g| g.delimiter() == Delimiter::Parenthesis)
@@ -609,9 +608,9 @@ impl Container {
                             repr == "packed"
                                 || repr.starts_with("packed(")
                                 || repr.starts_with("packed ")
-                        }),
-                _ => false
+                        })
             }
+            _ => false,
         });
 
         Container {
