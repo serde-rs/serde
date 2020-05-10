@@ -1246,14 +1246,14 @@ fn get_member(params: &Parameters, field: &Field, member: &Member) -> TokenStrea
     match (params.is_remote, field.attrs.getter()) {
         (false, None) => {
             if params.is_packed {
-                quote!(&{let copy = #self_var.#member; copy })
+                quote!(&{#self_var.#member})
             } else {
                 quote!(&#self_var.#member)
             }
         }
         (true, None) => {
             let inner = if params.is_packed {
-                quote!(&{let copy = #self_var.#member; copy })
+                quote!(&{#self_var.#member})
             } else {
                 quote!(&#self_var.#member)
             };
