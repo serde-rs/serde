@@ -109,6 +109,7 @@
 
 use lib::*;
 
+mod fmt;
 mod impls;
 mod impossible;
 
