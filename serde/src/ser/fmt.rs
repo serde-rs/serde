@@ -45,6 +45,13 @@ impl<'a, 'b> Serializer for &'a mut fmt::Formatter<'b> {
         serialize_unit_struct: &'static str,
     }
 
+    serde_if_integer128! {
+        fmt_primitives! {
+            serialize_i128: i128,
+            serialize_u128: u128,
+        }
+    }
+
     fn serialize_unit_variant(
         self,
         _name: &'static str,
