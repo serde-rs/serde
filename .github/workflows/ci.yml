@@ -109,6 +109,14 @@ jobs:
       - run: cd serde && cargo build --no-default-features
       - run: cd serde && cargo build
 
+  derive:
+    name: Rust 1.31.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@1.31.0
+      - run: cd serde_derive && cargo check
+
   alloc:
     name: Rust 1.36.0
     runs-on: ubuntu-latest
