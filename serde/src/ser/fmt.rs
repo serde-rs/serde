@@ -54,6 +54,13 @@ impl<'a, 'b> Serializer for &'a mut fmt::Formatter<'b> {
         Display::fmt(variant, self)
     }
 
+    fn serialize_newtype_struct<T: ?Sized>(self, _name: &'static str, value: &T) -> fmt::Result
+    where
+        T: Serialize,
+    {
+        Serialize::serialize(value, self)
+    }
+
     fn serialize_bytes(self, _v: &[u8]) -> fmt::Result {
         Err(fmt::Error)
     }
@@ -70,13 +77,6 @@ impl<'a, 'b> Serializer for &'a mut fmt::Formatter<'b> {
     }
 
     fn serialize_unit(self) -> fmt::Result {
-        Err(fmt::Error)
-    }
-
-    fn serialize_newtype_struct<T: ?Sized>(self, _name: &'static str, _value: &T) -> fmt::Result
-    where
-        T: Serialize,
-    {
         Err(fmt::Error)
     }
 
