@@ -1003,4 +1003,11 @@ impl<'a, 'b> Serializer for &'a mut fmt::Formatter<'b> {
     ) -> Result<Self::SerializeStructVariant, fmt::Error> {
         Err(fmt::Error)
     }
+
+    fn collect_str<T: ?Sized>(self, value: &T) -> fmt::Result
+    where
+        T: Display,
+    {
+        Display::fmt(value, self)
+    }
 }
