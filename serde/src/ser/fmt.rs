@@ -11,7 +11,7 @@ macro_rules! fmt_primitives {
     ($($f:ident: $t:ty,)*) => {
         $(
             fn $f(self, v: $t) -> fmt::Result {
-                write!(self, "{}", v)
+                Display::fmt(&v, self)
             }
         )*
     };
@@ -51,7 +51,7 @@ impl<'a, 'b> Serializer for &'a mut fmt::Formatter<'b> {
         _variant_index: u32,
         variant: &'static str,
     ) -> fmt::Result {
-        write!(self, "{}", variant)
+        Display::fmt(variant, self)
     }
 
     fn serialize_bytes(self, _v: &[u8]) -> fmt::Result {
