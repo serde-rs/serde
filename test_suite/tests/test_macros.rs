@@ -1893,4 +1893,16 @@ fn test_packed_struct_can_derive_serialize() {
     struct CPacked {
         t: f32,
     }
+
+    #[derive(Copy, Clone, Serialize)]
+    #[repr(C, packed(2))]
+    struct CPacked2 {
+        t: f32,
+    }
+
+    #[derive(Copy, Clone, Serialize)]
+    #[repr(packed(2), C)]
+    struct Packed2C {
+        t: f32,
+    }
 }
