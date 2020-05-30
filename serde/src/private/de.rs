@@ -1562,7 +1562,7 @@ mod content {
                     other.unexpected(),
                     &"struct variant",
                 )),
-                _ => Err(de::Error::invalid_type(
+                None => Err(de::Error::invalid_type(
                     de::Unexpected::UnitVariant,
                     &"struct variant",
                 )),
@@ -2252,7 +2252,7 @@ mod content {
                     other.unexpected(),
                     &"struct variant",
                 )),
-                _ => Err(de::Error::invalid_type(
+                None => Err(de::Error::invalid_type(
                     de::Unexpected::UnitVariant,
                     &"struct variant",
                 )),
