@@ -8,7 +8,7 @@ use bound;
 use dummy;
 use fragment::{Expr, Fragment, Match, Stmts};
 use internals::ast::{Container, Data, Field, Style, Variant};
-use internals::{attr, Ctxt, Derive};
+use internals::{attr, ungroup, Ctxt, Derive};
 use pretend;
 
 use std::collections::BTreeSet;
@@ -77,7 +77,7 @@ fn precondition(cx: &Ctxt, cont: &Container) {
 fn precondition_sized(cx: &Ctxt, cont: &Container) {
     if let Data::Struct(_, fields) = &cont.data {
         if let Some(last) = fields.last() {
-            if let syn::Type::Slice(_) = *last.ty {
+            if let syn::Type::Slice(_) = ungroup(last.ty) {
                 cx.error_spanned_by(
                     cont.original,
                     "cannot deserialize a dynamically sized struct",

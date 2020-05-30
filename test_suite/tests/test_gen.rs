@@ -708,6 +708,17 @@ fn test_gen() {
         x: u8,
         y: u16,
     }
+
+    macro_rules! deriving {
+        ($field:ty) => {
+            #[derive(Deserialize)]
+            struct MacroRules<'a> {
+                field: $field,
+            }
+        };
+    }
+
+    deriving!(&'a str);
 }
 
 //////////////////////////////////////////////////////////////////////////
