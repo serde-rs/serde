@@ -13,6 +13,21 @@ use pretend;
 
 use std::collections::BTreeSet;
 
+#[cfg(feature = "lean_strings")]
+macro_rules! lean_format {
+    ($($arg:expr),*) => {
+        {
+            $(let _ = $arg;)*
+            String::new()
+        }
+    }
+}
+
+#[cfg(not(feature = "lean_strings"))]
+macro_rules! lean_format {
+    ($($arg:tt)*) => (format!($($arg)*))
+}
+
 pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream, Vec<syn::Error>> {
     let ctxt = Ctxt::new();
     let cont = match Container::from_ast(&ctxt, input, Derive::Deserialize) {
@@ -398,7 +413,7 @@ fn deserialize_unit_struct(params: &Parameters, cattrs: &attr::Container) -> Fra
     let this = &params.this;
     let type_name = cattrs.name().deserialize_name();
 
-    let expecting = format!("unit struct {}", params.type_name());
+    let expecting = lean_format!("unit struct {}", params.type_name());
 
     quote_block! {
         struct __Visitor;
@@ -453,8 +468,8 @@ fn deserialize_tuple(
         None => construct,
     };
     let expecting = match variant_ident {
-        Some(variant_ident) => format!("tuple variant {}::{}", params.type_name(), variant_ident),
-        None => format!("tuple struct {}", params.type_name()),
+        Some(variant_ident) => lean_format!("tuple variant {}::{}", params.type_name(), variant_ident),
+        None => lean_format!("tuple struct {}", params.type_name()),
     };
 
     let nfields = fields.len();
@@ -539,8 +554,8 @@ fn deserialize_tuple_in_place(
 
     let is_enum = variant_ident.is_some();
     let expecting = match variant_ident {
-        Some(variant_ident) => format!("tuple variant {}::{}", params.type_name(), variant_ident),
-        None => format!("tuple struct {}", params.type_name()),
+        Some(variant_ident) => lean_format!("tuple variant {}::{}", params.type_name(), variant_ident),
+        None => lean_format!("tuple struct {}", params.type_name()),
     };
 
     let nfields = fields.len();
@@ -626,9 +641,9 @@ fn deserialize_seq(
         .filter(|field| !field.attrs.skip_deserializing())
         .count();
     let expecting = if deserialized_count == 1 {
-        format!("{} with 1 element", expecting)
+        lean_format!("{} with 1 element", expecting)
     } else {
-        format!("{} with {} elements", expecting, deserialized_count)
+        lean_format!("{} with {} elements", expecting, deserialized_count)
     };
 
     let mut index_in_seq = 0_usize;
@@ -728,9 +743,9 @@ fn deserialize_seq_in_place(
         .filter(|field| !field.attrs.skip_deserializing())
         .count();
     let expecting = if deserialized_count == 1 {
-        format!("{} with 1 element", expecting)
+        lean_format!("{} with 1 element", expecting)
     } else {
-        format!("{} with {} elements", expecting, deserialized_count)
+        lean_format!("{} with {} elements", expecting, deserialized_count)
     };
 
     let mut index_in_seq = 0usize;
@@ -904,8 +919,8 @@ fn deserialize_struct(
         None => construct,
     };
     let expecting = match variant_ident {
-        Some(variant_ident) => format!("struct variant {}::{}", params.type_name(), variant_ident),
-        None => format!("struct {}", params.type_name()),
+        Some(variant_ident) => lean_format!("struct variant {}::{}", params.type_name(), variant_ident),
+        None => lean_format!("struct {}", params.type_name()),
     };
 
     let visit_seq = Stmts(deserialize_seq(
@@ -1045,8 +1060,8 @@ fn deserialize_struct_in_place(
     let delife = params.borrowed.de_lifetime();
 
     let expecting = match variant_ident {
-        Some(variant_ident) => format!("struct variant {}::{}", params.type_name(), variant_ident),
-        None => format!("struct {}", params.type_name()),
+        Some(variant_ident) => lean_format!("struct variant {}::{}", params.type_name(), variant_ident),
+        None => lean_format!("struct {}", params.type_name()),
     };
 
     let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, &expecting));
@@ -1199,7 +1214,7 @@ fn deserialize_externally_tagged_enum(
     let delife = params.borrowed.de_lifetime();
 
     let type_name = cattrs.name().deserialize_name();
-    let expecting = format!("enum {}", params.type_name());
+    let expecting = lean_format!("enum {}", params.type_name());
 
     let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants, cattrs);
 
@@ -1358,7 +1373,7 @@ fn deserialize_adjacently_tagged_enum(
         })
         .collect();
 
-    let expecting = format!("adjacently tagged enum {}", params.type_name());
+    let expecting = lean_format!("adjacently tagged enum {}", params.type_name());
     let type_name = cattrs.name().deserialize_name();
     let deny_unknown_fields = cattrs.deny_unknown_fields();
 
@@ -1644,7 +1659,7 @@ fn deserialize_untagged_enum(
     // largest number of fields. I'm not sure I like that. Maybe it would be
     // better to save all the errors and combine them into one message that
     // explains why none of the variants matched.
-    let fallthrough_msg = format!(
+    let fallthrough_msg = lean_format!(
         "data did not match any variant of untagged enum {}",
         params.type_name()
     );

@@ -20,7 +20,7 @@ serde_derive = { version = "=1.0.111", optional = true, path = "../serde_derive"
 serde_derive = { version = "1.0", path = "../serde_derive" }
 
 [package.metadata.playground]
-features = ["derive", "rc"]
+features = ["derive", "lean_strings", "rc"]
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -33,6 +33,9 @@ default = ["std"]
 
 # Provide derive(Serialize, Deserialize) macros.
 derive = ["serde_derive"]
+
+# Remove optional diagnostic strings that may contain source code identifiers.
+lean_strings = ["serde_derive/lean_strings"]
 
 # Provide impls for common standard library types like Vec<T> and HashMap<K, V>.
 # Requires a dependency on the Rust standard library.

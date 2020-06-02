@@ -14,6 +14,7 @@ include = ["Cargo.toml", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-AP
 [features]
 default = []
 deserialize_in_place = []
+lean_strings = []
 
 [lib]
 name = "serde_derive"
