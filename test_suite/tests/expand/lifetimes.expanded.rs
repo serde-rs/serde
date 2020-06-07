@@ -7,7 +7,7 @@ enum Lifetimes<'a> {
 }
 #[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
-const _IMPL_SERIALIZE_FOR_Lifetimes: () = {
+const _: () = {
     #[allow(rust_2018_idioms, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
@@ -91,7 +91,7 @@ const _IMPL_SERIALIZE_FOR_Lifetimes: () = {
 };
 #[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
-const _IMPL_DESERIALIZE_FOR_Lifetimes: () = {
+const _: () = {
     #[allow(rust_2018_idioms, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
