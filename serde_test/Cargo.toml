@@ -9,7 +9,7 @@ repository = "https://github.com/serde-rs/serde"
 documentation = "https://docs.serde.rs/serde_test/"
 keywords = ["serde", "serialization"]
 readme = "crates-io.md"
-include = ["Cargo.toml", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+include = ["src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
 serde = { version = "1.0.60", path = "../serde" }

@@ -9,7 +9,7 @@ repository = "https://github.com/serde-rs/serde"
 documentation = "https://serde.rs/derive.html"
 keywords = ["serde", "serialization", "no_std"]
 readme = "crates-io.md"
-include = ["Cargo.toml", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+include = ["src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [features]
 default = []

@@ -10,7 +10,7 @@ documentation = "https://docs.serde.rs/serde/"
 keywords = ["serde", "serialization", "no_std"]
 categories = ["encoding"]
 readme = "crates-io.md"
-include = ["Cargo.toml", "build.rs", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+include = ["build.rs", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 build = "build.rs"
 
 [dependencies]

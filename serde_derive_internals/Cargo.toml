@@ -8,7 +8,7 @@ homepage = "https://serde.rs"
 repository = "https://github.com/serde-rs/serde"
 documentation = "https://docs.rs/serde_derive_internals"
 keywords = ["serde", "serialization"]
-include = ["Cargo.toml", "lib.rs", "src/**/*.rs", "LICENSE-APACHE", "LICENSE-MIT"]
+include = ["lib.rs", "src/**/*.rs", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [lib]
 path = "lib.rs"
