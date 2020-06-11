@@ -95,6 +95,8 @@
 #![cfg_attr(
     feature = "cargo-clippy",
     allow(
+        // clippy bug: https://github.com/rust-lang/rust-clippy/issues/5704
+        unnested_or_patterns,
         // not available in our oldest supported compiler
         checked_conversions,
         empty_enum,
