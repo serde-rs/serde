@@ -64,7 +64,10 @@ impl RenameRule {
     /// Apply a renaming rule to a struct field, returning the version expected in the source.
     pub fn apply_to_field(&self, field: &str) -> String {
         match *self {
-            None | LowerCase | SnakeCase => field.to_owned(),
+            None | SnakeCase => field.to_owned(),
+            LowerCase => {
+                field.replace('_', "").to_ascii_lowercase()
+            },
             UPPERCASE => field.to_ascii_uppercase(),
             PascalCase => {
                 let mut pascal = String::new();
@@ -80,7 +83,7 @@ impl RenameRule {
                     }
                 }
                 pascal
-            }
+            },
             CamelCase => {
                 let pascal = PascalCase.apply_to_field(field);
                 pascal[..1].to_ascii_lowercase() + &pascal[1..]
@@ -146,12 +149,13 @@ fn rename_variants() {
 
 #[test]
 fn rename_fields() {
-    for &(original, upper, pascal, camel, screaming, kebab, screaming_kebab) in &[
+    for &(original, lower, upper, pascal, camel, screaming, kebab, screaming_kebab) in &[
         (
-            "outcome", "OUTCOME", "Outcome", "outcome", "OUTCOME", "outcome", "OUTCOME",
+            "outcome", "outcome", "OUTCOME", "Outcome", "outcome", "OUTCOME", "outcome", "OUTCOME",
         ),
         (
             "very_tasty",
+            "verytasty",
             "VERY_TASTY",
             "VeryTasty",
             "veryTasty",
@@ -159,10 +163,11 @@ fn rename_fields() {
             "very-tasty",
             "VERY-TASTY",
         ),
-        ("a", "A", "A", "a", "A", "a", "A"),
-        ("z42", "Z42", "Z42", "z42", "Z42", "z42", "Z42"),
+        ("a", "a", "A", "A", "a", "A", "a", "A"),
+        ("z42", "z42", "Z42", "Z42", "z42", "Z42", "z42", "Z42"),
     ] {
         assert_eq!(None.apply_to_field(original), original);
+        assert_eq!(LowerCase.apply_to_field(original), lower);
         assert_eq!(UPPERCASE.apply_to_field(original), upper);
         assert_eq!(PascalCase.apply_to_field(original), pascal);
         assert_eq!(CamelCase.apply_to_field(original), camel);
