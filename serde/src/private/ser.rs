@@ -1243,6 +1243,18 @@ where
         self.0.serialize_value(value)
     }
 
+    fn serialize_entry<K: ?Sized, V: ?Sized>(
+        &mut self,
+        key: &K,
+        value: &V,
+    ) -> Result<(), Self::Error>
+    where
+        K: Serialize,
+        V: Serialize,
+    {
+        self.0.serialize_entry(key, value)
+    }
+
     fn end(self) -> Result<(), Self::Error> {
         Ok(())
     }
