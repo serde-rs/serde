@@ -12,7 +12,7 @@ fn main() {
     };
 
     // Underscore const names stabilized in Rust 1.37:
-    // https://github.com/rust-lang/rust/pull/61347
+    // https://blog.rust-lang.org/2019/08/15/Rust-1.37.0.html#using-unnamed-const-items-for-macros
     if minor >= 37 {
         println!("cargo:rustc-cfg=underscore_consts");
     }
