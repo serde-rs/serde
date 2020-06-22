@@ -597,19 +597,12 @@ impl Container {
         for attr in &item.attrs {
             if attr.path.is_ident("repr") {
                 let _ = attr.parse_args_with(|input: ParseStream| {
-                    input.step(|cursor| {
-                        let mut rest = *cursor;
-                        while let Some((tt, next)) = rest.token_tree() {
-                            match &tt {
-                                TokenTree::Ident(ident) if ident == "packed" => {
-                                    is_packed |= true;
-                                    return Ok(((), next));
-                                }
-                                _ => rest = next,
-                            }
+                    while let Some(token) = input.parse()? {
+                        if let TokenTree::Ident(ident) = token {
+                            is_packed |= ident == "packed";
                         }
-                        Err(cursor.error("no `packed` was found in the reprs"))
-                    })
+                    }
+                    Ok(())
                 });
             }
         }
