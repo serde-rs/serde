@@ -4,7 +4,7 @@
 
 #![deny(warnings)]
 #![cfg_attr(feature = "unstable", feature(non_ascii_idents))]
-#![allow(clippy::trivially_copy_pass_by_ref)]
+#![allow(mixed_script_confusables, clippy::trivially_copy_pass_by_ref)]
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
