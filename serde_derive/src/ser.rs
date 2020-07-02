@@ -268,19 +268,20 @@ fn serialize_tuple_struct(
 
     let let_mut = mut_if(serialized_fields.peek().is_some());
 
-    let len = serialized_fields
-        .map(|(i, field)| match field.attrs.skip_serializing_if() {
-            None => quote!(1),
-            Some(path) => {
-                let index = syn::Index {
-                    index: i as u32,
-                    span: Span::call_site(),
-                };
-                let field_expr = get_member(params, field, &Member::Unnamed(index));
-                quote!(if #path(#field_expr) { 0 } else { 1 })
-            }
-        })
-        .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
+    let len =
+        serialized_len(serialized_fields.map(
+            |(i, field)| match field.attrs.skip_serializing_if() {
+                None => FieldLen::One,
+                Some(path) => {
+                    let index = syn::Index {
+                        index: i as u32,
+                        span: Span::call_site(),
+                    };
+                    let field_expr = get_member(params, field, &Member::Unnamed(index));
+                    FieldLen::Quote(quote!(if #path(#field_expr) { 0 } else { 1 }))
+                }
+            },
+        ));
 
     quote_block! {
         let #let_mut __serde_state = try!(_serde::Serializer::serialize_tuple_struct(__serializer, #type_name, #len));
@@ -332,18 +333,16 @@ fn serialize_struct_as_struct(
 
     let let_mut = mut_if(serialized_fields.peek().is_some() || tag_field_exists);
 
-    let len = serialized_fields
-        .map(|field| match field.attrs.skip_serializing_if() {
-            None => quote!(1),
+    let len = serialized_len(serialized_fields.map(
+        |field| match field.attrs.skip_serializing_if() {
+            None => FieldLen::One,
             Some(path) => {
                 let field_expr = get_member(params, field, &field.member);
-                quote!(if #path(#field_expr) { 0 } else { 1 })
+                FieldLen::Quote(quote!(if #path(#field_expr) { 0 } else { 1 }))
             }
-        })
-        .fold(
-            quote!(#tag_field_exists as usize),
-            |sum, expr| quote!(#sum + #expr),
-        );
+        },
+    ));
+    let len = quote!(#tag_field_exists as usize + #len);
 
     quote_block! {
         let #let_mut __serde_state = try!(_serde::Serializer::serialize_struct(__serializer, #type_name, #len));
@@ -374,19 +373,17 @@ fn serialize_struct_as_map(
     let len = if cattrs.has_flatten() {
         quote!(_serde::export::None)
     } else {
-        let len = serialized_fields
-            .map(|field| match field.attrs.skip_serializing_if() {
-                None => quote!(1),
-                Some(path) => {
-                    let field_expr = get_member(params, field, &field.member);
-                    quote!(if #path(#field_expr) { 0 } else { 1 })
-                }
-            })
-            .fold(
-                quote!(#tag_field_exists as usize),
-                |sum, expr| quote!(#sum + #expr),
-            );
-        quote!(_serde::export::Some(#len))
+        let len =
+            serialized_len(serialized_fields.map(
+                |field| match field.attrs.skip_serializing_if() {
+                    None => FieldLen::One,
+                    Some(path) => {
+                        let field_expr = get_member(params, field, &field.member);
+                        FieldLen::Quote(quote!(if #path(#field_expr) { 0 } else { 1 }))
+                    }
+                },
+            ));
+        quote!(_serde::export::Some(#tag_field_exists as usize + #len))
     };
 
     quote_block! {
@@ -811,15 +808,16 @@ fn serialize_tuple_variant(
 
     let let_mut = mut_if(serialized_fields.peek().is_some());
 
-    let len = serialized_fields
-        .map(|(i, field)| match field.attrs.skip_serializing_if() {
-            None => quote!(1),
-            Some(path) => {
-                let field_expr = Ident::new(&format!("__field{}", i), Span::call_site());
-                quote!(if #path(#field_expr) { 0 } else { 1 })
-            }
-        })
-        .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
+    let len =
+        serialized_len(serialized_fields.map(
+            |(i, field)| match field.attrs.skip_serializing_if() {
+                None => FieldLen::One,
+                Some(path) => {
+                    let field_expr = Ident::new(&format!("__field{}", i), Span::call_site());
+                    FieldLen::Quote(quote!(if #path(#field_expr) { 0 } else { 1 }))
+                }
+            },
+        ));
 
     match context {
         TupleVariant::ExternallyTagged {
@@ -862,6 +860,26 @@ enum StructVariant<'a> {
     Untagged,
 }
 
+enum FieldLen {
+    One,
+    Quote(TokenStream),
+}
+
+fn serialized_len(iter: impl IntoIterator<Item = FieldLen>) -> TokenStream {
+    let mut static_len = 0usize;
+    let dynamic_len = iter
+        .into_iter()
+        .filter_map(|field| match field {
+            FieldLen::Quote(quote) => Some(quote),
+            FieldLen::One => {
+                static_len += 1;
+                None
+            }
+        })
+        .fold(quote!(), |sum, expr| quote!(#sum + #expr));
+    quote!(#static_len #dynamic_len)
+}
+
 fn serialize_struct_variant<'a>(
     context: StructVariant<'a>,
     params: &Parameters,
@@ -888,16 +906,14 @@ fn serialize_struct_variant<'a>(
 
     let let_mut = mut_if(serialized_fields.peek().is_some());
 
-    let len = serialized_fields
-        .map(|field| {
-            let member = &field.member;
+    let len = serialized_len(serialized_fields.map(|field| {
+        let member = &field.member;
 
-            match field.attrs.skip_serializing_if() {
-                Some(path) => quote!(if #path(#member) { 0 } else { 1 }),
-                None => quote!(1),
-            }
-        })
-        .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
+        match field.attrs.skip_serializing_if() {
+            Some(path) => FieldLen::Quote(quote!(if #path(#member) { 0 } else { 1 })),
+            None => FieldLen::One,
+        }
+    }));
 
     match context {
         StructVariant::ExternallyTagged {
