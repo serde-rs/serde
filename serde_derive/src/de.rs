@@ -633,7 +633,8 @@ fn deserialize_seq(
     };
 
     let mut index_in_seq = 0_usize;
-    let let_values = vars.clone().zip(fields).map(|(var, field)| {
+    let mut has_index_error = false;
+    let let_values: Vec<_> = vars.clone().zip(fields).map(|(var, field)| {
         if field.attrs.skip_deserializing() {
             let default = Expr(expr_is_missing(field, cattrs));
             quote! {
@@ -661,9 +662,10 @@ fn deserialize_seq(
             let value_if_none = match field.attrs.default() {
                 attr::Default::Default => quote!(_serde::export::Default::default()),
                 attr::Default::Path(path) => quote!(#path()),
-                attr::Default::None => quote!(
-                    return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
-                ),
+                attr::Default::None => {
+                    has_index_error = true;
+                    quote!(break #index_in_seq)
+                }
             };
             let assign = quote! {
                 let #var = match #visit {
@@ -676,7 +678,7 @@ fn deserialize_seq(
             index_in_seq += 1;
             assign
         }
-    });
+    }).collect();
 
     let mut result = if is_struct {
         let names = fields.iter().map(|f| &f.member);
@@ -710,10 +712,21 @@ fn deserialize_seq(
         }
     };
 
-    quote_block! {
-        #let_default
-        #(#let_values)*
-        _serde::export::Ok(#result)
+    if has_index_error {
+        quote_block! {
+            let index_in_seq = loop {
+                #let_default
+                #(#let_values)*
+                return _serde::export::Ok(#result)
+            };
+            _serde::export::Err(_serde::de::Error::invalid_length(index_in_seq, &#expecting))
+        }
+    } else {
+        quote_block! {
+            #let_default
+            #(#let_values)*
+            _serde::export::Ok(#result)
+        }
     }
 }
 
