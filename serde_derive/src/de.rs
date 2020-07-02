@@ -2476,7 +2476,7 @@ fn deserialize_map(
             };
             quote! {
                 __Field::#name => {
-                    if _serde::export::Option::is_some(&#name) {
+                    if let _serde::export::Some(_) = #name {
                         return _serde::export::Err(<__A::Error as _serde::de::Error>::duplicate_field(#deser_name));
                     }
                     #name = _serde::export::Some(#visit);
