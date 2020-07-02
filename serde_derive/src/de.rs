@@ -1900,19 +1900,24 @@ fn deserialize_generated_identifier(
         (Some(ignore_variant), Some(fallthrough))
     };
 
-    let visitor_impl = Stmts(deserialize_identifier(
+    let lifetime = if !is_variant && cattrs.has_flatten() {
+        quote!(<'de>)
+    } else {
+        quote!()
+    };
+
+    let (helper_impl, visitor_impl) = deserialize_identifier(
         &this,
+        &lifetime,
+        &lifetime,
+        &quote!(),
         fields,
         is_variant,
         fallthrough,
         !is_variant && cattrs.has_flatten(),
-    ));
-
-    let lifetime = if !is_variant && cattrs.has_flatten() {
-        Some(quote!(<'de>))
-    } else {
-        None
-    };
+    );
+    let helper_impl = Stmts(helper_impl);
+    let visitor_impl = Stmts(visitor_impl);
 
     quote_block! {
         #[allow(non_camel_case_types)]
@@ -1928,6 +1933,8 @@ fn deserialize_generated_identifier(
 
             #visitor_impl
         }
+
+        #helper_impl
 
         impl<'de> _serde::Deserialize<'de> for __Field #lifetime {
             #[inline]
@@ -2007,13 +2014,18 @@ fn deserialize_custom_identifier(
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
-    let visitor_impl = Stmts(deserialize_identifier(
+    let (helper_impl, visitor_impl) = deserialize_identifier(
         &this,
+        &de_impl_generics,
+        &ty_generics,
+        &where_clause,
         &names_idents,
         is_variant,
         fallthrough,
         false,
-    ));
+    );
+    let helper_impl = Stmts(helper_impl);
+    let visitor_impl = Stmts(visitor_impl);
 
     quote_block! {
         #names_const
@@ -2022,6 +2034,9 @@ fn deserialize_custom_identifier(
             marker: _serde::export::PhantomData<#this #ty_generics>,
             lifetime: _serde::export::PhantomData<&#delife ()>,
         }
+
+        #helper_impl
+
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __FieldVisitor #de_ty_generics #where_clause {
             type Value = #this #ty_generics;
@@ -2039,17 +2054,19 @@ fn deserialize_custom_identifier(
 
 fn deserialize_identifier(
     this: &TokenStream,
+    de_impl_generics: &dyn ToTokens,
+    ty_generics: &dyn ToTokens,
+    where_clause: &dyn ToTokens,
     fields: &[(String, Ident, Vec<String>)],
     is_variant: bool,
     fallthrough: Option<TokenStream>,
     collect_other_fields: bool,
-) -> Fragment {
+) -> (Fragment, Fragment) {
     let mut flat_fields = Vec::new();
     for (_, ident, aliases) in fields {
         flat_fields.extend(aliases.iter().map(|alias| (alias, ident)))
     }
 
-    let field_strs = flat_fields.iter().map(|(name, _)| name);
     let field_borrowed_strs = flat_fields.iter().map(|(name, _)| name);
     let field_bytes = flat_fields
         .iter()
@@ -2264,7 +2281,22 @@ fn deserialize_identifier(
         }
     };
 
-    quote_block! {
+    let helper = quote_block! {
+        fn __visit_identifier #de_impl_generics (
+            __value: &[u8],
+        ) -> _serde::export::Result<#this #ty_generics, ()>
+            #where_clause
+        {
+            match __value {
+                #(
+                    #field_bytes => _serde::export::Ok(#constructors),
+                )*
+                _ => _serde::export::Err(())
+            }
+        }
+    };
+
+    let visitor_impl = quote_block! {
         fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
             _serde::export::Formatter::write_str(__formatter, #expecting)
         }
@@ -2275,11 +2307,9 @@ fn deserialize_identifier(
         where
             __E: _serde::de::Error,
         {
-            match __value {
-                #(
-                    #field_strs => _serde::export::Ok(#constructors),
-                )*
-                _ => {
+            match __visit_identifier(__value.as_bytes()) {
+                _serde::export::Ok(value) => _serde::export::Ok(value),
+                _serde::export::Err(()) => {
                     #value_as_str_content
                     #fallthrough_arm
                 }
@@ -2290,18 +2320,18 @@ fn deserialize_identifier(
         where
             __E: _serde::de::Error,
         {
-            match __value {
-                #(
-                    #field_bytes => _serde::export::Ok(#constructors),
-                )*
-                _ => {
+            match __visit_identifier(__value) {
+                _serde::export::Ok(value) => _serde::export::Ok(value),
+                _serde::export::Err(()) => {
                     #bytes_to_str
                     #value_as_bytes_content
                     #fallthrough_arm
                 }
             }
         }
-    }
+    };
+
+    (helper, visitor_impl)
 }
 
 fn deserialize_struct_as_struct_visitor(
