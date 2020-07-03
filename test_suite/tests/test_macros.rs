@@ -1736,7 +1736,7 @@ fn test_rename_all() {
 
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
     #[serde(rename_all = "PascalCase")]
-    struct S {
+    struct Pascal {
         serialize: bool,
         serialize_seq: bool,
     }
@@ -1744,6 +1744,13 @@ fn test_rename_all() {
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
     #[serde(rename_all = "SCREAMING-KEBAB-CASE")]
     struct ScreamingKebab {
+        serialize: bool,
+        serialize_seq: bool,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(rename_all = "TitleCase")]
+    struct Title {
         serialize: bool,
         serialize_seq: bool,
     }
@@ -1806,12 +1813,15 @@ fn test_rename_all() {
     );
 
     assert_tokens(
-        &S {
+        &Pascal {
             serialize: true,
             serialize_seq: true,
         },
         &[
-            Token::Struct { name: "S", len: 2 },
+            Token::Struct {
+                name: "Pascal",
+                len: 2,
+            },
             Token::Str("Serialize"),
             Token::Bool(true),
             Token::Str("SerializeSeq"),
@@ -1833,6 +1843,24 @@ fn test_rename_all() {
             Token::Str("SERIALIZE"),
             Token::Bool(true),
             Token::Str("SERIALIZE-SEQ"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &Title {
+            serialize: true,
+            serialize_seq: true,
+        },
+        &[
+            Token::Struct {
+                name: "Title",
+                len: 2,
+            },
+            Token::Str("Serialize"),
+            Token::Bool(true),
+            Token::Str("Serialize Seq"),
             Token::Bool(true),
             Token::StructEnd,
         ],

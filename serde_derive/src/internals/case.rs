@@ -33,6 +33,8 @@ pub enum RenameRule {
     KebabCase,
     /// Rename direct children to "SCREAMING-KEBAB-CASE" style.
     ScreamingKebabCase,
+    /// Rename direct children to "Title Case" style.
+    TitleCase,
 }
 
 impl RenameRule {
@@ -58,6 +60,16 @@ impl RenameRule {
             ScreamingKebabCase => ScreamingSnakeCase
                 .apply_to_variant(variant)
                 .replace('_', "-"),
+            TitleCase => {
+                let mut title = String::new();
+                for (i, ch) in variant.char_indices() {
+                    if i > 0 && ch.is_uppercase() {
+                        title.push(' ');
+                    }
+                    title.push(ch);
+                }
+                title
+            }
         }
     }
 
@@ -88,6 +100,22 @@ impl RenameRule {
             ScreamingSnakeCase => field.to_ascii_uppercase(),
             KebabCase => field.replace('_', "-"),
             ScreamingKebabCase => ScreamingSnakeCase.apply_to_field(field).replace('_', "-"),
+            TitleCase => {
+                let mut title = String::new();
+                let mut capitalize = true;
+                for ch in field.chars() {
+                    if ch == '_' {
+                        title.push(' ');
+                        capitalize = true;
+                    } else if capitalize {
+                        title.push(ch.to_ascii_uppercase());
+                        capitalize = false;
+                    } else {
+                        title.push(ch);
+                    }
+                }
+                title
+            }
         }
     }
 }
@@ -105,6 +133,7 @@ impl FromStr for RenameRule {
             "SCREAMING_SNAKE_CASE" => Ok(ScreamingSnakeCase),
             "kebab-case" => Ok(KebabCase),
             "SCREAMING-KEBAB-CASE" => Ok(ScreamingKebabCase),
+            "TitleCase" => Ok(TitleCase),
             _ => Err(()),
         }
     }
@@ -112,9 +141,10 @@ impl FromStr for RenameRule {
 
 #[test]
 fn rename_variants() {
-    for &(original, lower, upper, camel, snake, screaming, kebab, screaming_kebab) in &[
+    for &(original, lower, upper, camel, snake, screaming, kebab, screaming_kebab, title) in &[
         (
             "Outcome", "outcome", "OUTCOME", "outcome", "outcome", "OUTCOME", "outcome", "OUTCOME",
+            "Outcome",
         ),
         (
             "VeryTasty",
@@ -125,9 +155,12 @@ fn rename_variants() {
             "VERY_TASTY",
             "very-tasty",
             "VERY-TASTY",
+            "Very Tasty",
         ),
-        ("A", "a", "A", "a", "a", "A", "a", "A"),
-        ("Z42", "z42", "Z42", "z42", "z42", "Z42", "z42", "Z42"),
+        ("A", "a", "A", "a", "a", "A", "a", "A", "A"),
+        (
+            "Z42", "z42", "Z42", "z42", "z42", "Z42", "z42", "Z42", "Z42",
+        ),
     ] {
         assert_eq!(None.apply_to_variant(original), original);
         assert_eq!(LowerCase.apply_to_variant(original), lower);
@@ -141,14 +174,15 @@ fn rename_variants() {
             ScreamingKebabCase.apply_to_variant(original),
             screaming_kebab
         );
+        assert_eq!(TitleCase.apply_to_variant(original), title);
     }
 }
 
 #[test]
 fn rename_fields() {
-    for &(original, upper, pascal, camel, screaming, kebab, screaming_kebab) in &[
+    for &(original, upper, pascal, camel, screaming, kebab, screaming_kebab, title) in &[
         (
-            "outcome", "OUTCOME", "Outcome", "outcome", "OUTCOME", "outcome", "OUTCOME",
+            "outcome", "OUTCOME", "Outcome", "outcome", "OUTCOME", "outcome", "OUTCOME", "Outcome",
         ),
         (
             "very_tasty",
@@ -158,9 +192,10 @@ fn rename_fields() {
             "VERY_TASTY",
             "very-tasty",
             "VERY-TASTY",
+            "Very Tasty",
         ),
-        ("a", "A", "A", "a", "A", "a", "A"),
-        ("z42", "Z42", "Z42", "z42", "Z42", "z42", "Z42"),
+        ("a", "A", "A", "a", "A", "a", "A", "A"),
+        ("z42", "Z42", "Z42", "z42", "Z42", "z42", "Z42", "Z42"),
     ] {
         assert_eq!(None.apply_to_field(original), original);
         assert_eq!(UPPERCASE.apply_to_field(original), upper);
@@ -170,5 +205,6 @@ fn rename_fields() {
         assert_eq!(ScreamingSnakeCase.apply_to_field(original), screaming);
         assert_eq!(KebabCase.apply_to_field(original), kebab);
         assert_eq!(ScreamingKebabCase.apply_to_field(original), screaming_kebab);
+        assert_eq!(TitleCase.apply_to_field(original), title);
     }
 }
