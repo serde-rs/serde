@@ -37,8 +37,8 @@
 //!   used for IPC within the Servo rendering engine.
 //! - [CBOR], a Concise Binary Object Representation designed for small message
 //!   size without the need for version negotiation.
-//! - [YAML], a popular human-friendly configuration language that ain't markup
-//!   language.
+//! - [YAML], a self-proclaimed human-friendly configuration language that ain't
+//!   markup language.
 //! - [MessagePack], an efficient binary format that resembles a compact JSON.
 //! - [TOML], a minimal configuration format used by [Cargo].
 //! - [Pickle], a format common in the Python world.
