@@ -40,6 +40,7 @@
     clippy::match_same_arms,
     clippy::module_name_repetitions,
     clippy::must_use_candidate,
+    clippy::option_if_let_else,
     clippy::similar_names,
     clippy::single_match_else,
     clippy::struct_excessive_bools,

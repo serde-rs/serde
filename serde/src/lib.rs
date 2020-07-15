@@ -111,6 +111,7 @@
         // things are often more readable this way
         cast_lossless,
         module_name_repetitions,
+        option_if_let_else,
         single_match_else,
         type_complexity,
         use_self,
