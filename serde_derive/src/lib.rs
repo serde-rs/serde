@@ -20,6 +20,7 @@
 #![allow(
     clippy::cognitive_complexity,
     clippy::enum_variant_names,
+    clippy::match_like_matches_macro,
     clippy::needless_pass_by_value,
     clippy::too_many_arguments,
     clippy::trivially_copy_pass_by_ref,
