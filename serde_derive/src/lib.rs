@@ -50,8 +50,6 @@
     clippy::use_self,
     clippy::wildcard_imports
 )]
-// The `quote!` macro requires deep recursion.
-#![recursion_limit = "512"]
 
 #[macro_use]
 extern crate quote;
