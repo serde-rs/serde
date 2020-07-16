@@ -35,6 +35,7 @@ pub const TRY_FROM: Symbol = Symbol("try_from");
 pub const UNTAGGED: Symbol = Symbol("untagged");
 pub const VARIANT_IDENTIFIER: Symbol = Symbol("variant_identifier");
 pub const WITH: Symbol = Symbol("with");
+pub const AND_THEN: Symbol = Symbol("and_then");
 
 impl PartialEq<Symbol> for Ident {
     fn eq(&self, word: &Symbol) -> bool {

@@ -1906,3 +1906,82 @@ fn test_packed_struct_can_derive_serialize() {
         t: f32,
     }
 }
+
+#[test]
+fn test_and_then() {
+    fn check_above_2<E>(v: u32) -> Result<u32, E> where E: serde::de::Error {
+        if v > 2 {
+            Ok(v)
+        } else {
+            Err(serde::de::Error::invalid_value(
+                serde::de::Unexpected::Unsigned(v as u64), &"a value above 2")
+            )
+        }
+    }
+    
+    fn check_vec_not_empty<E>(v: Vec<u32>) -> Result<Vec<u32>, E> where E: serde::de::Error {
+        match v.is_empty() {
+            false => Ok(v),
+            true => Err(serde::de::Error::invalid_value(
+                serde::de::Unexpected::Seq, &"a non-empty vector'")
+            ),
+        }
+    }
+    
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Struct {
+        #[serde(and_then="check_above_2")]
+        field_above_2: u32,
+        #[serde(and_then="check_vec_not_empty")]
+        vec_non_empty: Vec<u32>,
+        field_unconditional: u32
+    }
+    
+    // All values are valid
+    assert_de_tokens(
+        &Struct {
+            field_above_2: 10,
+            vec_non_empty: vec![10],
+            field_unconditional: 0
+        },
+        &[
+            Token::Map { len: None },
+            Token::Str("field_above_2"),
+            Token::U32(10),
+            Token::Str("vec_non_empty"),
+            Token::Seq{ len: Some(1) },
+            Token::U32(10),
+            Token::SeqEnd,
+            Token::Str("field_unconditional"),
+            Token::U32(0),
+            Token::MapEnd
+        ]
+    );
+    
+    // Only invalid integer
+    assert_de_tokens_error::<Struct>(&[
+        Token::Map { len: None },
+        Token::Str("field_above_2"),
+        Token::U32(0),
+        Token::Str("vec_non_empty"),
+        Token::Seq{ len: Some(1) },
+        Token::U32(10),
+        Token::SeqEnd,
+        Token::Str("field_unconditional"),
+        Token::U32(0),
+        Token::MapEnd
+    ], "invalid value: integer `0`, expected a value above 2");
+    
+    // Only invalid vector
+    assert_de_tokens_error::<Struct>(&[
+        Token::Map { len: None },
+        Token::Str("field_above_2"),
+        Token::U32(10),
+        Token::Str("vec_non_empty"),
+        Token::Seq{ len: Some(0) },
+        Token::SeqEnd,
+        Token::Str("field_unconditional"),
+        Token::U32(0),
+        Token::MapEnd
+    ], "invalid value: sequence, expected a non-empty vector'");
+}

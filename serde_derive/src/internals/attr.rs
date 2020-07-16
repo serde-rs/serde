@@ -1137,6 +1137,7 @@ pub struct Field {
     getter: Option<syn::ExprPath>,
     flatten: bool,
     transparent: bool,
+    and_then: Option<syn::ExprPath>
 }
 
 /// Represents the default to use for a field when deserializing.
@@ -1181,6 +1182,7 @@ impl Field {
         let mut borrowed_lifetimes = Attr::none(cx, BORROW);
         let mut getter = Attr::none(cx, GETTER);
         let mut flatten = BoolAttr::none(cx, FLATTEN);
+        let mut and_then = Attr::none(cx, AND_THEN);
 
         let ident = match &field.ident {
             Some(ident) => unraw(ident),
@@ -1347,6 +1349,12 @@ impl Field {
                 Meta(Path(word)) if word == FLATTEN => {
                     flatten.set_true(word);
                 }
+                
+                Meta(NameValue(m)) if m.path == AND_THEN => {
+                    if let Ok(path) = parse_lit_into_expr_path(cx, AND_THEN, &m.lit) {
+                        and_then.set(&m.path, path);
+                    }
+                }
 
                 Meta(meta_item) => {
                     let path = meta_item
@@ -1441,6 +1449,7 @@ impl Field {
             getter: getter.get(),
             flatten: flatten.get(),
             transparent: false,
+            and_then: and_then.get()
         }
     }
 
@@ -1511,6 +1520,10 @@ impl Field {
 
     pub fn mark_transparent(&mut self) {
         self.transparent = true;
+    }
+    
+    pub fn and_then(&self) -> Option<&syn::ExprPath> {
+        self.and_then.as_ref()
     }
 }
 

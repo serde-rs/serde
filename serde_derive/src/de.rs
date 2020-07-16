@@ -2482,10 +2482,14 @@ fn deserialize_map(
         .filter(|&&(field, _)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
         .map(|(field, name)| {
             let missing_expr = Match(expr_is_missing(field, cattrs));
-
+            let and_then = match field.attrs.and_then() {
+                Some(and_then) => quote! { try!(#and_then(#name)) },
+                None => quote! { #name }
+            };
+            
             quote! {
                 let #name = match #name {
-                    _serde::export::Some(#name) => #name,
+                    _serde::export::Some(#name) => #and_then,
                     _serde::export::None => #missing_expr
                 };
             }
