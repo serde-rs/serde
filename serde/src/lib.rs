@@ -84,7 +84,7 @@
 // Serde types in rustdoc of other crates get linked to here.
 #![doc(html_root_url = "https://docs.rs/serde/1.0.114")]
 // Support using Serde without the standard library!
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 // Unstable functionality only if the user asks for it. For tracking and
 // discussion of these features please refer to this issue:
 //
@@ -142,66 +142,48 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+#[cfg(feature = "std")]
+extern crate std;
+
 /// A facade around all the types we need from the `std`, `core`, and `alloc`
 /// crates. This avoids elaborate import wrangling having to happen in every
 /// module.
 mod lib {
-    mod core {
-        #[cfg(not(feature = "std"))]
-        pub use core::*;
-        #[cfg(feature = "std")]
-        pub use std::*;
-    }
+    pub use core::{cmp, iter, mem, num, slice, str};
+    pub use core::{f32, f64};
+    pub use core::{i16, i32, i64, i8, isize};
+    pub use core::{u16, u32, u64, u8, usize};
 
-    pub use self::core::{cmp, iter, mem, num, slice, str};
-    pub use self::core::{f32, f64};
-    pub use self::core::{i16, i32, i64, i8, isize};
-    pub use self::core::{u16, u32, u64, u8, usize};
+    pub use core::cell::{Cell, RefCell};
+    pub use core::clone::{self, Clone};
+    pub use core::convert::{self, From, Into};
+    pub use core::default::{self, Default};
+    pub use core::fmt::{self, Debug, Display};
+    pub use core::marker::{self, PhantomData};
+    pub use core::ops::Range;
+    pub use core::option::{self, Option};
+    pub use core::result::{self, Result};
 
-    pub use self::core::cell::{Cell, RefCell};
-    pub use self::core::clone::{self, Clone};
-    pub use self::core::convert::{self, From, Into};
-    pub use self::core::default::{self, Default};
-    pub use self::core::fmt::{self, Debug, Display};
-    pub use self::core::marker::{self, PhantomData};
-    pub use self::core::ops::Range;
-    pub use self::core::option::{self, Option};
-    pub use self::core::result::{self, Result};
-
-    #[cfg(all(feature = "alloc", not(feature = "std")))]
+    #[cfg(feature = "alloc")]
     pub use alloc::borrow::{Cow, ToOwned};
-    #[cfg(feature = "std")]
-    pub use std::borrow::{Cow, ToOwned};
 
-    #[cfg(all(feature = "alloc", not(feature = "std")))]
+    #[cfg(feature = "alloc")]
     pub use alloc::string::{String, ToString};
-    #[cfg(feature = "std")]
-    pub use std::string::{String, ToString};
 
-    #[cfg(all(feature = "alloc", not(feature = "std")))]
+    #[cfg(feature = "alloc")]
     pub use alloc::vec::Vec;
-    #[cfg(feature = "std")]
-    pub use std::vec::Vec;
 
-    #[cfg(all(feature = "alloc", not(feature = "std")))]
+    #[cfg(feature = "alloc")]
     pub use alloc::boxed::Box;
-    #[cfg(feature = "std")]
-    pub use std::boxed::Box;
 
-    #[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
+    #[cfg(all(feature = "rc", feature = "alloc"))]
     pub use alloc::rc::{Rc, Weak as RcWeak};
-    #[cfg(all(feature = "rc", feature = "std"))]
-    pub use std::rc::{Rc, Weak as RcWeak};
 
-    #[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
+    #[cfg(all(feature = "rc", feature = "alloc"))]
     pub use alloc::sync::{Arc, Weak as ArcWeak};
-    #[cfg(all(feature = "rc", feature = "std"))]
-    pub use std::sync::{Arc, Weak as ArcWeak};
 
-    #[cfg(all(feature = "alloc", not(feature = "std")))]
+    #[cfg(feature = "alloc")]
     pub use alloc::collections::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
-    #[cfg(feature = "std")]
-    pub use std::collections::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
 
     #[cfg(feature = "std")]
     pub use std::{error, net};
@@ -227,13 +209,13 @@ mod lib {
     pub use std::collections::Bound;
 
     #[cfg(core_reverse)]
-    pub use self::core::cmp::Reverse;
+    pub use core::cmp::Reverse;
 
     #[cfg(ops_bound)]
-    pub use self::core::ops::Bound;
+    pub use core::ops::Bound;
 
     #[cfg(range_inclusive)]
-    pub use self::core::ops::RangeInclusive;
+    pub use core::ops::RangeInclusive;
 
     #[cfg(all(feature = "std", std_atomic))]
     pub use std::sync::atomic::{
@@ -243,8 +225,8 @@ mod lib {
     #[cfg(all(feature = "std", std_atomic64))]
     pub use std::sync::atomic::{AtomicI64, AtomicU64};
 
-    #[cfg(any(core_duration, feature = "std"))]
-    pub use self::core::time::Duration;
+    #[cfg(core_duration)]
+    pub use core::time::Duration;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

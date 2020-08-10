@@ -36,7 +36,7 @@ derive = ["serde_derive"]
 
 # Provide impls for common standard library types like Vec<T> and HashMap<K, V>.
 # Requires a dependency on the Rust standard library.
-std = []
+std = ["alloc"]
 
 # Provide impls for types that require unstable functionality. For tracking and
 # discussion of unstable functionality please refer to this issue:
