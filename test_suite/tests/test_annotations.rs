@@ -1968,6 +1968,29 @@ fn test_flatten_map_twice() {
 }
 
 #[test]
+fn test_flatten_unit() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Response<T> {
+        #[serde(flatten)]
+        data: T,
+        status: usize,
+    }
+
+    assert_tokens(
+        &Response {
+            data: (),
+            status: 0,
+        },
+        &[
+            Token::Map { len: None },
+            Token::Str("status"),
+            Token::U64(0),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_flatten_unsupported_type() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     struct Outer {
