@@ -2763,6 +2763,13 @@ where
         }
     }
 
+    fn deserialize_unit<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_unit()
+    }
+
     forward_to_deserialize_other! {
         deserialize_bool()
         deserialize_i8()
@@ -2780,7 +2787,6 @@ where
         deserialize_string()
         deserialize_bytes()
         deserialize_byte_buf()
-        deserialize_unit()
         deserialize_unit_struct(&'static str)
         deserialize_seq()
         deserialize_tuple(usize)
