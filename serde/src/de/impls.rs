@@ -495,6 +495,56 @@ impl<'de: 'a, 'a> Deserialize<'de> for &'a [u8] {
     }
 }
 
+struct FixedBytesVisitor<A> {
+    marker: PhantomData<A>,
+}
+
+macro_rules! borrowed_byte_array_impls {
+    ($($len:expr),*) => {$(
+        impl<'a> Visitor<'a> for FixedBytesVisitor<[u8; $len]> {
+            type Value = &'a [u8; $len];
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str(concat!("a borrowed byte array of length ", $len))
+            }
+
+            fn visit_borrowed_bytes<E>(self, v: &'a [u8]) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                let len = v.len();
+                v.try_into().map_err(|_| E::invalid_length(len, &stringify!($len)))
+            }
+
+            fn visit_borrowed_str<E>(self, v: &'a str) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                self.visit_borrowed_bytes(v.as_bytes())
+            }
+        }
+
+        impl<'de: 'a, 'a> Deserialize<'de> for &'a [u8; $len] {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                deserializer.deserialize_bytes(FixedBytesVisitor::<[u8; $len]> {
+                    marker: PhantomData,
+                })
+            }
+        }
+    )*}
+}
+
+borrowed_byte_array_impls! {
+     0,  1,  2,  3,  4,  5,  6,  7,
+     8,  9, 10, 11, 12, 13, 14, 15,
+    16, 17, 18, 19, 20, 21, 22, 23,
+    24, 25, 26, 27, 28, 29, 30, 31,
+    32
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "std")]
