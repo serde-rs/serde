@@ -48,7 +48,7 @@
 //!   definition.
 //! - [JSON5], A superset of JSON including some productions from ES5.
 //! - [Postcard], a no\_std and embedded-systems friendly compact binary format.
-//! - [URL], the x-www-form-urlencoded format.
+//! - [URL] query strings, in the x-www-form-urlencoded format.
 //! - [Envy], a way to deserialize environment variables into Rust structs.
 //!   *(deserialization only)*
 //! - [Envy Store], a way to deserialize [AWS Parameter Store] parameters into
@@ -70,7 +70,7 @@
 //! [Avro]: https://github.com/flavray/avro-rs
 //! [JSON5]: https://github.com/callum-oakley/json5-rs
 //! [Postcard]: https://github.com/jamesmunns/postcard
-//! [URL]: https://github.com/nox/serde_urlencoded
+//! [URL]: https://docs.rs/serde_qs
 //! [Envy]: https://github.com/softprops/envy
 //! [Envy Store]: https://github.com/softprops/envy-store
 //! [Cargo]: http://doc.crates.io/manifest.html
