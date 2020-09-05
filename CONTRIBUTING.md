@@ -58,4 +58,4 @@ In all Serde-related forums, we follow the [Rust Code of Conduct]. For
 escalation or moderation issues please contact Erick (erick.tryzelaar@gmail.com)
 instead of the Rust moderation team.
 
-[Rust Code of Conduct]: https://www.rust-lang.org/conduct.html
+[Rust Code of Conduct]: https://www.rust-lang.org/policies/code-of-conduct
