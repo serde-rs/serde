@@ -118,6 +118,7 @@
         zero_prefixed_literal,
         // correctly used
         enum_glob_use,
+        map_err_ignore,
         wildcard_imports,
         // not practical
         needless_pass_by_value,

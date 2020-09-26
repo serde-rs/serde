@@ -38,6 +38,7 @@
     clippy::filter_map,
     clippy::indexing_slicing,
     clippy::items_after_statements,
+    clippy::map_err_ignore,
     clippy::match_same_arms,
     clippy::module_name_repetitions,
     clippy::must_use_candidate,
