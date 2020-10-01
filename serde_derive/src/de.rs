@@ -940,14 +940,13 @@ fn deserialize_struct(
     };
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
-    let (field_visitor, fields_stmt, visit_map) = if cattrs.has_flatten() {
-        deserialize_struct_as_map_visitor(&type_path, params, fields, cattrs)
+    let (field_visitor, fields_stmt) = if cattrs.has_flatten() {
+        deserialize_struct_as_map_visitor(fields, cattrs)
     } else {
-        deserialize_struct_as_struct_visitor(&type_path, params, fields, cattrs)
+        deserialize_struct_as_struct_visitor(fields, cattrs)
     };
     let field_visitor = Stmts(field_visitor);
     let fields_stmt = fields_stmt.map(Stmts);
-    let visit_map = Stmts(visit_map);
 
     // untagged struct variants do not get a visit_seq method. The same applies to
     // structs that only have a map representation.
@@ -976,6 +975,7 @@ fn deserialize_struct(
         }
         _ => None,
     };
+    let visit_map = Stmts(deserialize_map(&type_path, params, fields, cattrs));
 
     let is_enum = variant_ident.is_some();
     let need_seed = deserializer.is_none();
@@ -2425,11 +2425,9 @@ fn deserialize_identifier(
 }
 
 fn deserialize_struct_as_struct_visitor(
-    struct_path: &TokenStream,
-    params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
-) -> (Fragment, Option<Fragment>, Fragment) {
+) -> (Fragment, Option<Fragment>) {
     assert!(!cattrs.has_flatten());
 
     let field_names_idents: Vec<_> = fields
@@ -2458,17 +2456,13 @@ fn deserialize_struct_as_struct_visitor(
 
     let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
 
-    let visit_map = deserialize_map(struct_path, params, fields, cattrs);
-
-    (field_visitor, Some(fields_stmt), visit_map)
+    (field_visitor, Some(fields_stmt))
 }
 
 fn deserialize_struct_as_map_visitor(
-    struct_path: &TokenStream,
-    params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
-) -> (Fragment, Option<Fragment>, Fragment) {
+) -> (Fragment, Option<Fragment>) {
     let field_names_idents: Vec<_> = fields
         .iter()
         .enumerate()
@@ -2484,9 +2478,7 @@ fn deserialize_struct_as_map_visitor(
 
     let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
 
-    let visit_map = deserialize_map(struct_path, params, fields, cattrs);
-
-    (field_visitor, None, visit_map)
+    (field_visitor, None)
 }
 
 fn deserialize_map(
