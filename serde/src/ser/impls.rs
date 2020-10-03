@@ -753,10 +753,10 @@ impl Serialize for net::SocketAddrV6 {
         S: Serializer,
     {
         if serializer.is_human_readable() {
-            const MAX_LEN: usize = 47;
+            const MAX_LEN: usize = 58;
             debug_assert_eq!(
                 MAX_LEN,
-                "[1001:1002:1003:1004:1005:1006:1007:1008]:65000".len()
+                "[1001:1002:1003:1004:1005:1006:1007:1008%4294967295]:65000".len()
             );
             serialize_display_bounded_length!(self, MAX_LEN, serializer)
         } else {
