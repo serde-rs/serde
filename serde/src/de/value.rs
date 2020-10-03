@@ -665,6 +665,47 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/// A deserializer holding a `&[u8]`.
+#[derive(Debug)]
+pub struct BytesDeserializer<'a, E> {
+    value: &'a [u8],
+    marker: PhantomData<E>,
+}
+
+impl_copy_clone!(BytesDeserializer<'de>);
+
+impl<'a, E> BytesDeserializer<'a, E> {
+    /// Create a new deserializer from the given slice.
+    pub fn new(value: &'a [u8]) -> Self {
+        BytesDeserializer {
+            value: value,
+            marker: PhantomData,
+        }
+    }
+}
+
+impl<'de, 'a, E> de::Deserializer<'de> for BytesDeserializer<'a, E>
+where
+    E: de::Error,
+{
+    type Error = E;
+
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        visitor.visit_bytes(self.value)
+    }
+
+    forward_to_deserialize_any! {
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str
+        string bytes byte_buf option unit unit_struct newtype_struct seq
+        tuple tuple_struct map struct enum identifier ignored_any
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 /// A deserializer holding a `&[u8]` with a lifetime tied to another
 /// deserializer.
 #[derive(Debug)]
@@ -699,9 +740,9 @@ where
     }
 
     forward_to_deserialize_any! {
-        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
-        tuple_struct map struct identifier ignored_any enum
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str
+        string bytes byte_buf option unit unit_struct newtype_struct seq
+        tuple tuple_struct map struct enum identifier ignored_any
     }
 }
 
