@@ -752,6 +752,65 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/// A deserializer holding a `Cow<[u8]>`.
+#[cfg(any(feature = "std", feature = "alloc"))]
+#[derive(Debug)]
+pub struct CowBytesDeserializer<'a, E> {
+    value: Cow<'a, [u8]>,
+    marker: PhantomData<E>,
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, E> Clone for CowBytesDeserializer<'a, E> {
+    fn clone(&self) -> Self {
+        CowBytesDeserializer {
+            value: self.value.clone(),
+            marker: PhantomData,
+        }
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'de, 'a, E> IntoDeserializer<'de, E> for Cow<'a, [u8]>
+where
+    E: de::Error,
+{
+    type Deserializer = CowBytesDeserializer<'a, E>;
+
+    fn into_deserializer(self) -> CowBytesDeserializer<'a, E> {
+        CowBytesDeserializer {
+            value: self,
+            marker: PhantomData,
+        }
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'de, 'a, E> de::Deserializer<'de> for CowBytesDeserializer<'a, E>
+where
+    E: de::Error,
+{
+    type Error = E;
+
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        match self.value {
+            Cow::Borrowed(bytes) => visitor.visit_bytes(bytes),
+            Cow::Owned(bytes) => visitor.visit_byte_buf(bytes),
+        }
+    }
+
+    forward_to_deserialize_any! {
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        tuple_struct map struct identifier ignored_any enum
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 /// A deserializer that iterates over a sequence.
 #[derive(Clone, Debug)]
 pub struct SeqDeserializer<I, E> {
