@@ -1906,3 +1906,140 @@ fn test_packed_struct_can_derive_serialize() {
         t: f32,
     }
 }
+
+#[test]
+fn test_case_insensitive_struct() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(case_insensitive)]
+    struct S {
+        case_insensitive: bool,
+        #[serde(rename = "AlSoCaSeInSeNsItIvE")]
+        also_case_insensitive: bool,
+    }
+
+    assert_de_tokens(
+        &S {
+            case_insensitive: true,
+            also_case_insensitive: true,
+        },
+        &[
+            Token::Struct { name: "S", len: 2 },
+            Token::Str("CaSe_InSeNsItIvE"),
+            Token::Bool(true),
+            Token::Str("ALSOCASEINSENSITIVE"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+
+    #[derive(Debug, PartialEq, Deserialize)]
+    struct Sensitive {
+        case_insensitive: bool,
+    }
+
+    assert_de_tokens_error::<Sensitive>(
+        &[
+            Token::Struct { name: "Sensitive", len: 1 },
+            Token::Str("CaSe_InSeNsItIvE"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+        "missing field `case_insensitive`",
+    );
+}
+
+#[test]
+fn test_case_insensitive_enum() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(case_insensitive)]
+    enum E {
+        Unit,
+        Struct {
+            case_insensitive: bool,
+        },
+        Seq(bool, bool),
+    }
+
+    assert_de_tokens(
+        &E::Unit,
+        &[
+            Token::UnitVariant {
+                name: "E",
+                variant: "uNIt",
+            },
+        ],
+    );
+
+    assert_de_tokens(
+        &E::Struct {
+            case_insensitive: true,
+        },
+        &[
+            Token::StructVariant {
+                name: "E",
+                variant: "sTrUcT",
+                len: 1,
+            },
+            Token::Str("cAsE_iNsEnSiTiVe"),
+            Token::Bool(true),
+            Token::StructVariantEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &E::Seq(true, true),
+        &[
+            Token::TupleVariant {
+                name: "E",
+                variant: "sEQ",
+                len: 2,
+            },
+            Token::Bool(true),
+            Token::Bool(true),
+            Token::TupleVariantEnd,
+        ],
+    );
+
+    #[derive(Debug, PartialEq, Deserialize)]
+    enum Sensitive {
+        Struct {
+            case_insensitive: bool,
+        }
+    }
+
+    assert_de_tokens_error::<Sensitive>(
+        &[
+            Token::StructVariant {
+                name: "Sensitive",
+                variant: "sTrUcT",
+                len: 1,
+            },
+        ],
+        "unknown variant `sTrUcT`, expected `Struct`",
+    );
+}
+
+#[test]
+fn test_case_insensitive_bytes() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(case_insensitive)]
+    struct S {
+        case_insensitive: bool,
+        also_case_insensitive: bool,
+    }
+
+    assert_de_tokens(
+        &S {
+            case_insensitive: true,
+            also_case_insensitive: true,
+        },
+        &[
+            Token::Struct { name: "S", len: 2 },
+            Token::Bytes(b"CASE_INSENSITIVE"),
+            Token::Bool(true),
+            Token::BorrowedBytes(b"aLsO_cAsE_iNSeNsItIvE"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+}

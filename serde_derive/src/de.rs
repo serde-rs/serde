@@ -1905,6 +1905,7 @@ fn deserialize_generated_identifier(
         is_variant,
         fallthrough,
         !is_variant && cattrs.has_flatten(),
+        cattrs.case_insensitive(),
     ));
 
     let lifetime = if !is_variant && cattrs.has_flatten() {
@@ -2012,6 +2013,7 @@ fn deserialize_custom_identifier(
         is_variant,
         fallthrough,
         false,
+        cattrs.case_insensitive(),
     ));
 
     quote_block! {
@@ -2042,6 +2044,7 @@ fn deserialize_identifier(
     is_variant: bool,
     fallthrough: Option<TokenStream>,
     collect_other_fields: bool,
+    case_insensitive: bool,
 ) -> Fragment {
     let mut flat_fields = Vec::new();
     for (_, ident, aliases) in fields {
@@ -2116,6 +2119,111 @@ fn deserialize_identifier(
         quote! {
             _serde::export::Err(_serde::de::Error::unknown_field(__value, FIELDS))
         }
+    };
+
+    let (
+        visit_body_str,
+        visit_body_borrowed_str,
+        visit_body_bytes,
+        visit_body_borrowed_bytes,
+    ) = if case_insensitive {
+        (
+            quote! {
+                #(
+                    if __value.eq_ignore_ascii_case(#field_strs) {
+                        _serde::export::Ok(#constructors)
+                    }
+                )else*
+                else {
+                    #value_as_str_content
+                    #fallthrough_arm
+                }
+            },
+            quote! {
+                #(
+                    if __value.eq_ignore_ascii_case(#field_borrowed_strs) {
+                        _serde::export::Ok(#constructors)
+                    }
+                )else*
+                else {
+                    #value_as_borrowed_str_content
+                    #fallthrough_arm
+                }
+            },
+            quote! {
+                #(
+                    if __value.eq_ignore_ascii_case(#field_bytes) {
+                        _serde::export::Ok(#constructors)
+                    }
+                )else*
+                else {
+                    #bytes_to_str
+                    #value_as_bytes_content
+                    #fallthrough_arm
+                }
+            },
+            quote! {
+                #(
+                    if __value.eq_ignore_ascii_case(#field_borrowed_bytes) {
+                        _serde::export::Ok(#constructors)
+                    }
+                )else*
+                else {
+                    #bytes_to_str
+                    #value_as_borrowed_bytes_content
+                    #fallthrough_arm
+                }
+            }
+        )
+    } else {
+        (
+            quote! {
+                match __value {
+                    #(
+                        #field_strs => _serde::export::Ok(#constructors),
+                    )*
+                    _ => {
+                        #value_as_str_content
+                        #fallthrough_arm
+                    }
+                }
+            },
+            quote! {
+                match __value {
+                    #(
+                        #field_borrowed_strs => _serde::export::Ok(#constructors),
+                    )*
+                    _ => {
+                        #value_as_borrowed_str_content
+                        #fallthrough_arm
+                    }
+                }
+            },
+            quote! {
+                match __value {
+                    #(
+                        #field_bytes => _serde::export::Ok(#constructors),
+                    )*
+                    _ => {
+                        #bytes_to_str
+                        #value_as_bytes_content
+                        #fallthrough_arm
+                    }
+                }
+            },
+            quote! {
+                match __value {
+                    #(
+                        #field_borrowed_bytes => _serde::export::Ok(#constructors),
+                    )*
+                    _ => {
+                        #bytes_to_str
+                        #value_as_borrowed_bytes_content
+                        #fallthrough_arm
+                    }
+                }
+            }
+        )
     };
 
     let variant_indices = 0_u64..;
@@ -2217,31 +2325,14 @@ fn deserialize_identifier(
             where
                 __E: _serde::de::Error,
             {
-                match __value {
-                    #(
-                        #field_borrowed_strs => _serde::export::Ok(#constructors),
-                    )*
-                    _ => {
-                        #value_as_borrowed_str_content
-                        #fallthrough_arm
-                    }
-                }
+                #visit_body_borrowed_str
             }
 
             fn visit_borrowed_bytes<__E>(self, __value: &'de [u8]) -> _serde::export::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                match __value {
-                    #(
-                        #field_borrowed_bytes => _serde::export::Ok(#constructors),
-                    )*
-                    _ => {
-                        #bytes_to_str
-                        #value_as_borrowed_bytes_content
-                        #fallthrough_arm
-                    }
-                }
+                #visit_body_borrowed_bytes
             }
         }
     } else {
@@ -2274,31 +2365,14 @@ fn deserialize_identifier(
         where
             __E: _serde::de::Error,
         {
-            match __value {
-                #(
-                    #field_strs => _serde::export::Ok(#constructors),
-                )*
-                _ => {
-                    #value_as_str_content
-                    #fallthrough_arm
-                }
-            }
+            #visit_body_str
         }
 
         fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::export::Result<Self::Value, __E>
         where
             __E: _serde::de::Error,
         {
-            match __value {
-                #(
-                    #field_bytes => _serde::export::Ok(#constructors),
-                )*
-                _ => {
-                    #bytes_to_str
-                    #value_as_bytes_content
-                    #fallthrough_arm
-                }
-            }
+            #visit_body_bytes
         }
     }
 }

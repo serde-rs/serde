@@ -223,6 +223,7 @@ pub struct Container {
     has_flatten: bool,
     serde_path: Option<syn::Path>,
     is_packed: bool,
+    case_insensitive: bool,
 }
 
 /// Styles of representing an enum.
@@ -305,6 +306,7 @@ impl Container {
         let mut field_identifier = BoolAttr::none(cx, FIELD_IDENTIFIER);
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
         let mut serde_path = Attr::none(cx, CRATE);
+        let mut case_insensitive = BoolAttr::none(cx, CASE_INSENSITIVE);
 
         for meta_item in item
             .attrs
@@ -575,6 +577,11 @@ impl Container {
                     }
                 }
 
+                // Parse `#[serde(case_insensitive)]`
+                Meta(Path(word)) if word == CASE_INSENSITIVE => {
+                    case_insensitive.set_true(word);
+                }
+
                 Meta(meta_item) => {
                     let path = meta_item
                         .path()
@@ -627,6 +634,7 @@ impl Container {
             has_flatten: false,
             serde_path: serde_path.get(),
             is_packed,
+            case_insensitive: case_insensitive.get(),
         }
     }
 
@@ -701,6 +709,10 @@ impl Container {
     pub fn serde_path(&self) -> Cow<syn::Path> {
         self.custom_serde_path()
             .map_or_else(|| Cow::Owned(parse_quote!(_serde)), Cow::Borrowed)
+    }
+
+    pub fn case_insensitive(&self) -> bool {
+        self.case_insensitive
     }
 }
 
