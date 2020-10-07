@@ -1933,6 +1933,18 @@ fn test_case_insensitive_struct() {
     );
 
     #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(case_insensitive)]
+    struct Empty {};
+
+    assert_de_tokens(
+        &Empty {},
+        &[
+            Token::Struct { name: "Empty", len: 0 },
+            Token::StructEnd,
+        ]
+    );
+
+    #[derive(Debug, PartialEq, Deserialize)]
     struct Sensitive {
         case_insensitive: bool,
     }
