@@ -965,12 +965,7 @@ fn deserialize_struct(
             )
         })
         .collect();
-    let field_visitor = Stmts(deserialize_generated_identifier(
-        &field_names_idents,
-        cattrs,
-        false,
-        None,
-    ));
+    let field_visitor = deserialize_field_identifier(&field_names_idents, cattrs);
 
     // untagged struct variants do not get a visit_seq method. The same applies to
     // structs that only have a map representation.
@@ -1128,12 +1123,7 @@ fn deserialize_struct_in_place(
         })
         .collect();
 
-    let field_visitor = Stmts(deserialize_generated_identifier(
-        &field_names_idents,
-        cattrs,
-        false,
-        None,
-    ));
+    let field_visitor = deserialize_field_identifier(&field_names_idents, cattrs);
 
     let mut_seq = if field_names_idents.is_empty() {
         quote!(_)
@@ -2050,6 +2040,20 @@ fn deserialize_generated_identifier(
             }
         }
     }
+}
+
+/// Generates enum and its `Deserialize` implementation that represents each
+/// non-skipped field of the struct
+fn deserialize_field_identifier(
+    fields: &[(&str, Ident, &BTreeSet<String>)],
+    cattrs: &attr::Container,
+) -> Stmts {
+    Stmts(deserialize_generated_identifier(
+        fields,
+        cattrs,
+        false,
+        None,
+    ))
 }
 
 // Generates `Deserialize::deserialize` body for an enum with
