@@ -1,6 +1,6 @@
 [package]
 name = "serde_derive"
-version = "1.0.116" # remember to update html_root_url
+version = "1.0.117" # remember to update html_root_url
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "Macros 1.1 implementation of #[derive(Serialize, Deserialize)]"
