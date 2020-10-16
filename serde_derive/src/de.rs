@@ -1237,7 +1237,12 @@ fn prepare_enum_variant_enum(
         })
         .collect();
 
-    let other_idx = deserialized_variants.position(|(_, variant)| variant.attrs.other());
+    let fallthrough = deserialized_variants
+        .position(|(_, variant)| variant.attrs.other())
+        .map(|other_idx| {
+            let ignore_variant = variant_names_idents[other_idx].1.clone();
+            quote!(_serde::__private::Ok(__Field::#ignore_variant))
+        });
 
     let variants_stmt = {
         let variant_names = variant_names_idents.iter().map(|(name, _, _)| name);
@@ -1246,11 +1251,6 @@ fn prepare_enum_variant_enum(
             const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
         }
     };
-
-    let fallthrough = other_idx.map(|other_idx| {
-        let ignore_variant = variant_names_idents[other_idx].1.clone();
-        quote!(_serde::__private::Ok(__Field::#ignore_variant))
-    });
 
     let variant_visitor = Stmts(deserialize_generated_identifier(
         &variant_names_idents,
