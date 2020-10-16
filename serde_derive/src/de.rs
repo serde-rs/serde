@@ -1247,11 +1247,20 @@ fn prepare_enum_variant_enum(
         }
     };
 
+    let (ignore_variant, fallthrough) = if let Some(other_idx) = other_idx {
+        let ignore_variant = variant_names_idents[other_idx].1.clone();
+        let fallthrough = quote!(_serde::__private::Ok(__Field::#ignore_variant));
+        (None, Some(fallthrough))
+    } else {
+        (None, None)
+    };
+
     let variant_visitor = Stmts(deserialize_generated_identifier(
         &variant_names_idents,
         cattrs,
         true,
-        other_idx,
+        ignore_variant,
+        fallthrough,
     ));
 
     (variants_stmt, variant_visitor)
@@ -1976,26 +1985,11 @@ fn deserialize_generated_identifier(
     fields: &[(&str, Ident, &BTreeSet<String>)],
     cattrs: &attr::Container,
     is_variant: bool,
-    other_idx: Option<usize>,
+    ignore_variant: Option<TokenStream>,
+    fallthrough: Option<TokenStream>,
 ) -> Fragment {
     let this_value = quote!(__Field);
     let field_idents: &Vec<_> = &fields.iter().map(|(_, ident, _)| ident).collect();
-
-    let (ignore_variant, fallthrough) = if !is_variant && cattrs.has_flatten() {
-        let ignore_variant = quote!(__other(_serde::__private::de::Content<'de>),);
-        let fallthrough = quote!(_serde::__private::Ok(__Field::__other(__value)));
-        (Some(ignore_variant), Some(fallthrough))
-    } else if let Some(other_idx) = other_idx {
-        let ignore_variant = fields[other_idx].1.clone();
-        let fallthrough = quote!(_serde::__private::Ok(__Field::#ignore_variant));
-        (None, Some(fallthrough))
-    } else if is_variant || cattrs.deny_unknown_fields() {
-        (None, None)
-    } else {
-        let ignore_variant = quote!(__ignore,);
-        let fallthrough = quote!(_serde::__private::Ok(__Field::__ignore));
-        (Some(ignore_variant), Some(fallthrough))
-    };
 
     let visitor_impl = Stmts(deserialize_identifier(
         &this_value,
@@ -2048,11 +2042,24 @@ fn deserialize_field_identifier(
     fields: &[(&str, Ident, &BTreeSet<String>)],
     cattrs: &attr::Container,
 ) -> Stmts {
+    let (ignore_variant, fallthrough) = if cattrs.has_flatten() {
+        let ignore_variant = quote!(__other(_serde::__private::de::Content<'de>),);
+        let fallthrough = quote!(_serde::__private::Ok(__Field::__other(__value)));
+        (Some(ignore_variant), Some(fallthrough))
+    } else if cattrs.deny_unknown_fields() {
+        (None, None)
+    } else {
+        let ignore_variant = quote!(__ignore,);
+        let fallthrough = quote!(_serde::__private::Ok(__Field::__ignore));
+        (Some(ignore_variant), Some(fallthrough))
+    };
+
     Stmts(deserialize_generated_identifier(
         fields,
         cattrs,
         false,
-        None,
+        ignore_variant,
+        fallthrough,
     ))
 }
 
