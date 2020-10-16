@@ -1247,19 +1247,19 @@ fn prepare_enum_variant_enum(
         }
     };
 
-    let (ignore_variant, fallthrough) = if let Some(other_idx) = other_idx {
+    let fallthrough = if let Some(other_idx) = other_idx {
         let ignore_variant = variant_names_idents[other_idx].1.clone();
         let fallthrough = quote!(_serde::__private::Ok(__Field::#ignore_variant));
-        (None, Some(fallthrough))
+        Some(fallthrough)
     } else {
-        (None, None)
+        None
     };
 
     let variant_visitor = Stmts(deserialize_generated_identifier(
         &variant_names_idents,
         cattrs,
         true,
-        ignore_variant,
+        None,
         fallthrough,
     ));
 
