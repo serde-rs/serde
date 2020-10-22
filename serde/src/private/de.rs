@@ -824,15 +824,17 @@ mod content {
     /// Not public API.
     pub struct TaggedContentVisitor<'de, T> {
         tag_name: &'static str,
+        expecting: &'static str,
         value: PhantomData<TaggedContent<'de, T>>,
     }
 
     impl<'de, T> TaggedContentVisitor<'de, T> {
         /// Visitor for the content of an internally tagged enum with the given
         /// tag name.
-        pub fn new(name: &'static str) -> Self {
+        pub fn new(name: &'static str, expecting: &'static str) -> Self {
             TaggedContentVisitor {
                 tag_name: name,
+                expecting: expecting,
                 value: PhantomData,
             }
         }
@@ -861,7 +863,7 @@ mod content {
         type Value = TaggedContent<'de, T>;
 
         fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-            fmt.write_str("internally tagged enum")
+            fmt.write_str(self.expecting)
         }
 
         fn visit_seq<S>(self, mut seq: S) -> Result<Self::Value, S::Error>

@@ -223,6 +223,8 @@ pub struct Container {
     has_flatten: bool,
     serde_path: Option<syn::Path>,
     is_packed: bool,
+    /// Error message generated when type can't be deserialized
+    expecting: Option<String>,
 }
 
 /// Styles of representing an enum.
@@ -305,6 +307,7 @@ impl Container {
         let mut field_identifier = BoolAttr::none(cx, FIELD_IDENTIFIER);
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
         let mut serde_path = Attr::none(cx, CRATE);
+        let mut expecting = Attr::none(cx, EXPECTING);
 
         for meta_item in item
             .attrs
@@ -575,6 +578,13 @@ impl Container {
                     }
                 }
 
+                // Parse `#[serde(expecting = "a message")]`
+                Meta(NameValue(m)) if m.path == EXPECTING => {
+                    if let Ok(s) = get_lit_str(cx, EXPECTING, &m.lit) {
+                        expecting.set(&m.path, s.value());
+                    }
+                }
+
                 Meta(meta_item) => {
                     let path = meta_item
                         .path()
@@ -627,6 +637,7 @@ impl Container {
             has_flatten: false,
             serde_path: serde_path.get(),
             is_packed,
+            expecting: expecting.get(),
         }
     }
 
@@ -701,6 +712,12 @@ impl Container {
     pub fn serde_path(&self) -> Cow<syn::Path> {
         self.custom_serde_path()
             .map_or_else(|| Cow::Owned(parse_quote!(_serde)), Cow::Borrowed)
+    }
+
+    /// Error message generated when type can't be deserialized.
+    /// If `None`, default message will be used
+    pub fn expecting(&self) -> Option<&str> {
+        self.expecting.as_ref().map(String::as_ref)
     }
 }
 

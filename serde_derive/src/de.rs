@@ -399,6 +399,7 @@ fn deserialize_unit_struct(params: &Parameters, cattrs: &attr::Container) -> Fra
     let type_name = cattrs.name().deserialize_name();
 
     let expecting = format!("unit struct {}", params.type_name());
+    let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     quote_block! {
         struct __Visitor;
@@ -456,6 +457,7 @@ fn deserialize_tuple(
         Some(variant_ident) => format!("tuple variant {}::{}", params.type_name(), variant_ident),
         None => format!("tuple struct {}", params.type_name()),
     };
+    let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     let nfields = fields.len();
 
@@ -542,6 +544,7 @@ fn deserialize_tuple_in_place(
         Some(variant_ident) => format!("tuple variant {}::{}", params.type_name(), variant_ident),
         None => format!("tuple struct {}", params.type_name()),
     };
+    let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     let nfields = fields.len();
 
@@ -630,6 +633,7 @@ fn deserialize_seq(
     } else {
         format!("{} with {} elements", expecting, deserialized_count)
     };
+    let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     let mut index_in_seq = 0_usize;
     let let_values = vars.clone().zip(fields).map(|(var, field)| {
@@ -732,6 +736,7 @@ fn deserialize_seq_in_place(
     } else {
         format!("{} with {} elements", expecting, deserialized_count)
     };
+    let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     let mut index_in_seq = 0usize;
     let write_values = fields.iter().map(|field| {
@@ -907,6 +912,7 @@ fn deserialize_struct(
         Some(variant_ident) => format!("struct variant {}::{}", params.type_name(), variant_ident),
         None => format!("struct {}", params.type_name()),
     };
+    let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     let visit_seq = Stmts(deserialize_seq(
         &type_path, params, fields, true, cattrs, &expecting,
@@ -1048,6 +1054,7 @@ fn deserialize_struct_in_place(
         Some(variant_ident) => format!("struct variant {}::{}", params.type_name(), variant_ident),
         None => format!("struct {}", params.type_name()),
     };
+    let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, &expecting));
 
@@ -1200,6 +1207,7 @@ fn deserialize_externally_tagged_enum(
 
     let type_name = cattrs.name().deserialize_name();
     let expecting = format!("enum {}", params.type_name());
+    let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants, cattrs);
 
@@ -1309,6 +1317,9 @@ fn deserialize_internally_tagged_enum(
             }
         });
 
+    let expecting = format!("internally tagged enum {}", params.type_name());
+    let expecting = cattrs.expecting().unwrap_or(&expecting);
+
     quote_block! {
         #variant_visitor
 
@@ -1316,7 +1327,7 @@ fn deserialize_internally_tagged_enum(
 
         let __tagged = try!(_serde::Deserializer::deserialize_any(
             __deserializer,
-            _serde::private::de::TaggedContentVisitor::<__Field>::new(#tag)));
+            _serde::private::de::TaggedContentVisitor::<__Field>::new(#tag, #expecting)));
 
         match __tagged.tag {
             #(#variant_arms)*
@@ -1359,6 +1370,7 @@ fn deserialize_adjacently_tagged_enum(
         .collect();
 
     let expecting = format!("adjacently tagged enum {}", params.type_name());
+    let expecting = cattrs.expecting().unwrap_or(&expecting);
     let type_name = cattrs.name().deserialize_name();
     let deny_unknown_fields = cattrs.deny_unknown_fields();
 
@@ -1648,6 +1660,7 @@ fn deserialize_untagged_enum(
         "data did not match any variant of untagged enum {}",
         params.type_name()
     );
+    let fallthrough_msg = cattrs.expecting().unwrap_or(&fallthrough_msg);
 
     quote_block! {
         let __content = try!(<_serde::private::de::Content as _serde::Deserialize>::deserialize(__deserializer));
@@ -1905,6 +1918,7 @@ fn deserialize_generated_identifier(
         is_variant,
         fallthrough,
         !is_variant && cattrs.has_flatten(),
+        None,
     ));
 
     let lifetime = if !is_variant && cattrs.has_flatten() {
@@ -2012,6 +2026,7 @@ fn deserialize_custom_identifier(
         is_variant,
         fallthrough,
         false,
+        cattrs.expecting(),
     ));
 
     quote_block! {
@@ -2042,6 +2057,7 @@ fn deserialize_identifier(
     is_variant: bool,
     fallthrough: Option<TokenStream>,
     collect_other_fields: bool,
+    expecting: Option<&str>,
 ) -> Fragment {
     let mut flat_fields = Vec::new();
     for (_, ident, aliases) in fields {
@@ -2066,11 +2082,11 @@ fn deserialize_identifier(
         .map(|(_, ident, _)| quote!(#this::#ident))
         .collect();
 
-    let expecting = if is_variant {
+    let expecting = expecting.unwrap_or(if is_variant {
         "variant identifier"
     } else {
         "field identifier"
-    };
+    });
 
     let index_expecting = if is_variant { "variant" } else { "field" };
 

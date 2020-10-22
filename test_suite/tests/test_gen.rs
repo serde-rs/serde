@@ -723,6 +723,55 @@ fn test_gen() {
     }
 
     deriving!(&'a str);
+
+    // https://github.com/serde-rs/serde/issues/1883
+    #[derive(Deserialize)]
+    #[serde(expecting = "a message")]
+    struct CustomMessageUnit;
+
+    #[derive(Deserialize)]
+    #[serde(expecting = "a message")]
+    struct CustomMessageNewtype(bool);
+
+    #[derive(Deserialize)]
+    #[serde(expecting = "a message")]
+    struct CustomMessageTuple(u32, bool);
+
+    #[derive(Deserialize)]
+    #[serde(expecting = "a message")]
+    struct CustomMessageStruct {
+        question: String,
+        answer: u32,
+    }
+
+    #[derive(Deserialize)]
+    #[serde(expecting = "a message")]
+    enum CustomMessageExternallyTaggedEnum {}
+
+    #[derive(Deserialize)]
+    #[serde(tag = "tag")]
+    #[serde(expecting = "a message")]
+    enum CustomMessageInternallyTaggedEnum {}
+
+    #[derive(Deserialize)]
+    #[serde(tag = "tag", content = "content")]
+    #[serde(expecting = "a message")]
+    enum CustomMessageAdjacentlyTaggedEnum {}
+
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    #[serde(expecting = "a message")]
+    enum CustomMessageUntaggedEnum {}
+
+    #[derive(Deserialize)]
+    #[serde(field_identifier)]
+    #[serde(expecting = "a message")]
+    enum CustomMessageFieldIdentifierEnum {}
+
+    #[derive(Deserialize)]
+    #[serde(variant_identifier)]
+    #[serde(expecting = "a message")]
+    enum CustomMessageVariantIdentifierEnum {}
 }
 
 //////////////////////////////////////////////////////////////////////////
