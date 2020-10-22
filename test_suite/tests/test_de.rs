@@ -693,6 +693,46 @@ declare_tests! {
             Token::SeqEnd,
         ],
     }
+    test_struct_borrowed_keys {
+        Struct { a: 1, b: 2, c: 0 } => &[
+            Token::Map { len: Some(3) },
+                Token::BorrowedStr("a"),
+                Token::I32(1),
+
+                Token::BorrowedStr("b"),
+                Token::I32(2),
+            Token::MapEnd,
+        ],
+        Struct { a: 1, b: 2, c: 0 } => &[
+            Token::Struct { name: "Struct", len: 2 },
+                Token::BorrowedStr("a"),
+                Token::I32(1),
+
+                Token::BorrowedStr("b"),
+                Token::I32(2),
+            Token::StructEnd,
+        ],
+    }
+    test_struct_owned_keys {
+        Struct { a: 1, b: 2, c: 0 } => &[
+            Token::Map { len: Some(3) },
+                Token::String("a"),
+                Token::I32(1),
+
+                Token::String("b"),
+                Token::I32(2),
+            Token::MapEnd,
+        ],
+        Struct { a: 1, b: 2, c: 0 } => &[
+            Token::Struct { name: "Struct", len: 2 },
+                Token::String("a"),
+                Token::I32(1),
+
+                Token::String("b"),
+                Token::I32(2),
+            Token::StructEnd,
+        ],
+    }
     test_struct_with_skip {
         Struct { a: 1, b: 2, c: 0 } => &[
             Token::Map { len: Some(3) },
