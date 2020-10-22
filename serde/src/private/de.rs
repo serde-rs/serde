@@ -2542,11 +2542,11 @@ pub trait IdentifierDeserializer<'de, E: Error> {
     fn from(self) -> Self::Deserializer;
 }
 
-impl<'de, E> IdentifierDeserializer<'de, E> for u32
+impl<'de, E> IdentifierDeserializer<'de, E> for u64
 where
     E: Error,
 {
-    type Deserializer = <u32 as IntoDeserializer<'de, E>>::Deserializer;
+    type Deserializer = <u64 as IntoDeserializer<'de, E>>::Deserializer;
 
     fn from(self) -> Self::Deserializer {
         self.into_deserializer()
