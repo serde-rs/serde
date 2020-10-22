@@ -97,10 +97,7 @@ const _: () = {
                         0u64 => _serde::export::Ok(__Field::__field0),
                         1u64 => _serde::export::Ok(__Field::__field1),
                         2u64 => _serde::export::Ok(__Field::__field2),
-                        _ => _serde::export::Err(_serde::de::Error::invalid_value(
-                            _serde::de::Unexpected::Unsigned(__value),
-                            &"field index 0 <= i < 3",
-                        )),
+                        _ => _serde::export::Ok(__Field::__ignore),
                     }
                 }
                 fn visit_str<__E>(self, __value: &str) -> _serde::export::Result<Self::Value, __E>
@@ -373,10 +370,7 @@ const _: () = {
                         0u64 => _serde::export::Ok(__Field::__field0),
                         1u64 => _serde::export::Ok(__Field::__field1),
                         2u64 => _serde::export::Ok(__Field::__field2),
-                        _ => _serde::export::Err(_serde::de::Error::invalid_value(
-                            _serde::de::Unexpected::Unsigned(__value),
-                            &"field index 0 <= i < 3",
-                        )),
+                        _ => _serde::export::Ok(__Field::__ignore),
                     }
                 }
                 fn visit_str<__E>(self, __value: &str) -> _serde::export::Result<Self::Value, __E>

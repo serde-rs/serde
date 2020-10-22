@@ -1940,6 +1940,15 @@ fn deserialize_generated_identifier(
     }
 }
 
+/// Generates `Deserialize::deserialize` body for
+/// ```ignore
+/// #[serde(field_identifier)]
+/// enum Field {
+/// }
+/// #[serde(variant_identifier)]
+/// enum Variant {
+/// }
+/// ```
 fn deserialize_custom_identifier(
     params: &Parameters,
     variants: &[Variant],
@@ -1957,6 +1966,8 @@ fn deserialize_custom_identifier(
     let (ordinary, fallthrough) = if let Some(last) = variants.last() {
         let last_ident = &last.ident;
         if last.attrs.other() {
+            // Processes `#[serde(other)]` attribute. It always belongs to the last variant
+            // (checked in `check_identifier`), so all other are ordinal variants
             let ordinary = &variants[..variants.len() - 1];
             let fallthrough = quote!(_serde::export::Ok(#this::#last_ident));
             (ordinary, Some(fallthrough))
@@ -1976,6 +1987,10 @@ fn deserialize_custom_identifier(
         (variants, None)
     };
 
+    // List of tuples:
+    // - field or variant name in the expected messages
+    // - information about field/variant
+    // - list of alternate names of the field/variant
     let names_idents: Vec<_> = ordinary
         .iter()
         .map(|variant| {
@@ -2106,7 +2121,7 @@ fn deserialize_identifier(
         (None, None, None, None)
     };
 
-    let fallthrough_arm = if let Some(fallthrough) = fallthrough {
+    let fallthrough_arm = if let Some(fallthrough) = fallthrough.clone() {
         fallthrough
     } else if is_variant {
         quote! {
@@ -2118,8 +2133,19 @@ fn deserialize_identifier(
         }
     };
 
+    let u64_fallthrough_arm = if let Some(fallthrough) = fallthrough {
+        fallthrough
+    } else {
+        let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
+        quote! {
+            _serde::export::Err(_serde::de::Error::invalid_value(
+                _serde::de::Unexpected::Unsigned(__value),
+                &#fallthrough_msg,
+            ))
+        }
+    };
+
     let variant_indices = 0_u64..;
-    let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
     let visit_other = if collect_other_fields {
         quote! {
             fn visit_bool<__E>(self, __value: bool) -> _serde::export::Result<Self::Value, __E>
@@ -2254,10 +2280,9 @@ fn deserialize_identifier(
                     #(
                         #variant_indices => _serde::export::Ok(#main_constructors),
                     )*
-                    _ => _serde::export::Err(_serde::de::Error::invalid_value(
-                        _serde::de::Unexpected::Unsigned(__value),
-                        &#fallthrough_msg,
-                    ))
+                    _ => {
+                        #u64_fallthrough_arm
+                    }
                 }
             }
         }

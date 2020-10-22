@@ -347,10 +347,7 @@ const _: () = {
                                     match __value {
                                         0u64 => _serde::export::Ok(__Field::__field0),
                                         1u64 => _serde::export::Ok(__Field::__field1),
-                                        _ => _serde::export::Err(_serde::de::Error::invalid_value(
-                                            _serde::de::Unexpected::Unsigned(__value),
-                                            &"field index 0 <= i < 2",
-                                        )),
+                                        _ => _serde::export::Ok(__Field::__ignore),
                                     }
                                 }
                                 fn visit_str<__E>(
