@@ -624,10 +624,56 @@ declare_tests! {
         ],
         Struct { a: 1, b: 2, c: 0 } => &[
             Token::Map { len: Some(3) },
+                Token::U8(0),
+                Token::I32(1),
+
+                Token::U8(1),
+                Token::I32(2),
+            Token::MapEnd,
+        ],
+        Struct { a: 1, b: 2, c: 0 } => &[
+            Token::Map { len: Some(3) },
+                Token::U16(0),
+                Token::I32(1),
+
+                Token::U16(1),
+                Token::I32(2),
+            Token::MapEnd,
+        ],
+        Struct { a: 1, b: 2, c: 0 } => &[
+            Token::Map { len: Some(3) },
                 Token::U32(0),
                 Token::I32(1),
 
                 Token::U32(1),
+                Token::I32(2),
+            Token::MapEnd,
+        ],
+        Struct { a: 1, b: 2, c: 0 } => &[
+            Token::Map { len: Some(3) },
+                Token::U64(0),
+                Token::I32(1),
+
+                Token::U64(1),
+                Token::I32(2),
+            Token::MapEnd,
+        ],
+        // Mixed key types
+        Struct { a: 1, b: 2, c: 0 } => &[
+            Token::Map { len: Some(3) },
+                Token::U8(0),
+                Token::I32(1),
+
+                Token::U64(1),
+                Token::I32(2),
+            Token::MapEnd,
+        ],
+        Struct { a: 1, b: 2, c: 0 } => &[
+            Token::Map { len: Some(3) },
+                Token::U8(0),
+                Token::I32(1),
+
+                Token::Str("b"),
                 Token::I32(2),
             Token::MapEnd,
         ],
@@ -660,6 +706,21 @@ declare_tests! {
                 Token::I32(3),
 
                 Token::Str("d"),
+                Token::I32(4),
+            Token::MapEnd,
+        ],
+        Struct { a: 1, b: 2, c: 0 } => &[
+            Token::Map { len: Some(3) },
+                Token::U8(0),
+                Token::I32(1),
+
+                Token::U16(1),
+                Token::I32(2),
+
+                Token::U32(2),
+                Token::I32(3),
+
+                Token::U64(3),
                 Token::I32(4),
             Token::MapEnd,
         ],
@@ -780,11 +841,51 @@ declare_tests! {
             Token::Str("Unit"),
             Token::Unit,
         ],
+        EnumOther::Unit => &[
+            Token::Enum { name: "EnumOther" },
+            Token::U8(0),
+            Token::Unit,
+        ],
+        EnumOther::Unit => &[
+            Token::Enum { name: "EnumOther" },
+            Token::U16(0),
+            Token::Unit,
+        ],
+        EnumOther::Unit => &[
+            Token::Enum { name: "EnumOther" },
+            Token::U32(0),
+            Token::Unit,
+        ],
+        EnumOther::Unit => &[
+            Token::Enum { name: "EnumOther" },
+            Token::U64(0),
+            Token::Unit,
+        ],
     }
     test_enum_other {
         EnumOther::Other => &[
             Token::Enum { name: "EnumOther" },
             Token::Str("Foo"),
+            Token::Unit,
+        ],
+        EnumOther::Other => &[
+            Token::Enum { name: "EnumOther" },
+            Token::U8(42),
+            Token::Unit,
+        ],
+        EnumOther::Other => &[
+            Token::Enum { name: "EnumOther" },
+            Token::U16(42),
+            Token::Unit,
+        ],
+        EnumOther::Other => &[
+            Token::Enum { name: "EnumOther" },
+            Token::U32(42),
+            Token::Unit,
+        ],
+        EnumOther::Other => &[
+            Token::Enum { name: "EnumOther" },
+            Token::U64(42),
             Token::Unit,
         ],
     }
