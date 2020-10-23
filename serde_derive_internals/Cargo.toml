@@ -16,7 +16,7 @@ path = "lib.rs"
 [dependencies]
 proc-macro2 = "1.0"
 quote = "1.0"
-syn = { version = "1.0.33", default-features = false, features = ["derive", "parsing", "printing", "clone-impls"] }
+syn = { version = "1.0.33", default-features = false, features = ["derive", "parsing", "printing", "clone-impls", "visit-mut"] }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
