@@ -1,7 +1,7 @@
 use lib::*;
 
 use de::{Deserialize, DeserializeSeed, Deserializer, Error, IntoDeserializer, Visitor};
-use de::value::BytesDeserializer;
+use de::value::{BytesDeserializer, BorrowedBytesDeserializer};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 use de::{MapAccess, Unexpected};
@@ -2527,20 +2527,26 @@ mod content {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// Like `IntoDeserializer` but also implemented for `&[u8]`. This is used for
-// the newtype fallthrough case of `field_identifier`.
-//
-//    #[derive(Deserialize)]
-//    #[serde(field_identifier)]
-//    enum F {
-//        A,
-//        B,
-//        Other(String), // deserialized using IdentifierDeserializer
-//    }
+/// Like `IntoDeserializer` but also implemented for `&[u8]`. This is used for
+/// the newtype fallthrough case of `field_identifier`.
+///
+/// ```ignore
+/// #[derive(Deserialize)]
+/// #[serde(field_identifier)]
+/// enum F {
+///     A,
+///     B,
+///     Other(String), // deserialized using IdentifierDeserializer
+/// }
+/// ```
 pub trait IdentifierDeserializer<'de, E: Error> {
+    /// Deserializer, that refers to data owned by deserializer
     type Deserializer: Deserializer<'de, Error = E>;
+    /// Deserializer, that borrows data from the input
+    type BorrowedDeserializer: Deserializer<'de, Error = E>;
 
     fn from(self) -> Self::Deserializer;
+    fn borrowed(self) -> Self::BorrowedDeserializer;
 }
 
 impl<'de, E> IdentifierDeserializer<'de, E> for u32
@@ -2548,22 +2554,33 @@ where
     E: Error,
 {
     type Deserializer = <u32 as IntoDeserializer<'de, E>>::Deserializer;
+    type BorrowedDeserializer = <u32 as IntoDeserializer<'de, E>>::Deserializer;
 
     fn from(self) -> Self::Deserializer {
+        self.into_deserializer()
+    }
+
+    fn borrowed(self) -> Self::BorrowedDeserializer {
         self.into_deserializer()
     }
 }
 
 forward_deserializer!(ref StrDeserializer<'a>(&'a str) => visit_str);
+forward_deserializer!(borrowed BorrowedStrDeserializer(&'de str) => visit_borrowed_str);
 
 impl<'a, E> IdentifierDeserializer<'a, E> for &'a str
 where
     E: Error,
 {
     type Deserializer = StrDeserializer<'a, E>;
+    type BorrowedDeserializer = BorrowedStrDeserializer<'a, E>;
 
     fn from(self) -> Self::Deserializer {
         StrDeserializer::new(self)
+    }
+
+    fn borrowed(self) -> Self::BorrowedDeserializer {
+        BorrowedStrDeserializer::new(self)
     }
 }
 
@@ -2572,9 +2589,14 @@ where
     E: Error,
 {
     type Deserializer = BytesDeserializer<'a, E>;
+    type BorrowedDeserializer = BorrowedBytesDeserializer<'a, E>;
 
     fn from(self) -> Self::Deserializer {
         BytesDeserializer::new(self)
+    }
+
+    fn borrowed(self) -> Self::BorrowedDeserializer {
+        BorrowedBytesDeserializer::new(self)
     }
 }
 

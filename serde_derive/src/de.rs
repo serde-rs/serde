@@ -1886,17 +1886,26 @@ fn deserialize_generated_identifier(
     let (ignore_variant, fallthrough) = if !is_variant && cattrs.has_flatten() {
         let ignore_variant = quote!(__other(_serde::private::de::Content<'de>),);
         let fallthrough = quote!(_serde::export::Ok(__Field::__other(__value)));
-        (Some(ignore_variant), Some(fallthrough))
+        (
+            Some(ignore_variant),
+            Some((fallthrough.clone(), fallthrough))
+        )
     } else if let Some(other_idx) = other_idx {
         let ignore_variant = fields[other_idx].1.clone();
         let fallthrough = quote!(_serde::export::Ok(__Field::#ignore_variant));
-        (None, Some(fallthrough))
+        (
+            None,
+            Some((fallthrough.clone(), fallthrough))
+        )
     } else if is_variant || cattrs.deny_unknown_fields() {
         (None, None)
     } else {
         let ignore_variant = quote!(__ignore,);
         let fallthrough = quote!(_serde::export::Ok(__Field::__ignore));
-        (Some(ignore_variant), Some(fallthrough))
+        (
+            Some(ignore_variant),
+            Some((fallthrough.clone(), fallthrough))
+        )
     };
 
     let visitor_impl = Stmts(deserialize_identifier(
@@ -1959,16 +1968,27 @@ fn deserialize_custom_identifier(
         if last.attrs.other() {
             let ordinary = &variants[..variants.len() - 1];
             let fallthrough = quote!(_serde::export::Ok(#this::#last_ident));
-            (ordinary, Some(fallthrough))
+            (
+                ordinary,
+                Some((fallthrough.clone(), fallthrough))
+            )
         } else if let Style::Newtype = last.style {
             let ordinary = &variants[..variants.len() - 1];
-            let deserializer = quote!(_serde::private::de::IdentifierDeserializer::from(__value));
-            let fallthrough = quote! {
+
+            let fallthrough = |method| quote! {
                 _serde::export::Result::map(
-                    _serde::Deserialize::deserialize(#deserializer),
+                    _serde::Deserialize::deserialize(
+                        _serde::private::de::IdentifierDeserializer::#method(__value)
+                    ),
                     #this::#last_ident)
             };
-            (ordinary, Some(fallthrough))
+            (
+                ordinary,
+                Some((
+                    fallthrough(quote!(from)),
+                    fallthrough(quote!(borrowed)),
+                ))
+            )
         } else {
             (variants, None)
         }
@@ -2040,7 +2060,8 @@ fn deserialize_identifier(
     this: &TokenStream,
     fields: &[(String, Ident, Vec<String>)],
     is_variant: bool,
-    fallthrough: Option<TokenStream>,
+    // .0 for referenced data, .1 -- for borrowed
+    fallthrough: Option<(TokenStream, TokenStream)>,
     collect_other_fields: bool,
 ) -> Fragment {
     let mut flat_fields = Vec::new();
@@ -2048,14 +2069,11 @@ fn deserialize_identifier(
         flat_fields.extend(aliases.iter().map(|alias| (alias, ident)))
     }
 
-    let field_strs = flat_fields.iter().map(|(name, _)| name);
-    let field_borrowed_strs = flat_fields.iter().map(|(name, _)| name);
-    let field_bytes = flat_fields
+    let field_strs: &Vec<_> = &flat_fields.iter().map(|(name, _)| name).collect();
+    let field_bytes: &Vec<_> = &flat_fields
         .iter()
-        .map(|(name, _)| Literal::byte_string(name.as_bytes()));
-    let field_borrowed_bytes = flat_fields
-        .iter()
-        .map(|(name, _)| Literal::byte_string(name.as_bytes()));
+        .map(|(name, _)| Literal::byte_string(name.as_bytes()))
+        .collect();
 
     let constructors: &Vec<_> = &flat_fields
         .iter()
@@ -2106,16 +2124,21 @@ fn deserialize_identifier(
         (None, None, None, None)
     };
 
-    let fallthrough_arm = if let Some(fallthrough) = fallthrough {
+    let (
+        fallthrough_arm,
+        fallthrough_borrowed_arm,
+    ) = if let Some(fallthrough) = fallthrough.clone() {
         fallthrough
     } else if is_variant {
-        quote! {
+        let fallthrough = quote! {
             _serde::export::Err(_serde::de::Error::unknown_variant(__value, VARIANTS))
-        }
+        };
+        (fallthrough.clone(), fallthrough)
     } else {
-        quote! {
+        let fallthrough = quote! {
             _serde::export::Err(_serde::de::Error::unknown_field(__value, FIELDS))
-        }
+        };
+        (fallthrough.clone(), fallthrough)
     };
 
     let variant_indices = 0_u64..;
@@ -2212,37 +2235,6 @@ fn deserialize_identifier(
             {
                 _serde::export::Ok(__Field::__other(_serde::private::de::Content::Unit))
             }
-
-            fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::export::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                match __value {
-                    #(
-                        #field_borrowed_strs => _serde::export::Ok(#constructors),
-                    )*
-                    _ => {
-                        #value_as_borrowed_str_content
-                        #fallthrough_arm
-                    }
-                }
-            }
-
-            fn visit_borrowed_bytes<__E>(self, __value: &'de [u8]) -> _serde::export::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                match __value {
-                    #(
-                        #field_borrowed_bytes => _serde::export::Ok(#constructors),
-                    )*
-                    _ => {
-                        #bytes_to_str
-                        #value_as_borrowed_bytes_content
-                        #fallthrough_arm
-                    }
-                }
-            }
         }
     } else {
         quote! {
@@ -2285,6 +2277,21 @@ fn deserialize_identifier(
             }
         }
 
+        fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::export::Result<Self::Value, __E>
+        where
+            __E: _serde::de::Error,
+        {
+            match __value {
+                #(
+                    #field_strs => _serde::export::Ok(#constructors),
+                )*
+                _ => {
+                    #value_as_borrowed_str_content
+                    #fallthrough_borrowed_arm
+                }
+            }
+        }
+
         fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::export::Result<Self::Value, __E>
         where
             __E: _serde::de::Error,
@@ -2297,6 +2304,22 @@ fn deserialize_identifier(
                     #bytes_to_str
                     #value_as_bytes_content
                     #fallthrough_arm
+                }
+            }
+        }
+
+        fn visit_borrowed_bytes<__E>(self, __value: &'de [u8]) -> _serde::export::Result<Self::Value, __E>
+        where
+            __E: _serde::de::Error,
+        {
+            match __value {
+                #(
+                    #field_bytes => _serde::export::Ok(#constructors),
+                )*
+                _ => {
+                    #bytes_to_str
+                    #value_as_borrowed_bytes_content
+                    #fallthrough_borrowed_arm
                 }
             }
         }
