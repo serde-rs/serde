@@ -10,9 +10,11 @@ use syn::{
 };
 
 pub fn replace_receiver(input: &mut DeriveInput) {
-    let ident = &input.ident;
-    let ty_generics = input.generics.split_for_impl().1;
-    let self_ty = parse_quote!(#ident #ty_generics);
+    let self_ty = {
+        let ident = &input.ident;
+        let ty_generics = input.generics.split_for_impl().1;
+        parse_quote!(#ident #ty_generics)
+    };
     let mut visitor = ReplaceReceiver(&self_ty);
     visitor.visit_generics_mut(&mut input.generics);
     visitor.visit_data_mut(&mut input.data);
@@ -30,9 +32,12 @@ impl ReplaceReceiver<'_> {
             return;
         }
 
-        let first = &path.segments[0];
-        if first.ident != "Self" || !first.arguments.is_empty() {
-            return;
+        // Make borrow checker happy
+        {
+            let first = &path.segments[0];
+            if first.ident != "Self" || !first.arguments.is_empty() {
+                return;
+            }
         }
 
         if path.segments.len() == 1 {
@@ -40,7 +45,7 @@ impl ReplaceReceiver<'_> {
             return;
         }
 
-        let span = first.ident.span();
+        let span = path.segments[0].ident.span();
         *qself = Some(QSelf {
             lt_token: Token![<](span),
             ty: Box::new(self.self_ty(span).into()),
@@ -60,12 +65,15 @@ impl ReplaceReceiver<'_> {
             return;
         }
 
-        let first = &path.segments[0];
-        if first.ident != "Self" || !first.arguments.is_empty() {
-            return;
+        // Make borrow checker happy
+        {
+            let first = &path.segments[0];
+            if first.ident != "Self" || !first.arguments.is_empty() {
+                return;
+            }
         }
 
-        let self_ty = self.self_ty(first.ident.span());
+        let self_ty = self.self_ty(path.segments[0].ident.span());
         let variant = mem::replace(path, self_ty.path);
         for segment in &mut path.segments {
             if let PathArguments::AngleBracketed(bracketed) = &mut segment.arguments {
@@ -92,20 +100,21 @@ impl ReplaceReceiver<'_> {
                         let self_ty = self.self_ty(ident.span());
                         match iter.peek() {
                             Some(TokenTree::Punct(p))
-                                if p.as_char() == ':' && p.spacing() == Spacing::Joint =>
-                            {
-                                let next = iter.next().unwrap();
-                                match iter.peek() {
-                                    Some(TokenTree::Punct(p)) if p.as_char() == ':' => {
-                                        let span = ident.span();
-                                        out.extend(quote_spanned!(span=> <#self_ty>));
-                                    }
-                                    _ => out.extend(quote!(#self_ty)),
-                                }
-                                out.push(next);
+                                if p.as_char() == ':' && p.spacing() == Spacing::Joint => {}
+                            _ => {
+                                out.extend(quote!(#self_ty));
+                                continue;
+                            }
+                        }
+                        let next = iter.next().unwrap();
+                        match iter.peek() {
+                            Some(TokenTree::Punct(p)) if p.as_char() == ':' => {
+                                let span = ident.span();
+                                out.extend(quote_spanned!(span=> <#self_ty>));
                             }
                             _ => out.extend(quote!(#self_ty)),
                         }
+                        out.push(next);
                     } else {
                         out.push(TokenTree::Ident(ident));
                     }
@@ -130,15 +139,18 @@ impl ReplaceReceiver<'_> {
 impl VisitMut for ReplaceReceiver<'_> {
     // `Self` -> `Receiver`
     fn visit_type_mut(&mut self, ty: &mut Type) {
-        if let Type::Path(node) = ty {
+        let span = if let Type::Path(node) = ty {
             if node.qself.is_none() && node.path.is_ident("Self") {
-                *ty = self.self_ty(node.path.segments[0].ident.span()).into();
+                node.path.segments[0].ident.span()
             } else {
                 self.visit_type_path_mut(node);
+                return;
             }
         } else {
             visit_mut::visit_type_mut(self, ty);
-        }
+            return;
+        };
+        *ty = self.self_ty(span).into();
     }
 
     // `Self::Assoc` -> `<Receiver>::Assoc`
