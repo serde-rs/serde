@@ -32,6 +32,8 @@ use ser;
 
 /// For structs that contain a PhantomData. We do not want the trait
 /// bound `E: Clone` inferred by derive(Clone).
+#[doc(hidden)]
+#[macro_export]
 macro_rules! impl_copy_clone {
     ($ty:ident $(<$lifetime:tt>)*) => {
         impl<$($lifetime,)* E> Copy for $ty<$($lifetime,)* E> {}
@@ -45,6 +47,8 @@ macro_rules! impl_copy_clone {
 }
 
 /// Creates a deserializer any method of which forwards to the specified visitor method
+#[doc(hidden)]
+#[macro_export(local_inner_macros)]
 macro_rules! forward_deserializer {
     // Non-borrowed references
     (
@@ -72,15 +76,15 @@ macro_rules! forward_deserializer {
 
         impl_copy_clone!($deserializer $(<$lifetime>)*);
 
-        impl<'de, $($lifetime,)* E> de::Deserializer<'de> for $deserializer<$($lifetime,)* E>
+        impl<'de, $($lifetime,)* E> $crate::de::Deserializer<'de> for $deserializer<$($lifetime,)* E>
         where
-            E: de::Error,
+            E: $crate::de::Error,
         {
             type Error = E;
 
-            fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+            fn deserialize_any<V>(self, visitor: V) -> $crate::export::Result<V::Value, Self::Error>
             where
-                V: de::Visitor<'de>,
+                V: $crate::de::Visitor<'de>,
             {
                 visitor.$visit(self.value)
             }
@@ -116,15 +120,15 @@ macro_rules! forward_deserializer {
 
         impl_copy_clone!($deserializer<'de>);
 
-        impl<'de, E> de::Deserializer<'de> for $deserializer<'de, E>
+        impl<'de, E> $crate::de::Deserializer<'de> for $deserializer<'de, E>
         where
-            E: de::Error,
+            E: $crate::de::Error,
         {
             type Error = E;
 
-            fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+            fn deserialize_any<V>(self, visitor: V) -> $crate::export::Result<V::Value, Self::Error>
             where
-                V: de::Visitor<'de>,
+                V: $crate::de::Visitor<'de>,
             {
                 visitor.$visit(self.value)
             }

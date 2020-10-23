@@ -256,6 +256,7 @@ mod macros;
 #[macro_use]
 mod integer128;
 
+#[macro_use]
 pub mod de;
 pub mod ser;
 
