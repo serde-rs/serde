@@ -281,9 +281,19 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
     } else if let attr::Identifier::No = cont.attrs.identifier() {
         match &cont.data {
             Data::Enum(variants) => deserialize_enum(params, variants, &cont.attrs),
-            Data::Struct(Style::Struct, fields) => {
-                deserialize_struct(None, params, fields, &cont.attrs, None, &Untagged::No)
-            }
+            Data::Struct(Style::Struct, fields) => deserialize_struct(
+                None,
+                params,
+                fields,
+                &cont.attrs,
+                if cont.attrs.has_flatten() {
+                    quote!(_serde::Deserializer::deserialize_map(__deserializer, __visitor))
+                } else {
+                    let type_name = cont.attrs.name().deserialize_name();
+                    quote!(_serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, __visitor))
+                },
+                &Untagged::No
+            ),
             Data::Struct(Style::Tuple, fields) | Data::Struct(Style::Newtype, fields) => {
                 deserialize_tuple(None, params, fields, &cont.attrs, None)
             }
@@ -891,7 +901,7 @@ fn deserialize_struct(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
-    deserializer: Option<TokenStream>,
+    dispatch: TokenStream,
     untagged: &Untagged,
 ) -> Fragment {
     let is_enum = variant_ident.is_some();
@@ -939,28 +949,6 @@ fn deserialize_struct(
             marker: _serde::__private::PhantomData::<#this #ty_generics>,
             lifetime: _serde::__private::PhantomData,
         };
-    };
-    let dispatch = if let Some(deserializer) = deserializer {
-        quote! {
-            _serde::Deserializer::deserialize_any(#deserializer, __visitor)
-        }
-    } else if is_enum && cattrs.has_flatten() {
-        quote! {
-            _serde::de::VariantAccess::newtype_variant_seed(__variant, __visitor)
-        }
-    } else if is_enum {
-        quote! {
-            _serde::de::VariantAccess::struct_variant(__variant, FIELDS, __visitor)
-        }
-    } else if cattrs.has_flatten() {
-        quote! {
-            _serde::Deserializer::deserialize_map(__deserializer, __visitor)
-        }
-    } else {
-        let type_name = cattrs.name().deserialize_name();
-        quote! {
-            _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, __visitor)
-        }
     };
 
     let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
@@ -1724,7 +1712,11 @@ fn deserialize_externally_tagged_variant(
             params,
             &variant.fields,
             cattrs,
-            None,
+            if cattrs.has_flatten() {
+                quote!(_serde::de::VariantAccess::newtype_variant_seed(__variant, __visitor))
+            } else {
+                quote!(_serde::de::VariantAccess::struct_variant(__variant, FIELDS, __visitor))
+            },
             &Untagged::No,
         ),
     }
@@ -1767,7 +1759,7 @@ fn deserialize_internally_tagged_variant(
             params,
             &variant.fields,
             cattrs,
-            Some(deserializer),
+            quote!(_serde::Deserializer::deserialize_any(#deserializer, __visitor)),
             &Untagged::No,
         ),
         Style::Tuple => unreachable!("checked in serde_derive_internals"),
@@ -1828,7 +1820,7 @@ fn deserialize_untagged_variant(
             params,
             &variant.fields,
             cattrs,
-            Some(deserializer),
+            quote!(_serde::Deserializer::deserialize_any(#deserializer, __visitor)),
             &Untagged::Yes,
         ),
     }
