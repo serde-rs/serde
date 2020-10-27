@@ -935,31 +935,31 @@ fn deserialize_struct(
     let visit_map = Stmts(visit_map);
 
     let visitor_expr = quote! {
-        __Visitor {
+        let __visitor = __Visitor {
             marker: _serde::__private::PhantomData::<#this #ty_generics>,
             lifetime: _serde::__private::PhantomData,
-        }
+        };
     };
     let dispatch = if let Some(deserializer) = deserializer {
         quote! {
-            _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
+            _serde::Deserializer::deserialize_any(#deserializer, __visitor)
         }
     } else if is_enum && cattrs.has_flatten() {
         quote! {
-            _serde::de::VariantAccess::newtype_variant_seed(__variant, #visitor_expr)
+            _serde::de::VariantAccess::newtype_variant_seed(__variant, __visitor)
         }
     } else if is_enum {
         quote! {
-            _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
+            _serde::de::VariantAccess::struct_variant(__variant, FIELDS, __visitor)
         }
     } else if cattrs.has_flatten() {
         quote! {
-            _serde::Deserializer::deserialize_map(__deserializer, #visitor_expr)
+            _serde::Deserializer::deserialize_map(__deserializer, __visitor)
         }
     } else {
         let type_name = cattrs.name().deserialize_name();
         quote! {
-            _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
+            _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, __visitor)
         }
     };
 
@@ -1031,6 +1031,8 @@ fn deserialize_struct(
         #visitor_seed
 
         #fields_stmt
+
+        #visitor_expr
 
         #dispatch
     }
