@@ -1000,16 +1000,40 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// A deserializer holding a `SeqAccess`.
+/// Represents [seq accessor] as a [deserializer], that forwards all calls
+/// to [`Visitor::visit_seq`].
+///
+/// Contains seq accessor and human readable capability of the deserializer.
+///
+/// [seq accessor]: ../trait.SeqAccess.html
+/// [deserializer]: ../trait.Deserializer.html
+/// [`Visitor::visit_seq`]: ../trait.Visitor.html#method.visit_seq
 #[derive(Clone, Debug)]
 pub struct SeqAccessDeserializer<A> {
+    /// Sequence assessor represented as a deserializer. Deserializer will forward
+    /// all calls to [`visit_seq()`] with this sequence as an argument.
+    ///
+    /// [`visit_seq()`]: ../trait.Visitor.html#method.visit_seq
     seq: A,
+
+    /// [`is_human_readable()`] attribute of the original deserializer, that
+    /// creates `seq` accessor.
+    ///
+    /// [`is_human_readable()`]: ../trait.Deserializer.html#method.is_human_readable
+    is_human_readable: bool,
 }
 
 impl<A> SeqAccessDeserializer<A> {
-    /// Construct a new `SeqAccessDeserializer<A>`.
+    /// Construct a new `SeqAccessDeserializer<A>` with readable representation
+    /// (`self.is_human_readable() == true`).
     pub fn new(seq: A) -> Self {
-        SeqAccessDeserializer { seq: seq }
+        SeqAccessDeserializer { seq: seq, is_human_readable: true }
+    }
+
+    /// Construct a new `SeqAccessDeserializer<A>` with specified representation
+    /// (`self.is_human_readable()`).
+    pub fn with_representation(seq: A, is_human_readable: bool) -> Self {
+        SeqAccessDeserializer { seq: seq, is_human_readable: is_human_readable }
     }
 }
 
@@ -1030,6 +1054,11 @@ where
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
         bytes byte_buf option unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any
+    }
+
+    #[inline]
+    fn is_human_readable(&self) -> bool {
+        self.is_human_readable
     }
 }
 
@@ -1401,16 +1430,43 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// A deserializer holding a `MapAccess`.
+/// Represents [map accessor] as a [deserializer], that forward almost all calls
+/// to [`Visitor::visit_map`]. Exception is a [`deserialize_enum`], which is forwarded
+/// to [`Visitor::visit_enum`].
+///
+/// Contains map accessor and human readable capability of the deserializer.
+///
+/// [map accessor]: ../trait.MapAccess.html
+/// [deserializer]: ../trait.Deserializer.html
+/// [`deserialize_enum`]: ../trait.Deserializer.html#method.deserialize_enum
+/// [`Visitor::visit_map`]: ../trait.Visitor.html#method.visit_map
+/// [`Visitor::visit_enum`]: ../trait.Visitor.html#method.visit_enum
 #[derive(Clone, Debug)]
 pub struct MapAccessDeserializer<A> {
+    /// Map assessor represented as a deserializer. Deserializer will forward
+    /// all calls to [`visit_map()`] with this map as an argument.
+    ///
+    /// [`visit_map()`]: ../trait.Visitor.html#method.visit_map
     map: A,
+
+    /// [`is_human_readable()`] attribute of the original deserializer, that
+    /// creates `map` accessor.
+    ///
+    /// [`is_human_readable()`]: ../trait.Deserializer.html#method.is_human_readable
+    is_human_readable: bool,
 }
 
 impl<A> MapAccessDeserializer<A> {
-    /// Construct a new `MapAccessDeserializer<A>`.
+    /// Construct a new `MapAccessDeserializer<A>` with readable representation
+    /// (`self.is_human_readable() == true`).
     pub fn new(map: A) -> Self {
-        MapAccessDeserializer { map: map }
+        MapAccessDeserializer { map: map, is_human_readable: true }
+    }
+
+    /// Construct a new `MapAccessDeserializer<A>` with specified representation
+    /// (`self.is_human_readable()`).
+    pub fn with_representation(map: A, is_human_readable: bool) -> Self {
+        MapAccessDeserializer { map: map, is_human_readable: is_human_readable }
     }
 }
 
@@ -1443,6 +1499,11 @@ where
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
         bytes byte_buf option unit unit_struct newtype_struct seq tuple
         tuple_struct map struct identifier ignored_any
+    }
+
+    #[inline]
+    fn is_human_readable(&self) -> bool {
+        self.is_human_readable
     }
 }
 

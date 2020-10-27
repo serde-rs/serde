@@ -35,6 +35,15 @@ where
     })
 }
 
+/// Used to serialize tagged newtype, such as:
+///
+/// ```ignore
+/// #[derive(Serialize)]
+/// #[serde(tag = "tag")]
+/// enum Enum {
+///     A(String),
+/// }
+/// ```
 struct TaggedSerializer<S> {
     type_ident: &'static str,
     variant_ident: &'static str,
@@ -332,6 +341,10 @@ where
         T: Display,
     {
         Err(self.bad_type(Unsupported::String))
+    }
+
+    fn is_human_readable(&self) -> bool {
+        self.delegate.is_human_readable()
     }
 }
 

@@ -829,6 +829,7 @@ mod content {
     /// Not public API.
     pub struct TaggedContentVisitor<'de, T> {
         tag_name: &'static str,
+        is_human_readable: bool,
         expecting: &'static str,
         value: PhantomData<TaggedContent<'de, T>>,
     }
@@ -836,9 +837,10 @@ mod content {
     impl<'de, T> TaggedContentVisitor<'de, T> {
         /// Visitor for the content of an internally tagged enum with the given
         /// tag name.
-        pub fn new(name: &'static str, expecting: &'static str) -> Self {
+        pub fn new(name: &'static str, is_human_readable: bool, expecting: &'static str) -> Self {
             TaggedContentVisitor {
                 tag_name: name,
+                is_human_readable: is_human_readable,
                 expecting: expecting,
                 value: PhantomData,
             }
@@ -881,7 +883,7 @@ mod content {
                     return Err(de::Error::missing_field(self.tag_name));
                 }
             };
-            let rest = de::value::SeqAccessDeserializer::new(seq);
+            let rest = de::value::SeqAccessDeserializer::with_representation(seq, self.is_human_readable);
             Ok(TaggedContent {
                 tag: tag,
                 content: try!(Content::deserialize(rest)),
