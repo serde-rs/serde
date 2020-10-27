@@ -14,7 +14,7 @@ use std::marker::PhantomData;
 
 use serde_test::{
     assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_ser_tokens_error,
-    assert_tokens, Token,
+    assert_tokens, Configure, Readable, Token,
 };
 
 trait MyDefault: Sized {
@@ -109,7 +109,7 @@ struct CollectOther {
     extra: HashMap<String, u32>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 struct FlattenStructEnumWrapper {
     #[serde(flatten)]
     data: FlattenStructEnum,
@@ -117,30 +117,30 @@ struct FlattenStructEnumWrapper {
     extra: HashMap<String, String>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "snake_case")]
 enum FlattenStructEnum {
     InsertInteger { index: u32, value: u32 },
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, Copy)]
 struct FlattenStructTagContentEnumWrapper {
     outer: u32,
     #[serde(flatten)]
     data: FlattenStructTagContentEnumNewtype,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, Copy)]
 struct FlattenStructTagContentEnumNewtype(pub FlattenStructTagContentEnum);
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, Copy)]
 #[serde(rename_all = "snake_case", tag = "type", content = "value")]
 enum FlattenStructTagContentEnum {
     InsertInteger { index: u32, value: u32 },
     NewtypeVariant(FlattenStructTagContentEnumNewtypeVariant),
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, Copy)]
 struct FlattenStructTagContentEnumNewtypeVariant {
     value: u32,
 }
@@ -1629,7 +1629,7 @@ fn test_collect_other() {
     let mut extra = HashMap::new();
     extra.insert("c".into(), 3);
     assert_tokens(
-        &CollectOther { a: 1, b: 2, extra },
+        &CollectOther { a: 1, b: 2, extra }.readable(),
         &[
             Token::Map { len: None },
             Token::Str("a"),
@@ -1655,7 +1655,7 @@ fn test_flatten_struct_enum() {
         extra,
     };
     assert_de_tokens(
-        &change_request,
+        &change_request.clone().readable(),
         &[
             Token::Map { len: None },
             Token::Str("insert_integer"),
@@ -1701,7 +1701,7 @@ fn test_flatten_struct_tag_content_enum() {
         }),
     };
     assert_de_tokens(
-        &change_request,
+        &change_request.readable(),
         &[
             Token::Map { len: None },
             Token::Str("outer"),
@@ -1750,7 +1750,7 @@ fn test_flatten_struct_tag_content_enum_newtype() {
         )),
     };
     assert_de_tokens(
-        &change_request,
+        &change_request.readable(),
         &[
             Token::Map { len: None },
             Token::Str("outer"),
@@ -1766,7 +1766,7 @@ fn test_flatten_struct_tag_content_enum_newtype() {
         ],
     );
     assert_ser_tokens(
-        &change_request,
+        &change_request.readable(),
         &[
             Token::Map { len: None },
             Token::Str("outer"),
@@ -1801,7 +1801,7 @@ fn test_unknown_field_in_flatten() {
         foo: HashMap<String, u32>,
     }
 
-    assert_de_tokens_error::<Outer>(
+    assert_de_tokens_error::<Readable<Outer>>(
         &[
             Token::Struct {
                 name: "Outer",
@@ -1862,7 +1862,7 @@ fn test_complex_flatten() {
             },
             second: Second { f: 3 },
             z: 4,
-        },
+        }.readable(),
         &[
             Token::Map { len: None },
             Token::Str("y"),
@@ -1900,7 +1900,7 @@ fn test_complex_flatten() {
             },
             second: Second { f: 3 },
             z: 4,
-        },
+        }.readable(),
         &[
             Token::Map { len: None },
             Token::Str("y"),
@@ -1959,7 +1959,7 @@ fn test_flatten_map_twice() {
                 second.insert("x".to_owned(), "X".to_owned());
                 second
             },
-        },
+        }.readable(),
         &[
             Token::Map { len: None },
             Token::Str("x"),
@@ -1984,7 +1984,7 @@ fn test_flatten_unit() {
         &Response {
             data: (),
             status: 0,
-        },
+        }.readable(),
         &[
             Token::Map { len: None },
             Token::Str("status"),
@@ -2007,7 +2007,7 @@ fn test_flatten_unsupported_type() {
         &Outer {
             outer: "foo".into(),
             inner: "bar".into(),
-        },
+        }.readable(),
         &[
             Token::Map { len: None },
             Token::Str("outer"),
@@ -2015,7 +2015,7 @@ fn test_flatten_unsupported_type() {
         ],
         "can only flatten structs and maps (got a string)",
     );
-    assert_de_tokens_error::<Outer>(
+    assert_de_tokens_error::<Readable<Outer>>(
         &[
             Token::Map { len: None },
             Token::Str("outer"),
@@ -2045,7 +2045,7 @@ fn test_non_string_keys() {
             name: "peter".into(),
             age: 3,
             mapping,
-        },
+        }.readable(),
         &[
             Token::Map { len: None },
             Token::Str("name"),
@@ -2082,7 +2082,7 @@ fn test_lifetime_propagation_for_flatten() {
     let mut owned_map = HashMap::new();
     owned_map.insert("x".to_string(), 42u32);
     assert_tokens(
-        &A { t: owned_map },
+        &A { t: owned_map }.readable(),
         &[
             Token::Map { len: None },
             Token::Str("x"),
@@ -2096,7 +2096,7 @@ fn test_lifetime_propagation_for_flatten() {
     assert_ser_tokens(
         &B {
             t: borrowed_map.clone(),
-        },
+        }.readable(),
         &[
             Token::Map { len: None },
             Token::BorrowedStr("x"),
@@ -2106,7 +2106,7 @@ fn test_lifetime_propagation_for_flatten() {
     );
 
     assert_de_tokens(
-        &B { t: borrowed_map },
+        &B { t: borrowed_map }.readable(),
         &[
             Token::Map { len: None },
             Token::BorrowedStr("x"),
@@ -2120,7 +2120,7 @@ fn test_lifetime_propagation_for_flatten() {
     assert_ser_tokens(
         &C {
             t: borrowed_map.clone(),
-        },
+        }.readable(),
         &[
             Token::Map { len: None },
             Token::Seq { len: Some(1) },
@@ -2132,7 +2132,7 @@ fn test_lifetime_propagation_for_flatten() {
     );
 
     assert_de_tokens(
-        &C { t: borrowed_map },
+        &C { t: borrowed_map }.readable(),
         &[
             Token::Map { len: None },
             Token::BorrowedBytes(b"x"),
@@ -2163,7 +2163,7 @@ fn test_flatten_enum_newtype() {
     let s = S { flat: e };
 
     assert_tokens(
-        &s,
+        &s.readable(),
         &[
             Token::Map { len: None },
             Token::Str("Q"),
@@ -2206,7 +2206,7 @@ fn test_flatten_internally_tagged() {
     };
 
     assert_tokens(
-        &s,
+        &s.readable(),
         &[
             Token::Map { len: None },
             Token::Str("typeX"),
@@ -2244,7 +2244,7 @@ fn test_externally_tagged_enum_containing_flatten() {
     };
 
     assert_tokens(
-        &data,
+        &data.readable(),
         &[
             Token::NewtypeVariant {
                 name: "Data",
@@ -2283,7 +2283,7 @@ fn test_internally_tagged_enum_containing_flatten() {
     };
 
     assert_tokens(
-        &data,
+        &data.readable(),
         &[
             Token::Map { len: None },
             Token::Str("t"),
@@ -2320,7 +2320,7 @@ fn test_adjacently_tagged_enum_containing_flatten() {
     };
 
     assert_tokens(
-        &data,
+        &data.readable(),
         &[
             Token::Struct {
                 name: "Data",
@@ -2363,7 +2363,7 @@ fn test_untagged_enum_containing_flatten() {
     };
 
     assert_tokens(
-        &data,
+        &data.readable(),
         &[
             Token::Map { len: None },
             Token::Str("a"),
@@ -2394,7 +2394,7 @@ fn test_flatten_untagged_enum() {
     };
 
     assert_tokens(
-        &data,
+        &data.readable(),
         &[
             Token::Map { len: None },
             Token::Str("a"),
@@ -2428,7 +2428,7 @@ fn test_flatten_option() {
         &Outer {
             inner1: Some(Inner1 { inner1: 1 }),
             inner2: Some(Inner2 { inner2: 2 }),
-        },
+        }.readable(),
         &[
             Token::Map { len: None },
             Token::Str("inner1"),
@@ -2443,7 +2443,7 @@ fn test_flatten_option() {
         &Outer {
             inner1: Some(Inner1 { inner1: 1 }),
             inner2: None,
-        },
+        }.readable(),
         &[
             Token::Map { len: None },
             Token::Str("inner1"),
@@ -2456,7 +2456,7 @@ fn test_flatten_option() {
         &Outer {
             inner1: None,
             inner2: Some(Inner2 { inner2: 2 }),
-        },
+        }.readable(),
         &[
             Token::Map { len: None },
             Token::Str("inner2"),
@@ -2469,7 +2469,7 @@ fn test_flatten_option() {
         &Outer {
             inner1: None,
             inner2: None,
-        },
+        }.readable(),
         &[Token::Map { len: None }, Token::MapEnd],
     );
 }
@@ -2523,7 +2523,7 @@ fn test_internally_tagged_unit_enum_with_unknown_fields() {
     let data = Data::A;
 
     assert_de_tokens(
-        &data,
+        &data.readable(),
         &[
             Token::Map { len: None },
             Token::Str("t"),
@@ -2563,7 +2563,7 @@ fn test_flattened_internally_tagged_unit_enum_with_unknown_fields() {
     };
 
     assert_de_tokens(
-        &s,
+        &s.readable(),
         &[
             Token::Map { len: None },
             Token::Str("typeX"),
@@ -2628,7 +2628,7 @@ fn test_flatten_any_after_flatten_struct() {
     };
 
     assert_de_tokens(
-        &s,
+        &s.readable(),
         &[
             Token::Map { len: None },
             Token::Str("inner"),
@@ -2709,13 +2709,13 @@ fn test_expecting_message_internally_tagged_enum() {
         InternallyTagged,
     }
 
-    assert_de_tokens_error::<Enum>(
+    assert_de_tokens_error::<Readable<Enum>>(
         &[Token::Str("InternallyTagged")],
         r#"invalid type: string "InternallyTagged", expected something strange..."#,
     );
 
     // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
-    assert_de_tokens_error::<Enum>(
+    assert_de_tokens_error::<Readable<Enum>>(
         &[Token::Map { len: None }, Token::Str("tag"), Token::Unit],
         r#"invalid type: unit value, expected variant identifier"#,
     );
@@ -2730,18 +2730,18 @@ fn test_expecting_message_adjacently_tagged_enum() {
         AdjacentlyTagged,
     }
 
-    assert_de_tokens_error::<Enum>(
+    assert_de_tokens_error::<Readable<Enum>>(
         &[Token::Str("AdjacentlyTagged")],
         r#"invalid type: string "AdjacentlyTagged", expected something strange..."#,
     );
 
-    assert_de_tokens_error::<Enum>(
+    assert_de_tokens_error::<Readable<Enum>>(
         &[Token::Map { len: None }, Token::Unit],
         r#"invalid type: unit value, expected "tag", "content", or other ignored fields"#,
     );
 
     // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
-    assert_de_tokens_error::<Enum>(
+    assert_de_tokens_error::<Readable<Enum>>(
         &[Token::Map { len: None }, Token::Str("tag"), Token::Unit],
         r#"invalid type: unit value, expected variant identifier"#,
     );
@@ -2756,7 +2756,7 @@ fn test_expecting_message_untagged_tagged_enum() {
         Untagged,
     }
 
-    assert_de_tokens_error::<Enum>(&[Token::Str("Untagged")], r#"something strange..."#);
+    assert_de_tokens_error::<Readable<Enum>>(&[Token::Str("Untagged")], r#"something strange..."#);
 }
 
 #[test]

@@ -281,19 +281,31 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
     } else if let attr::Identifier::No = cont.attrs.identifier() {
         match &cont.data {
             Data::Enum(variants) => deserialize_enum(params, variants, &cont.attrs),
-            Data::Struct(Style::Struct, fields) => deserialize_struct(
-                None,
-                params,
-                fields,
-                &cont.attrs,
+            Data::Struct(Style::Struct, fields) => {
+                let block = deserialize_struct(
+                    None,
+                    params,
+                    fields,
+                    &cont.attrs,
+                    if cont.attrs.has_flatten() {
+                        quote!(_serde::Deserializer::deserialize_map(__deserializer, __visitor))
+                    } else {
+                        let type_name = cont.attrs.name().deserialize_name();
+                        quote!(_serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, __visitor))
+                    },
+                    quote!(__form),
+                    &Untagged::No
+                );
                 if cont.attrs.has_flatten() {
-                    quote!(_serde::Deserializer::deserialize_map(__deserializer, __visitor))
+                    let block = Stmts(block);
+                    quote_block! {
+                        let __form = _serde::Deserializer::is_human_readable(&__deserializer);
+                        #block
+                    }
                 } else {
-                    let type_name = cont.attrs.name().deserialize_name();
-                    quote!(_serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, __visitor))
-                },
-                &Untagged::No
-            ),
+                    block
+                }
+            },
             Data::Struct(Style::Tuple, fields) | Data::Struct(Style::Newtype, fields) => {
                 deserialize_tuple(None, params, fields, &cont.attrs, None)
             }
@@ -896,12 +908,18 @@ enum Untagged {
     No,
 }
 
+/// Generates `deserialize` body of 4 types of structs:
+/// - ordinal structs
+/// - struct variants in externally tagged enums
+/// - struct variants in internally tagged enums
+/// - struct variants in untagged enums
 fn deserialize_struct(
     variant_ident: Option<&syn::Ident>,
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
     dispatch: TokenStream,
+    form_init: TokenStream,
     untagged: &Untagged,
 ) -> Fragment {
     let is_enum = variant_ident.is_some();
@@ -931,10 +949,14 @@ fn deserialize_struct(
     };
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
-    let (field_visitor, fields_stmt, visit_map) = if cattrs.has_flatten() {
-        deserialize_struct_as_map_visitor(&type_path, params, fields, cattrs)
+    let ((field_visitor, fields_stmt, visit_map), form_define, form_init) = if cattrs.has_flatten() {
+        (
+            deserialize_struct_as_map_visitor(&type_path, params, fields, cattrs),
+            Some(quote!(is_human_readable: bool,)),
+            Some(quote!(is_human_readable: #form_init,)),
+        )
     } else {
-        deserialize_struct_as_struct_visitor(&type_path, params, fields, cattrs)
+        (deserialize_struct_as_struct_visitor(&type_path, params, fields, cattrs), None, None)
     };
     let field_visitor = Stmts(field_visitor);
     let fields_stmt = fields_stmt.map(Stmts);
@@ -942,6 +964,7 @@ fn deserialize_struct(
 
     let visitor_expr = quote! {
         let __visitor = __Visitor {
+            #form_init
             marker: _serde::__private::PhantomData::<#this #ty_generics>,
             lifetime: _serde::__private::PhantomData,
         };
@@ -979,10 +1002,11 @@ fn deserialize_struct(
             impl #de_impl_generics _serde::de::DeserializeSeed<#delife> for __Visitor #de_ty_generics #where_clause {
                 type Value = #this #ty_generics;
 
-                fn deserialize<__D>(self, __deserializer: __D) -> _serde::__private::Result<Self::Value, __D::Error>
+                fn deserialize<__D>(mut self, __deserializer: __D) -> _serde::__private::Result<Self::Value, __D::Error>
                 where
                     __D: _serde::Deserializer<'de>,
                 {
+                    self.is_human_readable = _serde::Deserializer::is_human_readable(&__deserializer);
                     _serde::Deserializer::deserialize_map(__deserializer, self)
                 }
             }
@@ -995,6 +1019,7 @@ fn deserialize_struct(
         #field_visitor
 
         struct __Visitor #de_impl_generics #where_clause {
+            #form_define
             marker: _serde::__private::PhantomData<#this #ty_generics>,
             lifetime: _serde::__private::PhantomData<&#delife ()>,
         }
@@ -1306,7 +1331,7 @@ fn deserialize_internally_tagged_enum(
                 variant,
                 cattrs,
                 quote! {
-                    _serde::__private::de::ContentDeserializer::<__D::Error>::new(__tagged.content)
+                    _serde::__private::de::ContentDeserializer::<__D::Error>::new(__tagged.content, __form)
                 },
             ));
 
@@ -1323,6 +1348,7 @@ fn deserialize_internally_tagged_enum(
 
         #variants_stmt
 
+        let __form = _serde::Deserializer::is_human_readable(&__deserializer);
         let __tagged = try!(_serde::Deserializer::deserialize_any(
             __deserializer,
             _serde::__private::de::TaggedContentVisitor::<__Field>::new(#tag, #expecting)));
@@ -1478,6 +1504,7 @@ fn deserialize_adjacently_tagged_enum(
             where
                 __D: _serde::Deserializer<#delife>,
             {
+                let __form = _serde::Deserializer::is_human_readable(&__deserializer);
                 match self.field {
                     #(#variant_arms)*
                 }
@@ -1485,6 +1512,7 @@ fn deserialize_adjacently_tagged_enum(
         }
 
         struct __Visitor #de_impl_generics #where_clause {
+            is_human_readable: bool,
             marker: _serde::__private::PhantomData<#this #ty_generics>,
             lifetime: _serde::__private::PhantomData<&#delife ()>,
         }
@@ -1535,7 +1563,10 @@ fn deserialize_adjacently_tagged_enum(
                         match #next_relevant_key {
                             // Second key is the tag.
                             _serde::__private::Some(_serde::__private::de::TagOrContentField::Tag) => {
-                                let __deserializer = _serde::__private::de::ContentDeserializer::<__A::Error>::new(__content);
+                                // `finish_content_then_tag` also can use `__form`, if contains flattened structs,
+                                // so store value to variable instead of direct usage of `self.is_human_readable`
+                                let __form = self.is_human_readable;
+                                let __deserializer = _serde::__private::de::ContentDeserializer::<__A::Error>::new(__content, __form);
                                 #finish_content_then_tag
                             }
                             // Second key is a duplicate of the content.
@@ -1587,14 +1618,16 @@ fn deserialize_adjacently_tagged_enum(
         }
 
         const FIELDS: &'static [&'static str] = &[#tag, #content];
+        let __visitor = __Visitor {
+            is_human_readable: _serde::Deserializer::is_human_readable(&__deserializer),
+            marker: _serde::__private::PhantomData::<#this #ty_generics>,
+            lifetime: _serde::__private::PhantomData,
+        };
         _serde::Deserializer::deserialize_struct(
             __deserializer,
             #type_name,
             FIELDS,
-            __Visitor {
-                marker: _serde::__private::PhantomData::<#this #ty_generics>,
-                lifetime: _serde::__private::PhantomData,
-            },
+            __visitor,
         )
     }
 }
@@ -1612,9 +1645,7 @@ fn deserialize_untagged_enum(
                 params,
                 variant,
                 cattrs,
-                quote!(
-                    _serde::__private::de::ContentRefDeserializer::<__D::Error>::new(&__content)
-                ),
+                quote!(_serde::__private::de::ContentRefDeserializer::<__D::Error>::new(&__content, __form)),
             ))
         });
 
@@ -1631,6 +1662,7 @@ fn deserialize_untagged_enum(
     let fallthrough_msg = cattrs.expecting().unwrap_or(&fallthrough_msg);
 
     quote_block! {
+        let __form = _serde::Deserializer::is_human_readable(&__deserializer);
         let __content = try!(<_serde::__private::de::Content as _serde::Deserialize>::deserialize(__deserializer));
 
         #(
@@ -1686,6 +1718,7 @@ fn deserialize_externally_tagged_variant(
             } else {
                 quote!(_serde::de::VariantAccess::struct_variant(__variant, FIELDS, __visitor))
             },
+            quote!(true),// Dummy value, will be overridden in DeserializeSeed implementation
             &Untagged::No,
         ),
     }
@@ -1729,6 +1762,7 @@ fn deserialize_internally_tagged_variant(
             &variant.fields,
             cattrs,
             quote!(_serde::Deserializer::deserialize_any(#deserializer, __visitor)),
+            quote!(__form),
             &Untagged::No,
         ),
         Style::Tuple => unreachable!("checked in serde_derive_internals"),
@@ -1790,6 +1824,7 @@ fn deserialize_untagged_variant(
             &variant.fields,
             cattrs,
             quote!(_serde::Deserializer::deserialize_any(#deserializer, __visitor)),
+            quote!(__form),
             &Untagged::Yes,
         ),
     }
@@ -2531,6 +2566,7 @@ fn deserialize_map(
                 let #name: #field_ty = try!(#func(
                     _serde::__private::de::FlatMapDeserializer(
                         &mut __collect,
+                        self.is_human_readable,
                         _serde::__private::PhantomData)));
             }
         });

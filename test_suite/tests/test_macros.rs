@@ -5,7 +5,8 @@ mod bytes;
 
 use serde::{Deserialize, Serialize};
 use serde_test::{
-    assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_tokens, Token,
+    assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_tokens,
+    Configure, Readable, Token,
 };
 
 use std::collections::BTreeMap;
@@ -439,7 +440,7 @@ fn test_untagged_newtype_struct() {
     }
 
     assert_tokens(
-        &E::Newtype(GenericNewTypeStruct(5u32)),
+        &E::Newtype(GenericNewTypeStruct(5u32)).readable(),
         &[
             Token::NewtypeStruct {
                 name: "GenericNewTypeStruct",
@@ -459,7 +460,7 @@ fn test_adjacently_tagged_newtype_struct() {
     }
 
     assert_de_tokens(
-        &E::Newtype(GenericNewTypeStruct(5u32)),
+        &E::Newtype(GenericNewTypeStruct(5u32)).readable(),
         &[
             Token::Struct { name: "E", len: 2 },
             Token::Str("c"),
@@ -612,7 +613,7 @@ fn test_untagged_enum() {
     }
 
     assert_tokens(
-        &Untagged::A { a: 1 },
+        &Untagged::A { a: 1 }.readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -625,7 +626,7 @@ fn test_untagged_enum() {
     );
 
     assert_tokens(
-        &Untagged::B { b: 2 },
+        &Untagged::B { b: 2 }.readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -639,14 +640,14 @@ fn test_untagged_enum() {
 
     // Serializes to unit, deserializes from either depending on format's
     // preference.
-    assert_tokens(&Untagged::C, &[Token::Unit]);
-    assert_de_tokens(&Untagged::C, &[Token::None]);
+    assert_tokens(&Untagged::C.readable(), &[Token::Unit]);
+    assert_de_tokens(&Untagged::C.readable(), &[Token::None]);
 
-    assert_tokens(&Untagged::D(4), &[Token::U8(4)]);
-    assert_tokens(&Untagged::E("e".to_owned()), &[Token::Str("e")]);
+    assert_tokens(&Untagged::D(4).readable(), &[Token::U8(4)]);
+    assert_tokens(&Untagged::E("e".to_owned()).readable(), &[Token::Str("e")]);
 
     assert_tokens(
-        &Untagged::F(1, 2),
+        &Untagged::F(1, 2).readable(),
         &[
             Token::Tuple { len: 2 },
             Token::U8(1),
@@ -655,12 +656,12 @@ fn test_untagged_enum() {
         ],
     );
 
-    assert_de_tokens_error::<Untagged>(
+    assert_de_tokens_error::<Readable<Untagged>>(
         &[Token::Tuple { len: 1 }, Token::U8(1), Token::TupleEnd],
         "data did not match any variant of untagged enum Untagged",
     );
 
-    assert_de_tokens_error::<Untagged>(
+    assert_de_tokens_error::<Readable<Untagged>>(
         &[
             Token::Tuple { len: 3 },
             Token::U8(1),
@@ -693,7 +694,7 @@ fn test_internally_tagged_enum() {
     }
 
     assert_tokens(
-        &InternallyTagged::A { a: 1 },
+        &InternallyTagged::A { a: 1 }.readable(),
         &[
             Token::Struct {
                 name: "InternallyTagged",
@@ -708,7 +709,7 @@ fn test_internally_tagged_enum() {
     );
 
     assert_de_tokens(
-        &InternallyTagged::A { a: 1 },
+        &InternallyTagged::A { a: 1 }.readable(),
         &[
             Token::Seq { len: Some(2) },
             Token::Str("A"),
@@ -718,7 +719,7 @@ fn test_internally_tagged_enum() {
     );
 
     assert_tokens(
-        &InternallyTagged::B,
+        &InternallyTagged::B.readable(),
         &[
             Token::Struct {
                 name: "InternallyTagged",
@@ -731,12 +732,12 @@ fn test_internally_tagged_enum() {
     );
 
     assert_de_tokens(
-        &InternallyTagged::B,
+        &InternallyTagged::B.readable(),
         &[Token::Seq { len: Some(1) }, Token::Str("B"), Token::SeqEnd],
     );
 
     assert_tokens(
-        &InternallyTagged::C(BTreeMap::new()),
+        &InternallyTagged::C(BTreeMap::new()).readable(),
         &[
             Token::Map { len: Some(1) },
             Token::Str("type"),
@@ -745,7 +746,7 @@ fn test_internally_tagged_enum() {
         ],
     );
 
-    assert_de_tokens_error::<InternallyTagged>(
+    assert_de_tokens_error::<Readable<InternallyTagged>>(
         &[
             Token::Seq { len: Some(2) },
             Token::Str("C"),
@@ -757,7 +758,7 @@ fn test_internally_tagged_enum() {
     );
 
     assert_tokens(
-        &InternallyTagged::D(Newtype(BTreeMap::new())),
+        &InternallyTagged::D(Newtype(BTreeMap::new())).readable(),
         &[
             Token::Map { len: Some(1) },
             Token::Str("type"),
@@ -767,7 +768,7 @@ fn test_internally_tagged_enum() {
     );
 
     assert_tokens(
-        &InternallyTagged::E(Struct { f: 6 }),
+        &InternallyTagged::E(Struct { f: 6 }).readable(),
         &[
             Token::Struct {
                 name: "Struct",
@@ -782,7 +783,7 @@ fn test_internally_tagged_enum() {
     );
 
     assert_de_tokens(
-        &InternallyTagged::E(Struct { f: 6 }),
+        &InternallyTagged::E(Struct { f: 6 }).readable(),
         &[
             Token::Seq { len: Some(2) },
             Token::Str("E"),
@@ -791,12 +792,12 @@ fn test_internally_tagged_enum() {
         ],
     );
 
-    assert_de_tokens_error::<InternallyTagged>(
+    assert_de_tokens_error::<Readable<InternallyTagged>>(
         &[Token::Map { len: Some(0) }, Token::MapEnd],
         "missing field `type`",
     );
 
-    assert_de_tokens_error::<InternallyTagged>(
+    assert_de_tokens_error::<Readable<InternallyTagged>>(
         &[
             Token::Map { len: Some(1) },
             Token::Str("type"),
@@ -824,7 +825,7 @@ fn test_internally_tagged_bytes() {
     assert_de_tokens(
         &InternallyTagged::String {
             string: "\0".to_owned(),
-        },
+        }.readable(),
         &[
             Token::Struct {
                 name: "String",
@@ -841,7 +842,7 @@ fn test_internally_tagged_bytes() {
     assert_de_tokens(
         &InternallyTagged::String {
             string: "\0".to_owned(),
-        },
+        }.readable(),
         &[
             Token::Struct {
                 name: "String",
@@ -858,7 +859,7 @@ fn test_internally_tagged_bytes() {
     assert_de_tokens(
         &InternallyTagged::String {
             string: "\0".to_owned(),
-        },
+        }.readable(),
         &[
             Token::Struct {
                 name: "String",
@@ -875,7 +876,7 @@ fn test_internally_tagged_bytes() {
     assert_de_tokens(
         &InternallyTagged::String {
             string: "\0".to_owned(),
-        },
+        }.readable(),
         &[
             Token::Struct {
                 name: "String",
@@ -890,7 +891,7 @@ fn test_internally_tagged_bytes() {
     );
 
     assert_de_tokens(
-        &InternallyTagged::Bytes { bytes: vec![0] },
+        &InternallyTagged::Bytes { bytes: vec![0] }.readable(),
         &[
             Token::Struct {
                 name: "Bytes",
@@ -905,7 +906,7 @@ fn test_internally_tagged_bytes() {
     );
 
     assert_de_tokens(
-        &InternallyTagged::Bytes { bytes: vec![0] },
+        &InternallyTagged::Bytes { bytes: vec![0] }.readable(),
         &[
             Token::Struct {
                 name: "Bytes",
@@ -920,7 +921,7 @@ fn test_internally_tagged_bytes() {
     );
 
     assert_de_tokens(
-        &InternallyTagged::Bytes { bytes: vec![0] },
+        &InternallyTagged::Bytes { bytes: vec![0] }.readable(),
         &[
             Token::Struct {
                 name: "Bytes",
@@ -935,7 +936,7 @@ fn test_internally_tagged_bytes() {
     );
 
     assert_de_tokens(
-        &InternallyTagged::Bytes { bytes: vec![0] },
+        &InternallyTagged::Bytes { bytes: vec![0] }.readable(),
         &[
             Token::Struct {
                 name: "Bytes",
@@ -950,7 +951,7 @@ fn test_internally_tagged_bytes() {
     );
 
     assert_de_tokens(
-        &InternallyTagged::Bytes { bytes: vec![0] },
+        &InternallyTagged::Bytes { bytes: vec![0] }.readable(),
         &[
             Token::Struct {
                 name: "Bytes",
@@ -981,7 +982,7 @@ fn test_internally_tagged_struct_variant_containing_unit_variant() {
     }
 
     assert_de_tokens(
-        &Message::Log { level: Level::Info },
+        &Message::Log { level: Level::Info }.readable(),
         &[
             Token::Struct {
                 name: "Message",
@@ -1005,7 +1006,7 @@ fn test_internally_tagged_borrow() {
     }
 
     assert_tokens(
-        &Input::Package { name: "borrowed" },
+        &Input::Package { name: "borrowed" }.readable(),
         &[
             Token::Struct {
                 name: "Input",
@@ -1033,7 +1034,7 @@ fn test_adjacently_tagged_enum() {
 
     // unit with no content
     assert_ser_tokens(
-        &AdjacentlyTagged::Unit::<u8>,
+        &AdjacentlyTagged::Unit::<u8>.readable(),
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -1047,7 +1048,7 @@ fn test_adjacently_tagged_enum() {
 
     // unit with no content
     assert_de_tokens(
-        &AdjacentlyTagged::Unit::<u8>,
+        &AdjacentlyTagged::Unit::<u8>.readable(),
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -1061,7 +1062,7 @@ fn test_adjacently_tagged_enum() {
 
     // unit with tag first
     assert_de_tokens(
-        &AdjacentlyTagged::Unit::<u8>,
+        &AdjacentlyTagged::Unit::<u8>.readable(),
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -1077,7 +1078,7 @@ fn test_adjacently_tagged_enum() {
 
     // unit with content first
     assert_de_tokens(
-        &AdjacentlyTagged::Unit::<u8>,
+        &AdjacentlyTagged::Unit::<u8>.readable(),
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -1093,7 +1094,7 @@ fn test_adjacently_tagged_enum() {
 
     // unit with excess content (f, g, h)
     assert_de_tokens(
-        &AdjacentlyTagged::Unit::<u8>,
+        &AdjacentlyTagged::Unit::<u8>.readable(),
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -1115,7 +1116,7 @@ fn test_adjacently_tagged_enum() {
 
     // newtype with tag first
     assert_tokens(
-        &AdjacentlyTagged::Newtype::<u8>(1),
+        &AdjacentlyTagged::Newtype::<u8>(1).readable(),
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -1131,7 +1132,7 @@ fn test_adjacently_tagged_enum() {
 
     // newtype with content first
     assert_de_tokens(
-        &AdjacentlyTagged::Newtype::<u8>(1),
+        &AdjacentlyTagged::Newtype::<u8>(1).readable(),
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -1147,7 +1148,7 @@ fn test_adjacently_tagged_enum() {
 
     // optional newtype with no content field
     assert_de_tokens(
-        &AdjacentlyTagged::Newtype::<Option<u8>>(None),
+        &AdjacentlyTagged::Newtype::<Option<u8>>(None).readable(),
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -1161,7 +1162,7 @@ fn test_adjacently_tagged_enum() {
 
     // tuple with tag first
     assert_tokens(
-        &AdjacentlyTagged::Tuple::<u8>(1, 1),
+        &AdjacentlyTagged::Tuple::<u8>(1, 1).readable(),
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -1180,7 +1181,7 @@ fn test_adjacently_tagged_enum() {
 
     // tuple with content first
     assert_de_tokens(
-        &AdjacentlyTagged::Tuple::<u8>(1, 1),
+        &AdjacentlyTagged::Tuple::<u8>(1, 1).readable(),
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -1199,7 +1200,7 @@ fn test_adjacently_tagged_enum() {
 
     // struct with tag first
     assert_tokens(
-        &AdjacentlyTagged::Struct::<u8> { f: 1 },
+        &AdjacentlyTagged::Struct::<u8> { f: 1 }.readable(),
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -1221,7 +1222,7 @@ fn test_adjacently_tagged_enum() {
 
     // struct with content first
     assert_de_tokens(
-        &AdjacentlyTagged::Struct::<u8> { f: 1 },
+        &AdjacentlyTagged::Struct::<u8> { f: 1 }.readable(),
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -1251,7 +1252,7 @@ fn test_adjacently_tagged_enum_deny_unknown_fields() {
     }
 
     assert_de_tokens(
-        &AdjacentlyTagged::Unit,
+        &AdjacentlyTagged::Unit.readable(),
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -1265,7 +1266,7 @@ fn test_adjacently_tagged_enum_deny_unknown_fields() {
         ],
     );
 
-    assert_de_tokens_error::<AdjacentlyTagged>(
+    assert_de_tokens_error::<Readable<AdjacentlyTagged>>(
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -1280,7 +1281,7 @@ fn test_adjacently_tagged_enum_deny_unknown_fields() {
         r#"invalid value: string "h", expected "t" or "c""#,
     );
 
-    assert_de_tokens_error::<AdjacentlyTagged>(
+    assert_de_tokens_error::<Readable<AdjacentlyTagged>>(
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -1291,7 +1292,7 @@ fn test_adjacently_tagged_enum_deny_unknown_fields() {
         r#"invalid value: string "h", expected "t" or "c""#,
     );
 
-    assert_de_tokens_error::<AdjacentlyTagged>(
+    assert_de_tokens_error::<Readable<AdjacentlyTagged>>(
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -1322,7 +1323,7 @@ fn test_enum_in_internally_tagged_enum() {
     }
 
     assert_tokens(
-        &Outer::Inner(Inner::Unit),
+        &Outer::Inner(Inner::Unit).readable(),
         &[
             Token::Map { len: Some(2) },
             Token::Str("type"),
@@ -1334,7 +1335,7 @@ fn test_enum_in_internally_tagged_enum() {
     );
 
     assert_tokens(
-        &Outer::Inner(Inner::Newtype(1)),
+        &Outer::Inner(Inner::Newtype(1)).readable(),
         &[
             Token::Map { len: Some(2) },
             Token::Str("type"),
@@ -1346,7 +1347,7 @@ fn test_enum_in_internally_tagged_enum() {
     );
 
     assert_tokens(
-        &Outer::Inner(Inner::Tuple(1, 1)),
+        &Outer::Inner(Inner::Tuple(1, 1)).readable(),
         &[
             Token::Map { len: Some(2) },
             Token::Str("type"),
@@ -1364,7 +1365,7 @@ fn test_enum_in_internally_tagged_enum() {
     );
 
     assert_tokens(
-        &Outer::Inner(Inner::Struct { f: 1 }),
+        &Outer::Inner(Inner::Struct { f: 1 }).readable(),
         &[
             Token::Map { len: Some(2) },
             Token::Str("type"),
@@ -1452,7 +1453,7 @@ fn test_internally_tagged_struct_with_flattened_field() {
     }
 
     assert_tokens(
-        &Struct { flat: Enum::A(0) },
+        &Struct { flat: Enum::A(0) }.readable(),
         &[
             Token::Map { len: None },
             Token::Str("tag_struct"),
@@ -1466,7 +1467,7 @@ fn test_internally_tagged_struct_with_flattened_field() {
     );
 
     assert_de_tokens(
-        &Struct { flat: Enum::A(0) },
+        &Struct { flat: Enum::A(0) }.readable(),
         &[
             Token::Map { len: None },
             Token::Str("tag_enum"),
@@ -1496,7 +1497,7 @@ fn test_untagged_enum_with_flattened_integer_key() {
                 map.insert(100, "BTreeMap".to_owned());
                 map
             },
-        },
+        }.readable(),
         &[
             Token::Map { len: None },
             Token::U64(100),
@@ -1523,7 +1524,7 @@ fn test_enum_in_untagged_enum() {
     }
 
     assert_tokens(
-        &Outer::Inner(Inner::Unit),
+        &Outer::Inner(Inner::Unit).readable(),
         &[Token::UnitVariant {
             name: "Inner",
             variant: "Unit",
@@ -1531,7 +1532,7 @@ fn test_enum_in_untagged_enum() {
     );
 
     assert_tokens(
-        &Outer::Inner(Inner::Newtype(1)),
+        &Outer::Inner(Inner::Newtype(1)).readable(),
         &[
             Token::NewtypeVariant {
                 name: "Inner",
@@ -1542,7 +1543,7 @@ fn test_enum_in_untagged_enum() {
     );
 
     assert_tokens(
-        &Outer::Inner(Inner::Tuple(1, 1)),
+        &Outer::Inner(Inner::Tuple(1, 1)).readable(),
         &[
             Token::TupleVariant {
                 name: "Inner",
@@ -1556,7 +1557,7 @@ fn test_enum_in_untagged_enum() {
     );
 
     assert_tokens(
-        &Outer::Inner(Inner::Struct { f: 1 }),
+        &Outer::Inner(Inner::Struct { f: 1 }).readable(),
         &[
             Token::StructVariant {
                 name: "Inner",
@@ -1587,7 +1588,7 @@ fn test_untagged_bytes() {
     assert_de_tokens(
         &Untagged::String {
             string: "\0".to_owned(),
-        },
+        }.readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -1602,7 +1603,7 @@ fn test_untagged_bytes() {
     assert_de_tokens(
         &Untagged::String {
             string: "\0".to_owned(),
-        },
+        }.readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -1617,7 +1618,7 @@ fn test_untagged_bytes() {
     assert_de_tokens(
         &Untagged::String {
             string: "\0".to_owned(),
-        },
+        }.readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -1632,7 +1633,7 @@ fn test_untagged_bytes() {
     assert_de_tokens(
         &Untagged::String {
             string: "\0".to_owned(),
-        },
+        }.readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -1645,7 +1646,7 @@ fn test_untagged_bytes() {
     );
 
     assert_de_tokens(
-        &Untagged::Bytes { bytes: vec![0] },
+        &Untagged::Bytes { bytes: vec![0] }.readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -1658,7 +1659,7 @@ fn test_untagged_bytes() {
     );
 
     assert_de_tokens(
-        &Untagged::Bytes { bytes: vec![0] },
+        &Untagged::Bytes { bytes: vec![0] }.readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -1671,7 +1672,7 @@ fn test_untagged_bytes() {
     );
 
     assert_de_tokens(
-        &Untagged::Bytes { bytes: vec![0] },
+        &Untagged::Bytes { bytes: vec![0] }.readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -1684,7 +1685,7 @@ fn test_untagged_bytes() {
     );
 
     assert_de_tokens(
-        &Untagged::Bytes { bytes: vec![0] },
+        &Untagged::Bytes { bytes: vec![0] }.readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -1697,7 +1698,7 @@ fn test_untagged_bytes() {
     );
 
     assert_de_tokens(
-        &Untagged::Bytes { bytes: vec![0] },
+        &Untagged::Bytes { bytes: vec![0] }.readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -1852,7 +1853,7 @@ fn test_untagged_newtype_variant_containing_unit_struct_not_map() {
     }
 
     assert_tokens(
-        &Message::Map(BTreeMap::new()),
+        &Message::Map(BTreeMap::new()).readable(),
         &[Token::Map { len: Some(0) }, Token::MapEnd],
     );
 }
@@ -1869,7 +1870,7 @@ fn test_internally_tagged_newtype_variant_containing_unit_struct() {
     }
 
     assert_tokens(
-        &Message::Info(Info),
+        &Message::Info(Info).readable(),
         &[
             Token::Map { len: Some(1) },
             Token::Str("topic"),

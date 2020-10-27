@@ -1019,6 +1019,7 @@ mod content {
     /// Not public API
     pub struct ContentDeserializer<'de, E> {
         content: Content<'de>,
+        is_human_readable: bool,
         err: PhantomData<E>,
     }
 
@@ -1068,12 +1069,16 @@ mod content {
         }
     }
 
-    fn visit_content_seq<'de, V, E>(content: Vec<Content<'de>>, visitor: V) -> Result<V::Value, E>
+    fn visit_content_seq<'de, V, E>(
+        content: Vec<Content<'de>>,
+        is_human_readable: bool,
+        visitor: V,
+    ) -> Result<V::Value, E>
     where
         V: Visitor<'de>,
         E: de::Error,
     {
-        let seq = content.into_iter().map(ContentDeserializer::new);
+        let seq = content.into_iter().map(|content| ContentDeserializer::new(content, is_human_readable));
         let mut seq_visitor = de::value::SeqDeserializer::new(seq);
         let value = try!(visitor.visit_seq(&mut seq_visitor));
         try!(seq_visitor.end());
@@ -1082,6 +1087,7 @@ mod content {
 
     fn visit_content_map<'de, V, E>(
         content: Vec<(Content<'de>, Content<'de>)>,
+        is_human_readable: bool,
         visitor: V,
     ) -> Result<V::Value, E>
     where
@@ -1090,7 +1096,10 @@ mod content {
     {
         let map = content
             .into_iter()
-            .map(|(k, v)| (ContentDeserializer::new(k), ContentDeserializer::new(v)));
+            .map(|(k, v)| (
+                ContentDeserializer::new(k, is_human_readable),
+                ContentDeserializer::new(v, is_human_readable)
+            ));
         let mut map_visitor = de::value::MapDeserializer::new(map);
         let value = try!(visitor.visit_map(&mut map_visitor));
         try!(map_visitor.end());
@@ -1128,10 +1137,10 @@ mod content {
                 Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
                 Content::Unit => visitor.visit_unit(),
                 Content::None => visitor.visit_none(),
-                Content::Some(v) => visitor.visit_some(ContentDeserializer::new(*v)),
-                Content::Newtype(v) => visitor.visit_newtype_struct(ContentDeserializer::new(*v)),
-                Content::Seq(v) => visit_content_seq(v, visitor),
-                Content::Map(v) => visit_content_map(v, visitor),
+                Content::Some(v) => visitor.visit_some(ContentDeserializer::new(*v, self.is_human_readable)),
+                Content::Newtype(v) => visitor.visit_newtype_struct(ContentDeserializer::new(*v, self.is_human_readable)),
+                Content::Seq(v) => visit_content_seq(v, self.is_human_readable, visitor),
+                Content::Map(v) => visit_content_map(v, self.is_human_readable, visitor),
             }
         }
 
@@ -1263,7 +1272,7 @@ mod content {
                 Content::Str(v) => visitor.visit_borrowed_str(v),
                 Content::ByteBuf(v) => visitor.visit_byte_buf(v),
                 Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
-                Content::Seq(v) => visit_content_seq(v, visitor),
+                Content::Seq(v) => visit_content_seq(v, self.is_human_readable, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1274,7 +1283,7 @@ mod content {
         {
             match self.content {
                 Content::None => visitor.visit_none(),
-                Content::Some(v) => visitor.visit_some(ContentDeserializer::new(*v)),
+                Content::Some(v) => visitor.visit_some(ContentDeserializer::new(*v, self.is_human_readable)),
                 Content::Unit => visitor.visit_unit(),
                 _ => visitor.visit_some(self),
             }
@@ -1327,7 +1336,7 @@ mod content {
             V: Visitor<'de>,
         {
             match self.content {
-                Content::Newtype(v) => visitor.visit_newtype_struct(ContentDeserializer::new(*v)),
+                Content::Newtype(v) => visitor.visit_newtype_struct(ContentDeserializer::new(*v, self.is_human_readable)),
                 _ => visitor.visit_newtype_struct(self),
             }
         }
@@ -1337,7 +1346,7 @@ mod content {
             V: Visitor<'de>,
         {
             match self.content {
-                Content::Seq(v) => visit_content_seq(v, visitor),
+                Content::Seq(v) => visit_content_seq(v, self.is_human_readable, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1366,7 +1375,7 @@ mod content {
             V: Visitor<'de>,
         {
             match self.content {
-                Content::Map(v) => visit_content_map(v, visitor),
+                Content::Map(v) => visit_content_map(v, self.is_human_readable, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1381,8 +1390,8 @@ mod content {
             V: Visitor<'de>,
         {
             match self.content {
-                Content::Seq(v) => visit_content_seq(v, visitor),
-                Content::Map(v) => visit_content_map(v, visitor),
+                Content::Seq(v) => visit_content_seq(v, self.is_human_readable, visitor),
+                Content::Map(v) => visit_content_map(v, self.is_human_readable, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1426,7 +1435,7 @@ mod content {
                 }
             };
 
-            visitor.visit_enum(EnumDeserializer::new(variant, value))
+            visitor.visit_enum(EnumDeserializer::new(variant, value, self.is_human_readable))
         }
 
         fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -1451,13 +1460,19 @@ mod content {
             drop(self);
             visitor.visit_unit()
         }
+
+        #[inline]
+        fn is_human_readable(&self) -> bool {
+            self.is_human_readable
+        }
     }
 
     impl<'de, E> ContentDeserializer<'de, E> {
         /// private API, don't use
-        pub fn new(content: Content<'de>) -> Self {
+        pub fn new(content: Content<'de>, is_human_readable: bool) -> Self {
             ContentDeserializer {
                 content: content,
+                is_human_readable: is_human_readable,
                 err: PhantomData,
             }
         }
@@ -1469,6 +1484,7 @@ mod content {
     {
         variant: Content<'de>,
         value: Option<Content<'de>>,
+        is_human_readable: bool,
         err: PhantomData<E>,
     }
 
@@ -1476,10 +1492,11 @@ mod content {
     where
         E: de::Error,
     {
-        pub fn new(variant: Content<'de>, value: Option<Content<'de>>) -> EnumDeserializer<'de, E> {
+        pub fn new(variant: Content<'de>, value: Option<Content<'de>>, is_human_readable: bool) -> EnumDeserializer<'de, E> {
             EnumDeserializer {
                 variant: variant,
                 value: value,
+                is_human_readable: is_human_readable,
                 err: PhantomData,
             }
         }
@@ -1498,9 +1515,10 @@ mod content {
         {
             let visitor = VariantDeserializer {
                 value: self.value,
+                is_human_readable: self.is_human_readable,
                 err: PhantomData,
             };
-            seed.deserialize(ContentDeserializer::new(self.variant))
+            seed.deserialize(ContentDeserializer::new(self.variant, self.is_human_readable))
                 .map(|v| (v, visitor))
         }
     }
@@ -1510,6 +1528,7 @@ mod content {
         E: de::Error,
     {
         value: Option<Content<'de>>,
+        is_human_readable: bool,
         err: PhantomData<E>,
     }
 
@@ -1521,7 +1540,7 @@ mod content {
 
         fn unit_variant(self) -> Result<(), E> {
             match self.value {
-                Some(value) => de::Deserialize::deserialize(ContentDeserializer::new(value)),
+                Some(value) => de::Deserialize::deserialize(ContentDeserializer::new(value, self.is_human_readable)),
                 None => Ok(()),
             }
         }
@@ -1531,7 +1550,7 @@ mod content {
             T: de::DeserializeSeed<'de>,
         {
             match self.value {
-                Some(value) => seed.deserialize(ContentDeserializer::new(value)),
+                Some(value) => seed.deserialize(ContentDeserializer::new(value, self.is_human_readable)),
                 None => Err(de::Error::invalid_type(
                     de::Unexpected::UnitVariant,
                     &"newtype variant",
@@ -1545,7 +1564,7 @@ mod content {
         {
             match self.value {
                 Some(Content::Seq(v)) => {
-                    de::Deserializer::deserialize_any(SeqDeserializer::new(v), visitor)
+                    de::Deserializer::deserialize_any(SeqDeserializer::new(v, self.is_human_readable), visitor)
                 }
                 Some(other) => Err(de::Error::invalid_type(
                     other.unexpected(),
@@ -1568,10 +1587,10 @@ mod content {
         {
             match self.value {
                 Some(Content::Map(v)) => {
-                    de::Deserializer::deserialize_any(MapDeserializer::new(v), visitor)
+                    de::Deserializer::deserialize_any(MapDeserializer::new(v, self.is_human_readable), visitor)
                 }
                 Some(Content::Seq(v)) => {
-                    de::Deserializer::deserialize_any(SeqDeserializer::new(v), visitor)
+                    de::Deserializer::deserialize_any(SeqDeserializer::new(v, self.is_human_readable), visitor)
                 }
                 Some(other) => Err(de::Error::invalid_type(
                     other.unexpected(),
@@ -1590,6 +1609,7 @@ mod content {
         E: de::Error,
     {
         iter: <Vec<Content<'de>> as IntoIterator>::IntoIter,
+        is_human_readable: bool,
         err: PhantomData<E>,
     }
 
@@ -1597,9 +1617,10 @@ mod content {
     where
         E: de::Error,
     {
-        fn new(vec: Vec<Content<'de>>) -> Self {
+        fn new(vec: Vec<Content<'de>>, is_human_readable: bool) -> Self {
             SeqDeserializer {
                 iter: vec.into_iter(),
+                is_human_readable: is_human_readable,
                 err: PhantomData,
             }
         }
@@ -1635,6 +1656,11 @@ mod content {
             bytes byte_buf option unit unit_struct newtype_struct seq tuple
             tuple_struct map struct enum identifier ignored_any
         }
+
+        #[inline]
+        fn is_human_readable(&self) -> bool {
+            self.is_human_readable
+        }
     }
 
     impl<'de, E> de::SeqAccess<'de> for SeqDeserializer<'de, E>
@@ -1648,7 +1674,7 @@ mod content {
             T: de::DeserializeSeed<'de>,
         {
             match self.iter.next() {
-                Some(value) => seed.deserialize(ContentDeserializer::new(value)).map(Some),
+                Some(value) => seed.deserialize(ContentDeserializer::new(value, self.is_human_readable)).map(Some),
                 None => Ok(None),
             }
         }
@@ -1664,6 +1690,7 @@ mod content {
     {
         iter: <Vec<(Content<'de>, Content<'de>)> as IntoIterator>::IntoIter,
         value: Option<Content<'de>>,
+        is_human_readable: bool,
         err: PhantomData<E>,
     }
 
@@ -1671,10 +1698,11 @@ mod content {
     where
         E: de::Error,
     {
-        fn new(map: Vec<(Content<'de>, Content<'de>)>) -> Self {
+        fn new(map: Vec<(Content<'de>, Content<'de>)>, is_human_readable: bool) -> Self {
             MapDeserializer {
                 iter: map.into_iter(),
                 value: None,
+                is_human_readable: is_human_readable,
                 err: PhantomData,
             }
         }
@@ -1693,7 +1721,7 @@ mod content {
             match self.iter.next() {
                 Some((key, value)) => {
                     self.value = Some(value);
-                    seed.deserialize(ContentDeserializer::new(key)).map(Some)
+                    seed.deserialize(ContentDeserializer::new(key, self.is_human_readable)).map(Some)
                 }
                 None => Ok(None),
             }
@@ -1704,7 +1732,7 @@ mod content {
             T: de::DeserializeSeed<'de>,
         {
             match self.value.take() {
-                Some(value) => seed.deserialize(ContentDeserializer::new(value)),
+                Some(value) => seed.deserialize(ContentDeserializer::new(value, self.is_human_readable)),
                 None => Err(de::Error::custom("value is missing")),
             }
         }
@@ -1738,6 +1766,7 @@ mod content {
     /// Not public API.
     pub struct ContentRefDeserializer<'a, 'de: 'a, E> {
         content: &'a Content<'de>,
+        is_human_readable: bool,
         err: PhantomData<E>,
     }
 
@@ -1770,13 +1799,14 @@ mod content {
 
     fn visit_content_seq_ref<'a, 'de, V, E>(
         content: &'a [Content<'de>],
+        is_human_readable: bool,
         visitor: V,
     ) -> Result<V::Value, E>
     where
         V: Visitor<'de>,
         E: de::Error,
     {
-        let seq = content.iter().map(ContentRefDeserializer::new);
+        let seq = content.iter().map(|content| ContentRefDeserializer::new(content, is_human_readable));
         let mut seq_visitor = de::value::SeqDeserializer::new(seq);
         let value = try!(visitor.visit_seq(&mut seq_visitor));
         try!(seq_visitor.end());
@@ -1785,6 +1815,7 @@ mod content {
 
     fn visit_content_map_ref<'a, 'de, V, E>(
         content: &'a [(Content<'de>, Content<'de>)],
+        is_human_readable: bool,
         visitor: V,
     ) -> Result<V::Value, E>
     where
@@ -1793,8 +1824,8 @@ mod content {
     {
         let map = content.iter().map(|&(ref k, ref v)| {
             (
-                ContentRefDeserializer::new(k),
-                ContentRefDeserializer::new(v),
+                ContentRefDeserializer::new(k, is_human_readable),
+                ContentRefDeserializer::new(v, is_human_readable),
             )
         });
         let mut map_visitor = de::value::MapDeserializer::new(map);
@@ -1834,12 +1865,12 @@ mod content {
                 Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
                 Content::Unit => visitor.visit_unit(),
                 Content::None => visitor.visit_none(),
-                Content::Some(ref v) => visitor.visit_some(ContentRefDeserializer::new(v)),
+                Content::Some(ref v) => visitor.visit_some(ContentRefDeserializer::new(v, self.is_human_readable)),
                 Content::Newtype(ref v) => {
-                    visitor.visit_newtype_struct(ContentRefDeserializer::new(v))
+                    visitor.visit_newtype_struct(ContentRefDeserializer::new(v, self.is_human_readable))
                 }
-                Content::Seq(ref v) => visit_content_seq_ref(v, visitor),
-                Content::Map(ref v) => visit_content_map_ref(v, visitor),
+                Content::Seq(ref v) => visit_content_seq_ref(v, self.is_human_readable, visitor),
+                Content::Map(ref v) => visit_content_map_ref(v, self.is_human_readable, visitor),
             }
         }
 
@@ -1975,7 +2006,7 @@ mod content {
                 Content::Str(v) => visitor.visit_borrowed_str(v),
                 Content::ByteBuf(ref v) => visitor.visit_bytes(v),
                 Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
-                Content::Seq(ref v) => visit_content_seq_ref(v, visitor),
+                Content::Seq(ref v) => visit_content_seq_ref(v, self.is_human_readable, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1993,7 +2024,7 @@ mod content {
         {
             match *self.content {
                 Content::None => visitor.visit_none(),
-                Content::Some(ref v) => visitor.visit_some(ContentRefDeserializer::new(v)),
+                Content::Some(ref v) => visitor.visit_some(ContentRefDeserializer::new(v, self.is_human_readable)),
                 Content::Unit => visitor.visit_unit(),
                 _ => visitor.visit_some(self),
             }
@@ -2026,7 +2057,7 @@ mod content {
         {
             match *self.content {
                 Content::Newtype(ref v) => {
-                    visitor.visit_newtype_struct(ContentRefDeserializer::new(v))
+                    visitor.visit_newtype_struct(ContentRefDeserializer::new(v, self.is_human_readable))
                 }
                 _ => visitor.visit_newtype_struct(self),
             }
@@ -2037,7 +2068,7 @@ mod content {
             V: Visitor<'de>,
         {
             match *self.content {
-                Content::Seq(ref v) => visit_content_seq_ref(v, visitor),
+                Content::Seq(ref v) => visit_content_seq_ref(v, self.is_human_readable, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2066,7 +2097,7 @@ mod content {
             V: Visitor<'de>,
         {
             match *self.content {
-                Content::Map(ref v) => visit_content_map_ref(v, visitor),
+                Content::Map(ref v) => visit_content_map_ref(v, self.is_human_readable, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2081,8 +2112,8 @@ mod content {
             V: Visitor<'de>,
         {
             match *self.content {
-                Content::Seq(ref v) => visit_content_seq_ref(v, visitor),
-                Content::Map(ref v) => visit_content_map_ref(v, visitor),
+                Content::Seq(ref v) => visit_content_seq_ref(v, self.is_human_readable, visitor),
+                Content::Map(ref v) => visit_content_map_ref(v, self.is_human_readable, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2129,6 +2160,7 @@ mod content {
             visitor.visit_enum(EnumRefDeserializer {
                 variant: variant,
                 value: value,
+                is_human_readable: self.is_human_readable,
                 err: PhantomData,
             })
         }
@@ -2154,13 +2186,19 @@ mod content {
         {
             visitor.visit_unit()
         }
+
+        #[inline]
+        fn is_human_readable(&self) -> bool {
+            self.is_human_readable
+        }
     }
 
     impl<'a, 'de, E> ContentRefDeserializer<'a, 'de, E> {
         /// private API, don't use
-        pub fn new(content: &'a Content<'de>) -> Self {
+        pub fn new(content: &'a Content<'de>, is_human_readable: bool) -> Self {
             ContentRefDeserializer {
                 content: content,
+                is_human_readable: is_human_readable,
                 err: PhantomData,
             }
         }
@@ -2172,6 +2210,7 @@ mod content {
     {
         variant: &'a Content<'de>,
         value: Option<&'a Content<'de>>,
+        is_human_readable: bool,
         err: PhantomData<E>,
     }
 
@@ -2188,9 +2227,10 @@ mod content {
         {
             let visitor = VariantRefDeserializer {
                 value: self.value,
+                is_human_readable: self.is_human_readable,
                 err: PhantomData,
             };
-            seed.deserialize(ContentRefDeserializer::new(self.variant))
+            seed.deserialize(ContentRefDeserializer::new(self.variant, self.is_human_readable))
                 .map(|v| (v, visitor))
         }
     }
@@ -2200,6 +2240,7 @@ mod content {
         E: de::Error,
     {
         value: Option<&'a Content<'de>>,
+        is_human_readable: bool,
         err: PhantomData<E>,
     }
 
@@ -2211,7 +2252,7 @@ mod content {
 
         fn unit_variant(self) -> Result<(), E> {
             match self.value {
-                Some(value) => de::Deserialize::deserialize(ContentRefDeserializer::new(value)),
+                Some(value) => de::Deserialize::deserialize(ContentRefDeserializer::new(value, self.is_human_readable)),
                 None => Ok(()),
             }
         }
@@ -2221,7 +2262,7 @@ mod content {
             T: de::DeserializeSeed<'de>,
         {
             match self.value {
-                Some(value) => seed.deserialize(ContentRefDeserializer::new(value)),
+                Some(value) => seed.deserialize(ContentRefDeserializer::new(value, self.is_human_readable)),
                 None => Err(de::Error::invalid_type(
                     de::Unexpected::UnitVariant,
                     &"newtype variant",
@@ -2235,7 +2276,7 @@ mod content {
         {
             match self.value {
                 Some(&Content::Seq(ref v)) => {
-                    de::Deserializer::deserialize_any(SeqRefDeserializer::new(v), visitor)
+                    de::Deserializer::deserialize_any(SeqRefDeserializer::new(v, self.is_human_readable), visitor)
                 }
                 Some(other) => Err(de::Error::invalid_type(
                     other.unexpected(),
@@ -2258,10 +2299,10 @@ mod content {
         {
             match self.value {
                 Some(&Content::Map(ref v)) => {
-                    de::Deserializer::deserialize_any(MapRefDeserializer::new(v), visitor)
+                    de::Deserializer::deserialize_any(MapRefDeserializer::new(v, self.is_human_readable), visitor)
                 }
                 Some(&Content::Seq(ref v)) => {
-                    de::Deserializer::deserialize_any(SeqRefDeserializer::new(v), visitor)
+                    de::Deserializer::deserialize_any(SeqRefDeserializer::new(v, self.is_human_readable), visitor)
                 }
                 Some(other) => Err(de::Error::invalid_type(
                     other.unexpected(),
@@ -2280,6 +2321,7 @@ mod content {
         E: de::Error,
     {
         iter: <&'a [Content<'de>] as IntoIterator>::IntoIter,
+        is_human_readable: bool,
         err: PhantomData<E>,
     }
 
@@ -2287,9 +2329,10 @@ mod content {
     where
         E: de::Error,
     {
-        fn new(slice: &'a [Content<'de>]) -> Self {
+        fn new(slice: &'a [Content<'de>], is_human_readable: bool) -> Self {
             SeqRefDeserializer {
                 iter: slice.iter(),
+                is_human_readable: is_human_readable,
                 err: PhantomData,
             }
         }
@@ -2325,6 +2368,11 @@ mod content {
             bytes byte_buf option unit unit_struct newtype_struct seq tuple
             tuple_struct map struct enum identifier ignored_any
         }
+
+        #[inline]
+        fn is_human_readable(&self) -> bool {
+            self.is_human_readable
+        }
     }
 
     impl<'de, 'a, E> de::SeqAccess<'de> for SeqRefDeserializer<'a, 'de, E>
@@ -2339,7 +2387,7 @@ mod content {
         {
             match self.iter.next() {
                 Some(value) => seed
-                    .deserialize(ContentRefDeserializer::new(value))
+                    .deserialize(ContentRefDeserializer::new(value, self.is_human_readable))
                     .map(Some),
                 None => Ok(None),
             }
@@ -2356,6 +2404,7 @@ mod content {
     {
         iter: <&'a [(Content<'de>, Content<'de>)] as IntoIterator>::IntoIter,
         value: Option<&'a Content<'de>>,
+        is_human_readable: bool,
         err: PhantomData<E>,
     }
 
@@ -2363,10 +2412,11 @@ mod content {
     where
         E: de::Error,
     {
-        fn new(map: &'a [(Content<'de>, Content<'de>)]) -> Self {
+        fn new(map: &'a [(Content<'de>, Content<'de>)], is_human_readable: bool) -> Self {
             MapRefDeserializer {
                 iter: map.iter(),
                 value: None,
+                is_human_readable: is_human_readable,
                 err: PhantomData,
             }
         }
@@ -2385,7 +2435,7 @@ mod content {
             match self.iter.next() {
                 Some(&(ref key, ref value)) => {
                     self.value = Some(value);
-                    seed.deserialize(ContentRefDeserializer::new(key)).map(Some)
+                    seed.deserialize(ContentRefDeserializer::new(key, self.is_human_readable)).map(Some)
                 }
                 None => Ok(None),
             }
@@ -2396,7 +2446,7 @@ mod content {
             T: de::DeserializeSeed<'de>,
         {
             match self.value.take() {
-                Some(value) => seed.deserialize(ContentRefDeserializer::new(value)),
+                Some(value) => seed.deserialize(ContentRefDeserializer::new(value, self.is_human_readable)),
                 None => Err(de::Error::custom("value is missing")),
             }
         }
@@ -2424,6 +2474,11 @@ mod content {
             bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
             bytes byte_buf option unit unit_struct newtype_struct seq tuple
             tuple_struct map struct enum identifier ignored_any
+        }
+
+        #[inline]
+        fn is_human_readable(&self) -> bool {
+            self.is_human_readable
         }
     }
 
@@ -2673,6 +2728,7 @@ where
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub struct FlatMapDeserializer<'a, 'de: 'a, E>(
     pub &'a mut Vec<Option<(Content<'de>, Content<'de>)>>,
+    pub bool,
     pub PhantomData<E>,
 );
 
@@ -2714,6 +2770,7 @@ where
         visitor.visit_map(FlatInternallyTaggedAccess {
             iter: self.0.iter_mut(),
             pending: None,
+            is_human_readable: self.1,
             _marker: PhantomData,
         })
     }
@@ -2738,7 +2795,7 @@ where
 
             if use_item {
                 let (key, value) = item.take().unwrap();
-                return visitor.visit_enum(EnumDeserializer::new(key, Some(value)));
+                return visitor.visit_enum(EnumDeserializer::new(key, Some(value), self.1));
             }
         }
 
@@ -2752,7 +2809,7 @@ where
     where
         V: Visitor<'de>,
     {
-        visitor.visit_map(FlatMapAccess::new(self.0.iter()))
+        visitor.visit_map(FlatMapAccess::new(self.0.iter(), self.1))
     }
 
     fn deserialize_struct<V>(
@@ -2764,7 +2821,7 @@ where
     where
         V: Visitor<'de>,
     {
-        visitor.visit_map(FlatStructAccess::new(self.0.iter_mut(), fields))
+        visitor.visit_map(FlatStructAccess::new(self.0.iter_mut(), fields, self.1))
     }
 
     fn deserialize_newtype_struct<V>(self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
@@ -2815,12 +2872,18 @@ where
         deserialize_identifier()
         deserialize_ignored_any()
     }
+
+    #[inline]
+    fn is_human_readable(&self) -> bool {
+        self.1
+    }
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub struct FlatMapAccess<'a, 'de: 'a, E> {
     iter: slice::Iter<'a, Option<(Content<'de>, Content<'de>)>>,
     pending_content: Option<&'a Content<'de>>,
+    is_human_readable: bool,
     _marker: PhantomData<E>,
 }
 
@@ -2828,10 +2891,12 @@ pub struct FlatMapAccess<'a, 'de: 'a, E> {
 impl<'a, 'de, E> FlatMapAccess<'a, 'de, E> {
     fn new(
         iter: slice::Iter<'a, Option<(Content<'de>, Content<'de>)>>,
+        is_human_readable: bool,
     ) -> FlatMapAccess<'a, 'de, E> {
         FlatMapAccess {
             iter: iter,
             pending_content: None,
+            is_human_readable: is_human_readable,
             _marker: PhantomData,
         }
     }
@@ -2852,7 +2917,7 @@ where
             // Items in the vector are nulled out when used by a struct.
             if let Some((ref key, ref content)) = *item {
                 self.pending_content = Some(content);
-                return seed.deserialize(ContentRefDeserializer::new(key)).map(Some);
+                return seed.deserialize(ContentRefDeserializer::new(key, self.is_human_readable)).map(Some);
             }
         }
         Ok(None)
@@ -2863,7 +2928,7 @@ where
         T: DeserializeSeed<'de>,
     {
         match self.pending_content.take() {
-            Some(value) => seed.deserialize(ContentRefDeserializer::new(value)),
+            Some(value) => seed.deserialize(ContentRefDeserializer::new(value, self.is_human_readable)),
             None => Err(Error::custom("value is missing")),
         }
     }
@@ -2874,6 +2939,7 @@ pub struct FlatStructAccess<'a, 'de: 'a, E> {
     iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
     pending_content: Option<Content<'de>>,
     fields: &'static [&'static str],
+    is_human_readable: bool,
     _marker: PhantomData<E>,
 }
 
@@ -2882,11 +2948,13 @@ impl<'a, 'de, E> FlatStructAccess<'a, 'de, E> {
     fn new(
         iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
         fields: &'static [&'static str],
+        is_human_readable: bool,
     ) -> FlatStructAccess<'a, 'de, E> {
         FlatStructAccess {
             iter: iter,
             pending_content: None,
             fields: fields,
+            is_human_readable: is_human_readable,
             _marker: PhantomData,
         }
     }
@@ -2915,7 +2983,7 @@ where
             if use_item {
                 let (key, content) = item.take().unwrap();
                 self.pending_content = Some(content);
-                return seed.deserialize(ContentDeserializer::new(key)).map(Some);
+                return seed.deserialize(ContentDeserializer::new(key, self.is_human_readable)).map(Some);
             }
         }
         Ok(None)
@@ -2926,7 +2994,7 @@ where
         T: DeserializeSeed<'de>,
     {
         match self.pending_content.take() {
-            Some(value) => seed.deserialize(ContentDeserializer::new(value)),
+            Some(value) => seed.deserialize(ContentDeserializer::new(value, self.is_human_readable)),
             None => Err(Error::custom("value is missing")),
         }
     }
@@ -2936,6 +3004,7 @@ where
 pub struct FlatInternallyTaggedAccess<'a, 'de: 'a, E> {
     iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
     pending: Option<&'a Content<'de>>,
+    is_human_readable: bool,
     _marker: PhantomData<E>,
 }
 
@@ -2957,7 +3026,7 @@ where
                 // is going to be consumed. Borrowing here leaves the entry
                 // available for later flattened fields.
                 self.pending = Some(content);
-                return seed.deserialize(ContentRefDeserializer::new(key)).map(Some);
+                return seed.deserialize(ContentRefDeserializer::new(key, self.is_human_readable)).map(Some);
             }
         }
         Ok(None)
@@ -2968,7 +3037,7 @@ where
         T: DeserializeSeed<'de>,
     {
         match self.pending.take() {
-            Some(value) => seed.deserialize(ContentRefDeserializer::new(value)),
+            Some(value) => seed.deserialize(ContentRefDeserializer::new(value, self.is_human_readable)),
             None => panic!("value is missing"),
         }
     }
