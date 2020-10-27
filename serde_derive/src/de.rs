@@ -1372,21 +1372,6 @@ fn deserialize_adjacently_tagged_enum(
     let type_name = cattrs.name().deserialize_name();
     let deny_unknown_fields = cattrs.deny_unknown_fields();
 
-    // If unknown fields are allowed, we pick the visitor that can step over
-    // those. Otherwise we pick the visitor that fails on unknown keys.
-    let field_visitor_ty = if deny_unknown_fields {
-        quote! { _serde::__private::de::TagOrContentFieldVisitor }
-    } else {
-        quote! { _serde::__private::de::TagContentOtherFieldVisitor }
-    };
-
-    let tag_or_content = quote! {
-        #field_visitor_ty {
-            tag: #tag,
-            content: #content,
-        }
-    };
-
     let mut missing_content = quote! {
         _serde::__private::Err(<__A::Error as _serde::de::Error>::missing_field(#content))
     };
@@ -1429,37 +1414,20 @@ fn deserialize_adjacently_tagged_enum(
         };
     }
 
-    // Advance the map by one key, returning early in case of error.
-    let next_key = quote! {
-        try!(_serde::de::MapAccess::next_key_seed(&mut __map, #tag_or_content))
-    };
-
     // When allowing unknown fields, we want to transparently step through keys
     // we don't care about until we find `tag`, `content`, or run out of keys.
     let next_relevant_key = if deny_unknown_fields {
-        next_key
-    } else {
-        quote!({
-            let mut __rk : _serde::__private::Option<_serde::__private::de::TagOrContentField> = _serde::__private::None;
-            while let _serde::__private::Some(__k) = #next_key {
-                match __k {
-                    _serde::__private::de::TagContentOtherField::Other => {
-                        try!(_serde::de::MapAccess::next_value::<_serde::de::IgnoredAny>(&mut __map));
-                        continue;
-                    },
-                    _serde::__private::de::TagContentOtherField::Tag => {
-                        __rk = _serde::__private::Some(_serde::__private::de::TagOrContentField::Tag);
-                        break;
-                    }
-                    _serde::__private::de::TagContentOtherField::Content => {
-                        __rk = _serde::__private::Some(_serde::__private::de::TagOrContentField::Content);
-                        break;
-                    }
+        quote! {
+            try!(_serde::de::MapAccess::next_key_seed(
+                &mut __map,
+                _serde::__private::de::TagOrContentFieldVisitor {
+                    tag: #tag,
+                    content: #content,
                 }
-            }
-
-            __rk
-        })
+            ))
+        }
+    } else {
+        quote!(try!(_serde::__private::de::next_tag_or_content(&mut __map, #tag, #content)))
     };
 
     // Step through remaining keys, looking for duplicates of previously-seen

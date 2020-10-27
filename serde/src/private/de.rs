@@ -4,12 +4,12 @@ use de::value::{BorrowedBytesDeserializer, BytesDeserializer};
 use de::{Deserialize, Deserializer, Error, IntoDeserializer, Visitor};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use de::{DeserializeSeed, MapAccess, Unexpected};
+use de::{DeserializeSeed, IgnoredAny, MapAccess, Unexpected};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{
     Content, ContentDeserializer, ContentRefDeserializer, EnumDeserializer,
-    InternallyTaggedUnitVisitor, TagContentOtherField, TagContentOtherFieldVisitor,
+    InternallyTaggedUnitVisitor, TagContentOtherField,
     TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
 };
 
@@ -53,6 +53,31 @@ where
 
     let deserializer = MissingFieldDeserializer(field, PhantomData);
     Deserialize::deserialize(deserializer)
+}
+
+/// Used in adjacently tagged enums when unknown fields is allowed
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub fn next_tag_or_content<'de, A>(
+    mut map: A,
+    tag: &'static str,
+    content: &'static str,
+) -> Result<Option<TagOrContentField>, A::Error>
+where
+    A: MapAccess<'de>,
+{
+    while let Some(k) = try!(map.next_key_seed(
+        content::TagContentOtherFieldVisitor { tag: tag, content: content }
+    )) {
+        match k {
+            TagContentOtherField::Other => {
+                try!(map.next_value::<IgnoredAny>());
+                continue;
+            }
+            TagContentOtherField::Tag => return Ok(Some(TagOrContentField::Tag)),
+            TagContentOtherField::Content => return Ok(Some(TagOrContentField::Content)),
+        }
+    }
+    Ok(None)
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
