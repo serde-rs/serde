@@ -32,18 +32,18 @@ impl<'a> Serializer<'a> {
 }
 
 macro_rules! assert_next_token {
-    ($ser:expr, $expected:ident) => {
-        assert_next_token!($ser, stringify!($expected), Token::$expected, true);
+    ($ser:expr, $actual:ident) => {
+        assert_next_token!($ser, stringify!($actual), Token::$actual, true);
     };
-    ($ser:expr, $expected:ident($v:expr)) => {
+    ($ser:expr, $actual:ident($v:expr)) => {
         assert_next_token!(
             $ser,
-            format_args!(concat!(stringify!($expected), "({:?})"), $v),
-            Token::$expected(v),
+            format_args!(concat!(stringify!($actual), "({:?})"), $v),
+            Token::$actual(v),
             v == $v
         );
     };
-    ($ser:expr, $expected:ident { $($k:ident),* }) => {
+    ($ser:expr, $actual:ident { $($k:ident),* }) => {
         let compare = ($($k,)*);
         let field_format = || {
             use std::fmt::Write;
@@ -55,21 +55,21 @@ macro_rules! assert_next_token {
         };
         assert_next_token!(
             $ser,
-            format_args!(concat!(stringify!($expected), " {{ {}}}"), field_format()),
-            Token::$expected { $($k),* },
+            format_args!(concat!(stringify!($actual), " {{ {}}}"), field_format()),
+            Token::$actual { $($k),* },
             ($($k,)*) == compare
         );
     };
-    ($ser:expr, $expected:expr, $pat:pat, $guard:expr) => {
+    ($ser:expr, $actual:expr, $pat:pat, $guard:expr) => {
         match $ser.next_token() {
             Some($pat) if $guard => {}
-            Some(other) => {
+            Some(expected) => {
                 panic!("expected Token::{} but serialized as {}",
-                       $expected, other);
+                       expected, $actual);
             }
             None => {
-                panic!("expected Token::{} after end of serialized tokens",
-                       $expected);
+                panic!("expected end of tokens, but {} was serialized",
+                       $actual);
             }
         }
     };
