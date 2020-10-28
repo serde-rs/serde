@@ -12,6 +12,7 @@ use internals::{attr, ungroup, Ctxt, Derive};
 use pretend;
 
 use std::collections::BTreeSet;
+use std::ptr;
 
 pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream, Vec<syn::Error>> {
     let ctxt = Ctxt::new();
@@ -359,7 +360,7 @@ fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
 
     let assign = fields.iter().map(|field| {
         let member = &field.member;
-        if field as *const Field == transparent_field as *const Field {
+        if ptr::eq(field, transparent_field) {
             quote!(#member: __transparent)
         } else {
             let value = match field.attrs.default() {
