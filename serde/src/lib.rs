@@ -119,6 +119,7 @@
         // correctly used
         enum_glob_use,
         map_err_ignore,
+        result_unit_err,
         wildcard_imports,
         // not practical
         needless_pass_by_value,
