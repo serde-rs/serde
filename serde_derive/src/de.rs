@@ -939,6 +939,25 @@ fn deserialize_struct(
     cattrs: &attr::Container,
     form: StructForm,
 ) -> Fragment {
+    let (visitor, fields_stmt) = deserialize_struct_visitor(prefix, params, fields, cattrs, &form);
+    let dispatch = deserialize_struct_dispatch(prefix, params, cattrs, has_flatten, form);
+
+    quote_block! {
+        #visitor
+
+        #fields_stmt
+
+        #dispatch
+    }
+}
+
+fn deserialize_struct_visitor(
+    prefix: &str,
+    params: &Parameters,
+    fields: &[Field],
+    cattrs: &attr::Container,
+    form: &StructForm,
+) -> (TokenStream, Option<TokenStream>) {
     let this_type = &params.this_type;
     let this_value = &params.this_value;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
@@ -1047,37 +1066,7 @@ fn deserialize_struct(
         })
     };
 
-    let visitor_expr = quote! {
-        __Visitor {
-            marker: _serde::__private::PhantomData::<#this_type #ty_generics>,
-            lifetime: _serde::__private::PhantomData,
-        }
-    };
-    let dispatch = match form {
-        StructForm::Struct if has_flatten => quote! {
-            _serde::Deserializer::deserialize_map(__deserializer, #visitor_expr)
-        },
-        StructForm::Struct => {
-            let type_name = cattrs.name().deserialize_name();
-            quote! {
-                _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
-            }
-        }
-        StructForm::ExternallyTagged(_) if has_flatten => quote! {
-            _serde::de::VariantAccess::newtype_variant_seed(__variant, #visitor_expr)
-        },
-        StructForm::ExternallyTagged(_) => quote! {
-            _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
-        },
-        StructForm::InternallyTagged(_, deserializer) => quote! {
-            _serde::Deserializer::deserialize_map(#deserializer, #visitor_expr)
-        },
-        StructForm::Untagged(_, deserializer) => quote! {
-            _serde::Deserializer::deserialize_map(#deserializer, #visitor_expr)
-        },
-    };
-
-    quote_block! {
+    let visitor = quote! {
         #field_visitor
 
         #[doc(hidden)]
@@ -1105,10 +1094,51 @@ fn deserialize_struct(
         }
 
         #visitor_seed
+    };
 
-        #fields_stmt
+    (visitor, fields_stmt)
+}
 
-        #dispatch
+fn deserialize_struct_dispatch(
+    prefix: &str,
+    params: &Parameters,
+    cattrs: &attr::Container,
+    has_flatten: bool,
+    form: StructForm,
+) -> TokenStream {
+    let this_type = &params.this_type;
+    let (_, _, ty_generics, _) = split_with_de_lifetime(params);
+
+    let visitor_name = visitor_struct_name(prefix);
+    let visitor_expr = quote! {
+        #visitor_name {
+            marker: _serde::__private::PhantomData::<#this_type #ty_generics>,
+            lifetime: _serde::__private::PhantomData,
+        }
+    };
+
+    match form {
+        StructForm::Struct if has_flatten => quote! {
+            _serde::Deserializer::deserialize_map(__deserializer, #visitor_expr)
+        },
+        StructForm::Struct => {
+            let type_name = cattrs.name().deserialize_name();
+            quote! {
+                _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
+            }
+        }
+        StructForm::ExternallyTagged(_) if has_flatten => quote! {
+            _serde::de::VariantAccess::newtype_variant_seed(__variant, #visitor_expr)
+        },
+        StructForm::ExternallyTagged(_) => quote! {
+            _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
+        },
+        StructForm::InternallyTagged(_, deserializer) => quote! {
+            _serde::Deserializer::deserialize_map(#deserializer, #visitor_expr)
+        },
+        StructForm::Untagged(_, deserializer) => quote! {
+            _serde::Deserializer::deserialize_map(#deserializer, #visitor_expr)
+        },
     }
 }
 
