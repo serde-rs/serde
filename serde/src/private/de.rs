@@ -1287,8 +1287,9 @@ mod content {
                 //     }
                 //
                 // We want {"topic":"Info"} to deserialize even though
-                // ordinarily unit structs do not deserialize from empty map.
+                // ordinarily unit structs do not deserialize from empty map/seq.
                 Content::Map(ref v) if v.is_empty() => visitor.visit_unit(),
+                Content::Seq(ref v) if v.is_empty() => visitor.visit_unit(),
                 _ => self.deserialize_any(visitor),
             }
         }
