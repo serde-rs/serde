@@ -994,6 +994,28 @@ fn test_internally_tagged_struct_variant_containing_unit_variant() {
             Token::StructEnd,
         ],
     );
+
+    assert_de_tokens(
+        &Message::Log { level: Level::Info },
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("action"),
+            Token::Str("Log"),
+            Token::Str("level"),
+            Token::BorrowedStr("Info"),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &Message::Log { level: Level::Info },
+        &[
+            Token::Seq { len: Some(2) },
+            Token::Str("Log"),
+            Token::BorrowedStr("Info"),
+            Token::SeqEnd,
+        ],
+    );
 }
 
 #[test]
