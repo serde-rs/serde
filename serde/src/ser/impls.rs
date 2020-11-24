@@ -824,7 +824,6 @@ impl Serialize for OsString {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(feature = "std")]
 impl<T> Serialize for Wrapping<T>
 where
     T: Serialize,

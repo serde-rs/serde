@@ -2570,7 +2570,6 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(feature = "std")]
 impl<'de, T> Deserialize<'de> for Wrapping<T>
 where
     T: Deserialize<'de>,
