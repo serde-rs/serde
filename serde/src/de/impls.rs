@@ -1871,7 +1871,7 @@ impl<'de> Deserialize<'de> for Duration {
         enum Field {
             Secs,
             Nanos,
-        };
+        }
 
         impl<'de> Deserialize<'de> for Field {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -1996,7 +1996,7 @@ impl<'de> Deserialize<'de> for SystemTime {
         enum Field {
             Secs,
             Nanos,
-        };
+        }
 
         impl<'de> Deserialize<'de> for Field {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
