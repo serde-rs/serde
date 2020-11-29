@@ -90,6 +90,19 @@ impl RenameRule {
             ScreamingKebabCase => ScreamingSnakeCase.apply_to_field(field).replace('_', "-"),
         }
     }
+
+    pub(crate) const fn list() -> &'static [&'static str; 8] {
+        return &[
+            "lowercase",
+            "UPPERCASE",
+            "PascalCase",
+            "camelCase",
+            "snake_case",
+            "SCREAMING_SNAKE_CASE",
+            "kebab-case",
+            "SCREAMING-KEBAB-CASE",
+        ];
+    }
 }
 
 impl FromStr for RenameRule {
@@ -170,5 +183,14 @@ fn rename_fields() {
         assert_eq!(ScreamingSnakeCase.apply_to_field(original), screaming);
         assert_eq!(KebabCase.apply_to_field(original), kebab);
         assert_eq!(ScreamingKebabCase.apply_to_field(original), screaming_kebab);
+    }
+}
+
+#[test]
+fn variant_list_is_correct() {
+    for variant in RenameRule::list() {
+        if let Err(_) = RenameRule::from_str(variant) {
+            panic!("{} is not a valid RenameRule", variant);
+        }
     }
 }

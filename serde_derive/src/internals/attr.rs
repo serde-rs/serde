@@ -340,8 +340,9 @@ impl Container {
                             Err(()) => cx.error_spanned_by(
                                 s,
                                 format!(
-                                    "unknown rename rule for #[serde(rename_all = {:?})]",
+                                    "unknown rename rule for #[serde(rename_all = {:?})] a list of possible options {:?}",
                                     s.value(),
+                                    RenameRule::list(),
                                 ),
                             ),
                         }
@@ -357,8 +358,9 @@ impl Container {
                                 Err(()) => cx.error_spanned_by(
                                     ser,
                                     format!(
-                                        "unknown rename rule for #[serde(rename_all = {:?})]",
+                                        "unknown rename rule for #[serde(rename_all = {:?})] a list of possible options {:?}",
                                         ser.value(),
+                                        RenameRule::list(),
                                     ),
                                 ),
                             }
@@ -369,8 +371,9 @@ impl Container {
                                 Err(()) => cx.error_spanned_by(
                                     de,
                                     format!(
-                                        "unknown rename rule for #[serde(rename_all = {:?})]",
+                                        "unknown rename rule for #[serde(rename_all = {:?})] a list of possible options {:?}",
                                         de.value(),
+                                        RenameRule::list(),
                                     ),
                                 ),
                             }
@@ -917,8 +920,9 @@ impl Variant {
                             Err(()) => cx.error_spanned_by(
                                 s,
                                 format!(
-                                    "unknown rename rule for #[serde(rename_all = {:?})]",
-                                    s.value()
+                                    "unknown rename rule for #[serde(rename_all = {:?})] a list of possible options {:?}",
+                                    s.value(),
+                                    RenameRule::list(),
                                 ),
                             ),
                         }
@@ -934,8 +938,9 @@ impl Variant {
                                 Err(()) => cx.error_spanned_by(
                                     ser,
                                     format!(
-                                        "unknown rename rule for #[serde(rename_all = {:?})]",
+                                        "unknown rename rule for #[serde(rename_all = {:?})] a list of possible options {:?}",
                                         ser.value(),
+                                        RenameRule::list(),
                                     ),
                                 ),
                             }
@@ -946,8 +951,9 @@ impl Variant {
                                 Err(()) => cx.error_spanned_by(
                                     de,
                                     format!(
-                                        "unknown rename rule for #[serde(rename_all = {:?})]",
+                                        "unknown rename rule for #[serde(rename_all = {:?})] a list of possible options {:?}",
                                         de.value(),
+                                        RenameRule::list(),
                                     ),
                                 ),
                             }
