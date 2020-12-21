@@ -57,6 +57,8 @@
 //!   Lisp language family.
 //! - [D-Bus]'s binary wire format.
 //! - [FlexBuffers], the schemaless cousin of Google's FlatBuffers zero-copy serialization format.
+//! - [DynamoDB Items], the format used by [rusoto_dynamodb] to transfer data to
+//!   and from DynamoDB.
 //!
 //! [JSON]: https://github.com/serde-rs/json
 //! [Bincode]: https://github.com/servo/bincode
@@ -78,6 +80,8 @@
 //! [S-expressions]: https://github.com/rotty/lexpr-rs
 //! [D-Bus]: https://docs.rs/zvariant
 //! [FlexBuffers]: https://github.com/google/flatbuffers/tree/master/rust/flexbuffers
+//! [DynamoDB Items]: https://docs.rs/serde_dynamo
+//! [rusoto_dynamodb]: https://docs.rs/rusoto_dynamodb
 
 ////////////////////////////////////////////////////////////////////////////////
 
