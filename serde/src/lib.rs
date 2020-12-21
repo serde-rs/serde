@@ -9,10 +9,8 @@
 //! these two groups interact with each other, allowing any supported data
 //! structure to be serialized and deserialized using any supported data format.
 //!
-//! See the Serde website [https://serde.rs/] for additional documentation and
+//! See the Serde website <https://serde.rs/> for additional documentation and
 //! usage examples.
-//!
-//! [https://serde.rs/]: https://serde.rs/
 //!
 //! ## Design
 //!
