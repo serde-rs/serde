@@ -12,6 +12,25 @@ pub use self::content::{
     TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
 };
 
+
+
+pub fn next_non_duplicate_value<'de, A, V>(access: &mut A, value: &mut Option<V>, field: &'static str) -> Result<(), A::Error>
+where
+    A: MapAccess<'de>,
+    V: Deserialize<'de>,
+{
+
+    if let Some(_) = value {
+        return Err(
+            A::Error::duplicate_field(
+                field,
+            ),
+        );
+    }
+    *value = Some(try!(access.next_value()));
+    Ok(())
+}
+
 pub fn extract_field<'de, V, E>(value: Option<V>, field: &'static str) -> Result<V, E>
 where
     V: Deserialize<'de>,

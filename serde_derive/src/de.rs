@@ -2456,30 +2456,31 @@ fn deserialize_map(
                     let field_ty = field.ty;
                     let span = field.original.span();
                     let func =
-                        quote_spanned!(span=> _serde::de::MapAccess::next_value::<#field_ty>);
+                        quote_spanned!(span=> _serde::private::de::next_non_duplicate_value::<_, #field_ty>);
                     quote! {
-                        try!(#func(&mut __map))
+                        try!(#func(&mut __map, &mut #name, #deser_name))
                     }
                 }
                 Some(path) => {
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
                     quote!({
+                        if let _serde::export::Some(_) = #name {
+                            return _serde::export::Err(<__A::Error as _serde::de::Error>::duplicate_field(#deser_name));
+                        }
+
                         #wrapper
-                        match _serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map) {
+                        #name = _serde::export::Some(match _serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map) {
                             _serde::export::Ok(__wrapper) => __wrapper.value,
                             _serde::export::Err(__err) => {
                                 return _serde::export::Err(__err);
                             }
-                        }
+                        })
                     })
                 }
             };
             quote! {
                 __Field::#name => {
-                    if let _serde::export::Some(_) = #name {
-                        return _serde::export::Err(<__A::Error as _serde::de::Error>::duplicate_field(#deser_name));
-                    }
-                    #name = _serde::export::Some(#visit);
+                    #visit;
                 }
             }
         });
