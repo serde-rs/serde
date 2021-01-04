@@ -26,7 +26,7 @@ where
     V: Deserialize<'de>,
 {
 
-    if let None = value {
+    if let None = *value {
         *value = Some(try!(access.next_value()));
         Ok(())
     } else {
