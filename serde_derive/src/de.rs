@@ -2501,7 +2501,7 @@ fn deserialize_map(
         None
     } else {
         Some(quote! {
-            _ => { let _ = try!(_serde::de::MapAccess::next_value::<_serde::de::IgnoredAny>(&mut __map)); _serde::export::Ok(()) }
+            _ => _serde::private::de::ignore_next_value(&mut __map),
         })
     };
 
