@@ -1,4 +1,8 @@
-#![allow(clippy::cast_lossless, clippy::trivially_copy_pass_by_ref)]
+#![allow(
+    clippy::cast_lossless,
+    clippy::from_over_into,
+    clippy::trivially_copy_pass_by_ref
+)]
 
 use serde::de::{self, MapAccess, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
