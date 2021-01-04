@@ -2458,7 +2458,7 @@ fn deserialize_map(
                     let func =
                         quote_spanned!(span=> _serde::private::de::next_non_duplicate_value::<_, #field_ty>);
                     quote! {
-                        try!(#func(&mut __map, &mut #name, #deser_name))
+                        #func(&mut __map, &mut #name, #deser_name)
                     }
                 }
                 Some(path) => {
@@ -2474,13 +2474,14 @@ fn deserialize_map(
                             _serde::export::Err(__err) => {
                                 return _serde::export::Err(__err);
                             }
-                        })
+                        });
+                        _serde::export::Ok(())
                     })
                 }
             };
             quote! {
                 __Field::#name => {
-                    #visit;
+                    #visit
                 }
             }
         });
@@ -2491,14 +2492,16 @@ fn deserialize_map(
             __Field::__other(__name) => {
                 __collect.push(_serde::export::Some((
                     __name,
-                    try!(_serde::de::MapAccess::next_value(&mut __map)))));
+                    try!(_serde::de::MapAccess::next_value(&mut __map)),
+                )));
+                _serde::export::Ok(())
             }
         })
     } else if cattrs.deny_unknown_fields() {
         None
     } else {
         Some(quote! {
-            _ => { let _ = try!(_serde::de::MapAccess::next_value::<_serde::de::IgnoredAny>(&mut __map)); }
+            _ => { let _ = try!(_serde::de::MapAccess::next_value::<_serde::de::IgnoredAny>(&mut __map)); _serde::export::Ok(()) }
         })
     };
 
@@ -2514,10 +2517,10 @@ fn deserialize_map(
     } else {
         quote! {
             while let _serde::export::Some(__key) = try!(_serde::de::MapAccess::next_key::<__Field>(&mut __map)) {
-                match __key {
+                try!(match __key {
                     #(#value_arms)*
                     #ignored_arm
-                }
+                })
             }
         }
     };
