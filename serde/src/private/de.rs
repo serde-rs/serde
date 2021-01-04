@@ -1,9 +1,9 @@
 use lib::*;
 
-use de::{Deserialize, DeserializeSeed, Deserializer, Error, IntoDeserializer, Visitor};
+use de::{Deserialize, MapAccess, DeserializeSeed, Deserializer, Error, IntoDeserializer, Visitor};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use de::{MapAccess, Unexpected};
+use de::{Unexpected};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{
@@ -11,6 +11,43 @@ pub use self::content::{
     InternallyTaggedUnitVisitor, TagContentOtherField, TagContentOtherFieldVisitor,
     TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
 };
+
+pub fn ignore_next_value<'de, A>(access: &mut A) -> Result<(), A::Error>
+where
+    A: MapAccess<'de>,
+{
+    try!(access.next_value::<::de::IgnoredAny>());
+    Ok(())
+}
+
+pub fn next_non_duplicate_value<'de, A, V>(access: &mut A, value: &mut Option<V>, field: &'static str) -> Result<(), A::Error>
+where
+    A: MapAccess<'de>,
+    V: Deserialize<'de>,
+{
+
+    if let None = *value {
+        *value = Some(try!(access.next_value()));
+        Ok(())
+    } else {
+        Err(
+            A::Error::duplicate_field(
+                field,
+            ),
+        )
+    }
+}
+
+pub fn extract_field<'de, V, E>(value: Option<V>, field: &'static str) -> Result<V, E>
+where
+    V: Deserialize<'de>,
+    E: Error,
+{
+    match value {
+        Some(value) => Ok(value),
+        None => missing_field(field),
+    }
+}
 
 /// If the missing field is of type `Option<T>` then treat is as `None`,
 /// otherwise it is an error.
@@ -49,7 +86,7 @@ where
     }
 
     let deserializer = MissingFieldDeserializer(field, PhantomData);
-    Deserialize::deserialize(deserializer)
+    V::deserialize(deserializer)
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
