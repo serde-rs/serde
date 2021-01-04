@@ -12,6 +12,17 @@ pub use self::content::{
     TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
 };
 
+pub fn extract_field<'de, V, E>(value: Option<V>, field: &'static str) -> Result<V, E>
+where
+    V: Deserialize<'de>,
+    E: Error,
+{
+    match value {
+        Some(value) => Ok(value),
+        None => missing_field(field),
+    }
+}
+
 /// If the missing field is of type `Option<T>` then treat is as `None`,
 /// otherwise it is an error.
 pub fn missing_field<'de, V, E>(field: &'static str) -> Result<V, E>

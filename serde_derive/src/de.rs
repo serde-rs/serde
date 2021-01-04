@@ -2524,16 +2524,27 @@ fn deserialize_map(
     let extract_values = fields_names
         .iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
-        .map(|(field, name)| {
-            let missing_expr = Match(expr_is_missing(field, cattrs));
-
-            quote! {
-                let #name = match #name {
-                    _serde::export::Some(#name) => #name,
-                    _serde::export::None => #missing_expr
-                };
-            }
-        });
+        .map(
+            |(field, name)| match inspect_expr_is_missing(field, cattrs) {
+                ExprIsMissing::Fragment(fragment) => {
+                    let missing_expr = Match(fragment);
+                    quote! {
+                        let #name = match #name {
+                            _serde::export::Some(#name) => #name,
+                            _serde::export::None => #missing_expr
+                        };
+                    }
+                }
+                ExprIsMissing::Default => {
+                    let name_str = field.attrs.name().deserialize_name();
+                    let span = field.original.span();
+                    let func = quote_spanned!(span=> _serde::private::de::extract_field);
+                    quote! {
+                        let #name = try!(#func(#name, #name_str));
+                    }
+                }
+            },
+        );
 
     let extract_collected = fields_names
         .iter()
@@ -2907,14 +2918,33 @@ fn wrap_deserialize_variant_with(
 }
 
 fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
+    match inspect_expr_is_missing(field, cattrs) {
+        ExprIsMissing::Fragment(fragment) => fragment,
+        ExprIsMissing::Default => {
+            let name = field.attrs.name().deserialize_name();
+            let span = field.original.span();
+            let func = quote_spanned!(span=> _serde::private::de::missing_field);
+            quote_expr! {
+                try!(#func(#name))
+            }
+        }
+    }
+}
+
+enum ExprIsMissing {
+    Fragment(Fragment),
+    Default,
+}
+
+fn inspect_expr_is_missing(field: &Field, cattrs: &attr::Container) -> ExprIsMissing {
     match field.attrs.default() {
         attr::Default::Default => {
             let span = field.original.span();
             let func = quote_spanned!(span=> _serde::export::Default::default);
-            return quote_expr!(#func());
+            return ExprIsMissing::Fragment(quote_expr!(#func()));
         }
         attr::Default::Path(path) => {
-            return quote_expr!(#path());
+            return ExprIsMissing::Fragment(quote_expr!(#path()));
         }
         attr::Default::None => { /* below */ }
     }
@@ -2922,24 +2952,18 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
     match *cattrs.default() {
         attr::Default::Default | attr::Default::Path(_) => {
             let member = &field.member;
-            return quote_expr!(__default.#member);
+            return ExprIsMissing::Fragment(quote_expr!(__default.#member));
         }
         attr::Default::None => { /* below */ }
     }
 
-    let name = field.attrs.name().deserialize_name();
     match field.attrs.deserialize_with() {
-        None => {
-            let span = field.original.span();
-            let func = quote_spanned!(span=> _serde::private::de::missing_field);
-            quote_expr! {
-                try!(#func(#name))
-            }
-        }
+        None => ExprIsMissing::Default,
         Some(_) => {
-            quote_expr! {
+            let name = field.attrs.name().deserialize_name();
+            ExprIsMissing::Fragment(quote_expr! {
                 return _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#name))
-            }
+            })
         }
     }
 }
