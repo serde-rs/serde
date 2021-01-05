@@ -2637,3 +2637,67 @@ fn test_flatten_any_after_flatten_struct() {
         ],
     );
 }
+
+#[test]
+fn test_flatten_on_tuple_struct() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct FirstTwo(i32, i32);
+
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct Outer(
+        #[serde(flatten)]
+        FirstTwo,
+        #[serde(flatten)]
+        Vec<i32>,
+    );
+
+    let s = Outer(
+        FirstTwo(1, 2),
+        vec![3, 4, 5],
+    );
+
+    assert_de_tokens(
+        &s,
+        &[
+            Token::Seq { len: Some(5) },
+            Token::I32(1),
+            Token::I32(2),
+            Token::I32(3),
+            Token::I32(4),
+            Token::I32(5),
+            Token::SeqEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_flatten_on_named_struct_deserialized_from_seq() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct FirstTwo(i32, i32);
+
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct Outer {
+        #[serde(flatten)]
+        first_two: FirstTwo,
+        #[serde(flatten)]
+        rest: Vec<i32>,
+    }
+
+    let s = Outer {
+        first_two: FirstTwo(1, 2),
+        rest: vec![3, 4, 5],
+    };
+
+    assert_de_tokens(
+        &s,
+        &[
+            Token::Seq { len: Some(5) },
+            Token::I32(1),
+            Token::I32(2),
+            Token::I32(3),
+            Token::I32(4),
+            Token::I32(5),
+            Token::SeqEnd,
+        ],
+    );
+}
