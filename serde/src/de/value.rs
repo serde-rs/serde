@@ -24,8 +24,8 @@
 use lib::*;
 
 use self::private::{First, Second};
+use __private::de::size_hint;
 use de::{self, Expected, IntoDeserializer, SeqAccess};
-use private::de::size_hint;
 use ser;
 
 ////////////////////////////////////////////////////////////////////////////////

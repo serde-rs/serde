@@ -273,6 +273,7 @@ pub mod __private;
 
 #[allow(unused_imports)]
 use self::__private as export;
+#[allow(unused_imports)]
 use self::__private as private;
 
 #[cfg(not(feature = "std"))]
