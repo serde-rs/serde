@@ -762,7 +762,7 @@ const _: () = {
                                         match __key {
                                             __Field::__field0 => {
                                                 if _serde::export::Option::is_some(&__field0) {
-                                                    return _serde :: export :: Err ( < __A :: Error as _serde :: de :: Error > :: duplicate_field ( "a" ) ) ;
+                                                    return _serde :: export :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("a")) ;
                                                 }
                                                 __field0 = _serde::export::Some(
                                                     match _serde::de::MapAccess::next_value::<i8>(
@@ -777,7 +777,7 @@ const _: () = {
                                             }
                                             __Field::__field1 => {
                                                 if _serde::export::Option::is_some(&__field1) {
-                                                    return _serde :: export :: Err ( < __A :: Error as _serde :: de :: Error > :: duplicate_field ( "b" ) ) ;
+                                                    return _serde :: export :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("b")) ;
                                                 }
                                                 __field1 = _serde::export::Some(
                                                     match _serde::de::MapAccess::next_value::<B>(
@@ -792,7 +792,7 @@ const _: () = {
                                             }
                                             __Field::__field2 => {
                                                 if _serde::export::Option::is_some(&__field2) {
-                                                    return _serde :: export :: Err ( < __A :: Error as _serde :: de :: Error > :: duplicate_field ( "c" ) ) ;
+                                                    return _serde :: export :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("c")) ;
                                                 }
                                                 __field2 = _serde::export::Some(
                                                     match _serde::de::MapAccess::next_value::<C>(
@@ -807,7 +807,7 @@ const _: () = {
                                             }
                                             __Field::__field3 => {
                                                 if _serde::export::Option::is_some(&__field3) {
-                                                    return _serde :: export :: Err ( < __A :: Error as _serde :: de :: Error > :: duplicate_field ( "d" ) ) ;
+                                                    return _serde :: export :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("d")) ;
                                                 }
                                                 __field3 = _serde::export::Some(
                                                     match _serde::de::MapAccess::next_value::<D>(
@@ -1265,7 +1265,7 @@ const _: () = {
                                         match __key {
                                             __Field::__field0 => {
                                                 if _serde::export::Option::is_some(&__field0) {
-                                                    return _serde :: export :: Err ( < __A :: Error as _serde :: de :: Error > :: duplicate_field ( "a" ) ) ;
+                                                    return _serde :: export :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("a")) ;
                                                 }
                                                 __field0 = _serde::export::Some(
                                                     match _serde::de::MapAccess::next_value::<i8>(
@@ -1280,7 +1280,7 @@ const _: () = {
                                             }
                                             __Field::__field1 => {
                                                 if _serde::export::Option::is_some(&__field1) {
-                                                    return _serde :: export :: Err ( < __A :: Error as _serde :: de :: Error > :: duplicate_field ( "b" ) ) ;
+                                                    return _serde :: export :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("b")) ;
                                                 }
                                                 __field1 = _serde::export::Some(
                                                     match _serde::de::MapAccess::next_value::<B>(
@@ -1295,7 +1295,7 @@ const _: () = {
                                             }
                                             __Field::__field2 => {
                                                 if _serde::export::Option::is_some(&__field2) {
-                                                    return _serde :: export :: Err ( < __A :: Error as _serde :: de :: Error > :: duplicate_field ( "c" ) ) ;
+                                                    return _serde :: export :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("c")) ;
                                                 }
                                                 __field2 = _serde::export::Some(
                                                     match _serde::de::MapAccess::next_value::<C>(
@@ -1310,7 +1310,7 @@ const _: () = {
                                             }
                                             __Field::__field3 => {
                                                 if _serde::export::Option::is_some(&__field3) {
-                                                    return _serde :: export :: Err ( < __A :: Error as _serde :: de :: Error > :: duplicate_field ( "d" ) ) ;
+                                                    return _serde :: export :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("d")) ;
                                                 }
                                                 __field3 = _serde::export::Some(
                                                     match _serde::de::MapAccess::next_value::<D>(

@@ -315,7 +315,7 @@ const _: () = {
                                     } {
                                         _serde::export::Some(__value) => __value,
                                         _serde::export::None => {
-                                            return _serde :: export :: Err ( _serde :: de :: Error :: invalid_length ( 0usize , & "struct variant Lifetimes::LifetimeMap with 1 element" ) ) ;
+                                            return _serde :: export :: Err (_serde :: de :: Error :: invalid_length (0usize , & "struct variant Lifetimes::LifetimeMap with 1 element")) ;
                                         }
                                     };
                                     _serde::export::Ok(Lifetimes::LifetimeMap { a: __field0 })
@@ -342,7 +342,7 @@ const _: () = {
                                         match __key {
                                             __Field::__field0 => {
                                                 if _serde::export::Option::is_some(&__field0) {
-                                                    return _serde :: export :: Err ( < __A :: Error as _serde :: de :: Error > :: duplicate_field ( "a" ) ) ;
+                                                    return _serde :: export :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("a")) ;
                                                 }
                                                 __field0 = _serde::export::Some(
                                                     match _serde::de::MapAccess::next_value::<&'a i32>(
@@ -500,7 +500,7 @@ const _: () = {
                                     } {
                                         _serde::export::Some(__value) => __value,
                                         _serde::export::None => {
-                                            return _serde :: export :: Err ( _serde :: de :: Error :: invalid_length ( 0usize , & "struct variant Lifetimes::NoLifetimeMap with 1 element" ) ) ;
+                                            return _serde :: export :: Err (_serde :: de :: Error :: invalid_length (0usize , & "struct variant Lifetimes::NoLifetimeMap with 1 element")) ;
                                         }
                                     };
                                     _serde::export::Ok(Lifetimes::NoLifetimeMap { a: __field0 })
@@ -527,7 +527,7 @@ const _: () = {
                                         match __key {
                                             __Field::__field0 => {
                                                 if _serde::export::Option::is_some(&__field0) {
-                                                    return _serde :: export :: Err ( < __A :: Error as _serde :: de :: Error > :: duplicate_field ( "a" ) ) ;
+                                                    return _serde :: export :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("a")) ;
                                                 }
                                                 __field0 = _serde::export::Some(
                                                     match _serde::de::MapAccess::next_value::<i32>(

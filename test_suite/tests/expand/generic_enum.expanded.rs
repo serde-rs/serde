@@ -288,7 +288,7 @@ const _: () = {
                                     } {
                                         _serde::export::Some(__value) => __value,
                                         _serde::export::None => {
-                                            return _serde :: export :: Err ( _serde :: de :: Error :: invalid_length ( 0usize , & "tuple variant GenericEnum::Seq with 2 elements" ) ) ;
+                                            return _serde :: export :: Err (_serde :: de :: Error :: invalid_length (0usize , & "tuple variant GenericEnum::Seq with 2 elements")) ;
                                         }
                                     };
                                     let __field1 = match match _serde::de::SeqAccess::next_element::<
@@ -303,7 +303,7 @@ const _: () = {
                                     } {
                                         _serde::export::Some(__value) => __value,
                                         _serde::export::None => {
-                                            return _serde :: export :: Err ( _serde :: de :: Error :: invalid_length ( 1usize , & "tuple variant GenericEnum::Seq with 2 elements" ) ) ;
+                                            return _serde :: export :: Err (_serde :: de :: Error :: invalid_length (1usize , & "tuple variant GenericEnum::Seq with 2 elements")) ;
                                         }
                                     };
                                     _serde::export::Ok(GenericEnum::Seq(__field0, __field1))
@@ -437,7 +437,7 @@ const _: () = {
                                     } {
                                         _serde::export::Some(__value) => __value,
                                         _serde::export::None => {
-                                            return _serde :: export :: Err ( _serde :: de :: Error :: invalid_length ( 0usize , & "struct variant GenericEnum::Map with 2 elements" ) ) ;
+                                            return _serde :: export :: Err (_serde :: de :: Error :: invalid_length (0usize , & "struct variant GenericEnum::Map with 2 elements")) ;
                                         }
                                     };
                                     let __field1 = match match _serde::de::SeqAccess::next_element::<
@@ -452,7 +452,7 @@ const _: () = {
                                     } {
                                         _serde::export::Some(__value) => __value,
                                         _serde::export::None => {
-                                            return _serde :: export :: Err ( _serde :: de :: Error :: invalid_length ( 1usize , & "struct variant GenericEnum::Map with 2 elements" ) ) ;
+                                            return _serde :: export :: Err (_serde :: de :: Error :: invalid_length (1usize , & "struct variant GenericEnum::Map with 2 elements")) ;
                                         }
                                     };
                                     _serde::export::Ok(GenericEnum::Map {
@@ -484,7 +484,7 @@ const _: () = {
                                         match __key {
                                             __Field::__field0 => {
                                                 if _serde::export::Option::is_some(&__field0) {
-                                                    return _serde :: export :: Err ( < __A :: Error as _serde :: de :: Error > :: duplicate_field ( "x" ) ) ;
+                                                    return _serde :: export :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("x")) ;
                                                 }
                                                 __field0 = _serde::export::Some(
                                                     match _serde::de::MapAccess::next_value::<T>(
@@ -499,7 +499,7 @@ const _: () = {
                                             }
                                             __Field::__field1 => {
                                                 if _serde::export::Option::is_some(&__field1) {
-                                                    return _serde :: export :: Err ( < __A :: Error as _serde :: de :: Error > :: duplicate_field ( "y" ) ) ;
+                                                    return _serde :: export :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("y")) ;
                                                 }
                                                 __field1 = _serde::export::Some(
                                                     match _serde::de::MapAccess::next_value::<U>(
