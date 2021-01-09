@@ -1906,7 +1906,7 @@ impl<'de> Deserialize<'de> for Duration {
                             b"secs" => Ok(Field::Secs),
                             b"nanos" => Ok(Field::Nanos),
                             _ => {
-                                let value = ::export::from_utf8_lossy(value);
+                                let value = ::__private::from_utf8_lossy(value);
                                 Err(Error::unknown_field(&value, FIELDS))
                             }
                         }
@@ -2214,7 +2214,7 @@ mod range {
                         b"start" => Ok(Field::Start),
                         b"end" => Ok(Field::End),
                         _ => {
-                            let value = ::export::from_utf8_lossy(value);
+                            let value = ::__private::from_utf8_lossy(value);
                             Err(Error::unknown_field(&value, FIELDS))
                         }
                     }

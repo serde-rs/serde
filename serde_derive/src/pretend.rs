@@ -74,9 +74,9 @@ fn pretend_fields_used(cont: &Container) -> TokenStream {
     };
 
     quote! {
-        match _serde::export::None::<#type_ident #ty_generics> {
+        match _serde::__private::None::<#type_ident #ty_generics> {
             #(
-                _serde::export::Some(#patterns) => {}
+                _serde::__private::Some(#patterns) => {}
             )*
             _ => {}
         }
@@ -120,8 +120,8 @@ fn pretend_variants_used(cont: &Container) -> TokenStream {
         };
 
         quote! {
-            match _serde::export::None {
-                _serde::export::Some((#(#placeholders,)*)) => {
+            match _serde::__private::None {
+                _serde::__private::Some((#(#placeholders,)*)) => {
                     let _ = #type_ident::#variant_ident #turbofish #pat;
                 }
                 _ => {}

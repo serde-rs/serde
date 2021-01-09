@@ -17,7 +17,7 @@ use ser::{
 ///
 /// ```edition2018
 /// # use serde::ser::{Serializer, Impossible};
-/// # use serde::private::ser::Error;
+/// # use serde::__private::ser::Error;
 /// #
 /// # struct MySerializer;
 /// #

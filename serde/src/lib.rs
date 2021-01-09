@@ -266,13 +266,14 @@ pub use de::{Deserialize, Deserializer};
 #[doc(inline)]
 pub use ser::{Serialize, Serializer};
 
-// Generated code uses these to support no_std. Not public API.
+// Used by generated code and doc tests. Not public API.
 #[doc(hidden)]
-pub mod export;
+#[path = "private/mod.rs"]
+pub mod __private;
 
-// Helpers used by generated code and doc tests. Not public API.
-#[doc(hidden)]
-pub mod private;
+#[allow(unused_imports)]
+use self::__private as export;
+use self::__private as private;
 
 #[cfg(not(feature = "std"))]
 mod std_error;
