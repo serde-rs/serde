@@ -1260,7 +1260,7 @@ macro_rules! parse_ip_impl {
                 D: Deserializer<'de>,
             {
                 if deserializer.is_human_readable() {
-                    deserializer.deserialize_str(FromStrVisitor::<$ty>::new($expecting))
+                    deserializer.deserialize_str(FromStrVisitor::new($expecting))
                 } else {
                     <[u8; $size]>::deserialize(deserializer).map(<$ty>::from)
                 }
@@ -1415,7 +1415,7 @@ macro_rules! parse_socket_impl {
                 D: Deserializer<'de>,
             {
                 if deserializer.is_human_readable() {
-                    deserializer.deserialize_str(FromStrVisitor::<$ty>::new($expecting))
+                    deserializer.deserialize_str(FromStrVisitor::new($expecting))
                 } else {
                     <(_, u16)>::deserialize(deserializer).map(|(ip, port)| $new(ip, port))
                 }
@@ -1431,7 +1431,6 @@ impl<'de> Deserialize<'de> for net::SocketAddr {
         D: Deserializer<'de>,
     {
         if deserializer.is_human_readable() {
-
             deserializer.deserialize_str(FromStrVisitor::new("socket address"))
         } else {
             use lib::net::SocketAddr;
@@ -2537,14 +2536,19 @@ atomic_impl! {
     AtomicI64 AtomicU64
 }
 
-
 #[cfg(feature = "std")]
-struct FromStrVisitor<T>(&'static str, PhantomData<T>);
+struct FromStrVisitor<T> {
+    expecting: &'static str,
+    ty: PhantomData<T>,
+}
 
 #[cfg(feature = "std")]
 impl<T> FromStrVisitor<T> {
-    fn new(msg: &'static str) -> Self {
-        FromStrVisitor(msg, PhantomData)
+    fn new(expecting: &'static str) -> Self {
+        FromStrVisitor {
+            expecting: expecting,
+            ty: PhantomData,
+        }
     }
 }
 
@@ -2557,7 +2561,7 @@ where
     type Value = T;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str(self.0)
+        formatter.write_str(self.expecting)
     }
 
     fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
