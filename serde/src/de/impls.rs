@@ -192,7 +192,7 @@ macro_rules! impl_deserialize_num {
         visit_integer_method!(i32, visit_i32, from_i32, Signed, i64);
         visit_integer_method!(i64, visit_i64, from_i64, Signed, i64);
 
-        visit_integer_method!(u8, visit_u8, from_u8, Unsigned, u64) ;
+        visit_integer_method!(u8, visit_u8, from_u8, Unsigned, u64);
         visit_integer_method!(u16, visit_u16, from_u16, Unsigned, u64);
         visit_integer_method!(u32, visit_u32, from_u32, Unsigned, u64);
         visit_integer_method!(u64, visit_u64, from_u64, Unsigned, u64);
