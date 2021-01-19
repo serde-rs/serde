@@ -6,6 +6,7 @@ pub use self::ctxt::Ctxt;
 
 mod case;
 mod check;
+mod extended_meta;
 mod symbol;
 
 use syn::Type;
