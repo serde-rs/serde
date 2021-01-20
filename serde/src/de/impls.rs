@@ -1849,6 +1849,17 @@ impl<'de> Deserialize<'de> for Duration {
             }
         }
 
+        fn check_overflow<E>(secs: u64, nanos: u32) -> Result<(), E>
+        where
+            E: Error,
+        {
+            static NANOS_PER_SEC: u32 = 1_000_000_000;
+            match secs.checked_add((nanos / NANOS_PER_SEC) as u64) {
+                Some(_) => Ok(()),
+                None => Err(E::custom("overflow deserializing Duration")),
+            }
+        }
+
         struct DurationVisitor;
 
         impl<'de> Visitor<'de> for DurationVisitor {
@@ -1874,6 +1885,7 @@ impl<'de> Deserialize<'de> for Duration {
                         return Err(Error::invalid_length(1, &self));
                     }
                 };
+                try!(check_overflow(secs, nanos));
                 Ok(Duration::new(secs, nanos))
             }
 
@@ -1907,6 +1919,7 @@ impl<'de> Deserialize<'de> for Duration {
                     Some(nanos) => nanos,
                     None => return Err(<A::Error as Error>::missing_field("nanos")),
                 };
+                try!(check_overflow(secs, nanos));
                 Ok(Duration::new(secs, nanos))
             }
         }
