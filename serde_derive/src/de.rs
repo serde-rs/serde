@@ -2540,6 +2540,16 @@ fn deserialize_map(
             }
         });
 
+    let flat_map_deserializer = if cattrs.case_insensitive() {
+        quote! {
+            _serde::__private::de::CaseInsensitiveFlatMapDeserializer
+        }
+    } else {
+        quote! {
+            _serde::__private::de::FlatMapDeserializer
+        }
+    };
+
     let extract_collected = fields_names
         .iter()
         .filter(|&&(field, _)| field.attrs.flatten() && !field.attrs.skip_deserializing())
@@ -2554,7 +2564,7 @@ fn deserialize_map(
             };
             quote! {
                 let #name: #field_ty = try!(#func(
-                    _serde::__private::de::FlatMapDeserializer(
+                    #flat_map_deserializer(
                         &mut __collect,
                         _serde::__private::PhantomData)));
             }

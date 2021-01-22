@@ -2053,3 +2053,166 @@ fn test_case_insensitive_bytes() {
         ],
     );
 }
+
+#[test]
+fn test_case_insensitive_flatten() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(case_insensitive)]
+    struct FullyInsensitive {
+        case_insensitive: bool,
+        #[serde(flatten)]
+        flat: InsensitiveFlattened,
+    }
+
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(case_insensitive)]
+    struct InsensitiveFlattened {
+        flat_case_insensitive: bool,
+        also_case_insensitive: bool,
+    }
+
+    assert_de_tokens(
+        &FullyInsensitive {
+            case_insensitive: true,
+            flat: InsensitiveFlattened {
+                flat_case_insensitive: true,
+                also_case_insensitive: true,
+            },
+        },
+        &[
+            Token::Struct { name: "S", len: 3 },
+            Token::Str("Case_InSensitive"),
+            Token::Bool(true),
+            Token::Str("fLaT_cAsE_iNsEnSiTiVe"),
+            Token::Bool(true),
+            Token::Str("also_CASE_insensitive"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+
+    #[derive(Debug, PartialEq, Deserialize)]
+    struct Sensitive {
+        case_insensitive: bool,
+        #[serde(flatten)]
+        flat: InsensitiveFlattened,
+    }
+
+    assert_de_tokens(
+        &Sensitive {
+            case_insensitive: false,
+            flat: InsensitiveFlattened {
+                flat_case_insensitive: false,
+                also_case_insensitive: false,
+            },
+        },
+        &[
+            Token::Struct {
+                name: "Sensitive",
+                len: 3,
+            },
+            Token::Str("case_insensitive"),
+            Token::Bool(false),
+            Token::Str("flat_case_insensitive"),
+            Token::Bool(false),
+            Token::Str("also_case_insensitive"),
+            Token::Bool(false),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens_error::<Sensitive>(
+        &[
+            Token::Struct {
+                name: "Sensitive",
+                len: 3,
+            },
+            Token::Str("case_insensitive"),
+            Token::Bool(false),
+            Token::Str("fLaT_cAsE_iNsEnSiTiVe"),
+            Token::Bool(true),
+            Token::Str("also_CASE_insensitive"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+        "missing field `flat_case_insensitive`",
+    );
+
+    #[derive(Debug, PartialEq, Deserialize)]
+    struct SensitiveFlattened {
+        flat_case_insensitive: bool,
+        also_case_insensitive: bool,
+    }
+
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(case_insensitive)]
+    struct Insensitive {
+        case_insensitive: bool,
+        #[serde(flatten)]
+        flat: SensitiveFlattened,
+    }
+
+    assert_de_tokens(
+        &Insensitive {
+            case_insensitive: true,
+            flat: SensitiveFlattened {
+                flat_case_insensitive: false,
+                also_case_insensitive: false,
+            },
+        },
+        &[
+            Token::Struct {
+                name: "Insensitive",
+                len: 3,
+            },
+            Token::Str("CaSe_InSensitive"),
+            Token::Bool(true),
+            Token::Str("flat_case_insensitive"),
+            Token::Bool(false),
+            Token::Str("also_case_insensitive"),
+            Token::Bool(false),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens_error::<Insensitive>(
+        &[
+            Token::Struct {
+                name: "Insensitive",
+                len: 3,
+            },
+            Token::Str("CaSe_InSensitive"),
+            Token::Bool(true),
+            Token::Str("fLaT_cAsE_iNsEnSiTiVe"),
+            Token::Bool(true),
+            Token::Str("also_CASE_insensitive"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+        "missing field `flat_case_insensitive`",
+    );
+
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(case_insensitive)]
+    struct InsensitiveWithFlatMap {
+        case_insensitive: bool,
+        #[serde(flatten)]
+        flat: BTreeMap<String, String>,
+    }
+
+    assert_de_tokens(
+        &InsensitiveWithFlatMap {
+            case_insensitive: true,
+            flat: BTreeMap::new(),
+        },
+        &[
+            Token::Struct {
+                name: "Insensitive",
+                len: 3,
+            },
+            Token::Str("CaSe_InSensitive"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+}
