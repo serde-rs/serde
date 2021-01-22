@@ -1405,7 +1405,7 @@ impl Field {
                 };
                 let span = Span::call_site();
                 path.segments.push(Ident::new("_serde", span).into());
-                path.segments.push(Ident::new("private", span).into());
+                path.segments.push(Ident::new("__private", span).into());
                 path.segments.push(Ident::new("de", span).into());
                 path.segments
                     .push(Ident::new("borrow_cow_str", span).into());
@@ -1422,7 +1422,7 @@ impl Field {
                 };
                 let span = Span::call_site();
                 path.segments.push(Ident::new("_serde", span).into());
-                path.segments.push(Ident::new("private", span).into());
+                path.segments.push(Ident::new("__private", span).into());
                 path.segments.push(Ident::new("de", span).into());
                 path.segments
                     .push(Ident::new("borrow_cow_bytes", span).into());

@@ -9,10 +9,8 @@
 //! these two groups interact with each other, allowing any supported data
 //! structure to be serialized and deserialized using any supported data format.
 //!
-//! See the Serde website [https://serde.rs/] for additional documentation and
+//! See the Serde website <https://serde.rs/> for additional documentation and
 //! usage examples.
-//!
-//! [https://serde.rs/]: https://serde.rs/
 //!
 //! ## Design
 //!
@@ -57,6 +55,8 @@
 //!   Lisp language family.
 //! - [D-Bus]'s binary wire format.
 //! - [FlexBuffers], the schemaless cousin of Google's FlatBuffers zero-copy serialization format.
+//! - [DynamoDB Items], the format used by [rusoto_dynamodb] to transfer data to
+//!   and from DynamoDB.
 //!
 //! [JSON]: https://github.com/serde-rs/json
 //! [Bincode]: https://github.com/servo/bincode
@@ -78,11 +78,13 @@
 //! [S-expressions]: https://github.com/rotty/lexpr-rs
 //! [D-Bus]: https://docs.rs/zvariant
 //! [FlexBuffers]: https://github.com/google/flatbuffers/tree/master/rust/flexbuffers
+//! [DynamoDB Items]: https://docs.rs/serde_dynamo
+//! [rusoto_dynamodb]: https://docs.rs/rusoto_dynamodb
 
 ////////////////////////////////////////////////////////////////////////////////
 
 // Serde types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/serde/1.0.116")]
+#![doc(html_root_url = "https://docs.rs/serde/1.0.120")]
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
 // Unstable functionality only if the user asks for it. For tracking and
@@ -119,6 +121,7 @@
         // correctly used
         enum_glob_use,
         map_err_ignore,
+        result_unit_err,
         wildcard_imports,
         // not practical
         needless_pass_by_value,
@@ -165,6 +168,7 @@ mod lib {
     pub use self::core::default::{self, Default};
     pub use self::core::fmt::{self, Debug, Display};
     pub use self::core::marker::{self, PhantomData};
+    pub use self::core::num::Wrapping;
     pub use self::core::ops::Range;
     pub use self::core::option::{self, Option};
     pub use self::core::result::{self, Result};
@@ -216,8 +220,6 @@ mod lib {
     #[cfg(feature = "std")]
     pub use std::io::Write;
     #[cfg(feature = "std")]
-    pub use std::num::Wrapping;
-    #[cfg(feature = "std")]
     pub use std::path::{Path, PathBuf};
     #[cfg(feature = "std")]
     pub use std::sync::{Mutex, RwLock};
@@ -264,13 +266,15 @@ pub use de::{Deserialize, Deserializer};
 #[doc(inline)]
 pub use ser::{Serialize, Serializer};
 
-// Generated code uses these to support no_std. Not public API.
+// Used by generated code and doc tests. Not public API.
 #[doc(hidden)]
-pub mod export;
+#[path = "private/mod.rs"]
+pub mod __private;
 
-// Helpers used by generated code and doc tests. Not public API.
-#[doc(hidden)]
-pub mod private;
+#[allow(unused_imports)]
+use self::__private as export;
+#[allow(unused_imports)]
+use self::__private as private;
 
 #[cfg(not(feature = "std"))]
 mod std_error;

@@ -7,7 +7,10 @@ const _: () = {
     extern crate serde as _serde;
     #[automatically_derived]
     impl _serde::Serialize for NamedUnit {
-        fn serialize<__S>(&self, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
+        fn serialize<__S>(
+            &self,
+            __serializer: __S,
+        ) -> _serde::__private::Result<__S::Ok, __S::Error>
         where
             __S: _serde::Serializer,
         {
@@ -22,7 +25,7 @@ const _: () = {
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'de> _serde::Deserialize<'de> for NamedUnit {
-        fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<Self, __D::Error>
+        fn deserialize<__D>(__deserializer: __D) -> _serde::__private::Result<Self, __D::Error>
         where
             __D: _serde::Deserializer<'de>,
         {
@@ -31,16 +34,16 @@ const _: () = {
                 type Value = NamedUnit;
                 fn expecting(
                     &self,
-                    __formatter: &mut _serde::export::Formatter,
-                ) -> _serde::export::fmt::Result {
-                    _serde::export::Formatter::write_str(__formatter, "unit struct NamedUnit")
+                    __formatter: &mut _serde::__private::Formatter,
+                ) -> _serde::__private::fmt::Result {
+                    _serde::__private::Formatter::write_str(__formatter, "unit struct NamedUnit")
                 }
                 #[inline]
-                fn visit_unit<__E>(self) -> _serde::export::Result<Self::Value, __E>
+                fn visit_unit<__E>(self) -> _serde::__private::Result<Self::Value, __E>
                 where
                     __E: _serde::de::Error,
                 {
-                    _serde::export::Ok(NamedUnit)
+                    _serde::__private::Ok(NamedUnit)
                 }
             }
             _serde::Deserializer::deserialize_unit_struct(__deserializer, "NamedUnit", __Visitor)

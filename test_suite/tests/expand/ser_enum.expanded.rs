@@ -23,7 +23,10 @@ const _: () = {
         C: _serde::Serialize,
         D: _serde::Serialize,
     {
-        fn serialize<__S>(&self, __serializer: __S) -> _serde::export::Result<__S::Ok, __S::Error>
+        fn serialize<__S>(
+            &self,
+            __serializer: __S,
+        ) -> _serde::__private::Result<__S::Ok, __S::Error>
         where
             __S: _serde::Serializer,
         {
@@ -42,45 +45,45 @@ const _: () = {
                         "Seq",
                         0 + 1 + 1 + 1 + 1,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     match _serde::ser::SerializeTupleVariant::serialize_field(
                         &mut __serde_state,
                         __field0,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     match _serde::ser::SerializeTupleVariant::serialize_field(
                         &mut __serde_state,
                         __field1,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     match _serde::ser::SerializeTupleVariant::serialize_field(
                         &mut __serde_state,
                         __field2,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     match _serde::ser::SerializeTupleVariant::serialize_field(
                         &mut __serde_state,
                         __field3,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     _serde::ser::SerializeTupleVariant::end(__serde_state)
@@ -98,9 +101,9 @@ const _: () = {
                         "Map",
                         0 + 1 + 1 + 1 + 1,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     match _serde::ser::SerializeStructVariant::serialize_field(
@@ -108,9 +111,9 @@ const _: () = {
                         "a",
                         a,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     match _serde::ser::SerializeStructVariant::serialize_field(
@@ -118,9 +121,9 @@ const _: () = {
                         "b",
                         b,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     match _serde::ser::SerializeStructVariant::serialize_field(
@@ -128,9 +131,9 @@ const _: () = {
                         "c",
                         c,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     match _serde::ser::SerializeStructVariant::serialize_field(
@@ -138,9 +141,9 @@ const _: () = {
                         "d",
                         d,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     _serde::ser::SerializeStructVariant::end(__serde_state)
@@ -159,45 +162,45 @@ const _: () = {
                         "_Seq2",
                         0 + 1 + 1 + 1 + 1,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     match _serde::ser::SerializeTupleVariant::serialize_field(
                         &mut __serde_state,
                         __field0,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     match _serde::ser::SerializeTupleVariant::serialize_field(
                         &mut __serde_state,
                         __field1,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     match _serde::ser::SerializeTupleVariant::serialize_field(
                         &mut __serde_state,
                         __field2,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     match _serde::ser::SerializeTupleVariant::serialize_field(
                         &mut __serde_state,
                         __field3,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     _serde::ser::SerializeTupleVariant::end(__serde_state)
@@ -215,9 +218,9 @@ const _: () = {
                         "_Map2",
                         0 + 1 + 1 + 1 + 1,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     match _serde::ser::SerializeStructVariant::serialize_field(
@@ -225,9 +228,9 @@ const _: () = {
                         "a",
                         a,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     match _serde::ser::SerializeStructVariant::serialize_field(
@@ -235,9 +238,9 @@ const _: () = {
                         "b",
                         b,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     match _serde::ser::SerializeStructVariant::serialize_field(
@@ -245,9 +248,9 @@ const _: () = {
                         "c",
                         c,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     match _serde::ser::SerializeStructVariant::serialize_field(
@@ -255,9 +258,9 @@ const _: () = {
                         "d",
                         d,
                     ) {
-                        _serde::export::Ok(__val) => __val,
-                        _serde::export::Err(__err) => {
-                            return _serde::export::Err(__err);
+                        _serde::__private::Ok(__val) => __val,
+                        _serde::__private::Err(__err) => {
+                            return _serde::__private::Err(__err);
                         }
                     };
                     _serde::ser::SerializeStructVariant::end(__serde_state)

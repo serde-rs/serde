@@ -37,7 +37,7 @@ macro_rules! __serialize_unimplemented {
 #[macro_export]
 macro_rules! __serialize_unimplemented_method {
     ($func:ident $(<$t:ident>)* ($($arg:ty),*) -> $ret:ident) => {
-        fn $func $(<$t: ?Sized + $crate::Serialize>)* (self $(, _: $arg)*) -> $crate::export::Result<Self::$ret, Self::Error> {
+        fn $func $(<$t: ?Sized + $crate::Serialize>)* (self $(, _: $arg)*) -> $crate::__private::Result<Self::$ret, Self::Error> {
             unimplemented!()
         }
     };
