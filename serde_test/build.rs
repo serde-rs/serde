@@ -11,11 +11,8 @@ fn main() {
         None => return,
     };
 
-    // Check ability to use #[track_caller]:
-    // https://doc.rust-lang.org/reference/attributes/codegen.html#the-track_caller-attribute
-    //
-    // Perhaps sometime it will be possible to replace by built-in `version` attribute:
-    // https://github.com/rust-lang/rust/issues/64796
+    // #[track_caller] stabilized in Rust 1.46:
+    // https://blog.rust-lang.org/2020/08/27/Rust-1.46.0.html#track_caller
     if minor >= 46 {
         println!("cargo:rustc-cfg=has_track_caller");
     }
