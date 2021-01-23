@@ -4,7 +4,6 @@ use proc_macro2::{Group, Span, TokenStream, TokenTree};
 use quote::ToTokens;
 use std::borrow::Cow;
 use std::collections::BTreeSet;
-use std::str::FromStr;
 use syn;
 use syn::parse::{self, Parse, ParseStream};
 use syn::punctuated::Punctuated;

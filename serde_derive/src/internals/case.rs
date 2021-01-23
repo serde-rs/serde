@@ -5,8 +5,6 @@
 #[allow(deprecated, unused_imports)]
 use std::ascii::AsciiExt;
 
-use std::str::FromStr;
-
 use self::RenameRule::*;
 
 /// The different possible ways to change case of fields in a struct, or variants in an enum.
@@ -36,6 +34,20 @@ pub enum RenameRule {
 }
 
 impl RenameRule {
+    pub fn from_str(rename_all_str: &str) -> Result<Self, ()> {
+        match rename_all_str {
+            "lowercase" => Ok(LowerCase),
+            "UPPERCASE" => Ok(UPPERCASE),
+            "PascalCase" => Ok(PascalCase),
+            "camelCase" => Ok(CamelCase),
+            "snake_case" => Ok(SnakeCase),
+            "SCREAMING_SNAKE_CASE" => Ok(ScreamingSnakeCase),
+            "kebab-case" => Ok(KebabCase),
+            "SCREAMING-KEBAB-CASE" => Ok(ScreamingKebabCase),
+            _ => Err(()),
+        }
+    }
+
     /// Apply a renaming rule to an enum variant, returning the version expected in the source.
     pub fn apply_to_variant(&self, variant: &str) -> String {
         match *self {
@@ -88,24 +100,6 @@ impl RenameRule {
             ScreamingSnakeCase => field.to_ascii_uppercase(),
             KebabCase => field.replace('_', "-"),
             ScreamingKebabCase => ScreamingSnakeCase.apply_to_field(field).replace('_', "-"),
-        }
-    }
-}
-
-impl FromStr for RenameRule {
-    type Err = ();
-
-    fn from_str(rename_all_str: &str) -> Result<Self, Self::Err> {
-        match rename_all_str {
-            "lowercase" => Ok(LowerCase),
-            "UPPERCASE" => Ok(UPPERCASE),
-            "PascalCase" => Ok(PascalCase),
-            "camelCase" => Ok(CamelCase),
-            "snake_case" => Ok(SnakeCase),
-            "SCREAMING_SNAKE_CASE" => Ok(ScreamingSnakeCase),
-            "kebab-case" => Ok(KebabCase),
-            "SCREAMING-KEBAB-CASE" => Ok(ScreamingKebabCase),
-            _ => Err(()),
         }
     }
 }
