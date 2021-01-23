@@ -250,7 +250,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             {
                 visitor.visit_enum(DeserializerEnumVisitor { de: self })
             }
-            _ => self.deserialize_any(visitor)
+            _ => self.deserialize_any(visitor),
         }
     }
 
