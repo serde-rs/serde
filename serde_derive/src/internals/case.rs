@@ -5,7 +5,7 @@
 #[allow(deprecated, unused_imports)]
 use std::ascii::AsciiExt;
 
-use std::fmt::{self, Display};
+use std::fmt::{self, Debug, Display};
 
 use self::RenameRule::*;
 
@@ -120,11 +120,16 @@ pub struct ParseError<'a> {
 
 impl<'a> Display for ParseError<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "unknown rename rule for #[serde(rename_all = {:?})]",
-            self.unknown,
-        )
+        f.write_str("unknown rename rule `rename_all = ")?;
+        Debug::fmt(self.unknown, f)?;
+        f.write_str("`, expected one of ")?;
+        for (i, (name, _rule)) in RENAME_RULES.iter().enumerate() {
+            if i > 0 {
+                f.write_str(", ")?;
+            }
+            Debug::fmt(name, f)?;
+        }
+        Ok(())
     }
 }
 
