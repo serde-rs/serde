@@ -2561,7 +2561,6 @@ where
     }
 }
 
-#[derive(Debug)]
 pub struct StrDeserializer<'a, E> {
     value: &'a str,
     marker: PhantomData<E>,
@@ -2575,8 +2574,6 @@ impl<'a, E> StrDeserializer<'a, E> {
         }
     }
 }
-
-impl_copy_clone!(StrDeserializer<'a>);
 
 impl<'de, 'a, E> Deserializer<'de> for StrDeserializer<'a, E>
 where
@@ -2598,7 +2595,6 @@ where
     }
 }
 
-#[derive(Debug)]
 pub struct BorrowedStrDeserializer<'de, E> {
     value: &'de str,
     marker: PhantomData<E>,
@@ -2612,8 +2608,6 @@ impl<'de, E> BorrowedStrDeserializer<'de, E> {
         }
     }
 }
-
-impl_copy_clone!(BorrowedStrDeserializer<'de>);
 
 impl<'de, E> Deserializer<'de> for BorrowedStrDeserializer<'de, E>
 where
