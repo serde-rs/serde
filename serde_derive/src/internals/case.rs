@@ -17,7 +17,7 @@ pub enum RenameRule {
     /// Rename direct children to "lowercase" style.
     LowerCase,
     /// Rename direct children to "UPPERCASE" style.
-    UPPERCASE,
+    UpperCase,
     /// Rename direct children to "PascalCase" style, as typically used for
     /// enum variants.
     PascalCase,
@@ -37,7 +37,7 @@ pub enum RenameRule {
 
 static RENAME_RULES: &[(&str, RenameRule)] = &[
     ("lowercase", LowerCase),
-    ("UPPERCASE", UPPERCASE),
+    ("UPPERCASE", UpperCase),
     ("PascalCase", PascalCase),
     ("camelCase", CamelCase),
     ("snake_case", SnakeCase),
@@ -63,7 +63,7 @@ impl RenameRule {
         match *self {
             None | PascalCase => variant.to_owned(),
             LowerCase => variant.to_ascii_lowercase(),
-            UPPERCASE => variant.to_ascii_uppercase(),
+            UpperCase => variant.to_ascii_uppercase(),
             CamelCase => variant[..1].to_ascii_lowercase() + &variant[1..],
             SnakeCase => {
                 let mut snake = String::new();
@@ -87,7 +87,7 @@ impl RenameRule {
     pub fn apply_to_field(&self, field: &str) -> String {
         match *self {
             None | LowerCase | SnakeCase => field.to_owned(),
-            UPPERCASE => field.to_ascii_uppercase(),
+            UpperCase => field.to_ascii_uppercase(),
             PascalCase => {
                 let mut pascal = String::new();
                 let mut capitalize = true;
@@ -149,7 +149,7 @@ fn rename_variants() {
     ] {
         assert_eq!(None.apply_to_variant(original), original);
         assert_eq!(LowerCase.apply_to_variant(original), lower);
-        assert_eq!(UPPERCASE.apply_to_variant(original), upper);
+        assert_eq!(UpperCase.apply_to_variant(original), upper);
         assert_eq!(PascalCase.apply_to_variant(original), original);
         assert_eq!(CamelCase.apply_to_variant(original), camel);
         assert_eq!(SnakeCase.apply_to_variant(original), snake);
@@ -181,7 +181,7 @@ fn rename_fields() {
         ("z42", "Z42", "Z42", "z42", "Z42", "z42", "Z42"),
     ] {
         assert_eq!(None.apply_to_field(original), original);
-        assert_eq!(UPPERCASE.apply_to_field(original), upper);
+        assert_eq!(UpperCase.apply_to_field(original), upper);
         assert_eq!(PascalCase.apply_to_field(original), pascal);
         assert_eq!(CamelCase.apply_to_field(original), camel);
         assert_eq!(SnakeCase.apply_to_field(original), original);
