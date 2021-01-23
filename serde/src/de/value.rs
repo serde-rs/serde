@@ -665,9 +665,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// A deserializer holding a `&[u8]`. Always call [`Visitor::visit_bytes`]
-///
-/// [`Visitor::visit_bytes`]: ../struct.Visitor.html#method.visit_bytes
+/// A deserializer holding a `&[u8]`. Always calls [`Visitor::visit_bytes`].
 #[derive(Debug)]
 pub struct BytesDeserializer<'a, E> {
     value: &'a [u8],
@@ -675,7 +673,7 @@ pub struct BytesDeserializer<'a, E> {
 }
 
 impl<'a, E> BytesDeserializer<'a, E> {
-    /// Create a new deserializer from the given value.
+    /// Create a new deserializer from the given bytes.
     pub fn new(value: &'a [u8]) -> Self {
         BytesDeserializer {
             value: value,
@@ -707,9 +705,7 @@ where
 }
 
 /// A deserializer holding a `&[u8]` with a lifetime tied to another
-/// deserializer. Always call [`Visitor::visit_borrowed_bytes`]
-///
-/// [`Visitor::visit_borrowed_bytes`]: ../struct.Visitor.html#method.visit_borrowed_bytes
+/// deserializer. Always calls [`Visitor::visit_borrowed_bytes`].
 #[derive(Debug)]
 pub struct BorrowedBytesDeserializer<'de, E> {
     value: &'de [u8],
@@ -717,7 +713,7 @@ pub struct BorrowedBytesDeserializer<'de, E> {
 }
 
 impl<'de, E> BorrowedBytesDeserializer<'de, E> {
-    /// Create a new borrowed deserializer from the given value.
+    /// Create a new borrowed deserializer from the given borrowed bytes.
     pub fn new(value: &'de [u8]) -> Self {
         BorrowedBytesDeserializer {
             value: value,
