@@ -99,12 +99,7 @@ fn test_field_identifier() {
         Str(&'a str),
     }
 
-    assert_de_tokens(
-        &FieldStr::Str("value"),
-        &[
-            Token::BorrowedStr("value"),
-        ],
-    );
+    assert_de_tokens(&FieldStr::Str("value"), &[Token::BorrowedStr("value")]);
 
     #[derive(Deserialize, Debug, PartialEq)]
     #[serde(field_identifier)]
@@ -115,9 +110,7 @@ fn test_field_identifier() {
 
     assert_de_tokens(
         &FieldBytes::Bytes(b"value"),
-        &[
-            Token::BorrowedBytes(b"value"),
-        ],
+        &[Token::BorrowedBytes(b"value")],
     );
 }
 

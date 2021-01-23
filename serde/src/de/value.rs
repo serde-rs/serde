@@ -25,15 +25,13 @@ use lib::*;
 
 use self::private::{First, Second};
 use __private::de::size_hint;
-use de::{self, Expected, IntoDeserializer, SeqAccess};
+use de::{self, Deserializer, Expected, IntoDeserializer, SeqAccess, Visitor};
 use ser;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// For structs that contain a PhantomData. We do not want the trait
-/// bound `E: Clone` inferred by derive(Clone).
-#[doc(hidden)]
-#[macro_export]
+// For structs that contain a PhantomData. We do not want the trait
+// bound `E: Clone` inferred by derive(Clone).
 macro_rules! impl_copy_clone {
     ($ty:ident $(<$lifetime:tt>)*) => {
         impl<$($lifetime,)* E> Copy for $ty<$($lifetime,)* E> {}
@@ -41,102 +39,6 @@ macro_rules! impl_copy_clone {
         impl<$($lifetime,)* E> Clone for $ty<$($lifetime,)* E> {
             fn clone(&self) -> Self {
                 *self
-            }
-        }
-    };
-}
-
-/// Creates a deserializer any method of which forwards to the specified visitor method
-#[doc(hidden)]
-#[macro_export(local_inner_macros)]
-macro_rules! forward_deserializer {
-    // Non-borrowed references
-    (
-        $(#[$doc:meta])*
-        // Actually, * in lifetime should be ?, but that syntax is not supported
-        // on old Rust versions (<= 1.28) or in 2015 edition
-        ref $deserializer:ident $(<$lifetime:tt>)* ($ty:ty) => $visit:ident
-    ) => {
-        $(#[$doc])*
-        #[derive(Debug)]
-        pub struct $deserializer<$($lifetime,)* E> {
-            value: $ty,
-            marker: PhantomData<E>,
-        }
-
-        impl<$($lifetime,)* E> $deserializer<$($lifetime,)* E> {
-            /// Create a new deserializer from the given value.
-            pub fn new(value: $ty) -> Self {
-                $deserializer {
-                    value: value,
-                    marker: PhantomData,
-                }
-            }
-        }
-
-        impl_copy_clone!($deserializer $(<$lifetime>)*);
-
-        impl<'de, $($lifetime,)* E> $crate::de::Deserializer<'de> for $deserializer<$($lifetime,)* E>
-        where
-            E: $crate::de::Error,
-        {
-            type Error = E;
-
-            fn deserialize_any<V>(self, visitor: V) -> $crate::export::Result<V::Value, Self::Error>
-            where
-                V: $crate::de::Visitor<'de>,
-            {
-                visitor.$visit(self.value)
-            }
-
-            forward_to_deserialize_any! {
-                bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str
-                string bytes byte_buf option unit unit_struct newtype_struct seq
-                tuple tuple_struct map struct enum identifier ignored_any
-            }
-        }
-    };
-    // Borrowed references
-    (
-        $(#[$doc:meta])*
-        borrowed $deserializer:ident($ty:ty) => $visit:ident
-    ) => {
-        $(#[$doc])*
-        #[derive(Debug)]
-        pub struct $deserializer<'de, E> {
-            value: $ty,
-            marker: PhantomData<E>,
-        }
-
-        impl<'de, E> $deserializer<'de, E> {
-            /// Create a new borrowed deserializer from the given value.
-            pub fn new(value: $ty) -> Self {
-                $deserializer {
-                    value: value,
-                    marker: PhantomData,
-                }
-            }
-        }
-
-        impl_copy_clone!($deserializer<'de>);
-
-        impl<'de, E> $crate::de::Deserializer<'de> for $deserializer<'de, E>
-        where
-            E: $crate::de::Error,
-        {
-            type Error = E;
-
-            fn deserialize_any<V>(self, visitor: V) -> $crate::export::Result<V::Value, Self::Error>
-            where
-                V: $crate::de::Visitor<'de>,
-            {
-                visitor.$visit(self.value)
-            }
-
-            forward_to_deserialize_any! {
-                bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str
-                string bytes byte_buf option unit unit_struct newtype_struct seq
-                tuple tuple_struct map struct enum identifier ignored_any
             }
         }
     };
@@ -763,19 +665,84 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-forward_deserializer!(
-    /// A deserializer holding a `&[u8]`. Always call [`Visitor::visit_bytes`]
-    ///
-    /// [`Visitor::visit_bytes`]: ../struct.Visitor.html#method.visit_bytes
-    ref BytesDeserializer<'a>(&'a [u8]) => visit_bytes
-);
-forward_deserializer!(
-    /// A deserializer holding a `&[u8]` with a lifetime tied to another
-    /// deserializer. Always call [`Visitor::visit_borrowed_bytes`]
-    ///
-    /// [`Visitor::visit_borrowed_bytes`]: ../struct.Visitor.html#method.visit_borrowed_bytes
-    borrowed BorrowedBytesDeserializer(&'de [u8]) => visit_borrowed_bytes
-);
+/// A deserializer holding a `&[u8]`. Always calls [`Visitor::visit_bytes`].
+#[derive(Debug)]
+pub struct BytesDeserializer<'a, E> {
+    value: &'a [u8],
+    marker: PhantomData<E>,
+}
+
+impl<'a, E> BytesDeserializer<'a, E> {
+    /// Create a new deserializer from the given bytes.
+    pub fn new(value: &'a [u8]) -> Self {
+        BytesDeserializer {
+            value: value,
+            marker: PhantomData,
+        }
+    }
+}
+
+impl_copy_clone!(BytesDeserializer<'a>);
+
+impl<'de, 'a, E> Deserializer<'de> for BytesDeserializer<'a, E>
+where
+    E: de::Error,
+{
+    type Error = E;
+
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_bytes(self.value)
+    }
+
+    forward_to_deserialize_any! {
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        tuple_struct map struct enum identifier ignored_any
+    }
+}
+
+/// A deserializer holding a `&[u8]` with a lifetime tied to another
+/// deserializer. Always calls [`Visitor::visit_borrowed_bytes`].
+#[derive(Debug)]
+pub struct BorrowedBytesDeserializer<'de, E> {
+    value: &'de [u8],
+    marker: PhantomData<E>,
+}
+
+impl<'de, E> BorrowedBytesDeserializer<'de, E> {
+    /// Create a new borrowed deserializer from the given borrowed bytes.
+    pub fn new(value: &'de [u8]) -> Self {
+        BorrowedBytesDeserializer {
+            value: value,
+            marker: PhantomData,
+        }
+    }
+}
+
+impl_copy_clone!(BorrowedBytesDeserializer<'de>);
+
+impl<'de, E> Deserializer<'de> for BorrowedBytesDeserializer<'de, E>
+where
+    E: de::Error,
+{
+    type Error = E;
+
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_borrowed_bytes(self.value)
+    }
+
+    forward_to_deserialize_any! {
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        tuple_struct map struct enum identifier ignored_any
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
