@@ -34,7 +34,7 @@ pub enum RenameRule {
 }
 
 impl RenameRule {
-    pub fn from_str(rename_all_str: &str) -> Result<Self, ()> {
+    pub fn from_str(rename_all_str: &str) -> Result<Self, ParseError> {
         match rename_all_str {
             "lowercase" => Ok(LowerCase),
             "UPPERCASE" => Ok(UPPERCASE),
@@ -44,7 +44,7 @@ impl RenameRule {
             "SCREAMING_SNAKE_CASE" => Ok(ScreamingSnakeCase),
             "kebab-case" => Ok(KebabCase),
             "SCREAMING-KEBAB-CASE" => Ok(ScreamingKebabCase),
-            _ => Err(()),
+            unknown => Err(ParseError { unknown }),
         }
     }
 
@@ -102,6 +102,10 @@ impl RenameRule {
             ScreamingKebabCase => ScreamingSnakeCase.apply_to_field(field).replace('_', "-"),
         }
     }
+}
+
+pub struct ParseError<'a> {
+    unknown: &'a str,
 }
 
 #[test]
