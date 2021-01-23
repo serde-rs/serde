@@ -5,6 +5,8 @@
 #[allow(deprecated, unused_imports)]
 use std::ascii::AsciiExt;
 
+use std::fmt::{self, Display};
+
 use self::RenameRule::*;
 
 /// The different possible ways to change case of fields in a struct, or variants in an enum.
@@ -106,6 +108,16 @@ impl RenameRule {
 
 pub struct ParseError<'a> {
     unknown: &'a str,
+}
+
+impl<'a> Display for ParseError<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "unknown rename rule for #[serde(rename_all = {:?})]",
+            self.unknown,
+        )
+    }
 }
 
 #[test]
