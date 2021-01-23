@@ -1,7 +1,7 @@
 use lib::*;
 
 use de::value::{BorrowedBytesDeserializer, BytesDeserializer};
-use de::{self, Deserialize, DeserializeSeed, Deserializer, Error, IntoDeserializer, Visitor};
+use de::{Deserialize, DeserializeSeed, Deserializer, Error, IntoDeserializer, Visitor};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 use de::{MapAccess, Unexpected};
@@ -2561,8 +2561,79 @@ where
     }
 }
 
-forward_deserializer!(ref StrDeserializer<'a>(&'a str) => visit_str);
-forward_deserializer!(borrowed BorrowedStrDeserializer(&'de str) => visit_borrowed_str);
+#[derive(Debug)]
+pub struct StrDeserializer<'a, E> {
+    value: &'a str,
+    marker: PhantomData<E>,
+}
+
+impl<'a, E> StrDeserializer<'a, E> {
+    pub fn new(value: &'a str) -> Self {
+        StrDeserializer {
+            value: value,
+            marker: PhantomData,
+        }
+    }
+}
+
+impl_copy_clone!(StrDeserializer<'a>);
+
+impl<'de, 'a, E> Deserializer<'de> for StrDeserializer<'a, E>
+where
+    E: Error,
+{
+    type Error = E;
+
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_str(self.value)
+    }
+
+    forward_to_deserialize_any! {
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        tuple_struct map struct enum identifier ignored_any
+    }
+}
+
+#[derive(Debug)]
+pub struct BorrowedStrDeserializer<'de, E> {
+    value: &'de str,
+    marker: PhantomData<E>,
+}
+
+impl<'de, E> BorrowedStrDeserializer<'de, E> {
+    pub fn new(value: &'de str) -> Self {
+        BorrowedStrDeserializer {
+            value: value,
+            marker: PhantomData,
+        }
+    }
+}
+
+impl_copy_clone!(BorrowedStrDeserializer<'de>);
+
+impl<'de, E> Deserializer<'de> for BorrowedStrDeserializer<'de, E>
+where
+    E: Error,
+{
+    type Error = E;
+
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_borrowed_str(self.value)
+    }
+
+    forward_to_deserialize_any! {
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        tuple_struct map struct enum identifier ignored_any
+    }
+}
 
 impl<'a, E> IdentifierDeserializer<'a, E> for &'a str
 where
