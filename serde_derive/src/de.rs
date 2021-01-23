@@ -2121,8 +2121,7 @@ fn deserialize_identifier(
         (None, None, None, None)
     };
 
-    let (fallthrough_arm, fallthrough_borrowed_arm) = if let Some(fallthrough) = fallthrough.clone()
-    {
+    let (fallthrough_arm, fallthrough_borrowed_arm) = if let Some(fallthrough) = fallthrough {
         fallthrough
     } else if is_variant {
         let fallthrough = quote! {
