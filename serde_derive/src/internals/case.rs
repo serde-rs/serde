@@ -5,7 +5,7 @@
 #[allow(deprecated, unused_imports)]
 use std::ascii::AsciiExt;
 
-use std::str::FromStr;
+use std::fmt::{self, Display};
 
 use self::RenameRule::*;
 
@@ -36,6 +36,20 @@ pub enum RenameRule {
 }
 
 impl RenameRule {
+    pub fn from_str(rename_all_str: &str) -> Result<Self, ParseError> {
+        match rename_all_str {
+            "lowercase" => Ok(LowerCase),
+            "UPPERCASE" => Ok(UPPERCASE),
+            "PascalCase" => Ok(PascalCase),
+            "camelCase" => Ok(CamelCase),
+            "snake_case" => Ok(SnakeCase),
+            "SCREAMING_SNAKE_CASE" => Ok(ScreamingSnakeCase),
+            "kebab-case" => Ok(KebabCase),
+            "SCREAMING-KEBAB-CASE" => Ok(ScreamingKebabCase),
+            unknown => Err(ParseError { unknown }),
+        }
+    }
+
     /// Apply a renaming rule to an enum variant, returning the version expected in the source.
     pub fn apply_to_variant(&self, variant: &str) -> String {
         match *self {
@@ -92,21 +106,17 @@ impl RenameRule {
     }
 }
 
-impl FromStr for RenameRule {
-    type Err = ();
+pub struct ParseError<'a> {
+    unknown: &'a str,
+}
 
-    fn from_str(rename_all_str: &str) -> Result<Self, Self::Err> {
-        match rename_all_str {
-            "lowercase" => Ok(LowerCase),
-            "UPPERCASE" => Ok(UPPERCASE),
-            "PascalCase" => Ok(PascalCase),
-            "camelCase" => Ok(CamelCase),
-            "snake_case" => Ok(SnakeCase),
-            "SCREAMING_SNAKE_CASE" => Ok(ScreamingSnakeCase),
-            "kebab-case" => Ok(KebabCase),
-            "SCREAMING-KEBAB-CASE" => Ok(ScreamingKebabCase),
-            _ => Err(()),
-        }
+impl<'a> Display for ParseError<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "unknown rename rule for #[serde(rename_all = {:?})]",
+            self.unknown,
+        )
     }
 }
 
