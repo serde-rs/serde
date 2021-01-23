@@ -1452,4 +1452,25 @@ declare_error_tests! {
         ],
         "invalid value: integer `65536`, expected u16",
     }
+    test_duration_overflow_seq<Duration> {
+        &[
+            Token::Seq { len: Some(2) },
+                Token::U64(u64::max_value()),
+                Token::U32(1_000_000_000),
+            Token::SeqEnd,
+        ],
+        "overflow deserializing Duration",
+    }
+    test_duration_overflow_struct<Duration> {
+        &[
+            Token::Struct { name: "Duration", len: 2 },
+                Token::Str("secs"),
+                Token::U64(u64::max_value()),
+
+                Token::Str("nanos"),
+                Token::U32(1_000_000_000),
+            Token::StructEnd,
+        ],
+        "overflow deserializing Duration",
+    }
 }
