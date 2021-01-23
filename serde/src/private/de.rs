@@ -2566,15 +2566,6 @@ pub struct StrDeserializer<'a, E> {
     marker: PhantomData<E>,
 }
 
-impl<'a, E> StrDeserializer<'a, E> {
-    pub fn new(value: &'a str) -> Self {
-        StrDeserializer {
-            value: value,
-            marker: PhantomData,
-        }
-    }
-}
-
 impl<'de, 'a, E> Deserializer<'de> for StrDeserializer<'a, E>
 where
     E: Error,
@@ -2598,15 +2589,6 @@ where
 pub struct BorrowedStrDeserializer<'de, E> {
     value: &'de str,
     marker: PhantomData<E>,
-}
-
-impl<'de, E> BorrowedStrDeserializer<'de, E> {
-    pub fn new(value: &'de str) -> Self {
-        BorrowedStrDeserializer {
-            value: value,
-            marker: PhantomData,
-        }
-    }
 }
 
 impl<'de, E> Deserializer<'de> for BorrowedStrDeserializer<'de, E>
@@ -2637,11 +2619,17 @@ where
     type BorrowedDeserializer = BorrowedStrDeserializer<'a, E>;
 
     fn from(self) -> Self::Deserializer {
-        StrDeserializer::new(self)
+        StrDeserializer {
+            value: self,
+            marker: PhantomData,
+        }
     }
 
     fn borrowed(self) -> Self::BorrowedDeserializer {
-        BorrowedStrDeserializer::new(self)
+        BorrowedStrDeserializer {
+            value: self,
+            marker: PhantomData,
+        }
     }
 }
 
