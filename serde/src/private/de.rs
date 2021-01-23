@@ -1,6 +1,7 @@
 use lib::*;
 
 use de::{Deserialize, DeserializeSeed, Deserializer, Error, IntoDeserializer, Visitor};
+use de::value::{BytesDeserializer, BorrowedBytesDeserializer};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 use de::{MapAccess, Unexpected};
@@ -2538,8 +2539,10 @@ mod content {
 //    }
 pub trait IdentifierDeserializer<'de, E: Error> {
     type Deserializer: Deserializer<'de, Error = E>;
+    type BorrowedDeserializer: Deserializer<'de, Error = E>;
 
     fn from(self) -> Self::Deserializer;
+    fn borrowed(self) -> Self::BorrowedDeserializer;
 }
 
 impl<'de, E> IdentifierDeserializer<'de, E> for u32
@@ -2547,54 +2550,34 @@ where
     E: Error,
 {
     type Deserializer = <u32 as IntoDeserializer<'de, E>>::Deserializer;
+    type BorrowedDeserializer = <u32 as IntoDeserializer<'de, E>>::Deserializer;
 
     fn from(self) -> Self::Deserializer {
         self.into_deserializer()
     }
+
+    fn borrowed(self) -> Self::BorrowedDeserializer {
+        self.into_deserializer()
+    }
 }
 
-pub struct StrDeserializer<'a, E> {
-    value: &'a str,
-    marker: PhantomData<E>,
-}
+forward_deserializer!(ref StrDeserializer<'a>(&'a str) => visit_str);
+forward_deserializer!(borrowed BorrowedStrDeserializer(&'de str) => visit_borrowed_str);
 
 impl<'a, E> IdentifierDeserializer<'a, E> for &'a str
 where
     E: Error,
 {
     type Deserializer = StrDeserializer<'a, E>;
+    type BorrowedDeserializer = BorrowedStrDeserializer<'a, E>;
 
     fn from(self) -> Self::Deserializer {
-        StrDeserializer {
-            value: self,
-            marker: PhantomData,
-        }
-    }
-}
-
-impl<'de, 'a, E> Deserializer<'de> for StrDeserializer<'a, E>
-where
-    E: Error,
-{
-    type Error = E;
-
-    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>,
-    {
-        visitor.visit_str(self.value)
+        StrDeserializer::new(self)
     }
 
-    forward_to_deserialize_any! {
-        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
-        tuple_struct map struct enum identifier ignored_any
+    fn borrowed(self) -> Self::BorrowedDeserializer {
+        BorrowedStrDeserializer::new(self)
     }
-}
-
-pub struct BytesDeserializer<'a, E> {
-    value: &'a [u8],
-    marker: PhantomData<E>,
 }
 
 impl<'a, E> IdentifierDeserializer<'a, E> for &'a [u8]
@@ -2602,32 +2585,14 @@ where
     E: Error,
 {
     type Deserializer = BytesDeserializer<'a, E>;
+    type BorrowedDeserializer = BorrowedBytesDeserializer<'a, E>;
 
     fn from(self) -> Self::Deserializer {
-        BytesDeserializer {
-            value: self,
-            marker: PhantomData,
-        }
-    }
-}
-
-impl<'de, 'a, E> Deserializer<'de> for BytesDeserializer<'a, E>
-where
-    E: Error,
-{
-    type Error = E;
-
-    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>,
-    {
-        visitor.visit_bytes(self.value)
+        BytesDeserializer::new(self)
     }
 
-    forward_to_deserialize_any! {
-        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
-        tuple_struct map struct enum identifier ignored_any
+    fn borrowed(self) -> Self::BorrowedDeserializer {
+        BorrowedBytesDeserializer::new(self)
     }
 }
 
