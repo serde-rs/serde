@@ -1893,15 +1893,12 @@ fn deserialize_generated_identifier(
         let fallthrough = quote!(_serde::__private::Ok(__Field::__other(__value)));
         (
             Some(ignore_variant),
-            Some((fallthrough.clone(), fallthrough))
+            Some((fallthrough.clone(), fallthrough)),
         )
     } else if let Some(other_idx) = other_idx {
         let ignore_variant = fields[other_idx].1.clone();
         let fallthrough = quote!(_serde::__private::Ok(__Field::#ignore_variant));
-        (
-            None,
-            Some((fallthrough.clone(), fallthrough))
-        )
+        (None, Some((fallthrough.clone(), fallthrough)))
     } else if is_variant || cattrs.deny_unknown_fields() {
         (None, None)
     } else {
@@ -1909,7 +1906,7 @@ fn deserialize_generated_identifier(
         let fallthrough = quote!(_serde::__private::Ok(__Field::__ignore));
         (
             Some(ignore_variant),
-            Some((fallthrough.clone(), fallthrough))
+            Some((fallthrough.clone(), fallthrough)),
         )
     };
 
@@ -1973,25 +1970,21 @@ fn deserialize_custom_identifier(
         if last.attrs.other() {
             let ordinary = &variants[..variants.len() - 1];
             let fallthrough = quote!(_serde::__private::Ok(#this::#last_ident));
-            (
-                ordinary,
-                Some((fallthrough.clone(), fallthrough))
-            )
+            (ordinary, Some((fallthrough.clone(), fallthrough)))
         } else if let Style::Newtype = last.style {
             let ordinary = &variants[..variants.len() - 1];
-            let fallthrough = |method| quote! {
-                _serde::__private::Result::map(
-                    _serde::Deserialize::deserialize(
-                        _serde::__private::de::IdentifierDeserializer::#method(__value)
-                    ),
-                    #this::#last_ident)
+            let fallthrough = |method| {
+                quote! {
+                    _serde::__private::Result::map(
+                        _serde::Deserialize::deserialize(
+                            _serde::__private::de::IdentifierDeserializer::#method(__value)
+                        ),
+                        #this::#last_ident)
+                }
             };
             (
                 ordinary,
-                Some((
-                    fallthrough(quote!(from)),
-                    fallthrough(quote!(borrowed)),
-                ))
+                Some((fallthrough(quote!(from)), fallthrough(quote!(borrowed)))),
             )
         } else {
             (variants, None)
@@ -2128,10 +2121,8 @@ fn deserialize_identifier(
         (None, None, None, None)
     };
 
-    let (
-        fallthrough_arm,
-        fallthrough_borrowed_arm,
-    ) = if let Some(fallthrough) = fallthrough.clone() {
+    let (fallthrough_arm, fallthrough_borrowed_arm) = if let Some(fallthrough) = fallthrough.clone()
+    {
         fallthrough
     } else if is_variant {
         let fallthrough = quote! {

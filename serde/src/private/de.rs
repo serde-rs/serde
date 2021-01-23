@@ -1,7 +1,7 @@
 use lib::*;
 
+use de::value::{BorrowedBytesDeserializer, BytesDeserializer};
 use de::{Deserialize, DeserializeSeed, Deserializer, Error, IntoDeserializer, Visitor};
-use de::value::{BytesDeserializer, BorrowedBytesDeserializer};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 use de::{MapAccess, Unexpected};
