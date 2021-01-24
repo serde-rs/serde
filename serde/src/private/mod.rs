@@ -1,6 +1,8 @@
 pub mod de;
-pub mod doc;
 pub mod ser;
+
+// FIXME: #[cfg(doctest)] once https://github.com/rust-lang/rust/issues/67295 is fixed.
+pub mod doc;
 
 pub use lib::clone::Clone;
 pub use lib::convert::{From, Into};
