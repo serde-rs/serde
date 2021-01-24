@@ -1529,7 +1529,6 @@ mod private {
         }
     }
 
-    #[derive(Clone, Debug)]
     pub struct MapAsEnum<A> {
         map: A,
     }
