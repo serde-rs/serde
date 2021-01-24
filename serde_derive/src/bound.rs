@@ -2,7 +2,6 @@ use std::collections::HashSet;
 
 use syn;
 use syn::punctuated::{Pair, Punctuated};
-use syn::visit::{self, Visit};
 
 use internals::ast::{Container, Data};
 use internals::{attr, ungroup};
@@ -112,7 +111,8 @@ pub fn with_bound(
         // parameters.
         associated_type_usage: Vec<&'ast syn::TypePath>,
     }
-    impl<'ast> Visit<'ast> for FindTyParams<'ast> {
+
+    impl<'ast> FindTyParams<'ast> {
         fn visit_field(&mut self, field: &'ast syn::Field) {
             if let syn::Type::Path(ty) = ungroup(&field.ty) {
                 if let Some(Pair::Punctuated(t, _)) = ty.path.segments.pairs().next() {
@@ -138,7 +138,98 @@ pub fn with_bound(
                     self.relevant_type_params.insert(id.clone());
                 }
             }
-            visit::visit_path(self, path);
+            for segment in &path.segments {
+                self.visit_path_segment(segment);
+            }
+        }
+
+        // Everything below is simply traversing the syntax tree.
+
+        fn visit_type(&mut self, ty: &'ast syn::Type) {
+            match ty {
+                syn::Type::Array(ty) => self.visit_type(&ty.elem),
+                syn::Type::BareFn(ty) => {
+                    for arg in &ty.inputs {
+                        self.visit_type(&arg.ty);
+                    }
+                    self.visit_return_type(&ty.output);
+                }
+                syn::Type::Group(ty) => self.visit_type(&ty.elem),
+                syn::Type::ImplTrait(ty) => {
+                    for bound in &ty.bounds {
+                        self.visit_type_param_bound(bound);
+                    }
+                }
+                syn::Type::Macro(ty) => self.visit_macro(&ty.mac),
+                syn::Type::Paren(ty) => self.visit_type(&ty.elem),
+                syn::Type::Path(ty) => {
+                    if let Some(qself) = &ty.qself {
+                        self.visit_type(&qself.ty);
+                    }
+                    self.visit_path(&ty.path);
+                }
+                syn::Type::Ptr(ty) => self.visit_type(&ty.elem),
+                syn::Type::Reference(ty) => self.visit_type(&ty.elem),
+                syn::Type::Slice(ty) => self.visit_type(&ty.elem),
+                syn::Type::TraitObject(ty) => {
+                    for bound in &ty.bounds {
+                        self.visit_type_param_bound(bound);
+                    }
+                }
+                syn::Type::Tuple(ty) => {
+                    for elem in &ty.elems {
+                        self.visit_type(elem);
+                    }
+                }
+
+                syn::Type::Infer(_) | syn::Type::Never(_) | syn::Type::Verbatim(_) => {}
+
+                #[cfg(test)]
+                syn::Type::__TestExhaustive(_) => unimplemented!(),
+                #[cfg(not(test))]
+                _ => {}
+            }
+        }
+
+        fn visit_path_segment(&mut self, segment: &'ast syn::PathSegment) {
+            self.visit_path_arguments(&segment.arguments);
+        }
+
+        fn visit_path_arguments(&mut self, arguments: &'ast syn::PathArguments) {
+            match arguments {
+                syn::PathArguments::None => {}
+                syn::PathArguments::AngleBracketed(arguments) => {
+                    for arg in &arguments.args {
+                        match arg {
+                            syn::GenericArgument::Type(arg) => self.visit_type(arg),
+                            syn::GenericArgument::Binding(arg) => self.visit_type(&arg.ty),
+                            syn::GenericArgument::Lifetime(_)
+                            | syn::GenericArgument::Constraint(_)
+                            | syn::GenericArgument::Const(_) => {}
+                        }
+                    }
+                }
+                syn::PathArguments::Parenthesized(arguments) => {
+                    for argument in &arguments.inputs {
+                        self.visit_type(argument);
+                    }
+                    self.visit_return_type(&arguments.output);
+                }
+            }
+        }
+
+        fn visit_return_type(&mut self, return_type: &'ast syn::ReturnType) {
+            match return_type {
+                syn::ReturnType::Default => {}
+                syn::ReturnType::Type(_, output) => self.visit_type(output),
+            }
+        }
+
+        fn visit_type_param_bound(&mut self, bound: &'ast syn::TypeParamBound) {
+            match bound {
+                syn::TypeParamBound::Trait(bound) => self.visit_path(&bound.path),
+                syn::TypeParamBound::Lifetime(_) => {}
+            }
         }
 
         // Type parameter should not be considered used by a macro path.
