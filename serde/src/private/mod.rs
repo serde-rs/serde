@@ -1,6 +1,5 @@
-mod macros;
-
 pub mod de;
+pub mod doc;
 pub mod ser;
 
 pub use lib::clone::Clone;
