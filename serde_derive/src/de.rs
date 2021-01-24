@@ -2141,28 +2141,33 @@ fn deserialize_identifier(
         (None, None, None, None)
     };
 
-    let fallthrough_arm = if let Some(fallthrough) = fallthrough.clone() {
+    let fallthrough_arm_tokens;
+    let fallthrough_arm = if let Some(fallthrough) = &fallthrough {
         fallthrough
     } else if is_variant {
-        quote! {
+        fallthrough_arm_tokens = quote! {
             _serde::__private::Err(_serde::de::Error::unknown_variant(__value, VARIANTS))
-        }
+        };
+        &fallthrough_arm_tokens
     } else {
-        quote! {
+        fallthrough_arm_tokens = quote! {
             _serde::__private::Err(_serde::de::Error::unknown_field(__value, FIELDS))
-        }
+        };
+        &fallthrough_arm_tokens
     };
 
-    let u64_fallthrough_arm = if let Some(fallthrough) = fallthrough {
+    let u64_fallthrough_arm_tokens;
+    let u64_fallthrough_arm = if let Some(fallthrough) = &fallthrough {
         fallthrough
     } else {
         let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
-        quote! {
+        u64_fallthrough_arm_tokens = quote! {
             _serde::__private::Err(_serde::de::Error::invalid_value(
                 _serde::de::Unexpected::Unsigned(__value),
                 &#fallthrough_msg,
             ))
-        }
+        };
+        &u64_fallthrough_arm_tokens
     };
 
     let variant_indices = 0_u64..;
