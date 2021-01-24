@@ -135,7 +135,6 @@ where
 }
 
 /// A deserializer holding a `()`.
-#[derive(Debug)]
 pub struct UnitDeserializer<E> {
     marker: PhantomData<E>,
 }
@@ -166,6 +165,12 @@ where
         V: de::Visitor<'de>,
     {
         visitor.visit_none()
+    }
+}
+
+impl<E> Debug for UnitDeserializer<E> {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.debug_struct("UnitDeserializer").finish()
     }
 }
 
@@ -217,7 +222,6 @@ macro_rules! primitive_deserializer {
     ($ty:ty, $doc:tt, $name:ident, $method:ident $($cast:tt)*) => {
         #[doc = "A deserializer holding"]
         #[doc = $doc]
-        #[derive(Debug)]
         pub struct $name<E> {
             value: $ty,
             marker: PhantomData<E>
@@ -258,6 +262,15 @@ macro_rules! primitive_deserializer {
                 visitor.$method(self.value $($cast)*)
             }
         }
+
+        impl<E> Debug for $name<E> {
+            fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter
+                    .debug_struct(stringify!($name))
+                    .field("value", &self.value)
+                    .finish()
+            }
+        }
     }
 }
 
@@ -281,7 +294,6 @@ serde_if_integer128! {
 }
 
 /// A deserializer holding a `u32`.
-#[derive(Debug)]
 pub struct U32Deserializer<E> {
     value: u32,
     marker: PhantomData<E>,
@@ -352,10 +364,18 @@ where
     }
 }
 
+impl<E> Debug for U32Deserializer<E> {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter
+            .debug_struct("U32Deserializer")
+            .field("value", &self.value)
+            .finish()
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A deserializer holding a `&str`.
-#[derive(Debug)]
 pub struct StrDeserializer<'a, E> {
     value: &'a str,
     marker: PhantomData<E>,
@@ -426,11 +446,19 @@ where
     }
 }
 
+impl<'a, E> Debug for StrDeserializer<'a, E> {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter
+            .debug_struct("StrDeserializer")
+            .field("value", &self.value)
+            .finish()
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A deserializer holding a `&str` with a lifetime tied to another
 /// deserializer.
-#[derive(Debug)]
 pub struct BorrowedStrDeserializer<'de, E> {
     value: &'de str,
     marker: PhantomData<E>,
@@ -497,11 +525,19 @@ where
     }
 }
 
+impl<'de, E> Debug for BorrowedStrDeserializer<'de, E> {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter
+            .debug_struct("BorrowedStrDeserializer")
+            .field("value", &self.value)
+            .finish()
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A deserializer holding a `String`.
 #[cfg(any(feature = "std", feature = "alloc"))]
-#[derive(Debug)]
 pub struct StringDeserializer<E> {
     value: String,
     marker: PhantomData<E>,
@@ -583,11 +619,20 @@ where
     }
 }
 
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<E> Debug for StringDeserializer<E> {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter
+            .debug_struct("StringDeserializer")
+            .field("value", &self.value)
+            .finish()
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A deserializer holding a `Cow<str>`.
 #[cfg(any(feature = "std", feature = "alloc"))]
-#[derive(Debug)]
 pub struct CowStrDeserializer<'a, E> {
     value: Cow<'a, str>,
     marker: PhantomData<E>,
@@ -672,10 +717,19 @@ where
     }
 }
 
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, E> Debug for CowStrDeserializer<'a, E> {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter
+            .debug_struct("CowStrDeserializer")
+            .field("value", &self.value)
+            .finish()
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A deserializer holding a `&[u8]`. Always calls [`Visitor::visit_bytes`].
-#[derive(Debug)]
 pub struct BytesDeserializer<'a, E> {
     value: &'a [u8],
     marker: PhantomData<E>,
@@ -724,9 +778,17 @@ where
     }
 }
 
+impl<'a, E> Debug for BytesDeserializer<'a, E> {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter
+            .debug_struct("BytesDeserializer")
+            .field("value", &self.value)
+            .finish()
+    }
+}
+
 /// A deserializer holding a `&[u8]` with a lifetime tied to another
 /// deserializer. Always calls [`Visitor::visit_borrowed_bytes`].
-#[derive(Debug)]
 pub struct BorrowedBytesDeserializer<'de, E> {
     value: &'de [u8],
     marker: PhantomData<E>,
@@ -764,10 +826,19 @@ where
     }
 }
 
+impl<'de, E> Debug for BorrowedBytesDeserializer<'de, E> {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter
+            .debug_struct("BorrowedBytesDeserializer")
+            .field("value", &self.value)
+            .finish()
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A deserializer that iterates over a sequence.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct SeqDeserializer<I, E> {
     iter: iter::Fuse<I>,
     count: usize,
@@ -869,6 +940,19 @@ impl Expected for ExpectedInSeq {
         } else {
             write!(formatter, "{} elements in sequence", self.0)
         }
+    }
+}
+
+impl<I, E> Debug for SeqDeserializer<I, E>
+where
+    I: Debug,
+{
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter
+            .debug_struct("SeqDeserializer")
+            .field("iter", &self.iter)
+            .field("count", &self.count)
+            .finish()
     }
 }
 
@@ -1167,7 +1251,6 @@ where
     }
 }
 
-// Cannot #[derive(Debug)] because of the bound `Second<I::Item>: Debug`.
 impl<'de, I, E> Debug for MapDeserializer<'de, I, E>
 where
     I: Iterator + Debug,
@@ -1180,8 +1263,6 @@ where
             .field("iter", &self.iter)
             .field("value", &self.value)
             .field("count", &self.count)
-            .field("lifetime", &self.lifetime)
-            .field("error", &self.error)
             .finish()
     }
 }
