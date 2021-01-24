@@ -93,18 +93,18 @@ impl ser::Error for Error {
 
 impl Display for Error {
     #[cfg(any(feature = "std", feature = "alloc"))]
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str(&self.err)
     }
 
     #[cfg(not(any(feature = "std", feature = "alloc")))]
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("Serde deserialization error")
     }
 }
 
 impl Debug for Error {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         let mut debug = formatter.debug_tuple("Error");
         #[cfg(any(feature = "std", feature = "alloc"))]
         debug.field(&self.err);
