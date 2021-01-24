@@ -1,3 +1,4 @@
+//! Tests for `#[serde(field_identifier)]` and `#[serde(variant_identifier)]`
 use serde::Deserialize;
 use serde_test::{assert_de_tokens, Token};
 
@@ -27,6 +28,10 @@ fn test_field_identifier() {
         Bbb,
     }
 
+    assert_de_tokens(&F::Aaa, &[Token::U8(0)]);
+    assert_de_tokens(&F::Aaa, &[Token::U16(0)]);
+    assert_de_tokens(&F::Aaa, &[Token::U32(0)]);
+    assert_de_tokens(&F::Aaa, &[Token::U64(0)]);
     assert_de_tokens(&F::Aaa, &[Token::Str("aaa")]);
     assert_de_tokens(&F::Aaa, &[Token::Bytes(b"aaa")]);
 }
@@ -42,6 +47,10 @@ fn test_unit_fallthrough() {
         Other,
     }
 
+    assert_de_tokens(&F::Other, &[Token::U8(42)]);
+    assert_de_tokens(&F::Other, &[Token::U16(42)]);
+    assert_de_tokens(&F::Other, &[Token::U32(42)]);
+    assert_de_tokens(&F::Other, &[Token::U64(42)]);
     assert_de_tokens(&F::Other, &[Token::Str("x")]);
 }
 
@@ -68,5 +77,9 @@ fn test_newtype_fallthrough_generic() {
         Other(T),
     }
 
+    assert_de_tokens(&F::Other(42u8), &[Token::U8(42)]);
+    assert_de_tokens(&F::Other(42u16), &[Token::U16(42)]);
+    assert_de_tokens(&F::Other(42u32), &[Token::U32(42)]);
+    assert_de_tokens(&F::Other(42u64), &[Token::U64(42)]);
     assert_de_tokens(&F::Other("x".to_owned()), &[Token::Str("x")]);
 }

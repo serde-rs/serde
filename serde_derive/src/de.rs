@@ -1965,6 +1965,8 @@ fn deserialize_generated_identifier(
     }
 }
 
+// Generates `Deserialize::deserialize` body for an enum with
+// `serde(field_identifier)` or `serde(variant_identifier)` attribute.
 fn deserialize_custom_identifier(
     params: &Parameters,
     variants: &[Variant],
@@ -1982,6 +1984,9 @@ fn deserialize_custom_identifier(
     let (ordinary, fallthrough) = if let Some(last) = variants.last() {
         let last_ident = &last.ident;
         if last.attrs.other() {
+            // Process `serde(other)` attribute. It would always be found on the
+            // last variant (checked in `check_identifier`), so all preceding
+            // are ordinary variants.
             let ordinary = &variants[..variants.len() - 1];
             let fallthrough = quote!(_serde::__private::Ok(#this::#last_ident));
             (ordinary, Some((fallthrough.clone(), fallthrough)))
@@ -2137,7 +2142,8 @@ fn deserialize_identifier(
         (None, None, None, None)
     };
 
-    let (fallthrough_arm, fallthrough_borrowed_arm) = if let Some(fallthrough) = fallthrough {
+    let (fallthrough_arm, fallthrough_borrowed_arm) = if let Some(fallthrough) = fallthrough.clone()
+    {
         fallthrough
     } else if is_variant {
         let fallthrough = quote! {
@@ -2151,8 +2157,19 @@ fn deserialize_identifier(
         (fallthrough.clone(), fallthrough)
     };
 
+    let u64_fallthrough_arm = if let Some((fallthrough, _)) = fallthrough {
+        fallthrough
+    } else {
+        let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
+        quote! {
+            _serde::__private::Err(_serde::de::Error::invalid_value(
+                _serde::de::Unexpected::Unsigned(__value),
+                &#fallthrough_msg,
+            ))
+        }
+    };
+
     let variant_indices = 0_u64..;
-    let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
     let visit_other = if collect_other_fields {
         quote! {
             fn visit_bool<__E>(self, __value: bool) -> _serde::__private::Result<Self::Value, __E>
@@ -2256,10 +2273,7 @@ fn deserialize_identifier(
                     #(
                         #variant_indices => _serde::__private::Ok(#main_constructors),
                     )*
-                    _ => _serde::__private::Err(_serde::de::Error::invalid_value(
-                        _serde::de::Unexpected::Unsigned(__value),
-                        &#fallthrough_msg,
-                    ))
+                    _ => #u64_fallthrough_arm,
                 }
             }
         }

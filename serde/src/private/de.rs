@@ -2547,12 +2547,12 @@ pub trait IdentifierDeserializer<'de, E: Error> {
     fn borrowed(self) -> Self::BorrowedDeserializer;
 }
 
-impl<'de, E> IdentifierDeserializer<'de, E> for u32
+impl<'de, E> IdentifierDeserializer<'de, E> for u64
 where
     E: Error,
 {
-    type Deserializer = <u32 as IntoDeserializer<'de, E>>::Deserializer;
-    type BorrowedDeserializer = <u32 as IntoDeserializer<'de, E>>::Deserializer;
+    type Deserializer = <u64 as IntoDeserializer<'de, E>>::Deserializer;
+    type BorrowedDeserializer = <u64 as IntoDeserializer<'de, E>>::Deserializer;
 
     fn from(self) -> Self::Deserializer {
         self.into_deserializer()
