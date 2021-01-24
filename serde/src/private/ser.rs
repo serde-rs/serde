@@ -452,7 +452,6 @@ mod content {
         }
     }
 
-    #[derive(Debug)]
     pub enum Content {
         Bool(bool),
 
