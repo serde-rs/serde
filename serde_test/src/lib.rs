@@ -158,6 +158,7 @@
         module_name_repetitions,
         must_use_candidate,
         redundant_field_names,
+        too_many_lines,
         use_debug,
         use_self
     )
