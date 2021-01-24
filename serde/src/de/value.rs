@@ -48,7 +48,7 @@ macro_rules! impl_copy_clone {
 
 /// A minimal representation of all possible errors that can occur using the
 /// `IntoDeserializer` trait.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Error {
     err: ErrorImpl,
 }
@@ -100,6 +100,15 @@ impl Display for Error {
     #[cfg(not(any(feature = "std", feature = "alloc")))]
     fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         formatter.write_str("Serde deserialization error")
+    }
+}
+
+impl Debug for Error {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        let mut debug = formatter.debug_tuple("Error");
+        #[cfg(any(feature = "std", feature = "alloc"))]
+        debug.field(&self.err);
+        debug.finish()
     }
 }
 
