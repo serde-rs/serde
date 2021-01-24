@@ -2545,7 +2545,7 @@ pub trait IdentifierDeserializer<'de, E: Error> {
     fn from(self) -> Self::Deserializer;
 }
 
-pub struct Borrowed<'de, T: ?Sized>(pub &'de T);
+pub struct Borrowed<'de, T: 'de + ?Sized>(pub &'de T);
 
 impl<'de, E> IdentifierDeserializer<'de, E> for u64
 where
