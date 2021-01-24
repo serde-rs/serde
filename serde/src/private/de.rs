@@ -2541,24 +2541,19 @@ mod content {
 //    }
 pub trait IdentifierDeserializer<'de, E: Error> {
     type Deserializer: Deserializer<'de, Error = E>;
-    type BorrowedDeserializer: Deserializer<'de, Error = E>;
 
     fn from(self) -> Self::Deserializer;
-    fn borrowed(self) -> Self::BorrowedDeserializer;
 }
+
+pub struct Borrowed<'de, T: ?Sized>(pub &'de T);
 
 impl<'de, E> IdentifierDeserializer<'de, E> for u64
 where
     E: Error,
 {
     type Deserializer = <u64 as IntoDeserializer<'de, E>>::Deserializer;
-    type BorrowedDeserializer = <u64 as IntoDeserializer<'de, E>>::Deserializer;
 
     fn from(self) -> Self::Deserializer {
-        self.into_deserializer()
-    }
-
-    fn borrowed(self) -> Self::BorrowedDeserializer {
         self.into_deserializer()
     }
 }
@@ -2618,7 +2613,6 @@ where
     E: Error,
 {
     type Deserializer = StrDeserializer<'a, E>;
-    type BorrowedDeserializer = BorrowedStrDeserializer<'a, E>;
 
     fn from(self) -> Self::Deserializer {
         StrDeserializer {
@@ -2626,10 +2620,17 @@ where
             marker: PhantomData,
         }
     }
+}
 
-    fn borrowed(self) -> Self::BorrowedDeserializer {
+impl<'de, E> IdentifierDeserializer<'de, E> for Borrowed<'de, str>
+where
+    E: Error,
+{
+    type Deserializer = BorrowedStrDeserializer<'de, E>;
+
+    fn from(self) -> Self::Deserializer {
         BorrowedStrDeserializer {
-            value: self,
+            value: self.0,
             marker: PhantomData,
         }
     }
@@ -2640,14 +2641,20 @@ where
     E: Error,
 {
     type Deserializer = BytesDeserializer<'a, E>;
-    type BorrowedDeserializer = BorrowedBytesDeserializer<'a, E>;
 
     fn from(self) -> Self::Deserializer {
         BytesDeserializer::new(self)
     }
+}
 
-    fn borrowed(self) -> Self::BorrowedDeserializer {
-        BorrowedBytesDeserializer::new(self)
+impl<'de, E> IdentifierDeserializer<'de, E> for Borrowed<'de, [u8]>
+where
+    E: Error,
+{
+    type Deserializer = BorrowedBytesDeserializer<'de, E>;
+
+    fn from(self) -> Self::Deserializer {
+        BorrowedBytesDeserializer::new(self.0)
     }
 }
 

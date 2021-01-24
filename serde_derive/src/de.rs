@@ -1992,18 +1992,21 @@ fn deserialize_custom_identifier(
             (ordinary, Some((fallthrough.clone(), fallthrough)))
         } else if let Style::Newtype = last.style {
             let ordinary = &variants[..variants.len() - 1];
-            let fallthrough = |method| {
+            let fallthrough = |value| {
                 quote! {
                     _serde::__private::Result::map(
                         _serde::Deserialize::deserialize(
-                            _serde::__private::de::IdentifierDeserializer::#method(__value)
+                            _serde::__private::de::IdentifierDeserializer::from(#value)
                         ),
                         #this::#last_ident)
                 }
             };
             (
                 ordinary,
-                Some((fallthrough(quote!(from)), fallthrough(quote!(borrowed)))),
+                Some((
+                    fallthrough(quote!(__value)),
+                    fallthrough(quote!(_serde::__private::de::Borrowed(__value))),
+                )),
             )
         } else {
             (variants, None)
