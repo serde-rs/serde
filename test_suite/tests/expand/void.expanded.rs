@@ -64,38 +64,9 @@ const _: () = {
                         )),
                     }
                 }
-                fn visit_borrowed_str<__E>(
-                    self,
-                    __value: &'de str,
-                ) -> _serde::__private::Result<Self::Value, __E>
-                where
-                    __E: _serde::de::Error,
-                {
-                    match __value {
-                        _ => _serde::__private::Err(_serde::de::Error::unknown_variant(
-                            __value, VARIANTS,
-                        )),
-                    }
-                }
                 fn visit_bytes<__E>(
                     self,
                     __value: &[u8],
-                ) -> _serde::__private::Result<Self::Value, __E>
-                where
-                    __E: _serde::de::Error,
-                {
-                    match __value {
-                        _ => {
-                            let __value = &_serde::__private::from_utf8_lossy(__value);
-                            _serde::__private::Err(_serde::de::Error::unknown_variant(
-                                __value, VARIANTS,
-                            ))
-                        }
-                    }
-                }
-                fn visit_borrowed_bytes<__E>(
-                    self,
-                    __value: &'de [u8],
                 ) -> _serde::__private::Result<Self::Value, __E>
                 where
                     __E: _serde::de::Error,

@@ -174,46 +174,9 @@ const _: () = {
                         )),
                     }
                 }
-                fn visit_borrowed_str<__E>(
-                    self,
-                    __value: &'de str,
-                ) -> _serde::__private::Result<Self::Value, __E>
-                where
-                    __E: _serde::de::Error,
-                {
-                    match __value {
-                        "Unit" => _serde::__private::Ok(__Field::__field0),
-                        "NewType" => _serde::__private::Ok(__Field::__field1),
-                        "Seq" => _serde::__private::Ok(__Field::__field2),
-                        "Map" => _serde::__private::Ok(__Field::__field3),
-                        _ => _serde::__private::Err(_serde::de::Error::unknown_variant(
-                            __value, VARIANTS,
-                        )),
-                    }
-                }
                 fn visit_bytes<__E>(
                     self,
                     __value: &[u8],
-                ) -> _serde::__private::Result<Self::Value, __E>
-                where
-                    __E: _serde::de::Error,
-                {
-                    match __value {
-                        b"Unit" => _serde::__private::Ok(__Field::__field0),
-                        b"NewType" => _serde::__private::Ok(__Field::__field1),
-                        b"Seq" => _serde::__private::Ok(__Field::__field2),
-                        b"Map" => _serde::__private::Ok(__Field::__field3),
-                        _ => {
-                            let __value = &_serde::__private::from_utf8_lossy(__value);
-                            _serde::__private::Err(_serde::de::Error::unknown_variant(
-                                __value, VARIANTS,
-                            ))
-                        }
-                    }
-                }
-                fn visit_borrowed_bytes<__E>(
-                    self,
-                    __value: &'de [u8],
                 ) -> _serde::__private::Result<Self::Value, __E>
                 where
                     __E: _serde::de::Error,
@@ -410,35 +373,9 @@ const _: () = {
                                         _ => _serde::__private::Ok(__Field::__ignore),
                                     }
                                 }
-                                fn visit_borrowed_str<__E>(
-                                    self,
-                                    __value: &'de str,
-                                ) -> _serde::__private::Result<Self::Value, __E>
-                                where
-                                    __E: _serde::de::Error,
-                                {
-                                    match __value {
-                                        "x" => _serde::__private::Ok(__Field::__field0),
-                                        "y" => _serde::__private::Ok(__Field::__field1),
-                                        _ => _serde::__private::Ok(__Field::__ignore),
-                                    }
-                                }
                                 fn visit_bytes<__E>(
                                     self,
                                     __value: &[u8],
-                                ) -> _serde::__private::Result<Self::Value, __E>
-                                where
-                                    __E: _serde::de::Error,
-                                {
-                                    match __value {
-                                        b"x" => _serde::__private::Ok(__Field::__field0),
-                                        b"y" => _serde::__private::Ok(__Field::__field1),
-                                        _ => _serde::__private::Ok(__Field::__ignore),
-                                    }
-                                }
-                                fn visit_borrowed_bytes<__E>(
-                                    self,
-                                    __value: &'de [u8],
                                 ) -> _serde::__private::Result<Self::Value, __E>
                                 where
                                     __E: _serde::de::Error,

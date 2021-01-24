@@ -332,50 +332,9 @@ const _: () = {
                         )),
                     }
                 }
-                fn visit_borrowed_str<__E>(
-                    self,
-                    __value: &'de str,
-                ) -> _serde::__private::Result<Self::Value, __E>
-                where
-                    __E: _serde::de::Error,
-                {
-                    match __value {
-                        "Unit" => _serde::__private::Ok(__Field::__field0),
-                        "Seq" => _serde::__private::Ok(__Field::__field1),
-                        "Map" => _serde::__private::Ok(__Field::__field2),
-                        "_Unit2" => _serde::__private::Ok(__Field::__field3),
-                        "_Seq2" => _serde::__private::Ok(__Field::__field4),
-                        "_Map2" => _serde::__private::Ok(__Field::__field5),
-                        _ => _serde::__private::Err(_serde::de::Error::unknown_variant(
-                            __value, VARIANTS,
-                        )),
-                    }
-                }
                 fn visit_bytes<__E>(
                     self,
                     __value: &[u8],
-                ) -> _serde::__private::Result<Self::Value, __E>
-                where
-                    __E: _serde::de::Error,
-                {
-                    match __value {
-                        b"Unit" => _serde::__private::Ok(__Field::__field0),
-                        b"Seq" => _serde::__private::Ok(__Field::__field1),
-                        b"Map" => _serde::__private::Ok(__Field::__field2),
-                        b"_Unit2" => _serde::__private::Ok(__Field::__field3),
-                        b"_Seq2" => _serde::__private::Ok(__Field::__field4),
-                        b"_Map2" => _serde::__private::Ok(__Field::__field5),
-                        _ => {
-                            let __value = &_serde::__private::from_utf8_lossy(__value);
-                            _serde::__private::Err(_serde::de::Error::unknown_variant(
-                                __value, VARIANTS,
-                            ))
-                        }
-                    }
-                }
-                fn visit_borrowed_bytes<__E>(
-                    self,
-                    __value: &'de [u8],
                 ) -> _serde::__private::Result<Self::Value, __E>
                 where
                     __E: _serde::de::Error,
@@ -632,39 +591,9 @@ const _: () = {
                                         _ => _serde::__private::Ok(__Field::__ignore),
                                     }
                                 }
-                                fn visit_borrowed_str<__E>(
-                                    self,
-                                    __value: &'de str,
-                                ) -> _serde::__private::Result<Self::Value, __E>
-                                where
-                                    __E: _serde::de::Error,
-                                {
-                                    match __value {
-                                        "a" => _serde::__private::Ok(__Field::__field0),
-                                        "b" => _serde::__private::Ok(__Field::__field1),
-                                        "c" => _serde::__private::Ok(__Field::__field2),
-                                        "d" => _serde::__private::Ok(__Field::__field3),
-                                        _ => _serde::__private::Ok(__Field::__ignore),
-                                    }
-                                }
                                 fn visit_bytes<__E>(
                                     self,
                                     __value: &[u8],
-                                ) -> _serde::__private::Result<Self::Value, __E>
-                                where
-                                    __E: _serde::de::Error,
-                                {
-                                    match __value {
-                                        b"a" => _serde::__private::Ok(__Field::__field0),
-                                        b"b" => _serde::__private::Ok(__Field::__field1),
-                                        b"c" => _serde::__private::Ok(__Field::__field2),
-                                        b"d" => _serde::__private::Ok(__Field::__field3),
-                                        _ => _serde::__private::Ok(__Field::__ignore),
-                                    }
-                                }
-                                fn visit_borrowed_bytes<__E>(
-                                    self,
-                                    __value: &'de [u8],
                                 ) -> _serde::__private::Result<Self::Value, __E>
                                 where
                                     __E: _serde::de::Error,
@@ -1165,39 +1094,9 @@ const _: () = {
                                         _ => _serde::__private::Ok(__Field::__ignore),
                                     }
                                 }
-                                fn visit_borrowed_str<__E>(
-                                    self,
-                                    __value: &'de str,
-                                ) -> _serde::__private::Result<Self::Value, __E>
-                                where
-                                    __E: _serde::de::Error,
-                                {
-                                    match __value {
-                                        "a" => _serde::__private::Ok(__Field::__field0),
-                                        "b" => _serde::__private::Ok(__Field::__field1),
-                                        "c" => _serde::__private::Ok(__Field::__field2),
-                                        "d" => _serde::__private::Ok(__Field::__field3),
-                                        _ => _serde::__private::Ok(__Field::__ignore),
-                                    }
-                                }
                                 fn visit_bytes<__E>(
                                     self,
                                     __value: &[u8],
-                                ) -> _serde::__private::Result<Self::Value, __E>
-                                where
-                                    __E: _serde::de::Error,
-                                {
-                                    match __value {
-                                        b"a" => _serde::__private::Ok(__Field::__field0),
-                                        b"b" => _serde::__private::Ok(__Field::__field1),
-                                        b"c" => _serde::__private::Ok(__Field::__field2),
-                                        b"d" => _serde::__private::Ok(__Field::__field3),
-                                        _ => _serde::__private::Ok(__Field::__ignore),
-                                    }
-                                }
-                                fn visit_borrowed_bytes<__E>(
-                                    self,
-                                    __value: &'de [u8],
                                 ) -> _serde::__private::Result<Self::Value, __E>
                                 where
                                     __E: _serde::de::Error,
