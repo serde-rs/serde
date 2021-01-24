@@ -684,6 +684,17 @@ impl<'a, E> BytesDeserializer<'a, E> {
 
 impl_copy_clone!(BytesDeserializer<'a>);
 
+impl<'de, 'a, E> IntoDeserializer<'de, E> for &'a [u8]
+where
+    E: de::Error,
+{
+    type Deserializer = BytesDeserializer<'a, E>;
+
+    fn into_deserializer(self) -> BytesDeserializer<'a, E> {
+        BytesDeserializer::new(self)
+    }
+}
+
 impl<'de, 'a, E> Deserializer<'de> for BytesDeserializer<'a, E>
 where
     E: de::Error,
