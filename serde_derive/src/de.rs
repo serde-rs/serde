@@ -1904,23 +1904,17 @@ fn deserialize_generated_identifier(
     let (ignore_variant, fallthrough) = if !is_variant && cattrs.has_flatten() {
         let ignore_variant = quote!(__other(_serde::__private::de::Content<'de>),);
         let fallthrough = quote!(_serde::__private::Ok(__Field::__other(__value)));
-        (
-            Some(ignore_variant),
-            Some((fallthrough.clone(), fallthrough)),
-        )
+        (Some(ignore_variant), Some(fallthrough))
     } else if let Some(other_idx) = other_idx {
         let ignore_variant = fields[other_idx].1.clone();
         let fallthrough = quote!(_serde::__private::Ok(__Field::#ignore_variant));
-        (None, Some((fallthrough.clone(), fallthrough)))
+        (None, Some(fallthrough))
     } else if is_variant || cattrs.deny_unknown_fields() {
         (None, None)
     } else {
         let ignore_variant = quote!(__ignore,);
         let fallthrough = quote!(_serde::__private::Ok(__Field::__ignore));
-        (
-            Some(ignore_variant),
-            Some((fallthrough.clone(), fallthrough)),
-        )
+        (Some(ignore_variant), Some(fallthrough))
     };
 
     let visitor_impl = Stmts(deserialize_identifier(
@@ -1928,6 +1922,7 @@ fn deserialize_generated_identifier(
         fields,
         is_variant,
         fallthrough,
+        None,
         !is_variant && cattrs.has_flatten(),
         None,
     ));
@@ -1981,7 +1976,7 @@ fn deserialize_custom_identifier(
     let this = &params.this;
     let this = quote!(#this);
 
-    let (ordinary, fallthrough) = if let Some(last) = variants.last() {
+    let (ordinary, fallthrough, fallthrough_borrowed) = if let Some(last) = variants.last() {
         let last_ident = &last.ident;
         if last.attrs.other() {
             // Process `serde(other)` attribute. It would always be found on the
@@ -1989,7 +1984,7 @@ fn deserialize_custom_identifier(
             // are ordinary variants.
             let ordinary = &variants[..variants.len() - 1];
             let fallthrough = quote!(_serde::__private::Ok(#this::#last_ident));
-            (ordinary, Some((fallthrough.clone(), fallthrough)))
+            (ordinary, Some(fallthrough), None)
         } else if let Style::Newtype = last.style {
             let ordinary = &variants[..variants.len() - 1];
             let fallthrough = |value| {
@@ -2003,16 +1998,16 @@ fn deserialize_custom_identifier(
             };
             (
                 ordinary,
-                Some((
-                    fallthrough(quote!(__value)),
-                    fallthrough(quote!(_serde::__private::de::Borrowed(__value))),
-                )),
+                Some(fallthrough(quote!(__value))),
+                Some(fallthrough(quote!(_serde::__private::de::Borrowed(
+                    __value
+                )))),
             )
         } else {
-            (variants, None)
+            (variants, None, None)
         }
     } else {
-        (variants, None)
+        (variants, None, None)
     };
 
     let names_idents: Vec<_> = ordinary
@@ -2050,6 +2045,7 @@ fn deserialize_custom_identifier(
         &names_idents,
         is_variant,
         fallthrough,
+        fallthrough_borrowed,
         false,
         cattrs.expecting(),
     ));
@@ -2080,8 +2076,8 @@ fn deserialize_identifier(
     this: &TokenStream,
     fields: &[(String, Ident, Vec<String>)],
     is_variant: bool,
-    // .0 for referenced data, .1 -- for borrowed
-    fallthrough: Option<(TokenStream, TokenStream)>,
+    fallthrough: Option<TokenStream>,
+    fallthrough_borrowed: Option<TokenStream>,
     collect_other_fields: bool,
     expecting: Option<&str>,
 ) -> Fragment {
@@ -2145,22 +2141,19 @@ fn deserialize_identifier(
         (None, None, None, None)
     };
 
-    let (fallthrough_arm, fallthrough_borrowed_arm) = if let Some(fallthrough) = fallthrough.clone()
-    {
+    let fallthrough_arm = if let Some(fallthrough) = fallthrough.clone() {
         fallthrough
     } else if is_variant {
-        let fallthrough = quote! {
+        quote! {
             _serde::__private::Err(_serde::de::Error::unknown_variant(__value, VARIANTS))
-        };
-        (fallthrough.clone(), fallthrough)
+        }
     } else {
-        let fallthrough = quote! {
+        quote! {
             _serde::__private::Err(_serde::de::Error::unknown_field(__value, FIELDS))
-        };
-        (fallthrough.clone(), fallthrough)
+        }
     };
 
-    let u64_fallthrough_arm = if let Some((fallthrough, _)) = fallthrough {
+    let u64_fallthrough_arm = if let Some(fallthrough) = fallthrough {
         fallthrough
     } else {
         let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
@@ -2282,6 +2275,44 @@ fn deserialize_identifier(
         }
     };
 
+    let visit_borrowed = if fallthrough_borrowed.is_some() || collect_other_fields {
+        let fallthrough_borrowed_arm = fallthrough_borrowed.as_ref().unwrap_or(&fallthrough_arm);
+        Some(quote! {
+            fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                match __value {
+                    #(
+                        #field_strs => _serde::__private::Ok(#constructors),
+                    )*
+                    _ => {
+                        #value_as_borrowed_str_content
+                        #fallthrough_borrowed_arm
+                    }
+                }
+            }
+
+            fn visit_borrowed_bytes<__E>(self, __value: &'de [u8]) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                match __value {
+                    #(
+                        #field_bytes => _serde::__private::Ok(#constructors),
+                    )*
+                    _ => {
+                        #bytes_to_str
+                        #value_as_borrowed_bytes_content
+                        #fallthrough_borrowed_arm
+                    }
+                }
+            }
+        })
+    } else {
+        None
+    };
+
     quote_block! {
         fn expecting(&self, __formatter: &mut _serde::__private::Formatter) -> _serde::__private::fmt::Result {
             _serde::__private::Formatter::write_str(__formatter, #expecting)
@@ -2304,21 +2335,6 @@ fn deserialize_identifier(
             }
         }
 
-        fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::__private::Result<Self::Value, __E>
-        where
-            __E: _serde::de::Error,
-        {
-            match __value {
-                #(
-                    #field_strs => _serde::__private::Ok(#constructors),
-                )*
-                _ => {
-                    #value_as_borrowed_str_content
-                    #fallthrough_borrowed_arm
-                }
-            }
-        }
-
         fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::__private::Result<Self::Value, __E>
         where
             __E: _serde::de::Error,
@@ -2335,21 +2351,7 @@ fn deserialize_identifier(
             }
         }
 
-        fn visit_borrowed_bytes<__E>(self, __value: &'de [u8]) -> _serde::__private::Result<Self::Value, __E>
-        where
-            __E: _serde::de::Error,
-        {
-            match __value {
-                #(
-                    #field_bytes => _serde::__private::Ok(#constructors),
-                )*
-                _ => {
-                    #bytes_to_str
-                    #value_as_borrowed_bytes_content
-                    #fallthrough_borrowed_arm
-                }
-            }
-        }
+        #visit_borrowed
     }
 }
 
