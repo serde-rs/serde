@@ -10,18 +10,6 @@ macro_rules! __private_serialize {
     };
 }
 
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __private_deserialize {
-    () => {
-        trait Deserialize<'de>: Sized {
-            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            where
-                D: $crate::Deserializer<'de>;
-        }
-    };
-}
-
 /// Used only by Serde doc tests. Not public API.
 #[doc(hidden)]
 #[macro_export(local_inner_macros)]
