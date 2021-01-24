@@ -1390,7 +1390,6 @@ mod private {
 
     use de::{self, DeserializeSeed, Deserializer, MapAccess, Unexpected, VariantAccess, Visitor};
 
-    #[derive(Clone, Debug)]
     pub struct UnitOnly<E> {
         marker: PhantomData<E>,
     }
