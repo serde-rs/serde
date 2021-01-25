@@ -1,5 +1,8 @@
+#[cfg(serde_derive)]
 pub mod de;
+#[cfg(serde_derive)]
 pub mod ser;
+
 pub mod size_hint;
 
 // FIXME: #[cfg(doctest)] once https://github.com/rust-lang/rust/issues/67295 is fixed.
