@@ -1,5 +1,6 @@
-use super::respan::respan;
+use internals::respan::respan;
 use proc_macro2::Span;
+use quote::ToTokens;
 use std::mem;
 use syn::punctuated::Punctuated;
 use syn::visit_mut::{self, VisitMut};
@@ -20,7 +21,9 @@ struct ReplaceReceiver<'a>(&'a TypePath);
 
 impl ReplaceReceiver<'_> {
     fn self_ty(&self, span: Span) -> TypePath {
-        respan(self.0, span)
+        let tokens = self.0.to_token_stream();
+        let respanned = respan(tokens, span);
+        syn::parse2(respanned).unwrap()
     }
 
     fn self_to_qself(&self, qself: &mut Option<QSelf>, path: &mut Path) {
