@@ -158,6 +158,7 @@ jobs:
         # https://github.com/rust-lang/rust-clippy/issues/5356
       - run: cd serde && cargo clippy --features rc,unstable -- -D clippy::all -A clippy::redundant_field_names
       - run: cd serde_derive && cargo clippy -- -D clippy::all
+      - run: cd serde_derive_internals && cargo clippy -- -D clippy::all
       - run: cd serde_test && cargo clippy -- -D clippy::all -A clippy::redundant_field_names
       - run: cd test_suite && cargo clippy --tests --features unstable -- -D clippy::all -A clippy::redundant_field_names
       - run: cd test_suite/no_std && cargo clippy -- -D clippy::all -A clippy::redundant_field_names
