@@ -8,13 +8,17 @@ use bound;
 use dummy;
 use fragment::{Expr, Fragment, Match, Stmts};
 use internals::ast::{Container, Data, Field, Style, Variant};
-use internals::{attr, ungroup, Ctxt, Derive};
+use internals::{attr, replace_receiver, ungroup, Ctxt, Derive};
 use pretend;
 
 use std::collections::BTreeSet;
 use std::ptr;
 
-pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream, Vec<syn::Error>> {
+pub fn expand_derive_deserialize(
+    input: &mut syn::DeriveInput,
+) -> Result<TokenStream, Vec<syn::Error>> {
+    replace_receiver(input);
+
     let ctxt = Ctxt::new();
     let cont = match Container::from_ast(&ctxt, input, Derive::Deserialize) {
         Some(cont) => cont,
