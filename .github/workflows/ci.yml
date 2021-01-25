@@ -115,6 +115,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: dtolnay/rust-toolchain@1.31.0
+      - run: cd serde && cargo check --no-default-features
+      - run: cd serde && cargo check
       - run: cd serde_derive && cargo check
 
   alloc:
