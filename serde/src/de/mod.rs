@@ -118,7 +118,6 @@ use lib::*;
 
 pub mod value;
 
-mod from_primitive;
 mod ignored_any;
 mod impls;
 mod utf8;
