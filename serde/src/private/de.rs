@@ -191,29 +191,6 @@ where
         .map(From::from)
 }
 
-pub mod size_hint {
-    use lib::*;
-
-    pub fn from_bounds<I>(iter: &I) -> Option<usize>
-    where
-        I: Iterator,
-    {
-        helper(iter.size_hint())
-    }
-
-    #[inline]
-    pub fn cautious(hint: Option<usize>) -> usize {
-        cmp::min(hint.unwrap_or(0), 4096)
-    }
-
-    fn helper(bounds: (usize, Option<usize>)) -> Option<usize> {
-        match bounds {
-            (lower, Some(upper)) if lower == upper => Some(upper),
-            _ => None,
-        }
-    }
-}
-
 #[cfg(any(feature = "std", feature = "alloc"))]
 mod content {
     // This module is private and nothing here should be used outside of
@@ -228,7 +205,7 @@ mod content {
 
     use lib::*;
 
-    use super::size_hint;
+    use __private::size_hint;
     use de::{
         self, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected, IgnoredAny,
         MapAccess, SeqAccess, Unexpected, Visitor,

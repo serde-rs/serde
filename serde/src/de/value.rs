@@ -24,7 +24,7 @@
 use lib::*;
 
 use self::private::{First, Second};
-use __private::de::size_hint;
+use __private::size_hint;
 use de::{self, Deserializer, Expected, IntoDeserializer, SeqAccess, Visitor};
 use ser;
 

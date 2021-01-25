@@ -10,7 +10,7 @@ use de::MapAccess;
 use seed::InPlaceSeed;
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use __private::de::size_hint;
+use __private::size_hint;
 
 ////////////////////////////////////////////////////////////////////////////////
 
