@@ -129,7 +129,7 @@ macro_rules! impl_deserialize_num {
                     }
 
                     $(
-                        impl_deserialize_num!($visit $ty);
+                        impl_deserialize_num!($visit);
                     )*
                 }
 
@@ -138,7 +138,7 @@ macro_rules! impl_deserialize_num {
         }
     };
 
-    (integer $ty:ident) => {
+    (integer) => {
         visit_integer_method!(i8, visit_i8, from_i8, Signed, i64);
         visit_integer_method!(i16, visit_i16, from_i16, Signed, i64);
         visit_integer_method!(i32, visit_i32, from_i32, Signed, i64);
@@ -150,7 +150,7 @@ macro_rules! impl_deserialize_num {
         visit_integer_method!(u64, visit_u64, from_u64, Unsigned, u64);
     };
 
-    (float $ty:ident) => {
+    (float) => {
         visit_float_method!(f32, visit_f32);
         visit_float_method!(f64, visit_f64);
     };
@@ -187,7 +187,7 @@ serde_if_integer128! {
                     formatter.write_str("i128")
                 }
 
-                impl_deserialize_num!(integer i128);
+                impl_deserialize_num!(integer);
 
                 #[inline]
                 fn visit_i128<E>(self, v: i128) -> Result<Self::Value, E>
@@ -229,7 +229,7 @@ serde_if_integer128! {
                     formatter.write_str("u128")
                 }
 
-                impl_deserialize_num!(integer u128);
+                impl_deserialize_num!(integer);
 
                 #[inline]
                 fn visit_i128<E>(self, v: i128) -> Result<Self::Value, E>
