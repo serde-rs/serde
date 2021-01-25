@@ -1,10 +1,10 @@
 use lib::*;
 
 use de::value::{BorrowedBytesDeserializer, BytesDeserializer};
-use de::{Deserialize, DeserializeSeed, Deserializer, Error, IntoDeserializer, Visitor};
+use de::{Deserialize, Deserializer, Error, IntoDeserializer, Visitor};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use de::{MapAccess, Unexpected};
+use de::{DeserializeSeed, MapAccess, Unexpected};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{
@@ -12,6 +12,8 @@ pub use self::content::{
     InternallyTaggedUnitVisitor, TagContentOtherField, TagContentOtherFieldVisitor,
     TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
 };
+
+pub use seed::InPlaceSeed;
 
 /// If the missing field is of type `Option<T>` then treat is as `None`,
 /// otherwise it is an error.
@@ -2663,24 +2665,6 @@ where
 
     fn from(self) -> Self::Deserializer {
         BorrowedBytesDeserializer::new(self.0)
-    }
-}
-
-/// A DeserializeSeed helper for implementing deserialize_in_place Visitors.
-///
-/// Wraps a mutable reference and calls deserialize_in_place on it.
-pub struct InPlaceSeed<'a, T: 'a>(pub &'a mut T);
-
-impl<'a, 'de, T> DeserializeSeed<'de> for InPlaceSeed<'a, T>
-where
-    T: Deserialize<'de>,
-{
-    type Value = ();
-    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        T::deserialize_in_place(deserializer, self.0)
     }
 }
 

@@ -276,6 +276,9 @@ use self::__private as export;
 #[allow(unused_imports)]
 use self::__private as private;
 
+#[path = "de/seed.rs"]
+mod seed;
+
 #[cfg(not(feature = "std"))]
 mod std_error;
 

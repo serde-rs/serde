@@ -7,7 +7,7 @@ use de::{
 #[cfg(any(core_duration, feature = "std", feature = "alloc"))]
 use de::MapAccess;
 
-use __private::de::InPlaceSeed;
+use seed::InPlaceSeed;
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 use __private::de::size_hint;
