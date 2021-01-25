@@ -1,6 +1,6 @@
 use internals::symbol::*;
 use internals::{ungroup, Ctxt};
-use proc_macro2::{Group, Span, TokenStream, TokenTree};
+use proc_macro2::{Group, Spacing, Span, TokenStream, TokenTree};
 use quote::ToTokens;
 use std::borrow::Cow;
 use std::collections::BTreeSet;
@@ -1901,14 +1901,37 @@ fn collect_lifetimes(ty: &syn::Type, out: &mut BTreeSet<syn::Lifetime>) {
         syn::Type::Group(ty) => {
             collect_lifetimes(&ty.elem, out);
         }
+        syn::Type::Macro(ty) => {
+            collect_lifetimes_from_tokens(ty.mac.tokens.clone(), out);
+        }
         syn::Type::BareFn(_)
         | syn::Type::Never(_)
         | syn::Type::TraitObject(_)
         | syn::Type::ImplTrait(_)
         | syn::Type::Infer(_)
-        | syn::Type::Macro(_)
         | syn::Type::Verbatim(_)
         | _ => {}
+    }
+}
+
+fn collect_lifetimes_from_tokens(tokens: TokenStream, out: &mut BTreeSet<syn::Lifetime>) {
+    let mut iter = tokens.into_iter();
+    while let Some(tt) = iter.next() {
+        match &tt {
+            TokenTree::Punct(op) if op.as_char() == '\'' && op.spacing() == Spacing::Joint => {
+                if let Some(TokenTree::Ident(ident)) = iter.next() {
+                    out.insert(syn::Lifetime {
+                        apostrophe: op.span(),
+                        ident,
+                    });
+                }
+            }
+            TokenTree::Group(group) => {
+                let tokens = group.stream();
+                collect_lifetimes_from_tokens(tokens, out);
+            }
+            _ => {}
+        }
     }
 }
 

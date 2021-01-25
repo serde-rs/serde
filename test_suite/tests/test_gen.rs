@@ -723,6 +723,18 @@ fn test_gen() {
     }
 
     deriving!(&'a str);
+
+    macro_rules! mac {
+        ($($tt:tt)*) => {
+            $($tt)*
+        };
+    }
+
+    #[derive(Deserialize)]
+    struct BorrowLifetimeInsideMacro<'a> {
+        #[serde(borrow = "'a")]
+        f: mac!(Cow<'a, str>),
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
