@@ -6,10 +6,14 @@ use bound;
 use dummy;
 use fragment::{Fragment, Match, Stmts};
 use internals::ast::{Container, Data, Field, Style, Variant};
-use internals::{attr, Ctxt, Derive};
+use internals::{attr, replace_receiver, Ctxt, Derive};
 use pretend;
 
-pub fn expand_derive_serialize(input: &syn::DeriveInput) -> Result<TokenStream, Vec<syn::Error>> {
+pub fn expand_derive_serialize(
+    input: &mut syn::DeriveInput,
+) -> Result<TokenStream, Vec<syn::Error>> {
+    replace_receiver(input);
+
     let ctxt = Ctxt::new();
     let cont = match Container::from_ast(&ctxt, input, Derive::Serialize) {
         Some(cont) => cont,

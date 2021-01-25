@@ -79,8 +79,8 @@ mod try;
 
 #[proc_macro_derive(Serialize, attributes(serde))]
 pub fn derive_serialize(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-    ser::expand_derive_serialize(&input)
+    let mut input = parse_macro_input!(input as DeriveInput);
+    ser::expand_derive_serialize(&mut input)
         .unwrap_or_else(to_compile_errors)
         .into()
 }
