@@ -1,12 +1,9 @@
 use super::respan::respan;
 use proc_macro2::Span;
 use std::mem;
-use syn::{
-    parse_quote,
-    punctuated::Punctuated,
-    visit_mut::{self, VisitMut},
-    DeriveInput, ExprPath, Path, PathArguments, QSelf, Type, TypePath,
-};
+use syn::punctuated::Punctuated;
+use syn::visit_mut::{self, VisitMut};
+use syn::{parse_quote, DeriveInput, ExprPath, Path, PathArguments, QSelf, Type, TypePath};
 
 pub fn replace_receiver(input: &mut DeriveInput) {
     let self_ty = {
@@ -27,16 +24,8 @@ impl ReplaceReceiver<'_> {
     }
 
     fn self_to_qself(&self, qself: &mut Option<QSelf>, path: &mut Path) {
-        if path.leading_colon.is_some() {
+        if path.leading_colon.is_some() || path.segments[0].ident != "Self" {
             return;
-        }
-
-        // Make borrow checker happy
-        {
-            let first = &path.segments[0];
-            if first.ident != "Self" || !first.arguments.is_empty() {
-                return;
-            }
         }
 
         if path.segments.len() == 1 {
@@ -47,7 +36,7 @@ impl ReplaceReceiver<'_> {
         let span = path.segments[0].ident.span();
         *qself = Some(QSelf {
             lt_token: Token![<](span),
-            ty: Box::new(self.self_ty(span).into()),
+            ty: Box::new(Type::Path(self.self_ty(span))),
             position: 0,
             as_token: None,
             gt_token: Token![>](span),
@@ -60,18 +49,6 @@ impl ReplaceReceiver<'_> {
     }
 
     fn self_to_expr_path(&self, path: &mut Path) {
-        if path.leading_colon.is_some() {
-            return;
-        }
-
-        // Make borrow checker happy
-        {
-            let first = &path.segments[0];
-            if first.ident != "Self" || !first.arguments.is_empty() {
-                return;
-            }
-        }
-
         let self_ty = self.self_ty(path.segments[0].ident.span());
         let variant = mem::replace(path, self_ty.path);
         for segment in &mut path.segments {
