@@ -48,6 +48,7 @@
     clippy::struct_excessive_bools,
     clippy::too_many_lines,
     clippy::unseparated_literal_suffix,
+    clippy::unused_self,
     clippy::use_self,
     clippy::wildcard_imports
 )]
