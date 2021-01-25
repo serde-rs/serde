@@ -1,12 +1,11 @@
 use super::respan::respan;
-use proc_macro2::{Group, Spacing, Span, TokenStream, TokenTree};
-use quote::{quote, quote_spanned};
-use std::{iter::FromIterator, mem};
+use proc_macro2::Span;
+use std::mem;
 use syn::{
     parse_quote,
     punctuated::Punctuated,
     visit_mut::{self, VisitMut},
-    DeriveInput, ExprPath, Macro, Path, PathArguments, QSelf, Type, TypePath,
+    DeriveInput, ExprPath, Path, PathArguments, QSelf, Type, TypePath,
 };
 
 pub fn replace_receiver(input: &mut DeriveInput) {
@@ -87,53 +86,6 @@ impl ReplaceReceiver<'_> {
             path.segments.extend(variant.segments.into_pairs().skip(1));
         }
     }
-
-    fn visit_token_stream(&self, tokens: &mut TokenStream) -> bool {
-        let mut out = Vec::new();
-        let mut modified = false;
-        let mut iter = tokens.clone().into_iter().peekable();
-        while let Some(tt) = iter.next() {
-            match tt {
-                TokenTree::Ident(ident) => {
-                    if ident == "Self" {
-                        modified = true;
-                        let self_ty = self.self_ty(ident.span());
-                        match iter.peek() {
-                            Some(TokenTree::Punct(p))
-                                if p.as_char() == ':' && p.spacing() == Spacing::Joint => {}
-                            _ => {
-                                out.extend(quote!(#self_ty));
-                                continue;
-                            }
-                        }
-                        let next = iter.next().unwrap();
-                        match iter.peek() {
-                            Some(TokenTree::Punct(p)) if p.as_char() == ':' => {
-                                let span = ident.span();
-                                out.extend(quote_spanned!(span=> <#self_ty>));
-                            }
-                            _ => out.extend(quote!(#self_ty)),
-                        }
-                        out.push(next);
-                    } else {
-                        out.push(TokenTree::Ident(ident));
-                    }
-                }
-                TokenTree::Group(group) => {
-                    let mut content = group.stream();
-                    modified |= self.visit_token_stream(&mut content);
-                    let mut new = Group::new(group.delimiter(), content);
-                    new.set_span(group.span());
-                    out.push(TokenTree::Group(new));
-                }
-                other => out.push(other),
-            }
-        }
-        if modified {
-            *tokens = TokenStream::from_iter(out);
-        }
-        modified
-    }
 }
 
 impl VisitMut for ReplaceReceiver<'_> {
@@ -168,23 +120,4 @@ impl VisitMut for ReplaceReceiver<'_> {
         }
         visit_mut::visit_expr_path_mut(self, expr);
     }
-
-    fn visit_macro_mut(&mut self, mac: &mut Macro) {
-        // We can't tell in general whether `self` inside a macro invocation
-        // refers to the self in the argument list or a different self
-        // introduced within the macro. Heuristic: if the macro input contains
-        // `fn`, then `self` is more likely to refer to something other than the
-        // outer function's self argument.
-        if !contains_fn(mac.tokens.clone()) {
-            self.visit_token_stream(&mut mac.tokens);
-        }
-    }
-}
-
-fn contains_fn(tokens: TokenStream) -> bool {
-    tokens.into_iter().any(|tt| match tt {
-        TokenTree::Ident(ident) => ident == "fn",
-        TokenTree::Group(group) => contains_fn(group.stream()),
-        _ => false,
-    })
 }
