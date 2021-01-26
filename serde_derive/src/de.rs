@@ -2177,34 +2177,33 @@ fn deserialize_identifier(
         &u64_fallthrough_arm_tokens
     };
 
-    let (visit_arms_str, visit_arms_bytes) =
-        if case_insensitive {
-            (
-                quote! {
-                    #(
-                        __value if __value.eq_ignore_ascii_case(#field_strs) => _serde::__private::Ok(#constructors),
-                    )*
-                },
-                quote! {
-                    #(
-                        __value if __value.eq_ignore_ascii_case(#field_bytes) => _serde::__private::Ok(#constructors),
-                    )*
-                },
-            )
-        } else {
-            (
-                quote! {
-                    #(
-                        #field_strs => _serde::__private::Ok(#constructors),
-                    )*
-                },
-                quote! {
-                    #(
-                        #field_bytes => _serde::__private::Ok(#constructors),
-                    )*
-                },
-            )
-        };
+    let (visit_arms_str, visit_arms_bytes) = if case_insensitive {
+        (
+            quote! {
+                #(
+                    __value if __value.eq_ignore_ascii_case(#field_strs) => _serde::__private::Ok(#constructors),
+                )*
+            },
+            quote! {
+                #(
+                    __value if __value.eq_ignore_ascii_case(#field_bytes) => _serde::__private::Ok(#constructors),
+                )*
+            },
+        )
+    } else {
+        (
+            quote! {
+                #(
+                    #field_strs => _serde::__private::Ok(#constructors),
+                )*
+            },
+            quote! {
+                #(
+                    #field_bytes => _serde::__private::Ok(#constructors),
+                )*
+            },
+        )
+    };
 
     let variant_indices = 0_u64..;
     let visit_other = if collect_other_fields {
