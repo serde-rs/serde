@@ -91,6 +91,10 @@ impl<'a> Container<'a> {
                         field
                             .attrs
                             .rename_by_rules(variant.attrs.rename_all_rules());
+
+                        for rule in attrs.alias_all_rules() {
+                            field.attrs.alias_all(*rule);
+                        }
                     }
                 }
             }
@@ -100,6 +104,10 @@ impl<'a> Container<'a> {
                         has_flatten = true;
                     }
                     field.attrs.rename_by_rules(attrs.rename_all_rules());
+
+                    for rule in attrs.alias_all_rules() {
+                        field.attrs.alias_all(*rule);
+                    }
                 }
             }
         }

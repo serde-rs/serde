@@ -2805,3 +2805,42 @@ fn test_expecting_message_identifier_enum() {
         r#"invalid type: map, expected something strange..."#,
     );
 }
+
+#[test]
+fn test_alias_all() {
+    #[derive(Deserialize, Debug, PartialEq)]
+    #[serde(alias_all = "PascalCase", alias_all = "camelCase")]
+    struct MyStruct {
+        my_data: u32,
+    }
+
+    let s = MyStruct { my_data: 42 };
+
+    assert_de_tokens(
+        &s,
+        &[
+            Token::Map { len: None },
+            Token::Str("my_data"),
+            Token::U32(42),
+            Token::MapEnd,
+        ],
+    );
+    assert_de_tokens(
+        &s,
+        &[
+            Token::Map { len: None },
+            Token::Str("MyData"),
+            Token::U32(42),
+            Token::MapEnd,
+        ],
+    );
+    assert_de_tokens(
+        &s,
+        &[
+            Token::Map { len: None },
+            Token::Str("myData"),
+            Token::U32(42),
+            Token::MapEnd,
+        ],
+    );
+}

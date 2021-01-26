@@ -212,6 +212,7 @@ pub struct Container {
     deny_unknown_fields: bool,
     default: Default,
     rename_all_rules: RenameAllRules,
+    alias_all_rules: Vec<RenameRule>,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     tag: TagType,
@@ -295,6 +296,7 @@ impl Container {
         let mut default = Attr::none(cx, DEFAULT);
         let mut rename_all_ser_rule = Attr::none(cx, RENAME_ALL);
         let mut rename_all_de_rule = Attr::none(cx, RENAME_ALL);
+        let mut alias_all_rules = VecAttr::none(cx, ALIAS_ALL);
         let mut ser_bound = Attr::none(cx, BOUND);
         let mut de_bound = Attr::none(cx, BOUND);
         let mut untagged = BoolAttr::none(cx, UNTAGGED);
@@ -340,6 +342,16 @@ impl Container {
                                 rename_all_ser_rule.set(&m.path, rename_rule);
                                 rename_all_de_rule.set(&m.path, rename_rule);
                             }
+                            Err(err) => cx.error_spanned_by(s, err),
+                        }
+                    }
+                }
+
+                // Parse `#[serde(alias_all = "foo")]`
+                Meta(NameValue(m)) if m.path == ALIAS_ALL => {
+                    if let Ok(s) = get_lit_str(cx, ALIAS_ALL, &m.lit) {
+                        match RenameRule::from_str(&s.value()) {
+                            Ok(rename_rule) => alias_all_rules.insert(&m.path, rename_rule),
                             Err(err) => cx.error_spanned_by(s, err),
                         }
                     }
@@ -608,6 +620,7 @@ impl Container {
                 serialize: rename_all_ser_rule.get().unwrap_or(RenameRule::None),
                 deserialize: rename_all_de_rule.get().unwrap_or(RenameRule::None),
             },
+            alias_all_rules: alias_all_rules.get(),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
             tag: decide_tag(cx, item, untagged, internal_tag, content),
@@ -629,6 +642,10 @@ impl Container {
 
     pub fn rename_all_rules(&self) -> &RenameAllRules {
         &self.rename_all_rules
+    }
+
+    pub fn alias_all_rules(&self) -> &Vec<RenameRule> {
+        &self.alias_all_rules
     }
 
     pub fn transparent(&self) -> bool {
@@ -1440,6 +1457,10 @@ impl Field {
         if !self.name.deserialize_renamed {
             self.name.deserialize = rules.deserialize.apply_to_field(&self.name.deserialize);
         }
+    }
+
+    pub fn alias_all(&mut self, rule: RenameRule) {
+        self.name.deserialize_aliases.push(rule.apply_to_field(&self.name.deserialize));
     }
 
     pub fn skip_serializing(&self) -> bool {
