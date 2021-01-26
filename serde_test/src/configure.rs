@@ -777,6 +777,17 @@ macro_rules! impl_deserializer {
             {
                 self.0.next_value_seed($wrapper(seed))
             }
+            fn next_entry_seed<K, V>(
+                &mut self,
+                kseed: K,
+                vseed: V,
+            ) -> Result<Option<(K::Value, V::Value)>, D::Error>
+            where
+                K: DeserializeSeed<'de>,
+                V: DeserializeSeed<'de>,
+            {
+                self.0.next_entry_seed($wrapper(kseed), $wrapper(vseed))
+            }
             fn size_hint(&self) -> Option<usize> {
                 self.0.size_hint()
             }

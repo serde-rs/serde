@@ -2637,3 +2637,171 @@ fn test_flatten_any_after_flatten_struct() {
         ],
     );
 }
+
+#[test]
+fn test_expecting_message() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    #[serde(expecting = "something strange...")]
+    struct Unit;
+
+    #[derive(Deserialize)]
+    #[serde(expecting = "something strange...")]
+    struct Newtype(bool);
+
+    #[derive(Deserialize)]
+    #[serde(expecting = "something strange...")]
+    struct Tuple(u32, bool);
+
+    #[derive(Deserialize)]
+    #[serde(expecting = "something strange...")]
+    struct Struct {
+        question: String,
+        answer: u32,
+    }
+
+    assert_de_tokens_error::<Unit>(
+        &[Token::Str("Unit")],
+        r#"invalid type: string "Unit", expected something strange..."#,
+    );
+
+    assert_de_tokens_error::<Newtype>(
+        &[Token::Str("Newtype")],
+        r#"invalid type: string "Newtype", expected something strange..."#,
+    );
+
+    assert_de_tokens_error::<Tuple>(
+        &[Token::Str("Tuple")],
+        r#"invalid type: string "Tuple", expected something strange..."#,
+    );
+
+    assert_de_tokens_error::<Struct>(
+        &[Token::Str("Struct")],
+        r#"invalid type: string "Struct", expected something strange..."#,
+    );
+}
+
+#[test]
+fn test_expecting_message_externally_tagged_enum() {
+    #[derive(Deserialize)]
+    #[serde(expecting = "something strange...")]
+    enum Enum {
+        ExternallyTagged,
+    }
+
+    assert_de_tokens_error::<Enum>(
+        &[Token::Str("ExternallyTagged")],
+        r#"invalid type: string "ExternallyTagged", expected something strange..."#,
+    );
+
+    // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
+    assert_de_tokens_error::<Enum>(
+        &[Token::Enum { name: "Enum" }, Token::Unit],
+        r#"invalid type: unit value, expected variant identifier"#,
+    );
+}
+
+#[test]
+fn test_expecting_message_internally_tagged_enum() {
+    #[derive(Deserialize)]
+    #[serde(tag = "tag")]
+    #[serde(expecting = "something strange...")]
+    enum Enum {
+        InternallyTagged,
+    }
+
+    assert_de_tokens_error::<Enum>(
+        &[Token::Str("InternallyTagged")],
+        r#"invalid type: string "InternallyTagged", expected something strange..."#,
+    );
+
+    // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
+    assert_de_tokens_error::<Enum>(
+        &[Token::Map { len: None }, Token::Str("tag"), Token::Unit],
+        r#"invalid type: unit value, expected variant identifier"#,
+    );
+}
+
+#[test]
+fn test_expecting_message_adjacently_tagged_enum() {
+    #[derive(Deserialize)]
+    #[serde(tag = "tag", content = "content")]
+    #[serde(expecting = "something strange...")]
+    enum Enum {
+        AdjacentlyTagged,
+    }
+
+    assert_de_tokens_error::<Enum>(
+        &[Token::Str("AdjacentlyTagged")],
+        r#"invalid type: string "AdjacentlyTagged", expected something strange..."#,
+    );
+
+    assert_de_tokens_error::<Enum>(
+        &[Token::Map { len: None }, Token::Unit],
+        r#"invalid type: unit value, expected "tag", "content", or other ignored fields"#,
+    );
+
+    // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
+    assert_de_tokens_error::<Enum>(
+        &[Token::Map { len: None }, Token::Str("tag"), Token::Unit],
+        r#"invalid type: unit value, expected variant identifier"#,
+    );
+}
+
+#[test]
+fn test_expecting_message_untagged_tagged_enum() {
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    #[serde(expecting = "something strange...")]
+    enum Enum {
+        Untagged,
+    }
+
+    assert_de_tokens_error::<Enum>(&[Token::Str("Untagged")], r#"something strange..."#);
+}
+
+#[test]
+fn test_expecting_message_identifier_enum() {
+    #[derive(Deserialize)]
+    #[serde(field_identifier)]
+    #[serde(expecting = "something strange...")]
+    enum FieldEnum {
+        Field,
+    }
+
+    #[derive(Deserialize)]
+    #[serde(variant_identifier)]
+    #[serde(expecting = "something strange...")]
+    enum VariantEnum {
+        Variant,
+    }
+
+    assert_de_tokens_error::<FieldEnum>(
+        &[Token::Unit],
+        r#"invalid type: unit value, expected something strange..."#,
+    );
+
+    assert_de_tokens_error::<FieldEnum>(
+        &[
+            Token::Enum { name: "FieldEnum" },
+            Token::Str("Unknown"),
+            Token::None,
+        ],
+        r#"invalid type: map, expected something strange..."#,
+    );
+
+    assert_de_tokens_error::<VariantEnum>(
+        &[Token::Unit],
+        r#"invalid type: unit value, expected something strange..."#,
+    );
+
+    assert_de_tokens_error::<VariantEnum>(
+        &[
+            Token::Enum {
+                name: "VariantEnum",
+            },
+            Token::Str("Unknown"),
+            Token::None,
+        ],
+        r#"invalid type: map, expected something strange..."#,
+    );
+}

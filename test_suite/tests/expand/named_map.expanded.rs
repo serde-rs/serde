@@ -100,10 +100,7 @@ const _: () = {
                         0u64 => _serde::__private::Ok(__Field::__field0),
                         1u64 => _serde::__private::Ok(__Field::__field1),
                         2u64 => _serde::__private::Ok(__Field::__field2),
-                        _ => _serde::__private::Err(_serde::de::Error::invalid_value(
-                            _serde::de::Unexpected::Unsigned(__value),
-                            &"field index 0 <= i < 3",
-                        )),
+                        _ => _serde::__private::Ok(__Field::__ignore),
                     }
                 }
                 fn visit_str<__E>(
@@ -387,10 +384,7 @@ const _: () = {
                         0u64 => _serde::__private::Ok(__Field::__field0),
                         1u64 => _serde::__private::Ok(__Field::__field1),
                         2u64 => _serde::__private::Ok(__Field::__field2),
-                        _ => _serde::__private::Err(_serde::de::Error::invalid_value(
-                            _serde::de::Unexpected::Unsigned(__value),
-                            &"field index 0 <= i < 3",
-                        )),
+                        _ => _serde::__private::Ok(__Field::__ignore),
                     }
                 }
                 fn visit_str<__E>(

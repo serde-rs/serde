@@ -1,3 +1,35 @@
+// Used only by Serde doc tests. Not public API.
+
+use lib::*;
+
+use ser;
+
+#[doc(hidden)]
+#[derive(Debug)]
+pub struct Error;
+
+impl ser::Error for Error {
+    fn custom<T>(_: T) -> Self
+    where
+        T: Display,
+    {
+        unimplemented!()
+    }
+}
+
+#[cfg(feature = "std")]
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        unimplemented!()
+    }
+}
+
+impl Display for Error {
+    fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
+        unimplemented!()
+    }
+}
+
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __private_serialize {
@@ -10,19 +42,6 @@ macro_rules! __private_serialize {
     };
 }
 
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __private_deserialize {
-    () => {
-        trait Deserialize<'de>: Sized {
-            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            where
-                D: $crate::Deserializer<'de>;
-        }
-    };
-}
-
-/// Used only by Serde doc tests. Not public API.
 #[doc(hidden)]
 #[macro_export(local_inner_macros)]
 macro_rules! __serialize_unimplemented {

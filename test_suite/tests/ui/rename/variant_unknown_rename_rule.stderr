@@ -1,4 +1,4 @@
-error: unknown rename rule for #[serde(rename_all = "abc")]
+error: unknown rename rule `rename_all = "abc"`, expected one of "lowercase", "UPPERCASE", "PascalCase", "camelCase", "snake_case", "SCREAMING_SNAKE_CASE", "kebab-case", "SCREAMING-KEBAB-CASE"
  --> $DIR/variant_unknown_rename_rule.rs:5:26
   |
 5 |     #[serde(rename_all = "abc")]

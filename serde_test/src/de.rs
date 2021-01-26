@@ -168,13 +168,41 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                         self.next_token();
                         visitor.visit_str(variant)
                     }
+                    (Token::BorrowedStr(variant), Token::Unit) => {
+                        self.next_token();
+                        visitor.visit_borrowed_str(variant)
+                    }
+                    (Token::String(variant), Token::Unit) => {
+                        self.next_token();
+                        visitor.visit_string(variant.to_string())
+                    }
                     (Token::Bytes(variant), Token::Unit) => {
                         self.next_token();
                         visitor.visit_bytes(variant)
                     }
+                    (Token::BorrowedBytes(variant), Token::Unit) => {
+                        self.next_token();
+                        visitor.visit_borrowed_bytes(variant)
+                    }
+                    (Token::ByteBuf(variant), Token::Unit) => {
+                        self.next_token();
+                        visitor.visit_byte_buf(variant.to_vec())
+                    }
+                    (Token::U8(variant), Token::Unit) => {
+                        self.next_token();
+                        visitor.visit_u8(variant)
+                    }
+                    (Token::U16(variant), Token::Unit) => {
+                        self.next_token();
+                        visitor.visit_u16(variant)
+                    }
                     (Token::U32(variant), Token::Unit) => {
                         self.next_token();
                         visitor.visit_u32(variant)
+                    }
+                    (Token::U64(variant), Token::Unit) => {
+                        self.next_token();
+                        visitor.visit_u64(variant)
                     }
                     (variant, Token::Unit) => unexpected!(variant),
                     (variant, _) => {
@@ -250,9 +278,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             {
                 visitor.visit_enum(DeserializerEnumVisitor { de: self })
             }
-            _ => {
-                unexpected!(self.next_token());
-            }
+            _ => self.deserialize_any(visitor),
         }
     }
 

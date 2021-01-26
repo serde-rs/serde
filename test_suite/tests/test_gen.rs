@@ -7,6 +7,7 @@
 #![allow(
     unknown_lints,
     mixed_script_confusables,
+    clippy::ptr_arg,
     clippy::trivially_copy_pass_by_ref
 )]
 
@@ -723,6 +724,24 @@ fn test_gen() {
     }
 
     deriving!(&'a str);
+
+    macro_rules! mac {
+        ($($tt:tt)*) => {
+            $($tt)*
+        };
+    }
+
+    #[derive(Deserialize)]
+    struct BorrowLifetimeInsideMacro<'a> {
+        #[serde(borrow = "'a")]
+        f: mac!(Cow<'a, str>),
+    }
+
+    #[derive(Serialize)]
+    struct Struct {
+        #[serde(serialize_with = "vec_first_element")]
+        vec: Vec<Self>,
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -795,4 +814,12 @@ where
 
 pub fn is_zero(n: &u8) -> bool {
     *n == 0
+}
+
+fn vec_first_element<T, S>(vec: &Vec<T>, serializer: S) -> StdResult<S::Ok, S::Error>
+where
+    T: Serialize,
+    S: Serializer,
+{
+    vec.first().serialize(serializer)
 }

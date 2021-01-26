@@ -335,33 +335,6 @@ where
     }
 }
 
-/// Used only by Serde doc tests. Not public API.
-#[doc(hidden)]
-#[derive(Debug)]
-pub struct Error;
-
-impl ser::Error for Error {
-    fn custom<T>(_: T) -> Self
-    where
-        T: Display,
-    {
-        unimplemented!()
-    }
-}
-
-#[cfg(feature = "std")]
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        unimplemented!()
-    }
-}
-
-impl Display for Error {
-    fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
-        unimplemented!()
-    }
-}
-
 #[cfg(any(feature = "std", feature = "alloc"))]
 mod content {
     use lib::*;
@@ -452,7 +425,6 @@ mod content {
         }
     }
 
-    #[derive(Debug)]
     pub enum Content {
         Bool(bool),
 

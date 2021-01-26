@@ -36,6 +36,7 @@ pub const UNTAGGED: Symbol = Symbol("untagged");
 pub const VARIANT_IDENTIFIER: Symbol = Symbol("variant_identifier");
 pub const WITH: Symbol = Symbol("with");
 pub const CASE_INSENSITIVE: Symbol = Symbol("case_insensitive");
+pub const EXPECTING: Symbol = Symbol("expecting");
 
 impl PartialEq<Symbol> for Ident {
     fn eq(&self, word: &Symbol) -> bool {
