@@ -2338,9 +2338,6 @@ fn deserialize_identifier(
             {
                 match __value {
                     #visit_arms_bytes
-                    #(
-                        #field_bytes => _serde::__private::Ok(#constructors),
-                    )*
                     _ => {
                         #bytes_to_str
                         #value_as_borrowed_bytes_content
