@@ -4,6 +4,7 @@
 // Ignored clippy lints
 #![allow(
     clippy::cognitive_complexity,
+    clippy::missing_panics_doc,
     clippy::redundant_field_names,
     clippy::result_unit_err,
     clippy::should_implement_trait,

@@ -155,6 +155,7 @@
     allow(
         empty_line_after_outer_attr,
         missing_docs_in_private_items,
+        missing_panics_doc,
         module_name_repetitions,
         must_use_candidate,
         redundant_field_names,
