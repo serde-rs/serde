@@ -60,23 +60,6 @@ jobs:
       - run: cd test_suite/no_std && cargo build
         if: matrix.os != 'windows'
 
-  msrv:
-    name: Rust 1.13.0
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dtolnay/rust-toolchain@1.13.0
-      - name: Get timestamp for cache
-        id: date
-        run: echo ::set-output name=yearmo::$(date +%Y%m)
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry/index
-          key: cargo-registry-index-${{steps.date.outputs.yearmo}}
-      - run: cd serde && cargo build --features rc
-      - run: cd serde && cargo build --no-default-features
-      - run: cd serde_test && cargo build
-
   build:
     name: Rust ${{matrix.rust}}
     runs-on: ubuntu-latest
