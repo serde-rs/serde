@@ -1,7 +1,5 @@
 extern crate serde;
 #[macro_use]
-extern crate serde_derive;
-#[macro_use]
 extern crate serde_derive_state;
 extern crate serde_state;
 extern crate serde_test;
@@ -35,7 +33,8 @@ where
 #[serde(ser_parameters = "S")]
 #[serde(bound(serialize = "S: ::std::borrow::Borrow<Cell<i32>>"))]
 struct SeedStruct {
-    #[serde(serialize_state)] value: Inner,
+    #[serde(serialize_state)]
+    value: Inner,
 }
 
 #[test]
@@ -122,7 +121,8 @@ fn test_serialize_option_none_seed() {
 enum SeedEnum {
     A(#[serde(serialize_state)] Inner),
     B {
-        #[serde(serialize_state)] inner: Inner,
+        #[serde(serialize_state)]
+        inner: Inner,
     },
 }
 
@@ -186,12 +186,14 @@ fn test_serialize_state_generic_newtype() {
     assert_eq!(seed.get(), 1);
 }
 
-
 #[derive(SerializeState)]
 #[serde(serialize_state = "Cell<i32>")]
 enum GenericSeedEnum<T> {
     A(#[serde(serialize_state)] T),
-    B { #[serde(serialize_state)] inner: T },
+    B {
+        #[serde(serialize_state)]
+        inner: T,
+    },
 }
 
 #[test]
@@ -233,7 +235,6 @@ fn test_serialize_state_generic_struct_variant() {
     assert_eq!(seed.get(), 1);
 }
 
-
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -244,8 +245,10 @@ use serde::Serializer;
 #[serde(serialize_state = "RefCell<NodeToId>")]
 struct Node {
     data: char,
-    #[serde(serialize_state_with = "serialize_option_rc_seed")] left: Option<Rc<Node>>,
-    #[serde(serialize_state_with = "serialize_option_rc_seed")] right: Option<Rc<Node>>,
+    #[serde(serialize_state_with = "serialize_option_rc_seed")]
+    left: Option<Rc<Node>>,
+    #[serde(serialize_state_with = "serialize_option_rc_seed")]
+    right: Option<Rc<Node>>,
 }
 
 /// ```
@@ -458,15 +461,19 @@ where
     enum NodeVariant<'a> {
         Plain {
             data: char,
-            #[serde(serialize_state_with = "serialize_option_rc_seed")] left: &'a Option<Rc<Node>>,
-            #[serde(serialize_state_with = "serialize_option_rc_seed")] right: &'a Option<Rc<Node>>,
+            #[serde(serialize_state_with = "serialize_option_rc_seed")]
+            left: &'a Option<Rc<Node>>,
+            #[serde(serialize_state_with = "serialize_option_rc_seed")]
+            right: &'a Option<Rc<Node>>,
         },
         Reference(Id),
         Marked {
             id: Id,
             data: char,
-            #[serde(serialize_state_with = "serialize_option_rc_seed")] left: &'a Option<Rc<Node>>,
-            #[serde(serialize_state_with = "serialize_option_rc_seed")] right: &'a Option<Rc<Node>>,
+            #[serde(serialize_state_with = "serialize_option_rc_seed")]
+            left: &'a Option<Rc<Node>>,
+            #[serde(serialize_state_with = "serialize_option_rc_seed")]
+            right: &'a Option<Rc<Node>>,
         },
     }
 

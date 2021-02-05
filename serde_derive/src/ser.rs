@@ -52,7 +52,7 @@ pub fn expand_derive_serialize(
             #[automatically_derived]
             impl #impl_generics _serde::ser::SerializeState<#seed_ty> for #ident #ty_generics #where_clause {
 
-                fn serialize_state<__S>(&self, __serializer: __S, __seed: &#seed_ty) -> _serde::export::Result<__S::Ok, __S::Error>
+                fn serialize_state<__S>(&self, __serializer: __S, __seed: &#seed_ty) -> _serde::__private::Result<__S::Ok, __S::Error>
                     where __S: _serde::Serializer
                 {
                     #body
@@ -1335,11 +1335,11 @@ fn wrap_serialize_state_with(
         struct __SerializeWith #wrapper_impl_generics #where_clause {
             value: &'__a #field_ty,
             seed: &'__a #seed_ty,
-            phantom: _serde::export::PhantomData<#this #ty_generics>,
+            phantom: _serde::__private::PhantomData<#this #ty_generics>,
         }
 
         impl #wrapper_impl_generics _serde::Serialize for __SerializeWith #wrapper_ty_generics #where_clause {
-            fn serialize<__S>(&self, __s: __S) -> _serde::export::Result<__S::Ok, __S::Error>
+            fn serialize<__S>(&self, __s: __S) -> _serde::__private::Result<__S::Ok, __S::Error>
                 where __S: _serde::Serializer
             {
                 #serialize_with(self.value, __s, self.seed)
@@ -1349,7 +1349,7 @@ fn wrap_serialize_state_with(
         &__SerializeWith {
             value: #value,
             seed: __seed,
-            phantom: _serde::export::PhantomData::<#this #ty_generics>,
+            phantom: _serde::__private::PhantomData::<#this #ty_generics>,
         }
     })
 }

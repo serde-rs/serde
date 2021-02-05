@@ -59,7 +59,7 @@ pub fn expand_derive_deserialize(
                 #[automatically_derived]
                 impl #de_impl_generics _serde::de::DeserializeState<#delife, #seed_ty> for #ident #ty_generics #where_clause {
 
-                    fn deserialize_state<__D>(__seed: &mut #seed_ty, __deserializer: __D) -> _serde::export::Result<Self, __D::Error>
+                    fn deserialize_state<__D>(__seed: &mut #seed_ty, __deserializer: __D) -> _serde::__private::Result<Self, __D::Error>
                         where __D: _serde::Deserializer<#delife>
                     {
                         #body
@@ -191,7 +191,7 @@ fn build_generics(cont: &Container, borrowed: &BorrowedLifetimes, seeded: bool) 
                 attr::Default::Default => bound::with_self_bound(
                     cont,
                     &generics,
-                    &parse_quote!(_serde_state::__private::Default),
+                    &parse_quote!(_serde::__private::Default),
                 ),
                 attr::Default::None | attr::Default::Path(_) => generics,
             };
@@ -545,8 +545,8 @@ fn deserialize_tuple(
         struct __Visitor #de_impl_generics #where_clause {
             #visitor_field_def
 
-            marker: _serde::export::PhantomData<#this #ty_generics>,
-            lifetime: _serde::export::PhantomData<(&#delife (), &'seed mut ())>,
+            marker: _serde::__private::PhantomData<#this #ty_generics>,
+            lifetime: _serde::__private::PhantomData<(&#delife (), &'seed mut ())>,
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
@@ -560,7 +560,7 @@ fn deserialize_tuple(
 
             #[inline]
             #[allow(unused_mut)]
-            fn visit_seq<__A>(mut self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
+            fn visit_seq<__A>(mut self, #visitor_var: __A) -> _serde::__private::Result<Self::Value, __A::Error>
             where
                 __A: _serde::de::SeqAccess<#delife>,
             {
@@ -868,7 +868,7 @@ fn deserialize_newtype_struct(
     quote! {
         #[inline]
         #[allow(unused_mut)]
-        fn visit_newtype_struct<__E>(mut self, __e: __E) -> _serde::export::Result<Self::Value, __E::Error>
+        fn visit_newtype_struct<__E>(mut self, __e: __E) -> _serde::__private::Result<Self::Value, __E::Error>
         where
             __E: _serde::Deserializer<#delife>,
         {
@@ -966,8 +966,8 @@ fn deserialize_struct(
         __Visitor {
             #visitor_field
 
-            marker: _serde::export::PhantomData::<#this #ty_generics>,
-            lifetime: _serde::export::PhantomData,
+            marker: _serde::__private::PhantomData::<#this #ty_generics>,
+            lifetime: _serde::__private::PhantomData,
         }
     };
 
@@ -1007,7 +1007,7 @@ fn deserialize_struct(
         Untagged::No if !cattrs.has_flatten() => Some(quote! {
             #[inline]
             #[allow(unused_mut)]
-            fn visit_seq<__A>(mut self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
+            fn visit_seq<__A>(mut self, #visitor_var: __A) -> _serde::__private::Result<Self::Value, __A::Error>
             where
                 __A: _serde::de::SeqAccess<#delife>,
             {
@@ -1040,8 +1040,8 @@ fn deserialize_struct(
         struct __Visitor #de_impl_generics #where_clause {
             #visitor_field_def
 
-            marker: _serde::export::PhantomData<#this #ty_generics>,
-            lifetime: _serde::export::PhantomData<(&#delife (), &'seed mut ())>,
+            marker: _serde::__private::PhantomData<#this #ty_generics>,
+            lifetime: _serde::__private::PhantomData<(&#delife (), &'seed mut ())>,
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
@@ -1055,7 +1055,7 @@ fn deserialize_struct(
 
             #[inline]
             #[allow(unused_mut)]
-            fn visit_map<__A>(mut self, mut __map: __A) -> _serde::export::Result<Self::Value, __A::Error>
+            fn visit_map<__A>(mut self, mut __map: __A) -> _serde::__private::Result<Self::Value, __A::Error>
             where
                 __A: _serde::de::MapAccess<#delife>,
             {
@@ -1305,8 +1305,8 @@ fn deserialize_externally_tagged_enum(
         struct __Visitor #de_impl_generics #where_clause {
             #visitor_field_def
 
-            marker: _serde::export::PhantomData<#this #ty_generics>,
-            lifetime: _serde::export::PhantomData<(&#delife (), &'seed mut ())>,
+            marker: _serde::__private::PhantomData<#this #ty_generics>,
+            lifetime: _serde::__private::PhantomData<(&#delife (), &'seed mut ())>,
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
@@ -1317,7 +1317,7 @@ fn deserialize_externally_tagged_enum(
             }
 
             #[allow(unused_mut)]
-            fn visit_enum<__A>(mut self, __data: __A) -> _serde::export::Result<Self::Value, __A::Error>
+            fn visit_enum<__A>(mut self, __data: __A) -> _serde::__private::Result<Self::Value, __A::Error>
             where
                 __A: _serde::de::EnumAccess<#delife>,
             {
@@ -1334,8 +1334,8 @@ fn deserialize_externally_tagged_enum(
            __Visitor {
                #visitor_field
 
-               marker: _serde::export::PhantomData::<#this #ty_generics>,
-               lifetime: _serde::export::PhantomData,
+               marker: _serde::__private::PhantomData::<#this #ty_generics>,
+               lifetime: _serde::__private::PhantomData,
             },
         )
     }
@@ -1563,8 +1563,8 @@ fn deserialize_adjacently_tagged_enum(
             #visitor_field_def
 
             field: __Field,
-            marker: _serde::export::PhantomData<#this #ty_generics>,
-            lifetime: _serde::export::PhantomData<(&#delife (), &'seed mut ())>,
+            marker: _serde::__private::PhantomData<#this #ty_generics>,
+            lifetime: _serde::__private::PhantomData<(&#delife (), &'seed mut ())>,
         }
 
         impl #de_impl_generics _serde::de::DeserializeSeed<#delife> for __Seed #de_ty_generics #where_clause {
@@ -1583,8 +1583,8 @@ fn deserialize_adjacently_tagged_enum(
         struct __Visitor #de_impl_generics #where_clause {
             #visitor_field_def
 
-            marker: _serde::export::PhantomData<#this #ty_generics>,
-            lifetime: _serde::export::PhantomData<(&#delife (), &'seed mut ())>,
+            marker: _serde::__private::PhantomData<#this #ty_generics>,
+            lifetime: _serde::__private::PhantomData<(&#delife (), &'seed mut ())>,
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
@@ -1665,8 +1665,8 @@ fn deserialize_adjacently_tagged_enum(
                             &mut __seq,
                                 __Seed {
                                     field: __field,
-                                    marker: _serde::export::PhantomData,
-                                    lifetime: _serde::export::PhantomData,
+                                    marker: _serde::__private::PhantomData,
+                                    lifetime: _serde::__private::PhantomData,
                             },
                         )) {
                             _serde::__private::Some(__ret) => _serde::__private::Ok(__ret),
@@ -1692,8 +1692,8 @@ fn deserialize_adjacently_tagged_enum(
             __Visitor {
                 #visitor_field
 
-                marker: _serde::export::PhantomData::<#this #ty_generics>,
-                lifetime: _serde::export::PhantomData,
+                marker: _serde::__private::PhantomData::<#this #ty_generics>,
+                lifetime: _serde::__private::PhantomData,
             },
         )
     }
@@ -1902,7 +1902,7 @@ fn deserialize_externally_tagged_newtype_variant(
     let (wrapper, wrapper_value) = wrap_deserialize(params, field, cattrs.deserialize_state());
     quote_block! {
         #wrapper
-        _serde::export::Result::map(
+        _serde::__private::Result::map(
             _serde::de::VariantAccess::newtype_variant_seed(__variant, #wrapper_value),
             #this::#variant_ident)
     }
@@ -1919,7 +1919,7 @@ fn deserialize_untagged_newtype_variant(
     let (wrapper, wrapper_value) = wrap_deserialize(params, field, seed_ty);
     quote_block! {
         #wrapper
-        _serde::export::Result::map(
+        _serde::__private::Result::map(
             _serde::de::DeserializeSeed>::deserialize(#wrapper_value, #deserializer),
             #this::#variant_ident,
         )
@@ -2306,7 +2306,7 @@ fn deserialize_identifier(
                     #(
                         #variant_indices => _serde::__private::Ok(#main_constructors),
                     )*
-                    _ => _serde::export::Err(_serde::de::Error::invalid_value(
+                    _ => _serde::__private::Err(_serde::de::Error::invalid_value(
                                 _serde::de::Unexpected::Unsigned(__value),
                         &#fallthrough_msg,
                     ))
@@ -2464,9 +2464,9 @@ fn deserialize_map(
             let visit = quote!({
                 #wrapper
                 match _serde::de::MapAccess::next_value_seed(&mut __map, #wrapper_value) {
-                    _serde::export::Ok(__wrapper) => __wrapper,
-                    _serde::export::Err(__err) => {
-                        return _serde::export::Err(__err);
+                    _serde::__private::Ok(__wrapper) => __wrapper,
+                    _serde::__private::Err(__err) => {
+                        return _serde::__private::Err(__err);
                     }
                 }
             });
@@ -2821,7 +2821,7 @@ fn wrap_deserialize(
     ) {
         (false, None, None) => {
             let field_ty = &field.ty;
-            (quote!(), quote!( _serde::export::PhantomData::<#field_ty> ))
+            (quote!(), quote!( _serde::__private::PhantomData::<#field_ty> ))
         }
         (true, _, _) => (quote!(), quote!(_serde::de::Seed::new(&mut *self.seed))),
         (_, Some(path), _) => {
@@ -2845,14 +2845,14 @@ fn wrap_deserialize_with(
 
     let wrapper = quote! {
         struct __DeserializeWith #de_impl_generics #where_clause {
-            phantom: _serde::export::PhantomData<#this #ty_generics>,
-            lifetime: _serde::export::PhantomData<&#delife ()>,
+            phantom: _serde::__private::PhantomData<#this #ty_generics>,
+            lifetime: _serde::__private::PhantomData<&#delife ()>,
         }
 
         impl #de_impl_generics _serde::de::DeserializeSeed<#delife> for __DeserializeWith #de_ty_generics #where_clause {
             type Value = #value_ty;
 
-            fn deserialize<__D>(self, __deserializer: __D) -> _serde::export::Result<Self::Value, __D::Error>
+            fn deserialize<__D>(self, __deserializer: __D) -> _serde::__private::Result<Self::Value, __D::Error>
             where
                 __D: _serde::Deserializer<#delife>,
             {
@@ -2863,8 +2863,8 @@ fn wrap_deserialize_with(
 
     let wrapper_value = quote! {
         __DeserializeWith {
-            phantom: _serde::export::PhantomData,
-            lifetime: _serde::export::PhantomData,
+            phantom: _serde::__private::PhantomData,
+            lifetime: _serde::__private::PhantomData,
         }
     };
 
@@ -2937,17 +2937,17 @@ fn wrap_deserialize_state_with(
     let wrapper = quote! {
         struct __DeserializeWith #de_impl_generics #where_clause {
             seed: &'seed mut #seed_ty,
-            phantom: _serde::export::PhantomData<#this #ty_generics>,
-            lifetime: _serde::export::PhantomData<&'de ()>,
+            phantom: _serde::__private::PhantomData<#this #ty_generics>,
+            lifetime: _serde::__private::PhantomData<&'de ()>,
         }
 
         impl #de_impl_generics _serde::de::DeserializeSeed<'de> for __DeserializeWith #de_ty_generics #where_clause {
             type Value = #field_ty;
 
-            fn deserialize<__D>(self, __deserializer: __D) -> _serde::export::Result<#field_ty, __D::Error>
+            fn deserialize<__D>(self, __deserializer: __D) -> _serde::__private::Result<#field_ty, __D::Error>
                 where __D: _serde::Deserializer<'de>
             {
-                _serde::export::Ok(try!(#deserialize_with(self.seed, __deserializer)))
+                _serde::__private::Ok(try!(#deserialize_with(self.seed, __deserializer)))
             }
         }
     };
@@ -2955,8 +2955,8 @@ fn wrap_deserialize_state_with(
     let wrapper_value = quote! {
         __DeserializeWith {
             seed: &mut self.seed,
-            phantom: _serde::export::PhantomData::<#this #ty_generics>,
-            lifetime: _serde::export::PhantomData,
+            phantom: _serde::__private::PhantomData::<#this #ty_generics>,
+            lifetime: _serde::__private::PhantomData,
         }
     };
 
@@ -2990,12 +2990,12 @@ fn expr_is_missing(params: &Parameters, field: &Field, cattrs: &attr::Container)
         field.attrs.deserialize_with().is_some() || field.attrs.deserialize_state_with().is_some();
     if has_with_wrapper {
         quote_expr! {
-            return _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#name))
+            return _serde::__private::Err(<__A::Error as _serde::de::Error>::missing_field(#name))
         }
     } else {
         let (wrapper, wrapper_value) = wrap_deserialize(params, field, cattrs.deserialize_state());
         let span = field.original.span();
-        let func = quote_spanned!(span=> _serde_state::private::de::missing_field);
+        let func = quote_spanned!(span=> _serde::private::de::missing_field);
         quote_expr! {
             #wrapper
             try!(#func(#wrapper_value, #name))
