@@ -1,6 +1,6 @@
 [package]
 name = "serde_state"
-version = "0.4.7"
+version = "0.4.8"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Stateful serialization/deserialization for serde"
