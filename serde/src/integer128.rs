@@ -10,7 +10,7 @@
 /// bother with this macro and may assume support for 128-bit integers.
 ///
 /// ```edition2018
-/// # use serde::private::ser::Error;
+/// # use serde::__private::ser::Error;
 /// #
 /// # struct MySerializer;
 /// #

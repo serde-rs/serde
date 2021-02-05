@@ -5,7 +5,7 @@ use syn::punctuated::{Pair, Punctuated};
 use syn::visit::{self, Visit};
 
 use internals::ast::{Container, Data};
-use internals::attr;
+use internals::{attr, ungroup};
 
 use proc_macro2::Span;
 
@@ -114,7 +114,7 @@ pub fn with_bound(
     }
     impl<'ast> Visit<'ast> for FindTyParams<'ast> {
         fn visit_field(&mut self, field: &'ast syn::Field) {
-            if let syn::Type::Path(ty) = &field.ty {
+            if let syn::Type::Path(ty) = ungroup(&field.ty) {
                 if let Some(Pair::Punctuated(t, _)) = ty.path.segments.pairs().next() {
                     if self.all_type_params.contains(&t.ident) {
                         self.associated_type_usage.push(ty);
@@ -156,7 +156,7 @@ pub fn with_bound(
         .collect();
 
     let mut visitor = FindTyParams {
-        all_type_params: all_type_params,
+        all_type_params,
         relevant_type_params: HashSet::new(),
         associated_type_usage: Vec::new(),
     };
@@ -271,7 +271,7 @@ pub fn with_lifetime_bound(generics: &syn::Generics, lifetime: &str) -> syn::Gen
         .collect();
 
     syn::Generics {
-        params: params,
+        params,
         ..generics.clone()
     }
 }

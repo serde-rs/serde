@@ -637,7 +637,10 @@ fn test_untagged_enum() {
         ],
     );
 
+    // Serializes to unit, deserializes from either depending on format's
+    // preference.
     assert_tokens(&Untagged::C, &[Token::Unit]);
+    assert_de_tokens(&Untagged::C, &[Token::None]);
 
     assert_tokens(&Untagged::D(4), &[Token::U8(4)]);
     assert_tokens(&Untagged::E("e".to_owned()), &[Token::Str("e")]);
@@ -650,11 +653,6 @@ fn test_untagged_enum() {
             Token::U8(2),
             Token::TupleEnd,
         ],
-    );
-
-    assert_de_tokens_error::<Untagged>(
-        &[Token::None],
-        "data did not match any variant of untagged enum Untagged",
     );
 
     assert_de_tokens_error::<Untagged>(
@@ -1141,6 +1139,20 @@ fn test_adjacently_tagged_enum() {
             },
             Token::Str("c"),
             Token::U8(1),
+            Token::Str("t"),
+            Token::Str("Newtype"),
+            Token::StructEnd,
+        ],
+    );
+
+    // optional newtype with no content field
+    assert_de_tokens(
+        &AdjacentlyTagged::Newtype::<Option<u8>>(None),
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 1,
+            },
             Token::Str("t"),
             Token::Str("Newtype"),
             Token::StructEnd,
@@ -1865,4 +1877,32 @@ fn test_internally_tagged_newtype_variant_containing_unit_struct() {
             Token::MapEnd,
         ],
     );
+}
+
+#[deny(safe_packed_borrows)]
+#[test]
+fn test_packed_struct_can_derive_serialize() {
+    #[derive(Copy, Clone, Serialize)]
+    #[repr(packed, C)]
+    struct PackedC {
+        t: f32,
+    }
+
+    #[derive(Copy, Clone, Serialize)]
+    #[repr(C, packed)]
+    struct CPacked {
+        t: f32,
+    }
+
+    #[derive(Copy, Clone, Serialize)]
+    #[repr(C, packed(2))]
+    struct CPacked2 {
+        t: f32,
+    }
+
+    #[derive(Copy, Clone, Serialize)]
+    #[repr(packed(2), C)]
+    struct Packed2C {
+        t: f32,
+    }
 }

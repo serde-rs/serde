@@ -53,9 +53,10 @@ where
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub fn borrow_cow_str<'de: 'a, 'a, D>(deserializer: D) -> Result<Cow<'a, str>, D::Error>
+pub fn borrow_cow_str<'de: 'a, 'a, D, R>(deserializer: D) -> Result<R, D::Error>
 where
     D: Deserializer<'de>,
+    R: From<Cow<'a, str>>,
 {
     struct CowStrVisitor;
 
@@ -121,13 +122,14 @@ where
         }
     }
 
-    deserializer.deserialize_str(CowStrVisitor)
+    deserializer.deserialize_str(CowStrVisitor).map(From::from)
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub fn borrow_cow_bytes<'de: 'a, 'a, D>(deserializer: D) -> Result<Cow<'a, [u8]>, D::Error>
+pub fn borrow_cow_bytes<'de: 'a, 'a, D, R>(deserializer: D) -> Result<R, D::Error>
 where
     D: Deserializer<'de>,
+    R: From<Cow<'a, [u8]>>,
 {
     struct CowBytesVisitor;
 
@@ -181,7 +183,9 @@ where
         }
     }
 
-    deserializer.deserialize_bytes(CowBytesVisitor)
+    deserializer
+        .deserialize_bytes(CowBytesVisitor)
+        .map(From::from)
 }
 
 pub mod size_hint {
@@ -1558,7 +1562,7 @@ mod content {
                     other.unexpected(),
                     &"struct variant",
                 )),
-                _ => Err(de::Error::invalid_type(
+                None => Err(de::Error::invalid_type(
                     de::Unexpected::UnitVariant,
                     &"struct variant",
                 )),
@@ -2248,7 +2252,7 @@ mod content {
                     other.unexpected(),
                     &"struct variant",
                 )),
-                _ => Err(de::Error::invalid_type(
+                None => Err(de::Error::invalid_type(
                     de::Unexpected::UnitVariant,
                     &"struct variant",
                 )),
@@ -2470,7 +2474,7 @@ mod content {
         where
             M: MapAccess<'de>,
         {
-            while let Some(_) = try!(access.next_entry::<IgnoredAny, IgnoredAny>()) {}
+            while try!(access.next_entry::<IgnoredAny, IgnoredAny>()).is_some() {}
             Ok(())
         }
     }
@@ -2505,6 +2509,13 @@ mod content {
         }
 
         fn visit_unit<E>(self) -> Result<(), E>
+        where
+            E: de::Error,
+        {
+            Ok(())
+        }
+
+        fn visit_none<E>(self) -> Result<(), E>
         where
             E: de::Error,
         {
@@ -2752,6 +2763,13 @@ where
         }
     }
 
+    fn deserialize_unit<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_unit()
+    }
+
     forward_to_deserialize_other! {
         deserialize_bool()
         deserialize_i8()
@@ -2769,7 +2787,6 @@ where
         deserialize_string()
         deserialize_bytes()
         deserialize_byte_buf()
-        deserialize_unit()
         deserialize_unit_struct(&'static str)
         deserialize_seq()
         deserialize_tuple(usize)

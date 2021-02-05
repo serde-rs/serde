@@ -4,7 +4,11 @@
 
 #![deny(warnings)]
 #![cfg_attr(feature = "unstable", feature(non_ascii_idents))]
-#![allow(clippy::trivially_copy_pass_by_ref)]
+#![allow(
+    unknown_lints,
+    mixed_script_confusables,
+    clippy::trivially_copy_pass_by_ref
+)]
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -265,7 +269,7 @@ fn test_gen() {
     #[cfg(feature = "unstable")]
     #[derive(Serialize, Deserialize)]
     struct NonAsciiIdents {
-        σ:  f64,
+        σ: f64,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -691,6 +695,34 @@ fn test_gen() {
         #[serde(flatten, skip_deserializing)]
         flat: T,
     }
+
+    // https://github.com/serde-rs/serde/issues/1804
+    #[derive(Serialize, Deserialize)]
+    enum Message {
+        #[serde(skip)]
+        #[allow(dead_code)]
+        String(String),
+        #[serde(other)]
+        Unknown,
+    }
+
+    #[derive(Serialize)]
+    #[repr(packed)]
+    struct Packed {
+        x: u8,
+        y: u16,
+    }
+
+    macro_rules! deriving {
+        ($field:ty) => {
+            #[derive(Deserialize)]
+            struct MacroRules<'a> {
+                field: $field,
+            }
+        };
+    }
+
+    deriving!(&'a str);
 }
 
 //////////////////////////////////////////////////////////////////////////

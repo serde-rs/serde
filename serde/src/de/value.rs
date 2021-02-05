@@ -24,8 +24,8 @@
 use lib::*;
 
 use self::private::{First, Second};
+use __private::de::size_hint;
 use de::{self, Expected, IntoDeserializer, SeqAccess};
-use private::de::size_hint;
 use ser;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1034,7 +1034,7 @@ where
         let value = self.value.take();
         // Panic because this indicates a bug in the program rather than an
         // expected failure.
-        let value = value.expect("MapAccess::visit_value called before visit_key");
+        let value = value.expect("MapAccess::next_value called before next_key");
         seed.deserialize(value.into_deserializer())
     }
 

@@ -13,9 +13,9 @@ pub fn replacement() -> TokenStream {
         macro_rules! try {
             (#dollar __expr:expr) => {
                 match #dollar __expr {
-                    _serde::export::Ok(__val) => __val,
-                    _serde::export::Err(__err) => {
-                        return _serde::export::Err(__err);
+                    _serde::__private::Ok(__val) => __val,
+                    _serde::__private::Err(__err) => {
+                        return _serde::__private::Err(__err);
                     }
                 }
             }

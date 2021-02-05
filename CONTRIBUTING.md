@@ -4,11 +4,6 @@ Serde welcomes contribution from everyone in the form of suggestions, bug
 reports, pull requests, and feedback. This document gives some guidance if you
 are thinking of helping us.
 
-Please reach out here in a GitHub issue or in the #serde IRC channel on
-[`irc.mozilla.org`] if we can do anything to help you contribute.
-
-[`irc.mozilla.org`]: https://wiki.mozilla.org/IRC
-
 ## Submitting bug reports and feature requests
 
 Serde development is spread across lots of repositories, but this serde-rs/serde
@@ -63,4 +58,4 @@ In all Serde-related forums, we follow the [Rust Code of Conduct]. For
 escalation or moderation issues please contact Erick (erick.tryzelaar@gmail.com)
 instead of the Rust moderation team.
 
-[Rust Code of Conduct]: https://www.rust-lang.org/conduct.html
+[Rust Code of Conduct]: https://www.rust-lang.org/policies/code-of-conduct

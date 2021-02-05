@@ -29,10 +29,12 @@ fn main() {
         println!("cargo:rustc-cfg=core_reverse");
     }
 
-    // CString::into_boxed_c_str stabilized in Rust 1.20:
+    // CString::into_boxed_c_str and PathBuf::into_boxed_path stabilized in Rust 1.20:
     // https://doc.rust-lang.org/std/ffi/struct.CString.html#method.into_boxed_c_str
+    // https://doc.rust-lang.org/std/path/struct.PathBuf.html#method.into_boxed_path
     if minor >= 20 {
         println!("cargo:rustc-cfg=de_boxed_c_str");
+        println!("cargo:rustc-cfg=de_boxed_path");
     }
 
     // From<Box<T>> for Rc<T> / Arc<T> stabilized in Rust 1.21:
@@ -64,7 +66,7 @@ fn main() {
     }
 
     // Non-zero integers stabilized in Rust 1.28:
-    // https://github.com/rust-lang/rust/pull/50808
+    // https://blog.rust-lang.org/2018/08/02/Rust-1.28.html#library-stabilizations
     if minor >= 28 {
         println!("cargo:rustc-cfg=num_nonzero");
     }

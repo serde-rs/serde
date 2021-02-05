@@ -2,9 +2,8 @@ error[E0308]: mismatched types
  --> $DIR/wrong_ser.rs:9:10
   |
 9 | #[derive(Serialize)]
-  |          ^^^^^^^^^ expected u8, found u16
+  |          ^^^^^^^^^ expected `u8`, found `u16`
   |
-  = note: expected type `&u8`
-             found type `&u16`
-
-For more information about this error, try `rustc --explain E0308`.
+  = note: expected reference `&u8`
+             found reference `&u16`
+  = note: this error originates in a derive macro (in Nightly builds, run with -Z macro-backtrace for more info)

@@ -1,4 +1,5 @@
-use proc_macro2::{Ident, Span, TokenStream};
+use proc_macro2::{Ident, TokenStream};
+use quote::format_ident;
 
 use syn;
 use try;
@@ -11,24 +12,24 @@ pub fn wrap_in_const(
 ) -> TokenStream {
     let try_replacement = try::replacement();
 
-    let dummy_const = Ident::new(
-        &format!("_IMPL_{}_FOR_{}", trait_, unraw(ty)),
-        Span::call_site(),
-    );
+    let dummy_const = if cfg!(underscore_consts) {
+        format_ident!("_")
+    } else {
+        format_ident!("_IMPL_{}_FOR_{}", trait_, unraw(ty))
+    };
 
     let use_serde = match serde_path {
         Some(path) => quote! {
             use #path as _serde;
         },
         None => quote! {
-            #[allow(unknown_lints)]
-            #[cfg_attr(feature = "cargo-clippy", allow(useless_attribute))]
-            #[allow(rust_2018_idioms)]
+            #[allow(rust_2018_idioms, clippy::useless_attribute)]
             extern crate serde_state as _serde;
         },
     };
 
     quote! {
+        #[doc(hidden)]
         #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
         const #dummy_const: () = {
             #use_serde

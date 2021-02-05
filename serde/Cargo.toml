@@ -1,6 +1,6 @@
 [package]
 name = "serde"
-version = "1.0.101" # remember to update html_root_url
+version = "1.0.119" # remember to update html_root_url and serde_derive dependency
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "A generic serialization/deserialization framework"
@@ -10,12 +10,8 @@ documentation = "https://docs.serde.rs/serde/"
 keywords = ["serde", "serialization", "no_std"]
 categories = ["encoding"]
 readme = "crates-io.md"
-include = ["Cargo.toml", "build.rs", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+include = ["build.rs", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 build = "build.rs"
-
-[badges]
-travis-ci = { repository = "serde-rs/serde" }
-appveyor = { repository = "serde-rs/serde" }
 
 [dependencies]
 serde_derive = { version = "1.0", optional = true }
@@ -25,6 +21,9 @@ serde_derive = { version = "1.0" }
 
 [package.metadata.playground]
 features = ["derive", "rc"]
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
 
 
 ### FEATURES #################################################################

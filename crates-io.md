@@ -43,10 +43,20 @@ fn main() {
 
 ## Getting help
 
-Serde developers live in the #serde channel on [`irc.mozilla.org`][irc]. The
-\#rust channel is also a good resource with generally faster response time but
-less specific knowledge about Serde. If IRC is not your thing or you don't get a
-good response, we are happy to respond to [GitHub issues][issues] as well.
+Serde is one of the most widely used Rust libraries so any place that Rustaceans
+congregate will be able to help you out. For chat, consider trying the
+[#general] or [#beginners] channels of the unofficial community Discord, the
+[#rust-usage] channel of the official Rust Project Discord, or the
+[#general][zulip] stream in Zulip. For asynchronous, consider the [\[rust\] tag
+on StackOverflow][stackoverflow], the [/r/rust] subreddit which has a pinned
+weekly easy questions post, or the Rust [Discourse forum][discourse]. It's
+acceptable to file a support issue in this repo but they tend not to get as many
+eyes as any of the above and may get closed without a response after some time.
 
-[irc]: https://wiki.mozilla.org/IRC
-[issues]: https://github.com/serde-rs/serde/issues/new/choose
+[#general]: https://discord.com/channels/273534239310479360/274215136414400513
+[#beginners]: https://discord.com/channels/273534239310479360/273541522815713281
+[#rust-usage]: https://discord.com/channels/442252698964721669/443150878111694848
+[zulip]: https://rust-lang.zulipchat.com/#narrow/stream/122651-general
+[stackoverflow]: https://stackoverflow.com/questions/tagged/rust
+[/r/rust]: https://www.reddit.com/r/rust
+[discourse]: https://users.rust-lang.org

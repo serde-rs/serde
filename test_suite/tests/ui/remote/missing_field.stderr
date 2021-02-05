@@ -3,5 +3,3 @@ error[E0063]: missing field `b` in initializer of `remote::S`
    |
 11 | #[serde(remote = "remote::S")]
    |                  ^^^^^^^^^^^ missing `b`
-
-For more information about this error, try `rustc --explain E0063`.

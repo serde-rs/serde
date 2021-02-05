@@ -1,4 +1,8 @@
-#![allow(clippy::cast_lossless, clippy::trivially_copy_pass_by_ref)]
+#![allow(
+    clippy::cast_lossless,
+    clippy::from_over_into,
+    clippy::trivially_copy_pass_by_ref
+)]
 
 use serde::de::{self, MapAccess, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -1962,6 +1966,29 @@ fn test_flatten_map_twice() {
             Token::Str("X"),
             Token::Str("y"),
             Token::Str("Y"),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_flatten_unit() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Response<T> {
+        #[serde(flatten)]
+        data: T,
+        status: usize,
+    }
+
+    assert_tokens(
+        &Response {
+            data: (),
+            status: 0,
+        },
+        &[
+            Token::Map { len: None },
+            Token::Str("status"),
+            Token::U64(0),
             Token::MapEnd,
         ],
     );

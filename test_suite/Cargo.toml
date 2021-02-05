@@ -4,19 +4,25 @@ version = "0.0.0"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 edition = "2018"
 publish = false
+build = "build.rs"
 
 [features]
+expandtest = []
 unstable = ["serde/unstable"]
 
 [dependencies]
 serde = "1.0"
 
+[build-dependencies]
+toolchain_find = "0.1"
+
 [dev-dependencies]
 fnv = "1.0"
-rustversion = "0.1"
+macrotest = "=1.0.0"
+rustversion = "1.0"
 serde = { version = "1.0.0", features = ["rc"] }
 serde_state = { path = "../serde_state", features = ["rc"] }
 serde_derive = { version = "1", features = ["deserialize_in_place"] }
 serde_derive_state = { path = "../serde_derive", features = ["deserialize_in_place"] }
 serde_test = { path = "../serde_test" }
-trybuild = "1.0"
+trybuild = { version = "1.0.19", features = ["diff"] }

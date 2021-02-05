@@ -1125,7 +1125,7 @@ where
     }
 
     fn serialize_unit(self) -> Result<Self::Ok, Self::Error> {
-        Err(Self::bad_type(Unsupported::Unit))
+        Ok(())
     }
 
     fn serialize_unit_struct(self, _: &'static str) -> Result<Self::Ok, Self::Error> {
@@ -1242,6 +1242,18 @@ where
         T: Serialize,
     {
         self.0.serialize_value(value)
+    }
+
+    fn serialize_entry<K: ?Sized, V: ?Sized>(
+        &mut self,
+        key: &K,
+        value: &V,
+    ) -> Result<(), Self::Error>
+    where
+        K: Serialize,
+        V: Serialize,
+    {
+        self.0.serialize_entry(key, value)
     }
 
     fn end(self) -> Result<(), Self::Error> {

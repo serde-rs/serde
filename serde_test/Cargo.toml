@@ -1,6 +1,6 @@
 [package]
 name = "serde_test"
-version = "1.0.101" # remember to update html_root_url
+version = "1.0.119" # remember to update html_root_url
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "Token De/Serializer for testing De/Serialize implementations"
@@ -9,7 +9,7 @@ repository = "https://github.com/serde-rs/serde"
 documentation = "https://docs.serde.rs/serde_test/"
 keywords = ["serde", "serialization"]
 readme = "crates-io.md"
-include = ["Cargo.toml", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+include = ["src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
 serde = { version = "1.0.60" }
@@ -20,6 +20,5 @@ serde = { version = "1.0", features = ["rc"] }
 serde_derive = { version = "1.0" }
 serde_derive_state = { version = "0.4.3", path = "../serde_derive" }
 
-[badges]
-travis-ci = { repository = "serde-rs/serde" }
-appveyor = { repository = "serde-rs/serde" }
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

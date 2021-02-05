@@ -8,10 +8,11 @@ use bound;
 use dummy;
 use fragment::{Expr, Fragment, Match, Stmts};
 use internals::ast::{Container, Data, Field, Style, Variant};
-use internals::{attr, Ctxt, Derive};
+use internals::{attr, ungroup, Ctxt, Derive};
 use pretend;
 
 use std::collections::BTreeSet;
+use std::ptr;
 
 pub fn expand_derive_deserialize(
     input: &syn::DeriveInput,
@@ -40,7 +41,7 @@ pub fn expand_derive_deserialize(
         let used = pretend::pretend_used(&cont);
         quote! {
             impl #de_impl_generics #ident #ty_generics #where_clause {
-                #vis fn deserialize<__D>(__deserializer: __D) -> #serde::export::Result<#remote #ty_generics, __D::Error>
+                #vis fn deserialize<__D>(__deserializer: __D) -> #serde::__private::Result<#remote #ty_generics, __D::Error>
                 where
                     __D: #serde::Deserializer<#delife>,
                 {
@@ -69,7 +70,7 @@ pub fn expand_derive_deserialize(
             quote! {
                 #[automatically_derived]
             impl #de_impl_generics #serde::Deserialize<#delife> for #ident #ty_generics #where_clause {
-                fn deserialize<__D>(__deserializer: __D) -> #serde::export::Result<Self, __D::Error>
+                fn deserialize<__D>(__deserializer: __D) -> #serde::__private::Result<Self, __D::Error>
                 where
                     __D: #serde::Deserializer<#delife>,
                     {
@@ -97,7 +98,7 @@ fn precondition(cx: &Ctxt, cont: &Container) {
 fn precondition_sized(cx: &Ctxt, cont: &Container) {
     if let Data::Struct(_, fields) = &cont.data {
         if let Some(last) = fields.last() {
-            if let syn::Type::Slice(_) = *last.ty {
+            if let syn::Type::Slice(_) = ungroup(last.ty) {
                 cx.error_spanned_by(
                     cont.original,
                     "cannot deserialize a dynamically sized struct",
@@ -156,11 +157,11 @@ impl Parameters {
         let has_getter = cont.data.has_getter();
 
         Parameters {
-            local: local,
-            this: this,
-            generics: generics,
-            borrowed: borrowed,
-            has_getter: has_getter,
+            local,
+            this,
+            generics,
+            borrowed,
+            has_getter,
             de_parameters: cont.attrs.de_parameters().map(|params| params.to_owned()),
         }
     }
@@ -187,9 +188,11 @@ fn build_generics(cont: &Container, borrowed: &BorrowedLifetimes, seeded: bool) 
         Some(predicates) => bound::with_where_predicates(&generics, predicates),
         None => {
             let mut generics = match *cont.attrs.default() {
-                attr::Default::Default => {
-                    bound::with_self_bound(cont, &generics, &parse_quote!(_serde::export::Default))
-                }
+                attr::Default::Default => bound::with_self_bound(
+                    cont,
+                    &generics,
+                    &parse_quote!(_serde_state::__private::Default),
+                ),
                 attr::Default::None | attr::Default::Path(_) => generics,
             };
 
@@ -207,7 +210,7 @@ fn build_generics(cont: &Container, borrowed: &BorrowedLifetimes, seeded: bool) 
                 cont,
                 &generics,
                 requires_default,
-                &parse_quote!(_serde::export::Default),
+                &parse_quote!(_serde::__private::Default),
             )
         }
     }
@@ -335,12 +338,7 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
 
     let code = match &cont.data {
         Data::Struct(Style::Struct, fields) => {
-            if let Some(code) = deserialize_struct_in_place(None, params, fields, &cont.attrs, None)
-            {
-                code
-            } else {
-                return None;
-            }
+            deserialize_struct_in_place(None, params, fields, &cont.attrs, None)?
         }
         Data::Struct(Style::Tuple, fields) | Data::Struct(Style::Newtype, fields) => {
             deserialize_tuple_in_place(None, params, fields, &cont.attrs, None)
@@ -354,7 +352,7 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
     let stmts = Stmts(code);
 
     let fn_deserialize_in_place = quote_block! {
-        fn deserialize_in_place<__D>(__deserializer: __D, __place: &mut Self) -> _serde::export::Result<(), __D::Error>
+        fn deserialize_in_place<__D>(__deserializer: __D, __place: &mut Self) -> _serde::__private::Result<(), __D::Error>
         where
             __D: _serde::Deserializer<#delife>,
         {
@@ -389,20 +387,20 @@ fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
 
     let assign = fields.iter().map(|field| {
         let member = &field.member;
-        if field as *const Field == transparent_field as *const Field {
+        if ptr::eq(field, transparent_field) {
             quote!(#member: __transparent)
         } else {
             let value = match field.attrs.default() {
-                attr::Default::Default => quote!(_serde::export::Default::default()),
+                attr::Default::Default => quote!(_serde::__private::Default::default()),
                 attr::Default::Path(path) => quote!(#path()),
-                attr::Default::None => quote!(_serde::export::PhantomData),
+                attr::Default::None => quote!(_serde::__private::PhantomData),
             };
             quote!(#member: #value)
         }
     });
 
     quote_block! {
-        _serde::export::Result::map(
+        _serde::__private::Result::map(
             #path(__deserializer),
             |__transparent| #this { #(#assign),* })
     }
@@ -410,17 +408,17 @@ fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
 
 fn deserialize_from(type_from: &syn::Type) -> Fragment {
     quote_block! {
-        _serde::export::Result::map(
+        _serde::__private::Result::map(
             <#type_from as _serde::Deserialize>::deserialize(__deserializer),
-            _serde::export::From::from)
+            _serde::__private::From::from)
     }
 }
 
 fn deserialize_try_from(type_try_from: &syn::Type) -> Fragment {
     quote_block! {
-        _serde::export::Result::and_then(
+        _serde::__private::Result::and_then(
             <#type_try_from as _serde::Deserialize>::deserialize(__deserializer),
-            |v| _serde::export::TryFrom::try_from(v).map_err(_serde::de::Error::custom))
+            |v| _serde::__private::TryFrom::try_from(v).map_err(_serde::de::Error::custom))
     }
 }
 
@@ -436,16 +434,16 @@ fn deserialize_unit_struct(params: &Parameters, cattrs: &attr::Container) -> Fra
         impl<'de> _serde::de::Visitor<'de> for __Visitor {
             type Value = #this;
 
-            fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::Formatter::write_str(__formatter, #expecting)
+            fn expecting(&self, __formatter: &mut _serde::__private::Formatter) -> _serde::__private::fmt::Result {
+                _serde::__private::Formatter::write_str(__formatter, #expecting)
             }
 
             #[inline]
-            fn visit_unit<__E>(self) -> _serde::export::Result<Self::Value, __E>
+            fn visit_unit<__E>(self) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(#this)
+                _serde::__private::Ok(#this)
             }
         }
 
@@ -519,8 +517,8 @@ fn deserialize_tuple(
         __Visitor {
             #visitor_field
 
-            marker: _serde::export::PhantomData::<#this #ty_generics>,
-            lifetime: _serde::export::PhantomData,
+            marker: _serde::__private::PhantomData::<#this #ty_generics>,
+            lifetime: _serde::__private::PhantomData,
         }
     };
 
@@ -554,8 +552,8 @@ fn deserialize_tuple(
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
             type Value = #this #ty_generics;
 
-            fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::Formatter::write_str(__formatter, #expecting)
+            fn expecting(&self, __formatter: &mut _serde::__private::Formatter) -> _serde::__private::fmt::Result {
+                _serde::__private::Formatter::write_str(__formatter, #expecting)
             }
 
             #visit_newtype_struct
@@ -607,7 +605,7 @@ fn deserialize_tuple_in_place(
     let visitor_expr = quote! {
         __Visitor {
             place: __place,
-            lifetime: _serde::export::PhantomData,
+            lifetime: _serde::__private::PhantomData,
         }
     };
 
@@ -637,20 +635,20 @@ fn deserialize_tuple_in_place(
     quote_block! {
         struct __Visitor #in_place_impl_generics #where_clause {
             place: &#place_life mut #this #ty_generics,
-            lifetime: _serde::export::PhantomData<&#delife ()>,
+            lifetime: _serde::__private::PhantomData<&#delife ()>,
         }
 
         impl #in_place_impl_generics _serde::de::Visitor<#delife> for __Visitor #in_place_ty_generics #where_clause {
             type Value = ();
 
-            fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::Formatter::write_str(__formatter, #expecting)
+            fn expecting(&self, __formatter: &mut _serde::__private::Formatter) -> _serde::__private::fmt::Result {
+                _serde::__private::Formatter::write_str(__formatter, #expecting)
             }
 
             #visit_newtype_struct
 
             #[inline]
-            fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
+            fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::__private::Result<Self::Value, __A::Error>
             where
                 __A: _serde::de::SeqAccess<#delife>,
             {
@@ -697,16 +695,16 @@ fn deserialize_seq(
                     try!(_serde::de::SeqAccess::next_element_seed(&mut __seq, #wrapper_value))
                 });
             let value_if_none = match field.attrs.default() {
-                attr::Default::Default => quote!(_serde::export::Default::default()),
+                attr::Default::Default => quote!(_serde::__private::Default::default()),
                 attr::Default::Path(path) => quote!(#path()),
                 attr::Default::None => quote!(
-                    return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
+                    return _serde::__private::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
                 ),
             };
             let assign = quote! {
                 let #var = match #visit {
-                    Some(__value) => __value,
-                    None => {
+                    _serde::__private::Some(__value) => __value,
+                    _serde::__private::None => {
                         #value_if_none
                     }
                 };
@@ -730,13 +728,13 @@ fn deserialize_seq(
     if params.has_getter {
         let this = &params.this;
         result = quote! {
-            _serde::export::Into::<#this>::into(#result)
+            _serde::__private::Into::<#this>::into(#result)
         };
     }
 
     let let_default = match cattrs.default() {
         attr::Default::Default => Some(quote!(
-            let __default: Self::Value = _serde::export::Default::default();
+            let __default: Self::Value = _serde::__private::Default::default();
         )),
         attr::Default::Path(path) => Some(quote!(
             let __default: Self::Value = #path();
@@ -751,7 +749,7 @@ fn deserialize_seq(
     quote_block! {
         #let_default
         #(#let_values)*
-        _serde::export::Ok(#result)
+        _serde::__private::Ok(#result)
     }
 }
 
@@ -783,20 +781,20 @@ fn deserialize_seq_in_place(
         } else {
             let value_if_none = match field.attrs.default() {
                 attr::Default::Default => quote!(
-                    self.place.#member = _serde::export::Default::default();
+                    self.place.#member = _serde::__private::Default::default();
                 ),
                 attr::Default::Path(path) => quote!(
                     self.place.#member = #path();
                 ),
                 attr::Default::None => quote!(
-                return _serde::export::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
+                    return _serde::__private::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
                 ),
             };
             let write = match field.attrs.deserialize_with() {
                 None => {
                     quote! {
-                        if let _serde::export::None = try!(_serde::de::SeqAccess::next_element_seed(&mut __seq,
-                            _serde::private::de::InPlaceSeed(&mut self.place.#member)))
+                        if let _serde::__private::None = try!(_serde::de::SeqAccess::next_element_seed(&mut __seq,
+                            _serde::__private::de::InPlaceSeed(&mut self.place.#member)))
                         {
                             #value_if_none
                         }
@@ -807,10 +805,10 @@ fn deserialize_seq_in_place(
                     quote!({
                         #wrapper
                         match try!(_serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)) {
-                            _serde::export::Some(__wrap) => {
+                            _serde::__private::Some(__wrap) => {
                                 self.place.#member = __wrap.value;
                             }
-                            _serde::export::None => {
+                            _serde::__private::None => {
                                 #value_if_none
                             }
                         }
@@ -826,7 +824,7 @@ fn deserialize_seq_in_place(
     let (_, ty_generics, _) = params.generics.split_for_impl();
     let let_default = match cattrs.default() {
         attr::Default::Default => Some(quote!(
-            let __default: #this #ty_generics  = _serde::export::Default::default();
+            let __default: #this #ty_generics  = _serde::__private::Default::default();
         )),
         attr::Default::Path(path) => Some(quote!(
             let __default: #this #ty_generics  = #path();
@@ -841,7 +839,7 @@ fn deserialize_seq_in_place(
     quote_block! {
         #let_default
         #(#write_values)*
-        _serde::export::Ok(())
+        _serde::__private::Ok(())
     }
 }
 
@@ -862,7 +860,7 @@ fn deserialize_newtype_struct(
     if params.has_getter {
         let this = &params.this;
         result = quote! {
-            _serde::export::Into::<#this>::into(#result)
+            _serde::__private::Into::<#this>::into(#result)
         };
     }
 
@@ -875,7 +873,7 @@ fn deserialize_newtype_struct(
             __E: _serde::Deserializer<#delife>,
         {
             let __field0: #field_ty = #value;
-            _serde::export::Ok(#result)
+            _serde::__private::Ok(#result)
         }
     }
 }
@@ -889,7 +887,7 @@ fn deserialize_newtype_struct_in_place(params: &Parameters, field: &Field) -> To
 
     quote! {
         #[inline]
-        fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::export::Result<Self::Value, __E::Error>
+        fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::__private::Result<Self::Value, __E::Error>
         where
             __E: _serde::Deserializer<#delife>,
         {
@@ -1024,7 +1022,7 @@ fn deserialize_struct(
             impl #de_impl_generics _serde::de::DeserializeSeed<#delife> for __Visitor #de_ty_generics #where_clause {
                 type Value = #this #ty_generics;
 
-                fn deserialize<__D>(self, __deserializer: __D) -> _serde::export::Result<Self::Value, __D::Error>
+                fn deserialize<__D>(self, __deserializer: __D) -> _serde::__private::Result<Self::Value, __D::Error>
                 where
                     __D: _serde::Deserializer<'de>,
                 {
@@ -1049,8 +1047,8 @@ fn deserialize_struct(
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
             type Value = #this #ty_generics;
 
-            fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::Formatter::write_str(__formatter, #expecting)
+            fn expecting(&self, __formatter: &mut _serde::__private::Formatter) -> _serde::__private::fmt::Result {
+                _serde::__private::Formatter::write_str(__formatter, #expecting)
             }
 
             #visit_seq
@@ -1110,7 +1108,7 @@ fn deserialize_struct_in_place(
     let visitor_expr = quote! {
         __Visitor {
             place: __place,
-            lifetime: _serde::export::PhantomData,
+            lifetime: _serde::__private::PhantomData,
         }
     };
     let dispatch = if let Some(deserializer) = deserializer {
@@ -1137,7 +1135,7 @@ fn deserialize_struct_in_place(
 
     let visit_seq = quote! {
         #[inline]
-        fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::export::Result<Self::Value, __A::Error>
+        fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::__private::Result<Self::Value, __A::Error>
         where
             __A: _serde::de::SeqAccess<#delife>,
         {
@@ -1154,20 +1152,20 @@ fn deserialize_struct_in_place(
 
         struct __Visitor #in_place_impl_generics #where_clause {
             place: &#place_life mut #this #ty_generics,
-            lifetime: _serde::export::PhantomData<&#delife ()>,
+            lifetime: _serde::__private::PhantomData<&#delife ()>,
         }
 
         impl #in_place_impl_generics _serde::de::Visitor<#delife> for __Visitor #in_place_ty_generics #where_clause {
             type Value = ();
 
-            fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::Formatter::write_str(__formatter, #expecting)
+            fn expecting(&self, __formatter: &mut _serde::__private::Formatter) -> _serde::__private::fmt::Result {
+                _serde::__private::Formatter::write_str(__formatter, #expecting)
             }
 
             #visit_seq
 
             #[inline]
-            fn visit_map<__A>(self, mut __map: __A) -> _serde::export::Result<Self::Value, __A::Error>
+            fn visit_map<__A>(self, mut __map: __A) -> _serde::__private::Result<Self::Value, __A::Error>
             where
                 __A: _serde::de::MapAccess<#delife>,
             {
@@ -1202,10 +1200,13 @@ fn prepare_enum_variant_enum(
     variants: &[Variant],
     cattrs: &attr::Container,
 ) -> (TokenStream, Stmts) {
-    let variant_names_idents: Vec<_> = variants
+    let mut deserialized_variants = variants
         .iter()
         .enumerate()
-        .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
+        .filter(|&(_, variant)| !variant.attrs.skip_deserializing());
+
+    let variant_names_idents: Vec<_> = deserialized_variants
+        .clone()
         .map(|(i, variant)| {
             (
                 variant.attrs.name().deserialize_name(),
@@ -1215,7 +1216,7 @@ fn prepare_enum_variant_enum(
         })
         .collect();
 
-    let other_idx = variants.iter().position(|variant| variant.attrs.other());
+    let other_idx = deserialized_variants.position(|(_, variant)| variant.attrs.other());
 
     let variants_stmt = {
         let variant_names = variant_names_idents.iter().map(|(name, _, _)| name);
@@ -1274,9 +1275,9 @@ fn deserialize_externally_tagged_enum(
         // all variants have `#[serde(skip_deserializing)]`.
         quote! {
             // FIXME: Once we drop support for Rust 1.15:
-            // let _serde::export::Err(__err) = _serde::de::EnumAccess::variant::<__Field>(__data);
-            // _serde::export::Err(__err)
-            _serde::export::Result::map(
+            // let _serde::__private::Err(__err) = _serde::de::EnumAccess::variant::<__Field>(__data);
+            // _serde::__private::Err(__err)
+            _serde::__private::Result::map(
                 _serde::de::EnumAccess::variant::<__Field>(__data),
                 |(__impossible, _)| match __impossible {})
         }
@@ -1311,8 +1312,8 @@ fn deserialize_externally_tagged_enum(
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
             type Value = #this #ty_generics;
 
-            fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::Formatter::write_str(__formatter, #expecting)
+            fn expecting(&self, __formatter: &mut _serde::__private::Formatter) -> _serde::__private::fmt::Result {
+                _serde::__private::Formatter::write_str(__formatter, #expecting)
             }
 
             #[allow(unused_mut)]
@@ -1330,11 +1331,11 @@ fn deserialize_externally_tagged_enum(
             __deserializer,
             #type_name,
             VARIANTS,
-                                               __Visitor {
-                                                   #visitor_field
+           __Visitor {
+               #visitor_field
 
-                                                   marker: _serde::export::PhantomData::<#this #ty_generics>,
-                                                   lifetime: _serde::export::PhantomData,
+               marker: _serde::export::PhantomData::<#this #ty_generics>,
+               lifetime: _serde::export::PhantomData,
             },
         )
     }
@@ -1361,7 +1362,7 @@ fn deserialize_internally_tagged_enum(
                 variant,
                 cattrs,
                 quote! {
-                    _serde::private::de::ContentDeserializer::<__D::Error>::new(__tagged.content)
+                    _serde::__private::de::ContentDeserializer::<__D::Error>::new(__tagged.content)
                 },
             ));
 
@@ -1377,7 +1378,7 @@ fn deserialize_internally_tagged_enum(
 
         let __tagged = try!(_serde::Deserializer::deserialize_any(
             __deserializer,
-            _serde::private::de::TaggedContentVisitor::<__Field>::new(#tag)));
+            _serde::__private::de::TaggedContentVisitor::<__Field>::new(#tag)));
 
         match __tagged.tag {
             #(#variant_arms)*
@@ -1426,9 +1427,9 @@ fn deserialize_adjacently_tagged_enum(
     // If unknown fields are allowed, we pick the visitor that can step over
     // those. Otherwise we pick the visitor that fails on unknown keys.
     let field_visitor_ty = if deny_unknown_fields {
-        quote! { _serde::private::de::TagOrContentFieldVisitor }
+        quote! { _serde::__private::de::TagOrContentFieldVisitor }
     } else {
-        quote! { _serde::private::de::TagContentOtherFieldVisitor }
+        quote! { _serde::__private::de::TagContentOtherFieldVisitor }
     };
 
     let tag_or_content = quote! {
@@ -1438,39 +1439,44 @@ fn deserialize_adjacently_tagged_enum(
         }
     };
 
-    fn is_unit(variant: &Variant) -> bool {
-        match variant.style {
-            Style::Unit => true,
-            Style::Struct | Style::Tuple | Style::Newtype => false,
-        }
-    }
-
     let mut missing_content = quote! {
-        _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#content))
+        _serde::__private::Err(<__A::Error as _serde::de::Error>::missing_field(#content))
     };
-    if variants.iter().any(is_unit) {
-        let fallthrough = if variants.iter().all(is_unit) {
-            None
-        } else {
-            Some(quote! {
-                _ => #missing_content
-            })
-        };
-        let arms = variants
-            .iter()
-            .enumerate()
-            .filter(|&(_, variant)| !variant.attrs.skip_deserializing() && is_unit(variant))
-            .map(|(i, variant)| {
-                let variant_index = field_i(i);
-                let variant_ident = &variant.ident;
-                quote! {
-                    __Field::#variant_index => _serde::export::Ok(#this::#variant_ident),
+    let mut missing_content_fallthrough = quote!();
+    let missing_content_arms = variants
+        .iter()
+        .enumerate()
+        .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
+        .filter_map(|(i, variant)| {
+            let variant_index = field_i(i);
+            let variant_ident = &variant.ident;
+
+            let arm = match variant.style {
+                Style::Unit => quote! {
+                    _serde::__private::Ok(#this::#variant_ident)
+                },
+                Style::Newtype if variant.attrs.deserialize_with().is_none() => {
+                    let span = variant.original.span();
+                    let func = quote_spanned!(span=> _serde::__private::de::missing_field);
+                    quote! {
+                        #func(#content).map(#this::#variant_ident)
+                    }
                 }
-            });
+                _ => {
+                    missing_content_fallthrough = quote!(_ => #missing_content);
+                    return None;
+                }
+            };
+            Some(quote! {
+                __Field::#variant_index => #arm,
+            })
+        })
+        .collect::<Vec<_>>();
+    if !missing_content_arms.is_empty() {
         missing_content = quote! {
             match __field {
-                #(#arms)*
-                #fallthrough
+                #(#missing_content_arms)*
+                #missing_content_fallthrough
             }
         };
     }
@@ -1486,19 +1492,19 @@ fn deserialize_adjacently_tagged_enum(
         next_key
     } else {
         quote!({
-            let mut __rk : _serde::export::Option<_serde::private::de::TagOrContentField> = _serde::export::None;
-            while let _serde::export::Some(__k) = #next_key {
+            let mut __rk : _serde::__private::Option<_serde::__private::de::TagOrContentField> = _serde::__private::None;
+            while let _serde::__private::Some(__k) = #next_key {
                 match __k {
-                    _serde::private::de::TagContentOtherField::Other => {
+                    _serde::__private::de::TagContentOtherField::Other => {
                         try!(_serde::de::MapAccess::next_value::<_serde::de::IgnoredAny>(&mut __map));
                         continue;
                     },
-                    _serde::private::de::TagContentOtherField::Tag => {
-                        __rk = _serde::export::Some(_serde::private::de::TagOrContentField::Tag);
+                    _serde::__private::de::TagContentOtherField::Tag => {
+                        __rk = _serde::__private::Some(_serde::__private::de::TagOrContentField::Tag);
                         break;
                     }
-                    _serde::private::de::TagContentOtherField::Content => {
-                        __rk = _serde::export::Some(_serde::private::de::TagOrContentField::Content);
+                    _serde::__private::de::TagContentOtherField::Content => {
+                        __rk = _serde::__private::Some(_serde::__private::de::TagOrContentField::Content);
                         break;
                     }
                 }
@@ -1513,13 +1519,13 @@ fn deserialize_adjacently_tagged_enum(
     // at this point immediately produce an error.
     let visit_remaining_keys = quote! {
         match #next_relevant_key {
-            _serde::export::Some(_serde::private::de::TagOrContentField::Tag) => {
-                _serde::export::Err(<__A::Error as _serde::de::Error>::duplicate_field(#tag))
+            _serde::__private::Some(_serde::__private::de::TagOrContentField::Tag) => {
+                _serde::__private::Err(<__A::Error as _serde::de::Error>::duplicate_field(#tag))
             }
-            _serde::export::Some(_serde::private::de::TagOrContentField::Content) => {
-                _serde::export::Err(<__A::Error as _serde::de::Error>::duplicate_field(#content))
+            _serde::__private::Some(_serde::__private::de::TagOrContentField::Content) => {
+                _serde::__private::Err(<__A::Error as _serde::de::Error>::duplicate_field(#content))
             }
-            _serde::export::None => _serde::export::Ok(__ret),
+            _serde::__private::None => _serde::__private::Ok(__ret),
         }
     };
 
@@ -1564,7 +1570,7 @@ fn deserialize_adjacently_tagged_enum(
         impl #de_impl_generics _serde::de::DeserializeSeed<#delife> for __Seed #de_ty_generics #where_clause {
             type Value = #this #ty_generics;
 
-            fn deserialize<__D>(self, __deserializer: __D) -> _serde::export::Result<Self::Value, __D::Error>
+            fn deserialize<__D>(self, __deserializer: __D) -> _serde::__private::Result<Self::Value, __D::Error>
             where
                 __D: _serde::Deserializer<#delife>,
             {
@@ -1584,76 +1590,76 @@ fn deserialize_adjacently_tagged_enum(
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
             type Value = #this #ty_generics;
 
-            fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
-                _serde::export::Formatter::write_str(__formatter, #expecting)
+            fn expecting(&self, __formatter: &mut _serde::__private::Formatter) -> _serde::__private::fmt::Result {
+                _serde::__private::Formatter::write_str(__formatter, #expecting)
             }
 
-            fn visit_map<__A>(self, mut __map: __A) -> _serde::export::Result<Self::Value, __A::Error>
+            fn visit_map<__A>(self, mut __map: __A) -> _serde::__private::Result<Self::Value, __A::Error>
             where
                 __A: _serde::de::MapAccess<#delife>,
             {
                 // Visit the first relevant key.
                 match #next_relevant_key {
                     // First key is the tag.
-                    _serde::export::Some(_serde::private::de::TagOrContentField::Tag) => {
+                    _serde::__private::Some(_serde::__private::de::TagOrContentField::Tag) => {
                         // Parse the tag.
                         let __field = try!(_serde::de::MapAccess::next_value(&mut __map));
                         // Visit the second key.
                         match #next_relevant_key {
                             // Second key is a duplicate of the tag.
-                            _serde::export::Some(_serde::private::de::TagOrContentField::Tag) => {
-                                _serde::export::Err(<__A::Error as _serde::de::Error>::duplicate_field(#tag))
+                            _serde::__private::Some(_serde::__private::de::TagOrContentField::Tag) => {
+                                _serde::__private::Err(<__A::Error as _serde::de::Error>::duplicate_field(#tag))
                             }
                             // Second key is the content.
-                            _serde::export::Some(_serde::private::de::TagOrContentField::Content) => {
+                            _serde::__private::Some(_serde::__private::de::TagOrContentField::Content) => {
                                 let __ret = try!(_serde::de::MapAccess::next_value_seed(&mut __map,
                                     __Seed {
                                         field: __field,
-                                        marker: _serde::export::PhantomData,
-                                        lifetime: _serde::export::PhantomData,
+                                        marker: _serde::__private::PhantomData,
+                                        lifetime: _serde::__private::PhantomData,
                                     }));
                                 // Visit remaining keys, looking for duplicates.
                                 #visit_remaining_keys
                             }
                             // There is no second key; might be okay if the we have a unit variant.
-                            _serde::export::None => #missing_content
+                            _serde::__private::None => #missing_content
                         }
                     }
                     // First key is the content.
-                    _serde::export::Some(_serde::private::de::TagOrContentField::Content) => {
+                    _serde::__private::Some(_serde::__private::de::TagOrContentField::Content) => {
                         // Buffer up the content.
-                        let __content = try!(_serde::de::MapAccess::next_value::<_serde::private::de::Content>(&mut __map));
+                        let __content = try!(_serde::de::MapAccess::next_value::<_serde::__private::de::Content>(&mut __map));
                         // Visit the second key.
                         match #next_relevant_key {
                             // Second key is the tag.
-                            _serde::export::Some(_serde::private::de::TagOrContentField::Tag) => {
-                                let __deserializer = _serde::private::de::ContentDeserializer::<__A::Error>::new(__content);
+                            _serde::__private::Some(_serde::__private::de::TagOrContentField::Tag) => {
+                                let __deserializer = _serde::__private::de::ContentDeserializer::<__A::Error>::new(__content);
                                 #finish_content_then_tag
                             }
                             // Second key is a duplicate of the content.
-                            _serde::export::Some(_serde::private::de::TagOrContentField::Content) => {
-                                _serde::export::Err(<__A::Error as _serde::de::Error>::duplicate_field(#content))
+                            _serde::__private::Some(_serde::__private::de::TagOrContentField::Content) => {
+                                _serde::__private::Err(<__A::Error as _serde::de::Error>::duplicate_field(#content))
                             }
                             // There is no second key.
-                            _serde::export::None => {
-                                _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#tag))
+                            _serde::__private::None => {
+                                _serde::__private::Err(<__A::Error as _serde::de::Error>::missing_field(#tag))
                             }
                         }
                     }
                     // There is no first key.
-                    _serde::export::None => {
-                        _serde::export::Err(<__A::Error as _serde::de::Error>::missing_field(#tag))
+                    _serde::__private::None => {
+                        _serde::__private::Err(<__A::Error as _serde::de::Error>::missing_field(#tag))
                     }
                 }
             }
 
-            fn visit_seq<__A>(self, mut __seq: __A) -> _serde::export::Result<Self::Value, __A::Error>
+            fn visit_seq<__A>(self, mut __seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
             where
                 __A: _serde::de::SeqAccess<#delife>,
             {
                 // Visit the first element - the tag.
                 match try!(_serde::de::SeqAccess::next_element(&mut __seq)) {
-                    _serde::export::Some(__field) => {
+                    _serde::__private::Some(__field) => {
                         // Visit the second element - the content.
                         match try!(_serde::de::SeqAccess::next_element_seed(
                             &mut __seq,
@@ -1663,16 +1669,16 @@ fn deserialize_adjacently_tagged_enum(
                                     lifetime: _serde::export::PhantomData,
                             },
                         )) {
-                            _serde::export::Some(__ret) => _serde::export::Ok(__ret),
+                            _serde::__private::Some(__ret) => _serde::__private::Ok(__ret),
                             // There is no second element.
-                            _serde::export::None => {
-                                _serde::export::Err(_serde::de::Error::invalid_length(1, &self))
+                            _serde::__private::None => {
+                                _serde::__private::Err(_serde::de::Error::invalid_length(1, &self))
                             }
                         }
                     }
                     // There is no first element.
-                    _serde::export::None => {
-                        _serde::export::Err(_serde::de::Error::invalid_length(0, &self))
+                    _serde::__private::None => {
+                        _serde::__private::Err(_serde::de::Error::invalid_length(0, &self))
                     }
                 }
             }
@@ -1706,7 +1712,9 @@ fn deserialize_untagged_enum(
                 params,
                 variant,
                 cattrs,
-                quote!(_serde::private::de::ContentRefDeserializer::<__D::Error>::new(&__content)),
+                quote!(
+                    _serde::__private::de::ContentRefDeserializer::<__D::Error>::new(&__content)
+                ),
             ))
         });
 
@@ -1722,15 +1730,15 @@ fn deserialize_untagged_enum(
     );
 
     quote_block! {
-        let __content = try!(<_serde::private::de::Content as _serde::Deserialize>::deserialize(__deserializer));
+        let __content = try!(<_serde::__private::de::Content as _serde::Deserialize>::deserialize(__deserializer));
 
         #(
-            if let _serde::export::Ok(__ok) = #attempts {
-                return _serde::export::Ok(__ok);
+            if let _serde::__private::Ok(__ok) = #attempts {
+                return _serde::__private::Ok(__ok);
             }
         )*
 
-        _serde::export::Err(_serde::de::Error::custom(#fallthrough_msg))
+        _serde::__private::Err(_serde::de::Error::custom(#fallthrough_msg))
     }
 }
 
@@ -1743,7 +1751,7 @@ fn deserialize_externally_tagged_variant(
         let (wrapper, wrapper_ty, unwrap_fn) = wrap_deserialize_variant_with(params, variant, path);
         return quote_block! {
             #wrapper
-            _serde::export::Result::map(
+            _serde::__private::Result::map(
                 _serde::de::VariantAccess::newtype_variant::<#wrapper_ty>(__variant), #unwrap_fn)
         };
     }
@@ -1755,7 +1763,7 @@ fn deserialize_externally_tagged_variant(
             let this = &params.this;
             quote_block! {
                 try!(_serde::de::VariantAccess::unit_variant(__variant));
-                _serde::export::Ok(#this::#variant_ident)
+                _serde::__private::Ok(#this::#variant_ident)
             }
         }
         Style::Newtype => deserialize_externally_tagged_newtype_variant(
@@ -1800,8 +1808,8 @@ fn deserialize_internally_tagged_variant(
                 quote!((#default))
             });
             quote_block! {
-                try!(_serde::Deserializer::deserialize_any(#deserializer, _serde::private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name)));
-                _serde::export::Ok(#this::#variant_ident #default)
+                try!(_serde::Deserializer::deserialize_any(#deserializer, _serde::__private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name)));
+                _serde::__private::Ok(#this::#variant_ident #default)
             }
         }
         Style::Newtype => deserialize_untagged_newtype_variant(
@@ -1833,7 +1841,7 @@ fn deserialize_untagged_variant(
         let (wrapper, wrapper_ty, unwrap_fn) = wrap_deserialize_variant_with(params, variant, path);
         return quote_block! {
             #wrapper
-            _serde::export::Result::map(
+            _serde::__private::Result::map(
                 <#wrapper_ty as _serde::Deserialize>::deserialize(#deserializer), #unwrap_fn)
         };
     }
@@ -1852,10 +1860,10 @@ fn deserialize_untagged_variant(
             quote_expr! {
                 match _serde::Deserializer::deserialize_any(
                     #deserializer,
-                    _serde::private::de::UntaggedUnitVisitor::new(#type_name, #variant_name)
+                    _serde::__private::de::UntaggedUnitVisitor::new(#type_name, #variant_name)
                 ) {
-                    _serde::export::Ok(()) => _serde::export::Ok(#this::#variant_ident #default),
-                    _serde::export::Err(__err) => _serde::export::Err(__err),
+                    _serde::__private::Ok(()) => _serde::__private::Ok(#this::#variant_ident #default),
+                    _serde::__private::Err(__err) => _serde::__private::Err(__err),
                 }
             }
         }
@@ -1928,18 +1936,18 @@ fn deserialize_generated_identifier(
     let field_idents: &Vec<_> = &fields.iter().map(|(_, ident, _)| ident).collect();
 
     let (ignore_variant, fallthrough) = if !is_variant && cattrs.has_flatten() {
-        let ignore_variant = quote!(__other(_serde::private::de::Content<'de>),);
-        let fallthrough = quote!(_serde::export::Ok(__Field::__other(__value)));
+        let ignore_variant = quote!(__other(_serde::__private::de::Content<'de>),);
+        let fallthrough = quote!(_serde::__private::Ok(__Field::__other(__value)));
         (Some(ignore_variant), Some(fallthrough))
     } else if let Some(other_idx) = other_idx {
         let ignore_variant = fields[other_idx].1.clone();
-        let fallthrough = quote!(_serde::export::Ok(__Field::#ignore_variant));
+        let fallthrough = quote!(_serde::__private::Ok(__Field::#ignore_variant));
         (None, Some(fallthrough))
     } else if is_variant || cattrs.deny_unknown_fields() {
         (None, None)
     } else {
         let ignore_variant = quote!(__ignore,);
-        let fallthrough = quote!(_serde::export::Ok(__Field::__ignore));
+        let fallthrough = quote!(_serde::__private::Ok(__Field::__ignore));
         (Some(ignore_variant), Some(fallthrough))
     };
 
@@ -1974,7 +1982,7 @@ fn deserialize_generated_identifier(
 
         impl<'de> _serde::Deserialize<'de> for __Field #lifetime {
             #[inline]
-            fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<Self, __D::Error>
+            fn deserialize<__D>(__deserializer: __D) -> _serde::__private::Result<Self, __D::Error>
             where
                 __D: _serde::Deserializer<'de>,
             {
@@ -2002,13 +2010,13 @@ fn deserialize_custom_identifier(
         let last_ident = &last.ident;
         if last.attrs.other() {
             let ordinary = &variants[..variants.len() - 1];
-            let fallthrough = quote!(_serde::export::Ok(#this::#last_ident));
+            let fallthrough = quote!(_serde::__private::Ok(#this::#last_ident));
             (ordinary, Some(fallthrough))
         } else if let Style::Newtype = last.style {
             let ordinary = &variants[..variants.len() - 1];
-            let deserializer = quote!(_serde::private::de::IdentifierDeserializer::from(__value));
+            let deserializer = quote!(_serde::__private::de::IdentifierDeserializer::from(__value));
             let fallthrough = quote! {
-                _serde::export::Result::map(
+                _serde::__private::Result::map(
                     _serde::Deserialize::deserialize(#deserializer),
                     #this::#last_ident)
             };
@@ -2062,8 +2070,8 @@ fn deserialize_custom_identifier(
         #names_const
 
         struct __FieldVisitor #de_impl_generics #where_clause {
-            marker: _serde::export::PhantomData<#this #ty_generics>,
-            lifetime: _serde::export::PhantomData<&#delife ()>,
+            marker: _serde::__private::PhantomData<#this #ty_generics>,
+            lifetime: _serde::__private::PhantomData<&#delife ()>,
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __FieldVisitor #de_ty_generics #where_clause {
@@ -2073,8 +2081,8 @@ fn deserialize_custom_identifier(
         }
 
         let __visitor = __FieldVisitor {
-            marker: _serde::export::PhantomData::<#this #ty_generics>,
-            lifetime: _serde::export::PhantomData,
+            marker: _serde::__private::PhantomData::<#this #ty_generics>,
+            lifetime: _serde::__private::PhantomData,
         };
         _serde::Deserializer::deserialize_identifier(__deserializer, __visitor)
     }
@@ -2122,7 +2130,7 @@ fn deserialize_identifier(
         None
     } else {
         Some(quote! {
-            let __value = &_serde::export::from_utf8_lossy(__value);
+            let __value = &_serde::__private::from_utf8_lossy(__value);
         })
     };
 
@@ -2134,16 +2142,16 @@ fn deserialize_identifier(
     ) = if collect_other_fields {
         (
             Some(quote! {
-                let __value = _serde::private::de::Content::String(_serde::export::ToString::to_string(__value));
+                let __value = _serde::__private::de::Content::String(_serde::__private::ToString::to_string(__value));
             }),
             Some(quote! {
-                let __value = _serde::private::de::Content::Str(__value);
+                let __value = _serde::__private::de::Content::Str(__value);
             }),
             Some(quote! {
-                let __value = _serde::private::de::Content::ByteBuf(__value.to_vec());
+                let __value = _serde::__private::de::Content::ByteBuf(__value.to_vec());
             }),
             Some(quote! {
-                let __value = _serde::private::de::Content::Bytes(__value);
+                let __value = _serde::__private::de::Content::Bytes(__value);
             }),
         )
     } else {
@@ -2154,11 +2162,11 @@ fn deserialize_identifier(
         fallthrough
     } else if is_variant {
         quote! {
-            _serde::export::Err(_serde::de::Error::unknown_variant(__value, VARIANTS))
+            _serde::__private::Err(_serde::de::Error::unknown_variant(__value, VARIANTS))
         }
     } else {
         quote! {
-            _serde::export::Err(_serde::de::Error::unknown_field(__value, FIELDS))
+            _serde::__private::Err(_serde::de::Error::unknown_field(__value, FIELDS))
         }
     };
 
@@ -2166,104 +2174,104 @@ fn deserialize_identifier(
     let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
     let visit_other = if collect_other_fields {
         quote! {
-            fn visit_bool<__E>(self, __value: bool) -> _serde::export::Result<Self::Value, __E>
+            fn visit_bool<__E>(self, __value: bool) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::Bool(__value)))
+                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Bool(__value)))
             }
 
-            fn visit_i8<__E>(self, __value: i8) -> _serde::export::Result<Self::Value, __E>
+            fn visit_i8<__E>(self, __value: i8) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::I8(__value)))
+                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I8(__value)))
             }
 
-            fn visit_i16<__E>(self, __value: i16) -> _serde::export::Result<Self::Value, __E>
+            fn visit_i16<__E>(self, __value: i16) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::I16(__value)))
+                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I16(__value)))
             }
 
-            fn visit_i32<__E>(self, __value: i32) -> _serde::export::Result<Self::Value, __E>
+            fn visit_i32<__E>(self, __value: i32) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::I32(__value)))
+                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I32(__value)))
             }
 
-            fn visit_i64<__E>(self, __value: i64) -> _serde::export::Result<Self::Value, __E>
+            fn visit_i64<__E>(self, __value: i64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::I64(__value)))
+                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I64(__value)))
             }
 
-            fn visit_u8<__E>(self, __value: u8) -> _serde::export::Result<Self::Value, __E>
+            fn visit_u8<__E>(self, __value: u8) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::U8(__value)))
+                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U8(__value)))
             }
 
-            fn visit_u16<__E>(self, __value: u16) -> _serde::export::Result<Self::Value, __E>
+            fn visit_u16<__E>(self, __value: u16) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::U16(__value)))
+                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U16(__value)))
             }
 
-            fn visit_u32<__E>(self, __value: u32) -> _serde::export::Result<Self::Value, __E>
+            fn visit_u32<__E>(self, __value: u32) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::U32(__value)))
+                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U32(__value)))
             }
 
-            fn visit_u64<__E>(self, __value: u64) -> _serde::export::Result<Self::Value, __E>
+            fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::U64(__value)))
+                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U64(__value)))
             }
 
-            fn visit_f32<__E>(self, __value: f32) -> _serde::export::Result<Self::Value, __E>
+            fn visit_f32<__E>(self, __value: f32) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::F32(__value)))
+                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::F32(__value)))
             }
 
-            fn visit_f64<__E>(self, __value: f64) -> _serde::export::Result<Self::Value, __E>
+            fn visit_f64<__E>(self, __value: f64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::F64(__value)))
+                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::F64(__value)))
             }
 
-            fn visit_char<__E>(self, __value: char) -> _serde::export::Result<Self::Value, __E>
+            fn visit_char<__E>(self, __value: char) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::Char(__value)))
+                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Char(__value)))
             }
 
-            fn visit_unit<__E>(self) -> _serde::export::Result<Self::Value, __E>
+            fn visit_unit<__E>(self) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::export::Ok(__Field::__other(_serde::private::de::Content::Unit))
+                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Unit))
             }
 
-            fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::export::Result<Self::Value, __E>
+            fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
                 match __value {
                     #(
-                        #field_borrowed_strs => _serde::export::Ok(#constructors),
+                        #field_borrowed_strs => _serde::__private::Ok(#constructors),
                     )*
                     _ => {
                         #value_as_borrowed_str_content
@@ -2272,13 +2280,13 @@ fn deserialize_identifier(
                 }
             }
 
-            fn visit_borrowed_bytes<__E>(self, __value: &'de [u8]) -> _serde::export::Result<Self::Value, __E>
+            fn visit_borrowed_bytes<__E>(self, __value: &'de [u8]) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
                 match __value {
                     #(
-                        #field_borrowed_bytes => _serde::export::Ok(#constructors),
+                        #field_borrowed_bytes => _serde::__private::Ok(#constructors),
                     )*
                     _ => {
                         #bytes_to_str
@@ -2290,13 +2298,13 @@ fn deserialize_identifier(
         }
     } else {
         quote! {
-            fn visit_u64<__E>(self, __value: u64) -> _serde::export::Result<Self::Value, __E>
+            fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
                 match __value {
                     #(
-                        #variant_indices => _serde::export::Ok(#main_constructors),
+                        #variant_indices => _serde::__private::Ok(#main_constructors),
                     )*
                     _ => _serde::export::Err(_serde::de::Error::invalid_value(
                                 _serde::de::Unexpected::Unsigned(__value),
@@ -2308,19 +2316,19 @@ fn deserialize_identifier(
     };
 
     quote_block! {
-        fn expecting(&self, __formatter: &mut _serde::export::Formatter) -> _serde::export::fmt::Result {
-            _serde::export::Formatter::write_str(__formatter, #expecting)
+        fn expecting(&self, __formatter: &mut _serde::__private::Formatter) -> _serde::__private::fmt::Result {
+            _serde::__private::Formatter::write_str(__formatter, #expecting)
         }
 
         #visit_other
 
-        fn visit_str<__E>(self, __value: &str) -> _serde::export::Result<Self::Value, __E>
+        fn visit_str<__E>(self, __value: &str) -> _serde::__private::Result<Self::Value, __E>
         where
             __E: _serde::de::Error,
         {
             match __value {
                 #(
-                    #field_strs => _serde::export::Ok(#constructors),
+                    #field_strs => _serde::__private::Ok(#constructors),
                 )*
                 _ => {
                     #value_as_str_content
@@ -2329,13 +2337,13 @@ fn deserialize_identifier(
             }
         }
 
-        fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::export::Result<Self::Value, __E>
+        fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::__private::Result<Self::Value, __E>
         where
             __E: _serde::de::Error,
         {
             match __value {
                 #(
-                    #field_bytes => _serde::export::Ok(#constructors),
+                    #field_bytes => _serde::__private::Ok(#constructors),
                 )*
                 _ => {
                     #bytes_to_str
@@ -2428,16 +2436,16 @@ fn deserialize_map(
         .map(|(field, name)| {
             let field_ty = field.ty;
             quote! {
-                let mut #name: _serde::export::Option<#field_ty> = _serde::export::None;
+                let mut #name: _serde::__private::Option<#field_ty> = _serde::__private::None;
             }
         });
 
     // Collect contents for flatten fields into a buffer
     let let_collect = if cattrs.has_flatten() {
         Some(quote! {
-            let mut __collect = _serde::export::Vec::<_serde::export::Option<(
-                _serde::private::de::Content,
-                _serde::private::de::Content
+            let mut __collect = _serde::__private::Vec::<_serde::__private::Option<(
+                _serde::__private::de::Content,
+                _serde::__private::de::Content
             )>>::new();
         })
     } else {
@@ -2464,10 +2472,10 @@ fn deserialize_map(
             });
             quote! {
                 __Field::#name => {
-                    if _serde::export::Option::is_some(&#name) {
-                        return _serde::export::Err(<__A::Error as _serde::de::Error>::duplicate_field(#deser_name));
+                    if _serde::__private::Option::is_some(&#name) {
+                        return _serde::__private::Err(<__A::Error as _serde::de::Error>::duplicate_field(#deser_name));
                     }
-                    #name = _serde::export::Some(#visit);
+                    #name = _serde::__private::Some(#visit);
                 }
             }
         });
@@ -2476,7 +2484,7 @@ fn deserialize_map(
     let ignored_arm = if cattrs.has_flatten() {
         Some(quote! {
             __Field::__other(__name) => {
-                __collect.push(_serde::export::Some((
+                __collect.push(_serde::__private::Some((
                     __name,
                     try!(_serde::de::MapAccess::next_value(&mut __map)))));
             }
@@ -2493,14 +2501,14 @@ fn deserialize_map(
     let match_keys = if cattrs.deny_unknown_fields() && all_skipped {
         quote! {
             // FIXME: Once we drop support for Rust 1.15:
-            // let _serde::export::None::<__Field> = try!(_serde::de::MapAccess::next_key(&mut __map));
-            _serde::export::Option::map(
+            // let _serde::__private::None::<__Field> = try!(_serde::de::MapAccess::next_key(&mut __map));
+            _serde::__private::Option::map(
                 try!(_serde::de::MapAccess::next_key::<__Field>(&mut __map)),
                 |__impossible| match __impossible {});
         }
     } else {
         quote! {
-            while let _serde::export::Some(__key) = try!(_serde::de::MapAccess::next_key::<__Field>(&mut __map)) {
+            while let _serde::__private::Some(__key) = try!(_serde::de::MapAccess::next_key::<__Field>(&mut __map)) {
                 match __key {
                     #(#value_arms)*
                     #ignored_arm
@@ -2517,8 +2525,8 @@ fn deserialize_map(
 
             quote! {
                 let #name = match #name {
-                    _serde::export::Some(#name) => #name,
-                    _serde::export::None => #missing_expr
+                    _serde::__private::Some(#name) => #name,
+                    _serde::__private::None => #missing_expr
                 };
             }
         });
@@ -2537,22 +2545,22 @@ fn deserialize_map(
             };
             quote! {
                 let #name: #field_ty = try!(#func(
-                    _serde::private::de::FlatMapDeserializer(
+                    _serde::__private::de::FlatMapDeserializer(
                         &mut __collect,
-                        _serde::export::PhantomData)));
+                        _serde::__private::PhantomData)));
             }
         });
 
     let collected_deny_unknown_fields = if cattrs.has_flatten() && cattrs.deny_unknown_fields() {
         Some(quote! {
-            if let _serde::export::Some(_serde::export::Some((__key, _))) =
-                __collect.into_iter().filter(_serde::export::Option::is_some).next()
+            if let _serde::__private::Some(_serde::__private::Some((__key, _))) =
+                __collect.into_iter().filter(_serde::__private::Option::is_some).next()
             {
-                if let _serde::export::Some(__key) = __key.as_str() {
-                    return _serde::export::Err(
+                if let _serde::__private::Some(__key) = __key.as_str() {
+                    return _serde::__private::Err(
                         _serde::de::Error::custom(format_args!("unknown field `{}`", &__key)));
                 } else {
-                    return _serde::export::Err(
+                    return _serde::__private::Err(
                         _serde::de::Error::custom(format_args!("unexpected map key")));
                 }
             }
@@ -2573,7 +2581,7 @@ fn deserialize_map(
 
     let let_default = match cattrs.default() {
         attr::Default::Default => Some(quote!(
-            let __default: Self::Value = _serde::export::Default::default();
+            let __default: Self::Value = _serde::__private::Default::default();
         )),
         attr::Default::Path(path) => Some(quote!(
             let __default: Self::Value = #path();
@@ -2589,7 +2597,7 @@ fn deserialize_map(
     if params.has_getter {
         let this = &params.this;
         result = quote! {
-            _serde::export::Into::<#this>::into(#result)
+            _serde::__private::Into::<#this>::into(#result)
         };
     }
 
@@ -2608,7 +2616,7 @@ fn deserialize_map(
 
         #collected_deny_unknown_fields
 
-        _serde::export::Ok(#result)
+        _serde::__private::Ok(#result)
     }
 }
 
@@ -2682,7 +2690,7 @@ fn deserialize_map_in_place(
             let visit = match field.attrs.deserialize_with() {
                 None => {
                     quote! {
-                        try!(_serde::de::MapAccess::next_value_seed(&mut __map, _serde::private::de::InPlaceSeed(&mut self.place.#member)))
+                        try!(_serde::de::MapAccess::next_value_seed(&mut __map, _serde::__private::de::InPlaceSeed(&mut self.place.#member)))
                     }
                 }
                 Some(path) => {
@@ -2690,9 +2698,9 @@ fn deserialize_map_in_place(
                     quote!({
                         #wrapper
                         self.place.#member = match _serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map) {
-                            _serde::export::Ok(__wrapper) => __wrapper.value,
-                            _serde::export::Err(__err) => {
-                                return _serde::export::Err(__err);
+                            _serde::__private::Ok(__wrapper) => __wrapper.value,
+                            _serde::__private::Err(__err) => {
+                                return _serde::__private::Err(__err);
                             }
                         };
                     })
@@ -2701,7 +2709,7 @@ fn deserialize_map_in_place(
             quote! {
                 __Field::#name => {
                     if #name {
-                        return _serde::export::Err(<__A::Error as _serde::de::Error>::duplicate_field(#deser_name));
+                        return _serde::__private::Err(<__A::Error as _serde::de::Error>::duplicate_field(#deser_name));
                     }
                     #visit;
                     #name = true;
@@ -2723,14 +2731,14 @@ fn deserialize_map_in_place(
     let match_keys = if cattrs.deny_unknown_fields() && all_skipped {
         quote! {
             // FIXME: Once we drop support for Rust 1.15:
-            // let _serde::export::None::<__Field> = try!(_serde::de::MapAccess::next_key(&mut __map));
-            _serde::export::Option::map(
+            // let _serde::__private::None::<__Field> = try!(_serde::de::MapAccess::next_key(&mut __map));
+            _serde::__private::Option::map(
                 try!(_serde::de::MapAccess::next_key::<__Field>(&mut __map)),
                 |__impossible| match __impossible {});
         }
     } else {
         quote! {
-            while let _serde::export::Some(__key) = try!(_serde::de::MapAccess::next_key::<__Field>(&mut __map)) {
+            while let _serde::__private::Some(__key) = try!(_serde::de::MapAccess::next_key::<__Field>(&mut __map)) {
                 match __key {
                     #(#value_arms_from)*
                     #ignored_arm
@@ -2772,7 +2780,7 @@ fn deserialize_map_in_place(
 
     let let_default = match cattrs.default() {
         attr::Default::Default => Some(quote!(
-            let __default: #this #ty_generics = _serde::export::Default::default();
+            let __default: #this #ty_generics = _serde::__private::Default::default();
         )),
         attr::Default::Path(path) => Some(quote!(
             let __default: #this #ty_generics = #path();
@@ -2793,7 +2801,7 @@ fn deserialize_map_in_place(
 
         #(#check_flags)*
 
-        _serde::export::Ok(())
+        _serde::__private::Ok(())
     }
 }
 
@@ -2959,7 +2967,7 @@ fn expr_is_missing(params: &Parameters, field: &Field, cattrs: &attr::Container)
     match field.attrs.default() {
         attr::Default::Default => {
             let span = field.original.span();
-            let func = quote_spanned!(span=> _serde::export::Default::default);
+            let func = quote_spanned!(span=> _serde::__private::Default::default);
             return quote_expr!(#func());
         }
         attr::Default::Path(path) => {
