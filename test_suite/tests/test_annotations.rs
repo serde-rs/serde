@@ -2655,8 +2655,8 @@ fn test_expecting_message() {
     #[derive(Deserialize)]
     #[serde(expecting = "something strange...")]
     struct Struct {
-        question: String,
-        answer: u32,
+        _question: String,
+        _answer: u32,
     }
 
     assert_de_tokens_error::<Unit>(

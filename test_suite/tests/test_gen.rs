@@ -644,7 +644,7 @@ fn test_gen() {
 
     #[derive(Deserialize)]
     struct ImpliciltyBorrowedOption<'a> {
-        option: std::option::Option<&'a str>,
+        _option: std::option::Option<&'a str>,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -674,8 +674,8 @@ fn test_gen() {
 
     #[derive(Deserialize)]
     struct RelObject<'a> {
-        ty: &'a str,
-        id: String,
+        _ty: &'a str,
+        _id: String,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -718,7 +718,7 @@ fn test_gen() {
         ($field:ty) => {
             #[derive(Deserialize)]
             struct MacroRules<'a> {
-                field: $field,
+                _field: $field,
             }
         };
     }
@@ -734,7 +734,7 @@ fn test_gen() {
     #[derive(Deserialize)]
     struct BorrowLifetimeInsideMacro<'a> {
         #[serde(borrow = "'a")]
-        f: mac!(Cow<'a, str>),
+        _f: mac!(Cow<'a, str>),
     }
 
     #[derive(Serialize)]

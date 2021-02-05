@@ -125,10 +125,7 @@
 // discussion of these features please refer to this issue:
 //
 //    https://github.com/serde-rs/serde/issues/812
-#![cfg_attr(feature = "unstable", feature(nonzero, specialization))]
-#![cfg_attr(all(feature = "std", feature = "unstable"), feature(into_boxed_c_str))]
-#![cfg_attr(feature = "alloc", feature(alloc))]
-#![cfg_attr(feature = "alloc", feature(collections))]
+#![cfg_attr(feature = "unstable", feature(never_type))]
 // Whitelisted clippy lints.
 #![cfg_attr(feature = "cargo-clippy", allow(doc_markdown))]
 #![cfg_attr(feature = "cargo-clippy", allow(linkedlist))]
@@ -138,9 +135,6 @@
 #![deny(missing_docs, unused_imports)]
 
 ////////////////////////////////////////////////////////////////////////////////
-
-#[cfg(feature = "alloc")]
-extern crate collections;
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
@@ -228,9 +222,6 @@ mod lib {
     pub use std::sync::{Mutex, RwLock};
     #[cfg(feature = "std")]
     pub use std::time::Duration;
-
-    #[cfg(feature = "unstable")]
-    pub use core::nonzero::{NonZero, Zeroable};
 }
 
 ////////////////////////////////////////////////////////////////////////////////

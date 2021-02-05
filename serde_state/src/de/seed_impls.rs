@@ -828,39 +828,13 @@ where
             "Range",
             FIELDS,
             RangeVisitor {
-                seed: seed,
+                seed,
                 phantom: PhantomData,
             },
         )
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-
-#[cfg(feature = "unstable")]
-impl<'de, T> DeserializeState<'de, S> for NonZero<T>
-where
-    T: DeserializeState<'de, S> + Zeroable,
-{
-    fn deserialize_state<D>(seed: &mut S, deserializer: D) -> Result<NonZero<T>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let value = try!(Deserialize::deserialize_state(seed, deserializer));
-        unsafe {
-            let ptr = &value as *const T as *const u8;
-            if slice::from_raw_parts(ptr, mem::size_of::<T>())
-                .iter()
-                .all(|&b| b == 0)
-            {
-                return Err(Error::custom("expected a non-zero value"));
-            }
-            // Waiting for a safe way to construct NonZero<T>:
-            // https://github.com/rust-lang/rust/issues/27730#issuecomment-269726075
-            Ok(NonZero::new(value))
-        }
-    }
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 

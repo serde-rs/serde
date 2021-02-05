@@ -275,20 +275,6 @@ deref_impl!(<'a, Seed: ?Sized, T: ?Sized> SerializeState<Seed> for Cow<'a, T> wh
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(feature = "unstable")]
-impl<T, Seed: ?Sized> SerializeState<Seed> for NonZero<T>
-where
-    T: SerializeState<Seed> + Zeroable + Clone,
-{
-    #[inline]
-    fn serialize_state<S>(&self, serializer: S, seed: &Seed) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        self.clone().get().serialize(serializer, seed)
-    }
-}
-
 impl<T, Seed: ?Sized> SerializeState<Seed> for Cell<T>
 where
     T: SerializeState<Seed> + Copy,

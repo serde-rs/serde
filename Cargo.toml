@@ -6,3 +6,6 @@ members = [
     "serde_test",
     "test_suite",
 ]
+
+[patch.crates-io]
+serde = { version = "1.0.0", git = "https://github.com/serde-rs/serde" }
