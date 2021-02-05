@@ -10,16 +10,36 @@ use lib::*;
 
 use de::{DeserializeSeed, Deserializer, IntoDeserializer, Error, Visitor};
 
+use serde::Deserialize;
+
 #[cfg(any(feature = "std", feature = "alloc"))]
 use de::Unexpected;
-
-pub use serde::private::de::InPlaceSeed;
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{Content, ContentRefDeserializer, ContentDeserializer,
                         TaggedContentVisitor, TagOrContentField, TagOrContentFieldVisitor,
                         TagContentOtherField, TagContentOtherFieldVisitor,
                         InternallyTaggedUnitVisitor, UntaggedUnitVisitor};
+
+
+
+/// A DeserializeSeed helper for implementing deserialize_in_place Visitors.
+///
+/// Wraps a mutable reference and calls deserialize_in_place on it.
+pub struct InPlaceSeed<'a, T: 'a>(pub &'a mut T);
+
+impl<'a, 'de, T> DeserializeSeed<'de> for InPlaceSeed<'a, T>
+where
+    T: Deserialize<'de>,
+{
+    type Value = ();
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        T::deserialize_in_place(deserializer, self.0)
+    }
+}
 
 /// If the missing field is of type `Option<T>` then treat is as `None`,
 /// otherwise it is an error.

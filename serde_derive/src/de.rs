@@ -2995,7 +2995,7 @@ fn expr_is_missing(params: &Parameters, field: &Field, cattrs: &attr::Container)
     } else {
         let (wrapper, wrapper_value) = wrap_deserialize(params, field, cattrs.deserialize_state());
         let span = field.original.span();
-        let func = quote_spanned!(span=> _serde::private::de::missing_field);
+        let func = quote_spanned!(span=> _serde_state::private::de::missing_field);
         quote_expr! {
             #wrapper
             try!(#func(#wrapper_value, #name))
