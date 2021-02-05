@@ -91,6 +91,30 @@ fn test_struct() {
 }
 
 #[test]
+fn test_field_identifier() {
+    #[derive(Deserialize, Debug, PartialEq)]
+    #[serde(field_identifier)]
+    enum FieldStr<'a> {
+        #[serde(borrow)]
+        Str(&'a str),
+    }
+
+    assert_de_tokens(&FieldStr::Str("value"), &[Token::BorrowedStr("value")]);
+
+    #[derive(Deserialize, Debug, PartialEq)]
+    #[serde(field_identifier)]
+    enum FieldBytes<'a> {
+        #[serde(borrow)]
+        Bytes(&'a [u8]),
+    }
+
+    assert_de_tokens(
+        &FieldBytes::Bytes(b"value"),
+        &[Token::BorrowedBytes(b"value")],
+    );
+}
+
+#[test]
 fn test_cow() {
     #[derive(Deserialize)]
     struct Cows<'a, 'b> {

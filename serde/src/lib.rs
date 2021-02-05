@@ -84,7 +84,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Serde types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/serde/1.0.119")]
+#![doc(html_root_url = "https://docs.rs/serde/1.0.123")]
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
 // Unstable functionality only if the user asks for it. For tracking and
@@ -275,6 +275,9 @@ pub mod __private;
 use self::__private as export;
 #[allow(unused_imports)]
 use self::__private as private;
+
+#[path = "de/seed.rs"]
+mod seed;
 
 #[cfg(not(feature = "std"))]
 mod std_error;

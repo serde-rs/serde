@@ -13,7 +13,7 @@
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
-#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.119")]
+#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.123")]
 #![allow(unknown_lints, bare_trait_objects)]
 #![deny(clippy::all, clippy::pedantic)]
 // Ignored clippy lints
@@ -48,6 +48,7 @@
     clippy::struct_excessive_bools,
     clippy::too_many_lines,
     clippy::unseparated_literal_suffix,
+    clippy::unused_self,
     clippy::use_self,
     clippy::wildcard_imports
 )]
@@ -77,16 +78,16 @@ mod try;
 
 #[proc_macro_derive(SerializeState, attributes(serde))]
 pub fn derive_serialize_state(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-    ser::expand_derive_serialize(&input, true)
+    let mut input = parse_macro_input!(input as DeriveInput);
+    ser::expand_derive_serialize(&mut input, true)
         .unwrap_or_else(to_compile_errors)
         .into()
 }
 
 #[proc_macro_derive(DeserializeState, attributes(serde))]
 pub fn derive_deserialize_state(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-    de::expand_derive_deserialize(&input, true)
+    let mut input = parse_macro_input!(input as DeriveInput);
+    de::expand_derive_deserialize(&mut input, true)
         .unwrap_or_else(to_compile_errors)
         .into()
 }

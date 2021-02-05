@@ -711,7 +711,7 @@ pub trait Serializer: Sized {
     ///
     /// ```edition2018
     /// # use serde::ser::{Serializer, SerializeSeq};
-    /// # use serde::__private::ser::Error;
+    /// # use serde::__private::doc::Error;
     /// #
     /// # struct MySerializer;
     /// #

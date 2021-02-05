@@ -35,6 +35,7 @@ pub const TRY_FROM: Symbol = Symbol("try_from");
 pub const UNTAGGED: Symbol = Symbol("untagged");
 pub const VARIANT_IDENTIFIER: Symbol = Symbol("variant_identifier");
 pub const WITH: Symbol = Symbol("with");
+pub const EXPECTING: Symbol = Symbol("expecting");
 
 pub const DESERIALIZE_STATE_WITH: Symbol = Symbol("deserialize_state_with");
 pub const DESERIALIZE_STATE: Symbol = Symbol("deserialize_state");
