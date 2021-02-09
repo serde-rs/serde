@@ -223,11 +223,15 @@ mod content {
         U16(u16),
         U32(u32),
         U64(u64),
+        #[cfg(integer128)]
+        U128(u128),
 
         I8(i8),
         I16(i16),
         I32(i32),
         I64(i64),
+        #[cfg(integer128)]
+        I128(i128),
 
         F32(f32),
         F64(f64),
@@ -266,10 +270,14 @@ mod content {
                 Content::U16(n) => Unexpected::Unsigned(n as u64),
                 Content::U32(n) => Unexpected::Unsigned(n as u64),
                 Content::U64(n) => Unexpected::Unsigned(n),
+                #[cfg(integer128)]
+                Content::U128(_) => Unexpected::Other("u128"),
                 Content::I8(n) => Unexpected::Signed(n as i64),
                 Content::I16(n) => Unexpected::Signed(n as i64),
                 Content::I32(n) => Unexpected::Signed(n as i64),
                 Content::I64(n) => Unexpected::Signed(n),
+                #[cfg(integer128)]
+                Content::I128(_) => Unexpected::Other("i128"),
                 Content::F32(f) => Unexpected::Float(f as f64),
                 Content::F64(f) => Unexpected::Float(f),
                 Content::Char(c) => Unexpected::Char(c),
@@ -350,6 +358,15 @@ mod content {
             Ok(Content::I64(value))
         }
 
+        serde_if_integer128! {
+            fn visit_i128<F>(self, value: i128) -> Result<Self::Value, F>
+            where
+                F: de::Error,
+            {
+                Ok(Content::I128(value))
+            }
+        }
+
         fn visit_u8<F>(self, value: u8) -> Result<Self::Value, F>
         where
             F: de::Error,
@@ -376,6 +393,15 @@ mod content {
             F: de::Error,
         {
             Ok(Content::U64(value))
+        }
+
+        serde_if_integer128! {
+            fn visit_u128<F>(self, value: u128) -> Result<Self::Value, F>
+            where
+                F: de::Error,
+            {
+                Ok(Content::U128(value))
+            }
         }
 
         fn visit_f32<F>(self, value: f32) -> Result<Self::Value, F>
@@ -588,6 +614,17 @@ mod content {
                 .map(TagOrContent::Content)
         }
 
+        serde_if_integer128! {
+            fn visit_i128<F>(self, value: i128) -> Result<Self::Value, F>
+            where
+                F: de::Error,
+            {
+                ContentVisitor::new()
+                    .visit_i128(value)
+                    .map(TagOrContent::Content)
+            }
+        }
+
         fn visit_u8<F>(self, value: u8) -> Result<Self::Value, F>
         where
             F: de::Error,
@@ -622,6 +659,17 @@ mod content {
             ContentVisitor::new()
                 .visit_u64(value)
                 .map(TagOrContent::Content)
+        }
+
+        serde_if_integer128! {
+            fn visit_u128<F>(self, value: u128) -> Result<Self::Value, F>
+            where
+                F: de::Error,
+            {
+                ContentVisitor::new()
+                    .visit_u128(value)
+                    .map(TagOrContent::Content)
+            }
         }
 
         fn visit_f32<F>(self, value: f32) -> Result<Self::Value, F>
@@ -1015,10 +1063,14 @@ mod content {
                 Content::U16(v) => visitor.visit_u16(v),
                 Content::U32(v) => visitor.visit_u32(v),
                 Content::U64(v) => visitor.visit_u64(v),
+                #[cfg(integer128)]
+                Content::U128(v) => visitor.visit_u128(v),
                 Content::I8(v) => visitor.visit_i8(v),
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
+                #[cfg(integer128)]
+                Content::I128(v) => visitor.visit_i128(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1034,10 +1086,14 @@ mod content {
                 Content::U16(v) => visitor.visit_u16(v),
                 Content::U32(v) => visitor.visit_u32(v),
                 Content::U64(v) => visitor.visit_u64(v),
+                #[cfg(integer128)]
+                Content::U128(v) => visitor.visit_u128(v),
                 Content::I8(v) => visitor.visit_i8(v),
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
+                #[cfg(integer128)]
+                Content::I128(v) => visitor.visit_i128(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1090,12 +1146,16 @@ mod content {
                 Content::U16(v) => visitor.visit_u16(v),
                 Content::U32(v) => visitor.visit_u32(v),
                 Content::U64(v) => visitor.visit_u64(v),
+                #[cfg(integer128)]
+                Content::U128(v) => visitor.visit_u128(v),
                 Content::I8(v) => visitor.visit_i8(v),
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
                 Content::F32(v) => visitor.visit_f32(v),
                 Content::F64(v) => visitor.visit_f64(v),
+                #[cfg(integer128)]
+                Content::I128(v) => visitor.visit_i128(v),
                 Content::Char(v) => visitor.visit_char(v),
                 Content::String(v) => visitor.visit_string(v),
                 Content::Str(v) => visitor.visit_borrowed_str(v),
@@ -1148,6 +1208,15 @@ mod content {
             self.deserialize_integer(visitor)
         }
 
+        serde_if_integer128! {
+            fn deserialize_i128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+            where
+                V: Visitor<'de>,
+            {
+                self.deserialize_integer(visitor)
+            }
+        }
+
         fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
@@ -1174,6 +1243,15 @@ mod content {
             V: Visitor<'de>,
         {
             self.deserialize_integer(visitor)
+        }
+
+        serde_if_integer128! {
+            fn deserialize_u128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+            where
+                V: Visitor<'de>,
+            {
+                self.deserialize_integer(visitor)
+            }
         }
 
         fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -1735,10 +1813,14 @@ mod content {
                 Content::U16(v) => visitor.visit_u16(v),
                 Content::U32(v) => visitor.visit_u32(v),
                 Content::U64(v) => visitor.visit_u64(v),
+                #[cfg(integer128)]
+                Content::U128(v) => visitor.visit_u128(v),
                 Content::I8(v) => visitor.visit_i8(v),
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
+                #[cfg(integer128)]
+                Content::I128(v) => visitor.visit_i128(v),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1816,10 +1898,14 @@ mod content {
                 Content::U16(v) => visitor.visit_u16(v),
                 Content::U32(v) => visitor.visit_u32(v),
                 Content::U64(v) => visitor.visit_u64(v),
+                #[cfg(integer128)]
+                Content::U128(v) => visitor.visit_u128(v),
                 Content::I8(v) => visitor.visit_i8(v),
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
+                #[cfg(integer128)]
+                Content::I128(v) => visitor.visit_i128(v),
                 Content::F32(v) => visitor.visit_f32(v),
                 Content::F64(v) => visitor.visit_f64(v),
                 Content::Char(v) => visitor.visit_char(v),
@@ -1876,6 +1962,13 @@ mod content {
             self.deserialize_integer(visitor)
         }
 
+        fn deserialize_i128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            self.deserialize_integer(visitor)
+        }
+
         fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
@@ -1898,6 +1991,13 @@ mod content {
         }
 
         fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            self.deserialize_integer(visitor)
+        }
+
+        fn deserialize_u128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
         {
@@ -2775,16 +2875,19 @@ where
         visitor.visit_unit()
     }
 
+    // FIXME: How to have different integer128 and not(integer128) versions?
     forward_to_deserialize_other! {
         deserialize_bool()
         deserialize_i8()
         deserialize_i16()
         deserialize_i32()
         deserialize_i64()
+        deserialize_i128()
         deserialize_u8()
         deserialize_u16()
         deserialize_u32()
         deserialize_u64()
+        deserialize_u128()
         deserialize_f32()
         deserialize_f64()
         deserialize_char()
