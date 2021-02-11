@@ -44,7 +44,7 @@
 //! - [BSON], the data storage and network transfer format used by MongoDB.
 //! - [Avro], a binary format used within Apache Hadoop, with support for schema
 //!   definition.
-//! - [JSON5], A superset of JSON including some productions from ES5.
+//! - [JSON5], a superset of JSON including some productions from ES5.
 //! - [Postcard], a no\_std and embedded-systems friendly compact binary format.
 //! - [URL] query strings, in the x-www-form-urlencoded format.
 //! - [Envy], a way to deserialize environment variables into Rust structs.
