@@ -18,6 +18,7 @@
     clippy::doc_markdown,
     clippy::enum_glob_use,
     clippy::items_after_statements,
+    clippy::let_underscore_drop,
     clippy::match_same_arms,
     clippy::missing_errors_doc,
     clippy::module_name_repetitions,

@@ -120,6 +120,7 @@
         zero_prefixed_literal,
         // correctly used
         enum_glob_use,
+        let_underscore_drop,
         map_err_ignore,
         result_unit_err,
         wildcard_imports,
