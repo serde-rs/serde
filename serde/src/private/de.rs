@@ -212,6 +212,7 @@ mod content {
 
     use crate::lib::*;
 
+    use crate::de::value::MapAccessDeserializer;
     use crate::de::{
         self, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected, IgnoredAny,
         MapAccess, SeqAccess, Unexpected, Visitor,
@@ -865,9 +866,13 @@ mod content {
                 Content,
             )>(map.size_hint()));
 
+            // Read the first field. If it is a tag, immediately deserialize the typed data.
+            // Otherwise, we collect everything until we find the tag, and then deserialize
+            // using ContentDeserializer.
             match tri!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
                 Some(TagOrContent::Tag) => {
-                    tag = Some(tri!(map.next_value()));
+                    let tag: T = tri!(map.next_value());
+                    return tag.deserialize(MapAccessDeserializer::new(map));
                 }
                 Some(TagOrContent::Content(key)) => {
                     let v = tri!(map.next_value_seed(ContentVisitor::new()));
