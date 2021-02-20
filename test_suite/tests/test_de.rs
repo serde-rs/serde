@@ -1567,6 +1567,19 @@ fn test_enum_unit() {
             variant: "Unit",
         }],
     );
+
+    test(Enum::Unit, &[Token::Str("Unit")]);
+    test(Enum::Unit, &[Token::BorrowedStr("Unit")]);
+    test(Enum::Unit, &[Token::String("Unit")]);
+
+    test(Enum::Unit, &[Token::Bytes(b"Unit")]);
+    test(Enum::Unit, &[Token::BorrowedBytes(b"Unit")]);
+    test(Enum::Unit, &[Token::ByteBuf(b"Unit")]);
+
+    test(Enum::Unit, &[Token::U8(0)]);
+    test(Enum::Unit, &[Token::U16(0)]);
+    test(Enum::Unit, &[Token::U32(0)]);
+    test(Enum::Unit, &[Token::U64(0)]);
 }
 
 #[test]

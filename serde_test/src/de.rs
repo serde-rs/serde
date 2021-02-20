@@ -256,7 +256,10 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             Token::Enum { name: n } if name == n => {
                 self.next_token()?;
 
-                visitor.visit_enum(DeserializerEnumVisitor { de: self })
+                visitor.visit_enum(DeserializerEnumVisitor {
+                    de: self,
+                    optional_token: false,
+                })
             }
             Token::UnitVariant { name: n, .. }
             | Token::NewtypeVariant { name: n, .. }
@@ -264,8 +267,24 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             | Token::StructVariant { name: n, .. }
                 if name == n =>
             {
-                visitor.visit_enum(DeserializerEnumVisitor { de: self })
+                visitor.visit_enum(DeserializerEnumVisitor {
+                    de: self,
+                    optional_token: false,
+                })
             }
+            Token::Str(_)
+            | Token::BorrowedStr(_)
+            | Token::String(_)
+            | Token::Bytes(_)
+            | Token::BorrowedBytes(_)
+            | Token::ByteBuf(_)
+            | Token::U8(_)
+            | Token::U16(_)
+            | Token::U32(_)
+            | Token::U64(_) => visitor.visit_enum(DeserializerEnumVisitor {
+                de: self,
+                optional_token: true,
+            }),
             _ => self.deserialize_any(visitor),
         }
     }
@@ -454,6 +473,7 @@ impl<'de, 'a> MapAccess<'de> for DeserializerMapVisitor<'a, 'de> {
 
 struct DeserializerEnumVisitor<'a, 'de: 'a> {
     de: &'a mut Deserializer<'de>,
+    optional_token: bool,
 }
 
 impl<'de, 'a> EnumAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
@@ -485,12 +505,19 @@ impl<'de, 'a> VariantAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
     type Error = Error;
 
     fn unit_variant(self) -> Result<(), Error> {
-        match self.de.peek_token()? {
-            Token::UnitVariant { .. } => {
+        // Sometimes unit variant doesn't require tokens in stream
+        let token = if self.optional_token {
+            self.de.peek_token_opt()
+        } else {
+            Some(self.de.peek_token()?)
+        };
+        match token {
+            Some(Token::UnitVariant { .. }) => {
                 self.de.next_token()?;
                 Ok(())
             }
-            _ => Deserialize::deserialize(self.de),
+            Some(_) => Deserialize::deserialize(self.de),
+            None => Ok(()),
         }
     }
 

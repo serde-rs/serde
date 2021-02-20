@@ -2818,8 +2818,8 @@ fn test_expecting_message_externally_tagged_enum() {
     }
 
     assert_de_tokens_error::<Enum>(
-        &[Token::Str("ExternallyTagged")],
-        r#"invalid type: string "ExternallyTagged", expected something strange..."#,
+        &[Token::Bool(true)],
+        r#"invalid type: boolean `true`, expected something strange..."#,
     );
 
     // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
