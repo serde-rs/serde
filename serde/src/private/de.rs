@@ -11,9 +11,9 @@ use crate::de::{MapAccess, Unexpected};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{
-    Content, ContentDeserializer, ContentRefDeserializer, EnumDeserializer,
-    InternallyTaggedUnitVisitor, TagContentOtherField, TagContentOtherFieldVisitor,
-    TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
+    drain_map, Content, ContentDeserializer, ContentRefDeserializer, EnumDeserializer,
+    InternallyTaggedUnitVisitor, TagContentOtherField, TagContentOtherFieldVisitor, TagOrContent,
+    TagOrContentField, TagOrContentFieldVisitor, TagOrContentVisitor, UntaggedUnitVisitor,
 };
 
 pub use crate::seed::InPlaceSeed;
@@ -592,13 +592,13 @@ mod content {
 
     /// Serves as a seed for deserializing a key of internally tagged enum.
     /// Cannot capture externally tagged enums, `i128` and `u128`.
-    struct TagOrContentVisitor<'de> {
+    pub struct TagOrContentVisitor<'de> {
         name: &'static str,
         value: PhantomData<TagOrContent<'de>>,
     }
 
     impl<'de> TagOrContentVisitor<'de> {
-        fn new(name: &'static str) -> Self {
+        pub fn new(name: &'static str) -> Self {
             TagOrContentVisitor {
                 name,
                 value: PhantomData,
@@ -873,77 +873,6 @@ mod content {
             ContentVisitor::new()
                 .visit_enum(visitor)
                 .map(TagOrContent::Content)
-        }
-    }
-
-    /// Used by generated code to deserialize an internally tagged enum.
-    ///
-    /// Captures map or sequence from the original deserializer and searches
-    /// a tag in it (in case of sequence, tag is the first element of sequence).
-    ///
-    /// Not public API.
-    pub struct TaggedContentVisitor<T> {
-        tag_name: &'static str,
-        expecting: &'static str,
-        value: PhantomData<T>,
-    }
-
-    impl<T> TaggedContentVisitor<T> {
-        /// Visitor for the content of an internally tagged enum with the given
-        /// tag name.
-        pub fn new(name: &'static str, expecting: &'static str) -> Self {
-            TaggedContentVisitor {
-                tag_name: name,
-                expecting,
-                value: PhantomData,
-            }
-        }
-    }
-
-    impl<'de, T> Visitor<'de> for TaggedContentVisitor<T>
-    where
-        T: Deserialize<'de>,
-    {
-        type Value = (T, Content<'de>);
-
-        fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-            fmt.write_str(self.expecting)
-        }
-
-        fn visit_seq<S>(self, mut seq: S) -> Result<Self::Value, S::Error>
-        where
-            S: SeqAccess<'de>,
-        {
-            let tag = match tri!(seq.next_element()) {
-                Some(tag) => tag,
-                None => {
-                    return Err(de::Error::missing_field(self.tag_name));
-                }
-            };
-            let rest = de::value::SeqAccessDeserializer::new(seq);
-            Ok((tag, tri!(Content::deserialize(rest))))
-        }
-
-        fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
-        where
-            M: MapAccess<'de>,
-        {
-            let mut vec = Vec::<(Content, Content)>::with_capacity(size_hint::cautious::<(
-                Content,
-                Content,
-            )>(map.size_hint()));
-
-            match tri!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
-                Some(TagOrContent::Tag) => {
-                    let tag = tri!(map.next_value());
-                    drain_map(map, self.tag_name, Some(tag), vec)
-                }
-                Some(TagOrContent::Content(key)) => {
-                    vec.push((key, tri!(map.next_value())));
-                    drain_map(map, self.tag_name, None, vec)
-                }
-                None => Err(de::Error::missing_field(self.tag_name)),
-            }
         }
     }
 
