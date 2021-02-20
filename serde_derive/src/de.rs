@@ -1449,20 +1449,18 @@ fn deserialize_internally_tagged_enum(
                 )? {
                     _serde::__private::Some(_serde::__private::de::TagOrContent::Tag) => {
                         let __tag = _serde::de::MapAccess::next_value(&mut __map)?;
-                        let (__tag, __content) = _serde::__private::de::drain_map(
+                        let (__tag, __deserializer) = _serde::__private::de::drain_map(
                             __map, #tag, _serde::__private::Some(__tag), __vec
                         )?;
-                        let __deserializer = _serde::__private::de::ContentDeserializer::<__M::Error>::new(__content);
 
                         Self::visit(__tag, __deserializer)
                     },
                     _serde::__private::Some(_serde::__private::de::TagOrContent::Content(__key)) => {
                         let __val = _serde::de::MapAccess::next_value(&mut __map)?;
                         __vec.push((__key, __val));
-                        let (__tag, __content) = _serde::__private::de::drain_map(
+                        let (__tag, __deserializer) = _serde::__private::de::drain_map(
                             __map, #tag, _serde::__private::None, __vec
                         )?;
-                        let __deserializer = _serde::__private::de::ContentDeserializer::<__M::Error>::new(__content);
 
                         Self::visit(__tag, __deserializer)
                     },
