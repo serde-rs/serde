@@ -441,6 +441,43 @@ fn deserialize_unit_struct(params: &Parameters, cattrs: &attr::Container) -> Fra
             {
                 _serde::__private::Ok(#this_value)
             }
+
+            #[inline]
+            fn visit_seq<__A>(self, mut __seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
+            where
+                __A: _serde::de::SeqAccess<'de>,
+            {
+                // Allow to deserialize unit from empty sequence
+                if _serde::de::SeqAccess::next_element::<
+                    _serde::de::IgnoredAny,
+                >(&mut __seq)?.is_some() {
+                    _serde::__private::Err(_serde::de::Error::invalid_type(
+                        _serde::de::Unexpected::Seq,
+                        &self
+                    ))
+                } else {
+                    _serde::__private::Ok(#this_value)
+                }
+            }
+
+            #[inline]
+            fn visit_map<__A>(self, mut __map: __A) -> _serde::__private::Result<Self::Value, __A::Error>
+            where
+                __A: _serde::de::MapAccess<'de>,
+            {
+                // Allow to deserialize unit from empty map
+                if _serde::de::MapAccess::next_entry::<
+                    _serde::de::IgnoredAny,
+                    _serde::de::IgnoredAny,
+                >(&mut __map)?.is_some() {
+                    _serde::__private::Err(_serde::de::Error::invalid_type(
+                        _serde::de::Unexpected::Map,
+                        &self
+                    ))
+                } else {
+                    _serde::__private::Ok(#this_value)
+                }
+            }
         }
 
         _serde::Deserializer::deserialize_unit_struct(

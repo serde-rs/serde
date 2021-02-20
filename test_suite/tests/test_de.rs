@@ -903,6 +903,20 @@ fn test_unit() {
 fn test_unit_struct() {
     test(UnitStruct, &[Token::Unit]);
     test(UnitStruct, &[Token::UnitStruct { name: "UnitStruct" }]);
+    test(UnitStruct, &[Token::Seq { len: Some(0) }, Token::SeqEnd]);
+    test(UnitStruct, &[Token::Seq { len: None }, Token::SeqEnd]);
+    test(UnitStruct, &[Token::Map { len: Some(0) }, Token::MapEnd]);
+    test(UnitStruct, &[Token::Map { len: None }, Token::MapEnd]);
+    test(
+        UnitStruct,
+        &[
+            Token::Struct {
+                name: "ZeroStruct",
+                len: 0,
+            },
+            Token::StructEnd,
+        ],
+    );
 }
 
 #[test]
