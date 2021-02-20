@@ -864,6 +864,19 @@ mod content {
                 Content,
                 Content,
             )>(map.size_hint()));
+
+            if let Some(k) = tri!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
+                match k {
+                    TagOrContent::Tag => {
+                        tag = Some(tri!(map.next_value()));
+                    }
+                    TagOrContent::Content(key) => {
+                        let v = tri!(map.next_value_seed(ContentVisitor::new()));
+                        vec.push((key, v));
+                    }
+                }
+            }
+
             while let Some(k) = tri!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
                 match k {
                     TagOrContent::Tag => {
