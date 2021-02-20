@@ -215,6 +215,53 @@ mod content {
         MapAccess, SeqAccess, Unexpected, Visitor,
     };
 
+    /// Creates `ContentDeserializer` by consuming map.
+    ///
+    /// Used by derived code for deserialisation of the internally tagged enums.
+    /// Returns tag and content of `map` wrapped into `Content::Map`.
+    ///
+    /// # Parameters
+    /// - `map`: map that will be drained
+    /// - `tag_name`: name of tag in the `#[serde(tag = "tag_name")]` attribute
+    /// - `tag`: tag, if first value in map was a tag
+    /// - `vec`: placeholder for all other key-value pairs
+    ///
+    /// # Returns
+    /// A tuple with two values:
+    /// - value of the tag
+    /// - a content with all other key-value pairs of the map
+    ///
+    /// # Errors
+    /// - If deserialization of some value failed
+    /// - If map doesn't contain tag with `tag_name`
+    pub fn drain_map<'de, T, A>(
+        mut map: A,
+        tag_name: &'static str,
+        mut tag: Option<T>,
+        mut vec: Vec<(Content<'de>, Content<'de>)>,
+    ) -> Result<(T, Content<'de>), A::Error>
+    where
+        T: Deserialize<'de>,
+        A: MapAccess<'de>,
+    {
+        while let Some(key) = tri!(map.next_key_seed(TagOrContentVisitor::new(tag_name))) {
+            match key {
+                TagOrContent::Tag => {
+                    if tag.is_some() {
+                        return Err(de::Error::duplicate_field(tag_name));
+                    }
+                    tag = Some(tri!(map.next_value()));
+                }
+                TagOrContent::Content(key) => vec.push((key, tri!(map.next_value()))),
+            }
+        }
+
+        match tag {
+            None => Err(de::Error::missing_field(tag_name)),
+            Some(tag) => Ok((tag, Content::Map(vec))),
+        }
+    }
+
     /// Used from generated code to buffer the contents of the Deserializer when
     /// deserializing untagged enums and internally tagged enums.
     ///
@@ -881,7 +928,6 @@ mod content {
         where
             M: MapAccess<'de>,
         {
-            let mut tag = None;
             let mut vec = Vec::<(Content, Content)>::with_capacity(size_hint::cautious::<(
                 Content,
                 Content,
@@ -889,32 +935,14 @@ mod content {
 
             match tri!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
                 Some(TagOrContent::Tag) => {
-                    tag = Some(tri!(map.next_value()));
+                    let tag = tri!(map.next_value());
+                    drain_map(map, self.tag_name, Some(tag), vec)
                 }
                 Some(TagOrContent::Content(key)) => {
-                    let v = tri!(map.next_value());
-                    vec.push((key, v));
+                    vec.push((key, tri!(map.next_value())));
+                    drain_map(map, self.tag_name, None, vec)
                 }
-                None => {}
-            }
-
-            while let Some(k) = tri!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
-                match k {
-                    TagOrContent::Tag => {
-                        if tag.is_some() {
-                            return Err(de::Error::duplicate_field(self.tag_name));
-                        }
-                        tag = Some(tri!(map.next_value()));
-                    }
-                    TagOrContent::Content(k) => {
-                        let v = tri!(map.next_value());
-                        vec.push((k, v));
-                    }
-                }
-            }
-            match tag {
                 None => Err(de::Error::missing_field(self.tag_name)),
-                Some(tag) => Ok((tag, Content::Map(vec))),
             }
         }
     }
