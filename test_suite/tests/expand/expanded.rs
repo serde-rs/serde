@@ -1770,9 +1770,6 @@ mod expand {
                         where
                             __M: _serde::de::MapAccess<'de>,
                         {
-                            let mut __vec = _serde::__private::Vec::with_capacity(
-                                _serde::de::MapAccess::size_hint(&__map).unwrap_or(0),
-                            );
                             match _serde::de::MapAccess::next_key_seed(
                                 &mut __map,
                                 _serde::__private::de::TagOrContentVisitor::new("tag"),
@@ -1781,24 +1778,18 @@ mod expand {
                                     _serde::__private::de::TagOrContent::Tag,
                                 ) => {
                                     let __tag = _serde::de::MapAccess::next_value(&mut __map)?;
-                                    let (__tag, __deserializer) = _serde::__private::de::drain_map(
-                                        __map,
-                                        "tag",
-                                        _serde::__private::Some(__tag),
-                                        __vec,
-                                    )?;
-                                    Self::visit(__tag, __deserializer)
+                                    Self::visit(
+                                        __tag,
+                                        _serde::de::value::MapAccessDeserializer::new(__map),
+                                    )
                                 }
                                 _serde::__private::Some(
                                     _serde::__private::de::TagOrContent::Content(__key),
                                 ) => {
-                                    let __val = _serde::de::MapAccess::next_value(&mut __map)?;
-                                    __vec.push((__key, __val));
                                     let (__tag, __deserializer) = _serde::__private::de::drain_map(
                                         __map,
                                         "tag",
-                                        _serde::__private::None,
-                                        __vec,
+                                        __key,
                                     )?;
                                     Self::visit(__tag, __deserializer)
                                 }
