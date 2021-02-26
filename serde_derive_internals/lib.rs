@@ -4,6 +4,8 @@
 // Ignored clippy lints
 #![allow(
     clippy::cognitive_complexity,
+    // clippy bug: https://github.com/rust-lang/rust-clippy/issues/6797
+    clippy::manual_map,
     clippy::missing_panics_doc,
     clippy::redundant_field_names,
     clippy::result_unit_err,
