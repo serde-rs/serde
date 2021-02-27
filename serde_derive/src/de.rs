@@ -1728,6 +1728,15 @@ fn deserialize_externally_tagged_variant(
     }
 }
 
+/// Generates significant part of the `Visitor::visit_seq` and `Visitor::visit_map`
+/// bodies of visitors for deserializing variants of internally tagged enum:
+///
+/// ```ignore
+/// #[serde(tag = "...")]
+/// enum InternallyTagged {
+///   ...
+/// }
+/// ```
 fn deserialize_internally_tagged_variant(
     params: &Parameters,
     variant: &Variant,
@@ -1779,11 +1788,9 @@ fn deserialize_untagged_variant(
     deserializer: TokenStream,
 ) -> Fragment {
     if let Some(path) = variant.attrs.deserialize_with() {
-        let (wrapper, wrapper_ty, unwrap_fn) = wrap_deserialize_variant_with(params, variant, path);
+        let unwrap_fn = unwrap_to_variant_closure(params, variant, quote!(__wrap));
         return quote_block! {
-            #wrapper
-            _serde::__private::Result::map(
-                <#wrapper_ty as _serde::Deserialize>::deserialize(#deserializer), #unwrap_fn)
+            _serde::__private::Result::map(#path(#deserializer), #unwrap_fn)
         };
     }
 
@@ -2883,12 +2890,23 @@ fn wrap_deserialize_variant_with(
     variant: &Variant,
     deserialize_with: &syn::ExprPath,
 ) -> (TokenStream, TokenStream, TokenStream) {
-    let this = &params.this;
-    let variant_ident = &variant.ident;
-
     let field_tys = variant.fields.iter().map(|field| field.ty);
     let (wrapper, wrapper_ty) =
         wrap_deserialize_with(params, &quote!((#(#field_tys),*)), deserialize_with);
+
+    let unwrap_fn = unwrap_to_variant_closure(params, variant, quote!(__wrap.value));
+
+    (wrapper, wrapper_ty, unwrap_fn)
+}
+
+/// Generates closure that converts single input parameter to the final value
+fn unwrap_to_variant_closure(
+    params: &Parameters,
+    variant: &Variant,
+    wrapper: TokenStream,
+) -> TokenStream {
+    let this = &params.this;
+    let variant_ident = &variant.ident;
 
     let field_access = (0..variant.fields.len()).map(|n| {
         Member::Unnamed(Index {
@@ -2896,31 +2914,30 @@ fn wrap_deserialize_variant_with(
             span: Span::call_site(),
         })
     });
-    let unwrap_fn = match variant.style {
+
+    match variant.style {
         Style::Struct if variant.fields.len() == 1 => {
             let member = &variant.fields[0].member;
             quote! {
-                |__wrap| #this::#variant_ident { #member: __wrap.value }
+                |__wrap| #this::#variant_ident { #member: #wrapper }
             }
         }
         Style::Struct => {
             let members = variant.fields.iter().map(|field| &field.member);
             quote! {
-                |__wrap| #this::#variant_ident { #(#members: __wrap.value.#field_access),* }
+                |__wrap| #this::#variant_ident { #(#members: #wrapper.#field_access),* }
             }
         }
         Style::Tuple => quote! {
-            |__wrap| #this::#variant_ident(#(__wrap.value.#field_access),*)
+            |__wrap| #this::#variant_ident(#(#wrapper.#field_access),*)
         },
         Style::Newtype => quote! {
-            |__wrap| #this::#variant_ident(__wrap.value)
+            |__wrap| #this::#variant_ident(#wrapper)
         },
         Style::Unit => quote! {
             |__wrap| #this::#variant_ident
         },
-    };
-
-    (wrapper, wrapper_ty, unwrap_fn)
+    }
 }
 
 fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
