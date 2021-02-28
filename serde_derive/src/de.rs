@@ -1788,7 +1788,7 @@ fn deserialize_untagged_variant(
     deserializer: TokenStream,
 ) -> Fragment {
     if let Some(path) = variant.attrs.deserialize_with() {
-        let unwrap_fn = unwrap_to_variant_closure(params, variant, quote!(__wrap));
+        let unwrap_fn = unwrap_to_variant_closure(params, variant, false);
         return quote_block! {
             _serde::__private::Result::map(#path(#deserializer), #unwrap_fn)
         };
@@ -2894,7 +2894,7 @@ fn wrap_deserialize_variant_with(
     let (wrapper, wrapper_ty) =
         wrap_deserialize_with(params, &quote!((#(#field_tys),*)), deserialize_with);
 
-    let unwrap_fn = unwrap_to_variant_closure(params, variant, quote!(__wrap.value));
+    let unwrap_fn = unwrap_to_variant_closure(params, variant, true);
 
     (wrapper, wrapper_ty, unwrap_fn)
 }
@@ -2903,10 +2903,25 @@ fn wrap_deserialize_variant_with(
 fn unwrap_to_variant_closure(
     params: &Parameters,
     variant: &Variant,
-    wrapper: TokenStream,
+    with_wrapper: bool,
 ) -> TokenStream {
     let this = &params.this;
     let variant_ident = &variant.ident;
+
+    let (arg, wrapper) = if with_wrapper {
+        (
+            quote!{ __wrap },
+            quote!{ __wrap.value },
+        )
+    } else {
+        let field_tys = variant.fields.iter().map(|field| field.ty);
+        (
+            // When additional DeserializeWith wrapper is not used, Rust
+            // is not able to infer types, so we help him
+            quote!{ __wrap: (#(#field_tys),*) },
+            quote!{ __wrap },
+        )
+    };
 
     let field_access = (0..variant.fields.len()).map(|n| {
         Member::Unnamed(Index {
@@ -2919,23 +2934,23 @@ fn unwrap_to_variant_closure(
         Style::Struct if variant.fields.len() == 1 => {
             let member = &variant.fields[0].member;
             quote! {
-                |__wrap| #this::#variant_ident { #member: #wrapper }
+                |#arg| #this::#variant_ident { #member: #wrapper }
             }
         }
         Style::Struct => {
             let members = variant.fields.iter().map(|field| &field.member);
             quote! {
-                |__wrap| #this::#variant_ident { #(#members: #wrapper.#field_access),* }
+                |#arg| #this::#variant_ident { #(#members: #wrapper.#field_access),* }
             }
         }
         Style::Tuple => quote! {
-            |__wrap| #this::#variant_ident(#(#wrapper.#field_access),*)
+            |#arg| #this::#variant_ident(#(#wrapper.#field_access),*)
         },
         Style::Newtype => quote! {
-            |__wrap| #this::#variant_ident(#wrapper)
+            |#arg| #this::#variant_ident(#wrapper)
         },
         Style::Unit => quote! {
-            |__wrap| #this::#variant_ident
+            |#arg| #this::#variant_ident
         },
     }
 }
