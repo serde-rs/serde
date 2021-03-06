@@ -2130,7 +2130,7 @@ impl<'de> Deserialize<'de> for SystemTime {
         #[cfg(systemtime_checked_add)]
         let ret = UNIX_EPOCH
             .checked_add(duration)
-            .ok_or(D::Error::custom("overflow deserializing SystemTime"));
+            .ok_or_else(|| D::Error::custom("overflow deserializing SystemTime"));
         #[cfg(not(systemtime_checked_add))]
         let ret = Ok(UNIX_EPOCH + duration);
         ret

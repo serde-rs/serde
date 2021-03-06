@@ -76,7 +76,7 @@ fn main() {
         println!("cargo:rustc-cfg=serde_derive");
     }
 
-    // TryFrom, Atomic types, non-zero signed integers, and `SystemTime::checked_add`
+    // TryFrom, Atomic types, non-zero signed integers, and SystemTime::checked_add
     // stabilized in Rust 1.34:
     // https://blog.rust-lang.org/2019/04/11/Rust-1.34.0.html#tryfrom-and-tryinto
     // https://blog.rust-lang.org/2019/04/11/Rust-1.34.0.html#library-stabilizations

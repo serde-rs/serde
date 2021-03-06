@@ -192,15 +192,6 @@ macro_rules! declare_tests {
 }
 
 macro_rules! declare_error_tests {
-    ($($name:ident<$target:ty> { $tokens:expr, $expected:expr, })+) => {
-        $(
-            #[test]
-            fn $name() {
-                assert_de_tokens_error::<$target>($tokens, $expected);
-            }
-        )+
-    };
-
     ($(
         $(#[$cfg:meta])*
         $name:ident<$target:ty> { $tokens:expr, $expected:expr, }
