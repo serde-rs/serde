@@ -674,26 +674,32 @@ impl Serialize for net::IpAddr {
     }
 }
 
+const DEC_DIGITS_LUT: &'static [u8] = b"\
+      0001020304050607080910111213141516171819\
+      2021222324252627282930313233343536373839\
+      4041424344454647484950515253545556575859\
+      6061626364656667686970717273747576777879\
+      8081828384858687888990919293949596979899";
+
 #[inline]
-fn format_u8(mut v: u8, out: &mut [u8]) -> usize {
+fn format_u8(mut n: u8, out: &mut [u8]) -> usize {
     assert!(out.len() >= 3);
-    let mut written = 0;
-    let hundreds = v / 100;
-    v -= 100 * hundreds;
-    let tens = v / 10;
-    v -= 10 * tens;
-    let ones = v;
-    if hundreds > 0 {
-        out[written] = b'0' + hundreds;
-        written += 1;
+    if n >= 100 {
+        let d1 = ((n % 100) << 1) as usize;
+        n /= 100;
+        out[0] = b'0' + n;
+        out[1] = DEC_DIGITS_LUT[d1];
+        out[2] = DEC_DIGITS_LUT[d1 + 1];
+        3
+    } else if n >= 10 {
+        let d1 = (n << 1) as usize;
+        out[0] = DEC_DIGITS_LUT[d1];
+        out[1] = DEC_DIGITS_LUT[d1 + 1];
+        2
+    } else {
+        out[0] = b'0' + n;
+        1
     }
-    if hundreds > 0 || tens > 0 {
-        out[written] = b'0' + tens;
-        written += 1;
-    }
-    out[written] = b'0' + ones;
-    written += 1;
-    written
 }
 
 #[cfg(test)]
