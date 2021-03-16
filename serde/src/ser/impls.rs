@@ -674,6 +674,40 @@ impl Serialize for net::IpAddr {
     }
 }
 
+#[inline]
+fn format_u8(mut v: u8, out: &mut [u8]) -> usize {
+    assert!(out.len() >= 3);
+    let mut written = 0;
+    let hundreds = v / 100;
+    v -= 100 * hundreds;
+    let tens = v / 10;
+    v -= 10 * tens;
+    let ones = v;
+    if hundreds > 0 {
+        out[written] = b'0' + hundreds;
+        written += 1;
+    }
+    if hundreds > 0 || tens > 0 {
+        out[written] = b'0' + tens;
+        written += 1;
+    }
+    out[written] = b'0' + ones;
+    written += 1;
+    written
+}
+
+#[cfg(test)]
+mod format_u8_tests {
+    #[test]
+    fn all() {
+        for i in 0..(u8::MAX as u16) {
+            let mut buf = [0u8; 3];
+            let written = super::format_u8(i as u8, &mut buf);
+            assert_eq!(i.to_string().as_bytes(), &buf[..written]);
+        }
+    }
+}
+
 #[cfg(feature = "std")]
 impl Serialize for net::Ipv4Addr {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -683,7 +717,15 @@ impl Serialize for net::Ipv4Addr {
         if serializer.is_human_readable() {
             const MAX_LEN: usize = 15;
             debug_assert_eq!(MAX_LEN, "101.102.103.104".len());
-            serialize_display_bounded_length!(self, MAX_LEN, serializer)
+            let mut buf = [0u8; MAX_LEN];
+            let mut written = 0;
+            written += format_u8(self.octets()[0], &mut buf);
+            for oct in &self.octets()[1..] {
+                buf[written] = b'.';
+                written += 1;
+                written += format_u8(*oct, &mut buf[written..]);
+            }
+            serializer.serialize_str(str::from_utf8(&buf[..written]).unwrap())
         } else {
             self.octets().serialize(serializer)
         }
