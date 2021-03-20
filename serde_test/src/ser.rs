@@ -1,3 +1,4 @@
+use std::any::Any;
 use serde::{ser, Serialize};
 
 use error::Error;
@@ -310,6 +311,14 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
         panic!(
             "Types which have different human-readable and compact representations \
              must explicitly mark their test cases with `serde_test::Configure`"
+        );
+    }
+
+    #[allow(bare_trait_objects)] // to support rustc < 1.27
+    fn get_context<T: ?Sized + Any>(&self) -> &Any {
+        panic!(
+            "Types which have different representations must explicitly mark their \
+            test cases with `serde_test::Configure`"
         );
     }
 }

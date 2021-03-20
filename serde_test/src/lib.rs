@@ -182,7 +182,7 @@ pub use assert::{
 };
 pub use token::Token;
 
-pub use configure::{Compact, Configure, Readable};
+pub use configure::{Compact, Configure, Context, Readable};
 
 // Not public API.
 #[doc(hidden)]

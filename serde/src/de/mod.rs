@@ -1213,6 +1213,93 @@ pub trait Deserializer<'de>: Sized {
     fn is_human_readable(&self) -> bool {
         true
     }
+
+    /// Enable `Deserialize` implementations to obtain context that determines the
+    /// form from which they should expect to deserialize data.  This is a more
+    /// generalized version of the [`is_human_readable`] method.
+    ///
+    /// Some types have multiple forms that may each have different representations
+    /// in serde's data model.  For example, one form may use different element
+    /// names from another.
+    ///
+    /// ```edition2018
+    /// # use std::ops::Add;
+    /// # use std::str::FromStr;
+    /// #
+    /// # struct Timestamp;
+    /// #
+    /// # impl Timestamp {
+    /// #     const EPOCH: Timestamp = Timestamp;
+    /// # }
+    /// #
+    /// # impl FromStr for Timestamp {
+    /// #     type Err = String;
+    /// #     fn from_str(_: &str) -> Result<Self, Self::Err> {
+    /// #         unimplemented!()
+    /// #     }
+    /// # }
+    /// #
+    /// # struct Duration;
+    /// #
+    /// # impl Duration {
+    /// #     fn seconds(_: u64) -> Self { unimplemented!() }
+    /// # }
+    /// #
+    /// # impl Add<Duration> for Timestamp {
+    /// #     type Output = Timestamp;
+    /// #     fn add(self, _: Duration) -> Self::Output {
+    /// #         unimplemented!()
+    /// #     }
+    /// # }
+    /// #
+    /// use std::any::Any;
+    /// use serde::de::{self, Deserialize, Deserializer};
+    ///
+    /// enum TargetConsumer {
+    ///    Human,
+    ///    Machine,
+    /// }
+    ///
+    /// impl<'de> Deserialize<'de> for Timestamp {
+    ///     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    ///     where
+    ///         D: Deserializer<'de>,
+    ///     {
+    ///         match deserializer.get_context::<TargetConsumer>().downcast_ref::<TargetConsumer>() {
+    ///             Some(TargetConsumer::Human) => {
+    ///                 // Deserialize from a human-readable string like "2015-05-15T17:01:00Z".
+    ///                 let s = String::deserialize(deserializer)?;
+    ///                 Timestamp::from_str(&s).map_err(de::Error::custom)
+    ///             }
+    ///             Some(TargetConsumer::Machine) | None => {
+    ///                 // Deserialize from a compact binary representation, seconds since
+    ///                 // the Unix epoch (also our default if deserializer does not support
+    ///                 // the TargetConsumer context).
+    ///                 let n = u64::deserialize(deserializer)?;
+    ///                 Ok(Timestamp::EPOCH + Duration::seconds(n))
+    ///             }
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// The default implementation of this method returns `&()`. Data formats
+    /// may override this to request a specific form of the requested context for
+    /// types that support it. Note that modifying this method to change a format
+    /// should be regarded as a breaking change, as a value serialized in one mode
+    /// is not required to deserialize from the same data in another mode.
+    ///
+    /// This method is stable and an official public API, but hidden from the
+    /// documentation because it is almost never what newbies are looking for.
+    /// Showing it in rustdoc would cause it to be featured more prominently
+    /// than it deserves.
+    #[inline]
+    #[doc(hidden)]
+    #[allow(bare_trait_objects)] // to support rustc < 1.27
+    fn get_context<T: ?Sized + Any>(&self) -> &Any {
+        static UNIT: () = (); // to support rustc < 1.21
+        &UNIT
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

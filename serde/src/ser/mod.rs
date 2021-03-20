@@ -1447,6 +1447,75 @@ pub trait Serializer: Sized {
     fn is_human_readable(&self) -> bool {
         true
     }
+
+    /// Enable `Serialize` implementations to obtain context that determines the
+    /// form in which data should be serialized.  This is a more generalized
+    /// version of the [`is_human_readable`] method.
+    ///
+    /// Some types have multiple forms that may each have different representations
+    /// in serde's data model.  For example, one form may use different element
+    /// names from another.
+    ///
+    /// ```edition2018
+    /// # use std::fmt::{self, Display};
+    /// #
+    /// # struct Timestamp;
+    /// #
+    /// # impl Timestamp {
+    /// #     fn seconds_since_epoch(&self) -> u64 { unimplemented!() }
+    /// # }
+    /// #
+    /// # impl Display for Timestamp {
+    /// #     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    /// #         unimplemented!()
+    /// #     }
+    /// # }
+    /// #
+    /// use std::any::Any;
+    /// use serde::{Serialize, Serializer};
+    ///
+    /// enum TargetConsumer {
+    ///    Human,
+    ///    Machine,
+    /// }
+    ///
+    /// impl Serialize for Timestamp {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///     where
+    ///         S: Serializer,
+    ///     {
+    ///         match serializer.get_context::<TargetConsumer>().downcast_ref::<TargetConsumer>() {
+    ///             Some(TargetConsumer::Human) => {
+    ///                 // Serialize to a human-readable string "2015-05-15T17:01:00Z".
+    ///                 self.to_string().serialize(serializer)
+    ///             }
+    ///             Some(TargetConsumer::Machine) | None => {
+    ///                 // Serialize to a compact binary representation (also our default
+    ///                 // if serializer does not support the TargetConsumer context).
+    ///                 self.seconds_since_epoch().serialize(serializer)
+    ///             }
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// The default implementation of this method returns `&()`. Data formats
+    /// may override this to request a specific form of the requested context for
+    /// types that support it. Note that modifying this method to change a format
+    /// should be regarded as a breaking change, as a value serialized in one mode
+    /// is not required to deserialize from the same data in another mode.
+    ///
+    /// This method is stable and an official public API, but hidden from the
+    /// documentation because it is almost never what newbies are looking for.
+    /// Showing it in rustdoc would cause it to be featured more prominently
+    /// than it deserves.
+    #[inline]
+    #[doc(hidden)]
+    #[allow(bare_trait_objects)] // to support rustc < 1.27
+    fn get_context<T: ?Sized + Any>(&self) -> &Any {
+        static UNIT: () = (); // to support rustc < 1.21
+        &UNIT
+    }
 }
 
 /// Returned from `Serializer::serialize_seq`.

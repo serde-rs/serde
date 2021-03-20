@@ -163,6 +163,7 @@ mod lib {
     pub use self::core::{i16, i32, i64, i8, isize};
     pub use self::core::{u16, u32, u64, u8, usize};
 
+    pub use self::core::any::Any;
     pub use self::core::cell::{Cell, RefCell};
     pub use self::core::clone::{self, Clone};
     pub use self::core::convert::{self, From, Into};
