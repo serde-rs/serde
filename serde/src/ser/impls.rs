@@ -683,7 +683,6 @@ const DEC_DIGITS_LUT: &'static [u8] = b"\
 
 #[inline]
 fn format_u8(mut n: u8, out: &mut [u8]) -> usize {
-    assert!(out.len() >= 3);
     if n >= 100 {
         let d1 = ((n % 100) << 1) as usize;
         n /= 100;
@@ -723,15 +722,13 @@ impl Serialize for net::Ipv4Addr {
         if serializer.is_human_readable() {
             const MAX_LEN: usize = 15;
             debug_assert_eq!(MAX_LEN, "101.102.103.104".len());
-            let mut buf = [0u8; MAX_LEN];
-            let mut written = 0;
-            written += format_u8(self.octets()[0], &mut buf);
+            let mut buf = [b'.'; MAX_LEN];
+            let mut written = format_u8(self.octets()[0], &mut buf);
             for oct in &self.octets()[1..] {
-                buf[written] = b'.';
-                written += 1;
-                written += format_u8(*oct, &mut buf[written..]);
+                written += format_u8(*oct, &mut buf[written..]) + 1;
             }
-            serializer.serialize_str(str::from_utf8(&buf[..written]).unwrap())
+            // We've only written ASCII bytes to the buffer, so it is valid UTF-8
+            serializer.serialize_str(unsafe { str::from_utf8_unchecked(&buf[..written]) })
         } else {
             self.octets().serialize(serializer)
         }
