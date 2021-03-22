@@ -674,6 +674,7 @@ impl Serialize for net::IpAddr {
     }
 }
 
+#[cfg(feature = "std")]
 const DEC_DIGITS_LUT: &'static [u8] = b"\
       0001020304050607080910111213141516171819\
       2021222324252627282930313233343536373839\
@@ -681,6 +682,7 @@ const DEC_DIGITS_LUT: &'static [u8] = b"\
       6061626364656667686970717273747576777879\
       8081828384858687888990919293949596979899";
 
+#[cfg(feature = "std")]
 #[inline]
 fn format_u8(mut n: u8, out: &mut [u8]) -> usize {
     if n >= 100 {
@@ -701,6 +703,7 @@ fn format_u8(mut n: u8, out: &mut [u8]) -> usize {
     }
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn test_format_u8() {
     for i in 0..(u8::MAX as u16) {
