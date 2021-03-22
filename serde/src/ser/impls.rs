@@ -725,7 +725,8 @@ impl Serialize for net::Ipv4Addr {
             let mut buf = [b'.'; MAX_LEN];
             let mut written = format_u8(self.octets()[0], &mut buf);
             for oct in &self.octets()[1..] {
-                written += format_u8(*oct, &mut buf[written..]) + 1;
+                // Skip over delimiters that we initialized buf with
+                written += format_u8(*oct, &mut buf[written + 1..]) + 1;
             }
             // We've only written ASCII bytes to the buffer, so it is valid UTF-8
             serializer.serialize_str(unsafe { str::from_utf8_unchecked(&buf[..written]) })
