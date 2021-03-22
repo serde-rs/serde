@@ -706,10 +706,17 @@ fn format_u8(mut n: u8, out: &mut [u8]) -> usize {
 #[cfg(feature = "std")]
 #[test]
 fn test_format_u8() {
-    for i in 0..(u8::MAX as u16) {
+    let mut i = 0u8;
+
+    loop {
         let mut buf = [0u8; 3];
-        let written = format_u8(i as u8, &mut buf);
+        let written = format_u8(i, &mut buf);
         assert_eq!(i.to_string().as_bytes(), &buf[..written]);
+
+        match i.checked_add(1) {
+            Some(next) => i = next,
+            None => break,
+        }
     }
 }
 
