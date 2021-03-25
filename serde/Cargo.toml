@@ -31,6 +31,9 @@ targets = ["x86_64-unknown-linux-gnu"]
 [features]
 default = ["std"]
 
+# Supports arrays of arbitrary length
+const-generics = []
+
 # Provide derive(Serialize, Deserialize) macros.
 derive = ["serde_derive"]
 

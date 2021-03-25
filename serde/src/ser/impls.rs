@@ -1,3 +1,6 @@
+#[cfg(feature = "const-generics")]
+mod const_generics_impls;
+
 use lib::*;
 
 use ser::{Error, Serialize, SerializeTuple, Serializer};
@@ -127,6 +130,7 @@ impl<T: ?Sized> Serialize for PhantomData<T> {
 ////////////////////////////////////////////////////////////////////////////////
 
 // Does not require T: Serialize.
+#[cfg(not(feature = "const-generics"))]
 impl<T> Serialize for [T; 0] {
     #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -137,6 +141,7 @@ impl<T> Serialize for [T; 0] {
     }
 }
 
+#[cfg(not(feature = "const-generics"))]
 macro_rules! array_impls {
     ($($len:tt)+) => {
         $(
@@ -160,6 +165,7 @@ macro_rules! array_impls {
     }
 }
 
+#[cfg(not(feature = "const-generics"))]
 array_impls! {
     01 02 03 04 05 06 07 08 09 10
     11 12 13 14 15 16 17 18 19 20

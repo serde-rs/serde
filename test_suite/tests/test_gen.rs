@@ -348,6 +348,13 @@ fn test_gen() {
     #[serde(deny_unknown_fields)]
     struct UnitDenyUnknown;
 
+    #[cfg(feature = "const-generics")]
+    #[derive(Serialize, Deserialize)]
+    struct ArbitraryArrayLength {
+        empty: [u8; 123],
+    }
+
+    #[cfg(not(feature = "const-generics"))]
     #[derive(Serialize, Deserialize)]
     struct EmptyArray {
         empty: [X; 0],
