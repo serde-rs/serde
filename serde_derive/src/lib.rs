@@ -43,6 +43,8 @@
     clippy::let_underscore_drop,
     clippy::map_err_ignore,
     clippy::match_same_arms,
+    // clippy bug: https://github.com/rust-lang/rust-clippy/issues/6984
+    clippy::match_wildcard_for_single_variants,
     clippy::module_name_repetitions,
     clippy::must_use_candidate,
     clippy::option_if_let_else,
