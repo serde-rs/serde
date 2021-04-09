@@ -18,6 +18,8 @@
 #![deny(clippy::all, clippy::pedantic)]
 // Ignored clippy lints
 #![allow(
+    // clippy false positive: https://github.com/rust-lang/rust-clippy/issues/7054
+    clippy::branches_sharing_code,
     clippy::cognitive_complexity,
     clippy::enum_variant_names,
     // clippy bug: https://github.com/rust-lang/rust-clippy/issues/6797
