@@ -40,6 +40,11 @@ extern crate syn;
 extern crate proc_macro2;
 extern crate quote;
 
+#[cfg(target_os = "windows")]
+#[path = "../serde_derive/src/internals/mod.rs"]
+mod internals;
+
+#[cfg(not(target_os = "windows"))]
 #[path = "src/mod.rs"]
 mod internals;
 
