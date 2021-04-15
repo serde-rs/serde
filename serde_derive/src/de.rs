@@ -2577,11 +2577,11 @@ fn deserialize_map(
 
     let flat_map_deserializer = if cattrs.case_insensitive() {
         quote! {
-            _serde::__private::de::CaseInsensitiveFlatMapDeserializer
+            _serde::__private::de::FlatMapDeserializer::<'_, '_, _, _serde::__private::de::CaseInsensitiveStrComparison>
         }
     } else {
         quote! {
-            _serde::__private::de::FlatMapDeserializer
+            _serde::__private::de::FlatMapDeserializer::<'_, '_, _, _serde::__private::de::NormalStrComparison>
         }
     };
 

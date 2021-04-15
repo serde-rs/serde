@@ -2645,30 +2645,34 @@ where
     }
 }
 
-#[cfg(any(feature = "std", feature = "alloc"))]
-pub struct FlatMapDeserializer<'a, 'de: 'a, E>(
-    pub &'a mut Vec<Option<(Content<'de>, Content<'de>)>>,
-    pub PhantomData<E>,
-);
+pub trait StrComparison {
+    fn contains(array: &[&str], str: &str) -> bool;
+}
 
-#[cfg(any(feature = "std", feature = "alloc"))]
-impl<'a, 'de, E> FlatMapDeserializer<'a, 'de, E>
-where
-    E: Error,
-{
-    fn deserialize_other<V>() -> Result<V, E> {
-        Err(Error::custom("can only flatten structs and maps"))
+pub struct NormalStrComparison;
+
+impl StrComparison for NormalStrComparison {
+    fn contains(array: &[&str], str: &str) -> bool {
+        array.contains(&str)
+    }
+}
+
+pub struct CaseInsensitiveStrComparison;
+
+impl StrComparison for CaseInsensitiveStrComparison {
+    fn contains(array: &[&str], str: &str) -> bool {
+        array.iter().any(|e| e.eq_ignore_ascii_case(str))
     }
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub struct CaseInsensitiveFlatMapDeserializer<'a, 'de: 'a, E>(
+pub struct FlatMapDeserializer<'a, 'de: 'a, E, C>(
     pub &'a mut Vec<Option<(Content<'de>, Content<'de>)>>,
-    pub PhantomData<E>,
+    pub PhantomData<(E, C)>,
 );
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<'a, 'de, E> CaseInsensitiveFlatMapDeserializer<'a, 'de, E>
+impl<'a, 'de, E, C> FlatMapDeserializer<'a, 'de, E, C>
 where
     E: Error,
 {
@@ -2692,9 +2696,10 @@ macro_rules! forward_to_deserialize_other {
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
+impl<'a, 'de, E, C> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E, C>
 where
     E: Error,
+    C: StrComparison,
 {
     type Error = E;
 
@@ -2724,7 +2729,7 @@ where
             // about.
             let use_item = match *item {
                 None => false,
-                Some((ref c, _)) => c.as_str().map_or(false, |x| variants.contains(&x)),
+                Some((ref c, _)) => c.as_str().map_or(false, |x| C::contains(variants, &x)),
             };
 
             if use_item {
@@ -2755,126 +2760,7 @@ where
     where
         V: Visitor<'de>,
     {
-        visitor.visit_map(FlatStructAccess::new(self.0.iter_mut(), fields))
-    }
-
-    fn deserialize_newtype_struct<V>(self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>,
-    {
-        visitor.visit_newtype_struct(self)
-    }
-
-    fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>,
-    {
-        match visitor.__private_visit_untagged_option(self) {
-            Ok(value) => Ok(value),
-            Err(()) => Self::deserialize_other(),
-        }
-    }
-
-    fn deserialize_unit<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>,
-    {
-        visitor.visit_unit()
-    }
-
-    forward_to_deserialize_other! {
-        deserialize_bool()
-        deserialize_i8()
-        deserialize_i16()
-        deserialize_i32()
-        deserialize_i64()
-        deserialize_u8()
-        deserialize_u16()
-        deserialize_u32()
-        deserialize_u64()
-        deserialize_f32()
-        deserialize_f64()
-        deserialize_char()
-        deserialize_str()
-        deserialize_string()
-        deserialize_bytes()
-        deserialize_byte_buf()
-        deserialize_unit_struct(&'static str)
-        deserialize_seq()
-        deserialize_tuple(usize)
-        deserialize_tuple_struct(&'static str, usize)
-        deserialize_identifier()
-        deserialize_ignored_any()
-    }
-}
-
-#[cfg(any(feature = "std", feature = "alloc"))]
-impl<'a, 'de, E> Deserializer<'de> for CaseInsensitiveFlatMapDeserializer<'a, 'de, E>
-where
-    E: Error,
-{
-    type Error = E;
-
-    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>,
-    {
-        visitor.visit_map(FlatInternallyTaggedAccess {
-            iter: self.0.iter_mut(),
-            pending: None,
-            _marker: PhantomData,
-        })
-    }
-
-    fn deserialize_enum<V>(
-        self,
-        name: &'static str,
-        variants: &'static [&'static str],
-        visitor: V,
-    ) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>,
-    {
-        for item in self.0.iter_mut() {
-            // items in the vector are nulled out when used.  So we can only use
-            // an item if it's still filled in and if the field is one we care
-            // about.
-            let use_item = match *item {
-                None => false,
-                Some((ref c, _)) => c.as_str().map_or(false, |x| {
-                    variants.iter().any(|v| v.eq_ignore_ascii_case(x))
-                }),
-            };
-
-            if use_item {
-                let (key, value) = item.take().unwrap();
-                return visitor.visit_enum(EnumDeserializer::new(key, Some(value)));
-            }
-        }
-
-        Err(Error::custom(format_args!(
-            "no variant of enum {} found in flattened data",
-            name
-        )))
-    }
-
-    fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>,
-    {
-        visitor.visit_map(FlatMapAccess::new(self.0.iter()))
-    }
-
-    fn deserialize_struct<V>(
-        self,
-        _: &'static str,
-        fields: &'static [&'static str],
-        visitor: V,
-    ) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>,
-    {
-        visitor.visit_map(CaseInsensitiveFlatStructAccess::new(
+        visitor.visit_map(FlatStructAccess::<'_, '_, _, C>::new(
             self.0.iter_mut(),
             fields,
         ))
@@ -2983,19 +2869,19 @@ where
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub struct FlatStructAccess<'a, 'de: 'a, E> {
+pub struct FlatStructAccess<'a, 'de: 'a, E, C> {
     iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
     pending_content: Option<Content<'de>>,
     fields: &'static [&'static str],
-    _marker: PhantomData<E>,
+    _marker: PhantomData<(E, C)>,
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<'a, 'de, E> FlatStructAccess<'a, 'de, E> {
+impl<'a, 'de, E, C> FlatStructAccess<'a, 'de, E, C> {
     fn new(
         iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
         fields: &'static [&'static str],
-    ) -> FlatStructAccess<'a, 'de, E> {
+    ) -> FlatStructAccess<'a, 'de, E, C> {
         FlatStructAccess {
             iter: iter,
             pending_content: None,
@@ -3006,9 +2892,10 @@ impl<'a, 'de, E> FlatStructAccess<'a, 'de, E> {
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<'a, 'de, E> MapAccess<'de> for FlatStructAccess<'a, 'de, E>
+impl<'a, 'de, E, C> MapAccess<'de> for FlatStructAccess<'a, 'de, E, C>
 where
     E: Error,
+    C: StrComparison,
 {
     type Error = E;
 
@@ -3022,74 +2909,9 @@ where
             // about.  In case we do not know which fields we want, we take them all.
             let use_item = match *item {
                 None => false,
-                Some((ref c, _)) => c.as_str().map_or(false, |key| self.fields.contains(&key)),
-            };
-
-            if use_item {
-                let (key, content) = item.take().unwrap();
-                self.pending_content = Some(content);
-                return seed.deserialize(ContentDeserializer::new(key)).map(Some);
-            }
-        }
-        Ok(None)
-    }
-
-    fn next_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
-    where
-        T: DeserializeSeed<'de>,
-    {
-        match self.pending_content.take() {
-            Some(value) => seed.deserialize(ContentDeserializer::new(value)),
-            None => Err(Error::custom("value is missing")),
-        }
-    }
-}
-
-#[cfg(any(feature = "std", feature = "alloc"))]
-pub struct CaseInsensitiveFlatStructAccess<'a, 'de: 'a, E> {
-    iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
-    pending_content: Option<Content<'de>>,
-    fields: &'static [&'static str],
-    _marker: PhantomData<E>,
-}
-
-#[cfg(any(feature = "std", feature = "alloc"))]
-impl<'a, 'de, E> CaseInsensitiveFlatStructAccess<'a, 'de, E> {
-    fn new(
-        iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
-        fields: &'static [&'static str],
-    ) -> CaseInsensitiveFlatStructAccess<'a, 'de, E> {
-        CaseInsensitiveFlatStructAccess {
-            iter: iter,
-            pending_content: None,
-            fields: fields,
-            _marker: PhantomData,
-        }
-    }
-}
-
-#[cfg(any(feature = "std", feature = "alloc"))]
-impl<'a, 'de, E> MapAccess<'de> for CaseInsensitiveFlatStructAccess<'a, 'de, E>
-where
-    E: Error,
-{
-    type Error = E;
-
-    fn next_key_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
-    where
-        T: DeserializeSeed<'de>,
-    {
-        while let Some(item) = self.iter.next() {
-            // items in the vector are nulled out when used.  So we can only use
-            // an item if it's still filled in and if the field is one we care
-            // about.  In case we do not know which fields we want, we take them all.
-            let use_item = match *item {
-                None => false,
-                Some((ref c, _)) => c.as_str().map_or(false, |key| {
-                    self.fields
-                        .iter()
-                        .any(|field| field.eq_ignore_ascii_case(key))
-                }),
+                Some((ref c, _)) => c
+                    .as_str()
+                    .map_or(false, |key| C::contains(self.fields, key)),
             };
 
             if use_item {
