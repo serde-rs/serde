@@ -994,6 +994,28 @@ fn test_internally_tagged_struct_variant_containing_unit_variant() {
             Token::StructEnd,
         ],
     );
+
+    assert_de_tokens(
+        &Message::Log { level: Level::Info },
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("action"),
+            Token::Str("Log"),
+            Token::Str("level"),
+            Token::BorrowedStr("Info"),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &Message::Log { level: Level::Info },
+        &[
+            Token::Seq { len: Some(2) },
+            Token::Str("Log"),
+            Token::BorrowedStr("Info"),
+            Token::SeqEnd,
+        ],
+    );
 }
 
 #[test]
@@ -1877,9 +1899,31 @@ fn test_internally_tagged_newtype_variant_containing_unit_struct() {
             Token::MapEnd,
         ],
     );
+
+    assert_de_tokens(
+        &Message::Info(Info),
+        &[
+            Token::Struct {
+                name: "Message",
+                len: 1,
+            },
+            Token::Str("topic"),
+            Token::Str("Info"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &Message::Info(Info),
+        &[
+            Token::Seq { len: Some(1) },
+            Token::Str("Info"),
+            Token::SeqEnd,
+        ],
+    );
 }
 
-#[deny(safe_packed_borrows)]
+#[deny(unaligned_references)]
 #[test]
 fn test_packed_struct_can_derive_serialize() {
     #[derive(Copy, Clone, Serialize)]

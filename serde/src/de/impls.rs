@@ -2046,6 +2046,17 @@ impl<'de> Deserialize<'de> for SystemTime {
             }
         }
 
+        fn check_overflow<E>(secs: u64, nanos: u32) -> Result<(), E>
+        where
+            E: Error,
+        {
+            static NANOS_PER_SEC: u32 = 1_000_000_000;
+            match secs.checked_add((nanos / NANOS_PER_SEC) as u64) {
+                Some(_) => Ok(()),
+                None => Err(E::custom("overflow deserializing SystemTime epoch offset")),
+            }
+        }
+
         struct DurationVisitor;
 
         impl<'de> Visitor<'de> for DurationVisitor {
@@ -2071,6 +2082,7 @@ impl<'de> Deserialize<'de> for SystemTime {
                         return Err(Error::invalid_length(1, &self));
                     }
                 };
+                try!(check_overflow(secs, nanos));
                 Ok(Duration::new(secs, nanos))
             }
 
@@ -2108,13 +2120,20 @@ impl<'de> Deserialize<'de> for SystemTime {
                     Some(nanos) => nanos,
                     None => return Err(<A::Error as Error>::missing_field("nanos_since_epoch")),
                 };
+                try!(check_overflow(secs, nanos));
                 Ok(Duration::new(secs, nanos))
             }
         }
 
         const FIELDS: &'static [&'static str] = &["secs_since_epoch", "nanos_since_epoch"];
         let duration = try!(deserializer.deserialize_struct("SystemTime", FIELDS, DurationVisitor));
-        Ok(UNIX_EPOCH + duration)
+        #[cfg(systemtime_checked_add)]
+        let ret = UNIX_EPOCH
+            .checked_add(duration)
+            .ok_or_else(|| D::Error::custom("overflow deserializing SystemTime"));
+        #[cfg(not(systemtime_checked_add))]
+        let ret = Ok(UNIX_EPOCH + duration);
+        ret
     }
 }
 

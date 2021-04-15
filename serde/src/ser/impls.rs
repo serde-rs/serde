@@ -675,6 +675,52 @@ impl Serialize for net::IpAddr {
 }
 
 #[cfg(feature = "std")]
+const DEC_DIGITS_LUT: &'static [u8] = b"\
+      0001020304050607080910111213141516171819\
+      2021222324252627282930313233343536373839\
+      4041424344454647484950515253545556575859\
+      6061626364656667686970717273747576777879\
+      8081828384858687888990919293949596979899";
+
+#[cfg(feature = "std")]
+#[inline]
+fn format_u8(mut n: u8, out: &mut [u8]) -> usize {
+    if n >= 100 {
+        let d1 = ((n % 100) << 1) as usize;
+        n /= 100;
+        out[0] = b'0' + n;
+        out[1] = DEC_DIGITS_LUT[d1];
+        out[2] = DEC_DIGITS_LUT[d1 + 1];
+        3
+    } else if n >= 10 {
+        let d1 = (n << 1) as usize;
+        out[0] = DEC_DIGITS_LUT[d1];
+        out[1] = DEC_DIGITS_LUT[d1 + 1];
+        2
+    } else {
+        out[0] = b'0' + n;
+        1
+    }
+}
+
+#[cfg(feature = "std")]
+#[test]
+fn test_format_u8() {
+    let mut i = 0u8;
+
+    loop {
+        let mut buf = [0u8; 3];
+        let written = format_u8(i, &mut buf);
+        assert_eq!(i.to_string().as_bytes(), &buf[..written]);
+
+        match i.checked_add(1) {
+            Some(next) => i = next,
+            None => break,
+        }
+    }
+}
+
+#[cfg(feature = "std")]
 impl Serialize for net::Ipv4Addr {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -683,7 +729,14 @@ impl Serialize for net::Ipv4Addr {
         if serializer.is_human_readable() {
             const MAX_LEN: usize = 15;
             debug_assert_eq!(MAX_LEN, "101.102.103.104".len());
-            serialize_display_bounded_length!(self, MAX_LEN, serializer)
+            let mut buf = [b'.'; MAX_LEN];
+            let mut written = format_u8(self.octets()[0], &mut buf);
+            for oct in &self.octets()[1..] {
+                // Skip over delimiters that we initialized buf with
+                written += format_u8(*oct, &mut buf[written + 1..]) + 1;
+            }
+            // We've only written ASCII bytes to the buffer, so it is valid UTF-8
+            serializer.serialize_str(unsafe { str::from_utf8_unchecked(&buf[..written]) })
         } else {
             self.octets().serialize(serializer)
         }

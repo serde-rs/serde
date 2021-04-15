@@ -15,7 +15,7 @@ use std::sync::atomic::{
     AtomicUsize, Ordering,
 };
 use std::sync::{Arc, Weak as ArcWeak};
-use std::time::{Duration, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[cfg(target_arch = "x86_64")]
 use std::sync::atomic::{AtomicI64, AtomicU64};
@@ -192,8 +192,12 @@ macro_rules! declare_tests {
 }
 
 macro_rules! declare_error_tests {
-    ($($name:ident<$target:ty> { $tokens:expr, $expected:expr, })+) => {
+    ($(
+        $(#[$cfg:meta])*
+        $name:ident<$target:ty> { $tokens:expr, $expected:expr, }
+    )+) => {
         $(
+            $(#[$cfg])*
             #[test]
             fn $name() {
                 assert_de_tokens_error::<$target>($tokens, $expected);
@@ -1613,5 +1617,36 @@ declare_error_tests! {
             Token::StructEnd,
         ],
         "overflow deserializing Duration",
+    }
+    test_systemtime_overflow_seq<SystemTime> {
+        &[
+            Token::Seq { len: Some(2) },
+                Token::U64(u64::max_value()),
+                Token::U32(1_000_000_000),
+            Token::SeqEnd,
+        ],
+        "overflow deserializing SystemTime epoch offset",
+    }
+    test_systemtime_overflow_struct<SystemTime> {
+        &[
+            Token::Struct { name: "SystemTime", len: 2 },
+                Token::Str("secs_since_epoch"),
+                Token::U64(u64::max_value()),
+
+                Token::Str("nanos_since_epoch"),
+                Token::U32(1_000_000_000),
+            Token::StructEnd,
+        ],
+        "overflow deserializing SystemTime epoch offset",
+    }
+    #[cfg(systemtime_checked_add)]
+    test_systemtime_overflow<SystemTime> {
+        &[
+            Token::Seq { len: Some(2) },
+                Token::U64(u64::max_value()),
+                Token::U32(0),
+            Token::SeqEnd,
+        ],
+        "overflow deserializing SystemTime",
     }
 }

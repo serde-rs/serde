@@ -44,7 +44,7 @@
 //! - [BSON], the data storage and network transfer format used by MongoDB.
 //! - [Avro], a binary format used within Apache Hadoop, with support for schema
 //!   definition.
-//! - [JSON5], A superset of JSON including some productions from ES5.
+//! - [JSON5], a superset of JSON including some productions from ES5.
 //! - [Postcard], a no\_std and embedded-systems friendly compact binary format.
 //! - [URL] query strings, in the x-www-form-urlencoded format.
 //! - [Envy], a way to deserialize environment variables into Rust structs.
@@ -84,7 +84,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Serde types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/serde/1.0.123")]
+#![doc(html_root_url = "https://docs.rs/serde/1.0.125")]
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
 // Unstable functionality only if the user asks for it. For tracking and
@@ -120,6 +120,7 @@
         zero_prefixed_literal,
         // correctly used
         enum_glob_use,
+        let_underscore_drop,
         map_err_ignore,
         result_unit_err,
         wildcard_imports,
@@ -138,7 +139,6 @@
     )
 )]
 // Rustc lints.
-#![forbid(unsafe_code)]
 #![deny(missing_docs, unused_imports)]
 
 ////////////////////////////////////////////////////////////////////////////////
