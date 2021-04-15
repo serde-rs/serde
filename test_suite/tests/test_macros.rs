@@ -1934,7 +1934,7 @@ fn test_case_insensitive_struct() {
 
     #[derive(Debug, PartialEq, Deserialize)]
     #[serde(case_insensitive)]
-    struct Empty {};
+    struct Empty {}
 
     assert_de_tokens(
         &Empty {},
