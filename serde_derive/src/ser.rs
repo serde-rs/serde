@@ -173,6 +173,8 @@ fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
         serialize_transparent(cont, params)
     } else if let Some(type_into) = cont.attrs.type_into() {
         serialize_into(params, type_into)
+    } else if cont.attrs.type_to_string() {
+        serialize_to_string(params)
     } else {
         match &cont.data {
             Data::Enum(variants) => serialize_enum(params, variants, &cont.attrs),
@@ -216,6 +218,15 @@ fn serialize_into(params: &Parameters, type_into: &syn::Type) -> Fragment {
     quote_block! {
         _serde::Serialize::serialize(
             &_serde::__private::Into::<#type_into>::into(_serde::__private::Clone::clone(#self_var)),
+            __serializer)
+    }
+}
+
+fn serialize_to_string(params: &Parameters) -> Fragment {
+    let self_var = &params.self_var;
+    quote_block! {
+        _serde::Serialize::serialize(
+            &_serde::__private::ToString::to_string(#self_var),
             __serializer)
     }
 }

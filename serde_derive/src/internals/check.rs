@@ -14,6 +14,9 @@ pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     check_adjacent_tag_conflict(cx, cont);
     check_transparent(cx, cont, derive);
     check_from_and_try_from(cx, cont);
+    check_from_and_from_str(cx, cont);
+    check_try_from_and_from_str(cx, cont);
+    check_into_and_to_string(cx, cont);
 }
 
 /// Getters are only allowed inside structs (not enums) with the `remote`
@@ -329,10 +332,24 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
         );
     }
 
+    if cont.attrs.type_from_str() {
+        cx.error_spanned_by(
+            cont.original,
+            "#[serde(transparent)] is not allowed with #[serde(from_str)]",
+        );
+    }
+
     if cont.attrs.type_into().is_some() {
         cx.error_spanned_by(
             cont.original,
             "#[serde(transparent)] is not allowed with #[serde(into = \"...\")]",
+        );
+    }
+
+    if cont.attrs.type_to_string() {
+        cx.error_spanned_by(
+            cont.original,
+            "#[serde(transparent)] is not allowed with #[serde(to_string)]",
         );
     }
 
@@ -415,6 +432,33 @@ fn check_from_and_try_from(cx: &Ctxt, cont: &mut Container) {
         cx.error_spanned_by(
             cont.original,
             "#[serde(from = \"...\")] and #[serde(try_from = \"...\")] conflict with each other",
+        );
+    }
+}
+
+fn check_from_and_from_str(cx: &Ctxt, cont: &mut Container) {
+    if cont.attrs.type_from().is_some() && cont.attrs.type_from_str() {
+        cx.error_spanned_by(
+            cont.original,
+            "#[serde(from = \"...\")] and #[serde(from_str)] conflict with each other",
+        );
+    }
+}
+
+fn check_try_from_and_from_str(cx: &Ctxt, cont: &mut Container) {
+    if cont.attrs.type_try_from().is_some() && cont.attrs.type_from_str() {
+        cx.error_spanned_by(
+            cont.original,
+            "#[serde(try_from = \"...\")] and #[serde(from_str)] conflict with each other",
+        );
+    }
+}
+
+fn check_into_and_to_string(cx: &Ctxt, cont: &mut Container) {
+    if cont.attrs.type_into().is_some() && cont.attrs.type_to_string() {
+        cx.error_spanned_by(
+            cont.original,
+            "#[serde(into = \"...\")] and #[serde(to_string)] conflict with each other",
         );
     }
 }

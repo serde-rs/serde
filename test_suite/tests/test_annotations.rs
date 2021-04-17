@@ -9,8 +9,9 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
-use std::fmt;
+use std::fmt::{self, Display};
 use std::marker::PhantomData;
+use std::str::FromStr;
 
 use serde_test::{
     assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_ser_tokens_error,
@@ -1612,6 +1613,34 @@ impl TryFrom<u32> for TryFromU32 {
     }
 }
 
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug)]
+#[serde(from_str, to_string)]
+enum EnumToString {
+    One,
+    Two,
+}
+
+impl FromStr for EnumToString {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "one" => Ok(EnumToString::One),
+            "two" => Ok(EnumToString::Two),
+            _ => Err("invalid string".to_owned()),
+        }
+    }
+}
+
+impl Display for EnumToString {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(match self {
+            Self::One => "one",
+            Self::Two => "two",
+        })
+    }
+}
+
 #[test]
 fn test_from_into_traits() {
     assert_ser_tokens(&EnumToU32::One, &[Token::Some, Token::U32(1)]);
@@ -1622,6 +1651,9 @@ fn test_from_into_traits() {
     assert_de_tokens(&StructFromEnum(Some(2)), &[Token::Some, Token::U32(2)]);
     assert_de_tokens(&TryFromU32::Two, &[Token::U32(2)]);
     assert_de_tokens_error::<TryFromU32>(&[Token::U32(5)], "out of range");
+    assert_ser_tokens(&EnumToString::One, &[Token::Str("one")]);
+    assert_de_tokens(&EnumToString::Two, &[Token::BorrowedStr("two")]);
+    assert_de_tokens_error::<EnumToString>(&[Token::BorrowedStr("five")], "invalid string");
 }
 
 #[test]

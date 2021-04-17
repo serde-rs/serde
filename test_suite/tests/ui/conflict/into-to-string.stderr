@@ -1,0 +1,8 @@
+error: #[serde(into = "...")] and #[serde(to_string)] conflict with each other
+ --> $DIR/into-to-string.rs:4:1
+  |
+4 | / #[serde(into = "u64", to_string)]
+5 | | struct S {
+6 | |     a: u8,
+7 | | }
+  | |_^

@@ -217,7 +217,9 @@ pub struct Container {
     tag: TagType,
     type_from: Option<syn::Type>,
     type_try_from: Option<syn::Type>,
+    type_from_str: bool,
     type_into: Option<syn::Type>,
+    type_to_string: bool,
     remote: Option<syn::Path>,
     identifier: Identifier,
     has_flatten: bool,
@@ -302,7 +304,9 @@ impl Container {
         let mut content = Attr::none(cx, CONTENT);
         let mut type_from = Attr::none(cx, FROM);
         let mut type_try_from = Attr::none(cx, TRY_FROM);
+        let mut type_from_str = BoolAttr::none(cx, FROM_STR);
         let mut type_into = Attr::none(cx, INTO);
+        let mut type_to_string = BoolAttr::none(cx, TO_STRING);
         let mut remote = Attr::none(cx, REMOTE);
         let mut field_identifier = BoolAttr::none(cx, FIELD_IDENTIFIER);
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
@@ -511,25 +515,35 @@ impl Container {
                     }
                 }
 
-                // Parse `#[serde(from = "Type")]
+                // Parse `#[serde(from = "Type")]`
                 Meta(NameValue(m)) if m.path == FROM => {
                     if let Ok(from_ty) = parse_lit_into_ty(cx, FROM, &m.lit) {
                         type_from.set_opt(&m.path, Some(from_ty));
                     }
                 }
 
-                // Parse `#[serde(try_from = "Type")]
+                // Parse `#[serde(try_from = "Type")]`
                 Meta(NameValue(m)) if m.path == TRY_FROM => {
                     if let Ok(try_from_ty) = parse_lit_into_ty(cx, TRY_FROM, &m.lit) {
                         type_try_from.set_opt(&m.path, Some(try_from_ty));
                     }
                 }
 
-                // Parse `#[serde(into = "Type")]
+                // Parse `#[serde(from_str)]`
+                Meta(Path(word)) if word == FROM_STR => {
+                    type_from_str.set_true(word);
+                }
+
+                // Parse `#[serde(into = "Type")]`
                 Meta(NameValue(m)) if m.path == INTO => {
                     if let Ok(into_ty) = parse_lit_into_ty(cx, INTO, &m.lit) {
                         type_into.set_opt(&m.path, Some(into_ty));
                     }
+                }
+
+                // Parse `#[serde(to_string)]`
+                Meta(Path(word)) if word == TO_STRING => {
+                    type_to_string.set_true(word);
                 }
 
                 // Parse `#[serde(remote = "...")]`
@@ -613,7 +627,9 @@ impl Container {
             tag: decide_tag(cx, item, untagged, internal_tag, content),
             type_from: type_from.get(),
             type_try_from: type_try_from.get(),
+            type_from_str: type_from_str.get(),
             type_into: type_into.get(),
+            type_to_string: type_to_string.get(),
             remote: remote.get(),
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
             has_flatten: false,
@@ -663,8 +679,16 @@ impl Container {
         self.type_try_from.as_ref()
     }
 
+    pub fn type_from_str(&self) -> bool {
+        self.type_from_str
+    }
+
     pub fn type_into(&self) -> Option<&syn::Type> {
         self.type_into.as_ref()
+    }
+
+    pub fn type_to_string(&self) -> bool {
+        self.type_to_string
     }
 
     pub fn remote(&self) -> Option<&syn::Path> {

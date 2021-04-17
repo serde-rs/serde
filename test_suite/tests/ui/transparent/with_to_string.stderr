@@ -1,0 +1,8 @@
+error: #[serde(transparent)] is not allowed with #[serde(to_string)]
+ --> $DIR/with_to_string.rs:4:1
+  |
+4 | / #[serde(transparent, to_string)]
+5 | | struct S {
+6 | |     a: u8,
+7 | | }
+  | |_^
