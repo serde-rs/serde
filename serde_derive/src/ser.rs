@@ -225,9 +225,7 @@ fn serialize_into(params: &Parameters, type_into: &syn::Type) -> Fragment {
 fn serialize_to_string(params: &Parameters) -> Fragment {
     let self_var = &params.self_var;
     quote_block! {
-        _serde::Serialize::serialize(
-            &_serde::__private::ToString::to_string(#self_var),
-            __serializer)
+        _serde::Serializer::collect_str(__serializer, #self_var)
     }
 }
 
