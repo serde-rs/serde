@@ -3,7 +3,6 @@
 // types involved.
 
 #![deny(warnings)]
-#![cfg_attr(feature = "unstable", feature(non_ascii_idents))]
 #![allow(
     unknown_lints,
     mixed_script_confusables,
@@ -267,7 +266,6 @@ fn test_gen() {
     }
     assert::<EmptyEnumVariant>();
 
-    #[cfg(feature = "unstable")]
     #[derive(Serialize, Deserialize)]
     struct NonAsciiIdents {
         σ: f64,
