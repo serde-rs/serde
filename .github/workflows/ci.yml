@@ -23,24 +23,21 @@ jobs:
       - run: cd test_suite && cargo test --features unstable -- --skip ui --exact
 
   stable:
-    name: Rust stable
+    name: Rust ${{matrix.rust}}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [stable, beta]
     steps:
       - uses: actions/checkout@v2
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{matrix.rust}}
       - run: cd serde && cargo build --features rc
       - run: cd serde && cargo build --no-default-features
       - run: cd serde_test && cargo build
       - run: cd serde_test && cargo test --features serde/derive,serde/rc
-
-  beta:
-    name: Rust beta
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dtolnay/rust-toolchain@beta
-      - run: cd serde && cargo build --features rc
-      - run: cd test_suite && cargo test
 
   nightly:
     name: Rust nightly ${{matrix.os == 'windows' && '(windows)' || ''}}
