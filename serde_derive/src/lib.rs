@@ -39,7 +39,6 @@
     clippy::checked_conversions,
     clippy::doc_markdown,
     clippy::enum_glob_use,
-    clippy::filter_map,
     clippy::indexing_slicing,
     clippy::items_after_statements,
     clippy::let_underscore_drop,
