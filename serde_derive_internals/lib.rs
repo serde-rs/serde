@@ -37,11 +37,29 @@
 #[macro_use]
 extern crate syn;
 
-extern crate proc_macro2;
+#[macro_use]
 extern crate quote;
 
-#[cfg_attr(serde_build_from_git, path = "../serde_derive/src/internals/mod.rs")]
-#[cfg_attr(not(serde_build_from_git), path = "src/mod.rs")]
-mod internals;
+extern crate proc_macro2;
 
-pub use internals::*;
+#[cfg_attr(serde_build_from_git, path = "../serde_derive/src/")]
+#[cfg_attr(not(serde_build_from_git), path = "./src/")]
+mod derive {
+    pub mod internals;
+
+    #[macro_use]
+    pub mod bound;
+
+    #[macro_use]
+    pub mod fragment;
+
+    pub mod de;
+    pub mod dummy;
+    pub mod pretend;
+    pub mod ser;
+    pub mod try;
+}
+
+pub use derive::internals::*;
+
+pub use derive::*;
