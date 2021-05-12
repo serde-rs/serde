@@ -7,7 +7,7 @@ struct SerNamedMap<'a, 'b, A: 'a, B: 'b, C> {
 #[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _: () = {
-    #[allow(rust_2018_idioms, clippy::useless_attribute)]
+    #[allow(unused_extern_crates, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'a, 'b, A: 'a, B: 'b, C> _serde::Serialize for SerNamedMap<'a, 'b, A, B, C>
@@ -63,7 +63,7 @@ struct DeNamedMap<A, B, C> {
 #[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _: () = {
-    #[allow(rust_2018_idioms, clippy::useless_attribute)]
+    #[allow(unused_extern_crates, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'de, A, B, C> _serde::Deserialize<'de> for DeNamedMap<A, B, C>

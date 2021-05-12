@@ -3,7 +3,7 @@ pub struct GenericTupleStruct<T, U>(T, U);
 #[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _: () = {
-    #[allow(rust_2018_idioms, clippy::useless_attribute)]
+    #[allow(unused_extern_crates, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'de, T, U> _serde::Deserialize<'de> for GenericTupleStruct<T, U>
