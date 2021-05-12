@@ -10,7 +10,7 @@ enum DeEnum<B, C, D> {
 #[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _: () = {
-    #[allow(rust_2018_idioms, clippy::useless_attribute)]
+    #[allow(unused_extern_crates, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<B, C, D> _serde::Serialize for DeEnum<B, C, D>
@@ -265,7 +265,7 @@ const _: () = {
 #[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _: () = {
-    #[allow(rust_2018_idioms, clippy::useless_attribute)]
+    #[allow(unused_extern_crates, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'de, B, C, D> _serde::Deserialize<'de> for DeEnum<B, C, D>

@@ -3,7 +3,7 @@ struct SerNamedTuple<'a, 'b, A: 'a, B: 'b, C>(&'a A, &'b mut B, C);
 #[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _: () = {
-    #[allow(rust_2018_idioms, clippy::useless_attribute)]
+    #[allow(unused_extern_crates, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'a, 'b, A: 'a, B: 'b, C> _serde::Serialize for SerNamedTuple<'a, 'b, A, B, C>
@@ -55,7 +55,7 @@ struct DeNamedTuple<A, B, C>(A, B, C);
 #[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _: () = {
-    #[allow(rust_2018_idioms, clippy::useless_attribute)]
+    #[allow(unused_extern_crates, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'de, A, B, C> _serde::Deserialize<'de> for DeNamedTuple<A, B, C>

@@ -11,7 +11,7 @@ struct DefaultTyParam<T: AssociatedType<X = i32> = i32> {
 #[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _: () = {
-    #[allow(rust_2018_idioms, clippy::useless_attribute)]
+    #[allow(unused_extern_crates, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<T: AssociatedType<X = i32>> _serde::Serialize for DefaultTyParam<T> {
@@ -49,7 +49,7 @@ const _: () = {
 #[doc(hidden)]
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _: () = {
-    #[allow(rust_2018_idioms, clippy::useless_attribute)]
+    #[allow(unused_extern_crates, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'de, T: AssociatedType<X = i32>> _serde::Deserialize<'de> for DefaultTyParam<T> {

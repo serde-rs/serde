@@ -23,7 +23,7 @@ pub fn wrap_in_const(
             use #path as _serde;
         },
         None => quote! {
-            #[allow(rust_2018_idioms, clippy::useless_attribute)]
+            #[allow(unused_extern_crates, clippy::useless_attribute)]
             extern crate serde as _serde;
         },
     };
