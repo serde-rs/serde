@@ -1007,7 +1007,7 @@ pub trait Deserializer<'de>: Sized {
     /// `Deserializer`.
     ///
     /// If the `Visitor` would benefit from taking ownership of `String` data,
-    /// indiciate this to the `Deserializer` by using `deserialize_string`
+    /// indicate this to the `Deserializer` by using `deserialize_string`
     /// instead.
     fn deserialize_str<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where

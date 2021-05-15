@@ -23,7 +23,7 @@ pub struct Container<'a> {
 
 /// The fields of a struct or enum.
 ///
-/// Analagous to `syn::Data`.
+/// Analogous to `syn::Data`.
 pub enum Data<'a> {
     Enum(Vec<Variant<'a>>),
     Struct(Style, Vec<Field<'a>>),
