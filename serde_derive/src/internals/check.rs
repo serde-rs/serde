@@ -396,7 +396,7 @@ fn member_message(member: &Member) -> String {
 }
 
 fn allow_transparent(field: &Field, derive: Derive) -> bool {
-    if let Type::Path(ty) = ungroup(&field.ty) {
+    if let Type::Path(ty) = ungroup(field.ty) {
         if let Some(seg) = ty.path.segments.last() {
             if seg.ident == "PhantomData" {
                 return false;

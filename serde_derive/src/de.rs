@@ -475,7 +475,7 @@ fn deserialize_tuple(
     };
 
     let visit_seq = Stmts(deserialize_seq(
-        &type_path, params, fields, false, cattrs, &expecting,
+        &type_path, params, fields, false, cattrs, expecting,
     ));
 
     let visitor_expr = quote! {
@@ -561,7 +561,7 @@ fn deserialize_tuple_in_place(
         None
     };
 
-    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, &expecting));
+    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
 
     let visitor_expr = quote! {
         __Visitor {
@@ -922,7 +922,7 @@ fn deserialize_struct(
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     let visit_seq = Stmts(deserialize_seq(
-        &type_path, params, fields, true, cattrs, &expecting,
+        &type_path, params, fields, true, cattrs, expecting,
     ));
 
     let (field_visitor, fields_stmt, visit_map) = if cattrs.has_flatten() {
@@ -1063,7 +1063,7 @@ fn deserialize_struct_in_place(
     };
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
-    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, &expecting));
+    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
 
     let (field_visitor, fields_stmt, visit_map) =
         deserialize_struct_as_struct_in_place_visitor(params, fields, cattrs);
@@ -2285,7 +2285,7 @@ fn deserialize_identifier(
     };
 
     let visit_borrowed = if fallthrough_borrowed.is_some() || collect_other_fields {
-        let fallthrough_borrowed_arm = fallthrough_borrowed.as_ref().unwrap_or(&fallthrough_arm);
+        let fallthrough_borrowed_arm = fallthrough_borrowed.as_ref().unwrap_or(fallthrough_arm);
         Some(quote! {
             fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::__private::Result<Self::Value, __E>
             where

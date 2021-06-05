@@ -1099,7 +1099,7 @@ fn serialize_struct_visitor(
             let mut field_expr = if is_enum {
                 quote!(#member)
             } else {
-                get_member(params, field, &member)
+                get_member(params, field, member)
             };
 
             let key_expr = field.attrs.name().serialize_name();
