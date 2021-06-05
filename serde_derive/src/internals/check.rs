@@ -260,7 +260,7 @@ fn check_internal_tag_field_name_conflict(cx: &Ctxt, cont: &Container) {
         cx.error_spanned_by(
             cont.original,
             format!("variant field name `{}` conflicts with internal tag", tag),
-        )
+        );
     };
 
     for variant in variants {

@@ -556,7 +556,7 @@ impl Container {
                 // Parse `#[serde(crate = "foo")]`
                 Meta(NameValue(m)) if m.path == CRATE => {
                     if let Ok(path) = parse_lit_into_path(cx, CRATE, &m.lit) {
-                        serde_path.set(&m.path, path)
+                        serde_path.set(&m.path, path);
                     }
                 }
 
@@ -1609,7 +1609,7 @@ fn get_lit_str2<'a>(
 fn parse_lit_into_path(cx: &Ctxt, attr_name: Symbol, lit: &syn::Lit) -> Result<syn::Path, ()> {
     let string = get_lit_str(cx, attr_name, lit)?;
     parse_lit_str(string).map_err(|_| {
-        cx.error_spanned_by(lit, format!("failed to parse path: {:?}", string.value()))
+        cx.error_spanned_by(lit, format!("failed to parse path: {:?}", string.value()));
     })
 }
 
@@ -1620,7 +1620,7 @@ fn parse_lit_into_expr_path(
 ) -> Result<syn::ExprPath, ()> {
     let string = get_lit_str(cx, attr_name, lit)?;
     parse_lit_str(string).map_err(|_| {
-        cx.error_spanned_by(lit, format!("failed to parse path: {:?}", string.value()))
+        cx.error_spanned_by(lit, format!("failed to parse path: {:?}", string.value()));
     })
 }
 
@@ -1649,7 +1649,7 @@ fn parse_lit_into_ty(cx: &Ctxt, attr_name: Symbol, lit: &syn::Lit) -> Result<syn
         cx.error_spanned_by(
             lit,
             format!("failed to parse type: {} = {:?}", attr_name, string.value()),
-        )
+        );
     })
 }
 
