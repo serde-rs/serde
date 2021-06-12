@@ -34,22 +34,16 @@ tests for you.
 cargo test --features derive
 ```
 
-##### In the [`test_suite/deps`] directory
-
-```sh
-# This is a prerequisite for running the full test suite
-cargo clean && cargo update && cargo build
-```
-
 ##### In the [`test_suite`] directory
 
 ```sh
 # Run the full test suite, including tests of unstable functionality
-cargo test --features unstable
+cargo +nightly test --features unstable
 ```
 
+Note that this test suite currently only supports running on a nightly compiler.
+
 [`serde`]: https://github.com/serde-rs/serde/tree/master/serde
-[`test_suite/deps`]: https://github.com/serde-rs/serde/tree/master/test_suite/deps
 [`test_suite`]: https://github.com/serde-rs/serde/tree/master/test_suite
 
 ## Conduct
