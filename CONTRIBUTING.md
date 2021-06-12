@@ -31,7 +31,7 @@ tests for you.
 
 ```sh
 # Test all the example code in Serde documentation
-cargo test
+cargo test --features derive
 ```
 
 ##### In the [`test_suite/deps`] directory
