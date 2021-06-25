@@ -641,7 +641,7 @@ fn test_gen() {
     assert::<SkippedVariant<X>>();
 
     #[derive(Deserialize)]
-    struct ImpliciltyBorrowedOption<'a> {
+    struct ImplicitlyBorrowedOption<'a> {
         option: std::option::Option<&'a str>,
     }
 
