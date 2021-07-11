@@ -2848,4 +2848,73 @@ fn test_non_string_renames() {
             Token::StructEnd,
         ],
     );
+
+    assert_ser_tokens(
+        &SpecialEnum::B,
+        &[
+            Token::Struct { name: "SpecialEnum", len: 1 },
+            Token::Str("op"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+
+    #[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
+    #[serde(tag = "op", content = "d")]
+    enum AdjacentEnum {
+        #[serde(rename = 1)]
+        A { a: u64 },
+        #[serde(rename = true)]
+        B,
+    }
+
+    assert_de_tokens(
+        &AdjacentEnum::A { a: 1 },
+        &[
+            Token::Map { len: None },
+            Token::Str("op"),
+            Token::I32(1),
+            Token::Str("d"),
+            Token::Map { len: Some(1) },
+            Token::Str("a"),
+            Token::U64(1),
+            Token::MapEnd,
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &AdjacentEnum::B,
+        &[
+            Token::Map { len: None },
+            Token::Str("op"),
+            Token::Bool(true),
+            Token::MapEnd,
+        ]
+    );
+
+    assert_ser_tokens(
+        &AdjacentEnum::A { a: 1 },
+        &[
+            Token::Struct { name: "AdjacentEnum", len: 2 },
+            Token::Str("op"),
+            Token::I64(1),
+            Token::Str("d"),
+            Token::Struct { name: "1", len: 1 },
+            Token::Str("a"),
+            Token::U64(1),
+            Token::StructEnd,
+            Token::StructEnd,
+        ],
+    );
+
+    assert_ser_tokens(
+        &AdjacentEnum::B,
+        &[
+            Token::Struct { name: "AdjacentEnum", len: 1 },
+            Token::Str("op"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    )
 }
