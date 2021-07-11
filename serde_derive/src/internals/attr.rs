@@ -181,21 +181,21 @@ impl ToTokens for VariantName {
     }
 }
 
-pub struct VariantNames {
-    serialize: VariantName,
+pub struct Names<T: Clone + Ord> {
+    serialize: T,
     serialize_renamed: bool,
-    deserialize: VariantName,
+    deserialize: T,
     deserialize_renamed: bool,
-    deserialize_aliases: Vec<VariantName>,
+    deserialize_aliases: Vec<T>,
 }
 
-impl VariantNames {
+impl<T: Clone + Ord> Names<T> {
     fn from_attrs(
-        source_name: String,
-        ser_name: Attr<VariantName>,
-        de_name: Attr<VariantName>,
-        de_aliases: Option<VecAttr<VariantName>>,
-    ) -> VariantNames {
+        source_name: T,
+        ser_name: Attr<T>,
+        de_name: Attr<T>,
+        de_aliases: Option<VecAttr<T>>,
+    ) -> Names<T> {
         let deserialize_aliases = match de_aliases {
             Some(de_aliases) => {
                 let mut alias_list = BTreeSet::new();
@@ -211,74 +211,7 @@ impl VariantNames {
         let ser_renamed = ser_name.is_some();
         let de_name = de_name.get();
         let de_renamed = de_name.is_some();
-        VariantNames {
-            serialize: ser_name.unwrap_or_else(|| VariantName::String(source_name.clone())),
-            serialize_renamed: ser_renamed,
-            deserialize: de_name.unwrap_or(VariantName::String(source_name)),
-            deserialize_renamed: de_renamed,
-            deserialize_aliases,
-        }
-    }
-
-    /// Return the container name for the container when serializing.
-    pub fn serialize_name(&self) -> VariantName {
-        self.serialize.clone()
-    }
-
-    /// Return the container name for the container when deserializing.
-    pub fn deserialize_name(&self) -> VariantName {
-        self.deserialize.clone()
-    }
-
-    fn deserialize_aliases(&self) -> Vec<VariantName> {
-        let mut aliases = self.deserialize_aliases.clone();
-        let main_name = self.deserialize_name();
-        if !aliases.contains(&main_name) {
-            aliases.push(main_name);
-        }
-        aliases
-    }
-}
-
-pub struct Name {
-    serialize: String,
-    serialize_renamed: bool,
-    deserialize: String,
-    deserialize_renamed: bool,
-    deserialize_aliases: Vec<String>,
-}
-
-#[allow(deprecated)]
-fn unraw(ident: &Ident) -> String {
-    // str::trim_start_matches was added in 1.30, trim_left_matches deprecated
-    // in 1.33. We currently support rustc back to 1.15 so we need to continue
-    // to use the deprecated one.
-    ident.to_string().trim_left_matches("r#").to_owned()
-}
-
-impl Name {
-    fn from_attrs(
-        source_name: String,
-        ser_name: Attr<String>,
-        de_name: Attr<String>,
-        de_aliases: Option<VecAttr<String>>,
-    ) -> Name {
-        let deserialize_aliases = match de_aliases {
-            Some(de_aliases) => {
-                let mut alias_list = BTreeSet::new();
-                for alias_name in de_aliases.get() {
-                    alias_list.insert(alias_name);
-                }
-                alias_list.into_iter().collect()
-            }
-            None => Vec::new(),
-        };
-
-        let ser_name = ser_name.get();
-        let ser_renamed = ser_name.is_some();
-        let de_name = de_name.get();
-        let de_renamed = de_name.is_some();
-        Name {
+        Names {
             serialize: ser_name.unwrap_or_else(|| source_name.clone()),
             serialize_renamed: ser_renamed,
             deserialize: de_name.unwrap_or(source_name),
@@ -288,16 +221,16 @@ impl Name {
     }
 
     /// Return the container name for the container when serializing.
-    pub fn serialize_name(&self) -> String {
+    pub fn serialize_name(&self) -> T {
         self.serialize.clone()
     }
 
     /// Return the container name for the container when deserializing.
-    pub fn deserialize_name(&self) -> String {
+    pub fn deserialize_name(&self) -> T {
         self.deserialize.clone()
     }
 
-    fn deserialize_aliases(&self) -> Vec<String> {
+    fn deserialize_aliases(&self) -> Vec<T> {
         let mut aliases = self.deserialize_aliases.clone();
         let main_name = self.deserialize_name();
         if !aliases.contains(&main_name) {
@@ -305,6 +238,17 @@ impl Name {
         }
         aliases
     }
+}
+
+pub type VariantNames = Names<VariantName>;
+pub type Name = Names<String>;
+
+#[allow(deprecated)]
+fn unraw(ident: &Ident) -> String {
+    // str::trim_start_matches was added in 1.30, trim_left_matches deprecated
+    // in 1.33. We currently support rustc back to 1.15 so we need to continue
+    // to use the deprecated one.
+    ident.to_string().trim_left_matches("r#").to_owned()
 }
 
 pub struct RenameAllRules {
@@ -1144,7 +1088,7 @@ impl Variant {
         }
 
         Variant {
-            name: VariantNames::from_attrs(unraw(&variant.ident), ser_name, de_name, Some(de_aliases)),
+            name: VariantNames::from_attrs(VariantName::String(unraw(&variant.ident)), ser_name, de_name, Some(de_aliases)),
             rename_all_rules: RenameAllRules {
                 serialize: rename_all_ser_rule.get().unwrap_or(RenameRule::None),
                 deserialize: rename_all_de_rule.get().unwrap_or(RenameRule::None),
