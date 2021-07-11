@@ -697,7 +697,6 @@ fn serialize_adjacently_tagged_variant(
                 StructVariant::Untagged,
                 params,
                 &variant.fields,
-                // TODO: Is this correct?
                 &variant_name.to_string(),
             ),
         }
@@ -941,8 +940,6 @@ fn serialize_struct_variant<'a>(
                     #name,
                     #len + 1,
                 ));
-
-                // MARKER: is-problematic-borrow?
 
                 try!(_serde::ser::SerializeStruct::serialize_field(
                     &mut __serde_state,
