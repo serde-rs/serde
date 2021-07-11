@@ -2226,7 +2226,7 @@ fn deserialize_identifier(
 
     // TODO: handle collect_other_fields here
     let visit_bool = if constructor_bools.len() > 0 {
-        let missing_true_arm = !field_bools.iter().all(|b| !**b);
+        let missing_true_arm = field_bools.iter().all(|b| !**b);
         let missing_false_arm = field_bools.iter().all(|b| **b);
 
         let fallthrough_true_arm = if missing_true_arm {
