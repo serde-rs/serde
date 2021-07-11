@@ -1,0 +1,6 @@
+error: #[serde(rename)] must use a string name in externally tagged enums
+ --> $DIR/non_string_on_externally_tagged.rs:5:5
+  |
+5 | /     #[serde(rename = 1)]
+6 | |     A,
+  | |_____^
