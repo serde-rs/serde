@@ -1,5 +1,5 @@
 use internals::ast::{Container, Data, Field, Style};
-use internals::attr::{Identifier, TagType};
+use internals::attr::{Identifier, TagType, VariantName};
 use internals::{ungroup, Ctxt, Derive};
 use syn::{Member, Type};
 
@@ -14,6 +14,7 @@ pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     check_adjacent_tag_conflict(cx, cont);
     check_transparent(cx, cont, derive);
     check_from_and_try_from(cx, cont);
+    check_non_string_renames(cx, cont);
 }
 
 /// Getters are only allowed inside structs (not enums) with the `remote`
@@ -385,6 +386,40 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
                 );
             }
         },
+    }
+}
+
+/// Externally tagged/untagged enum variants must have string names.
+fn check_non_string_renames(cx: &Ctxt, cont: &mut Container) {
+    let details = match &cont.data {
+        Data::Enum(_) => match cont.attrs.tag() {
+            TagType::Adjacent { .. } | TagType::Internal { .. } => return,
+            TagType::External => "externally tagged enums",
+            TagType::None => "untagged enums",
+        },
+        Data::Struct(_, _) => return,
+    };
+
+    match &cont.data {
+        Data::Enum(variants) => {
+            for v in variants {
+                let name = v.attrs.name();
+                let ser_name = name.serialize_name();
+
+                match ser_name {
+                    VariantName::String(_) => {},
+                    _ => cx.error_spanned_by(v.original, format!("#[serde(rename)] must use a string name in {}", details)),
+                }
+
+                for alias in v.attrs.aliases() {
+                    match alias {
+                        VariantName::String(_) => {},
+                        _ => cx.error_spanned_by(v.original, format!("#[serde(rename)] must use a string name in {}", details)),
+                    }
+                }
+            }
+        },
+        _ => {},
     }
 }
 

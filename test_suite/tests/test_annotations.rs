@@ -2807,3 +2807,45 @@ fn test_expecting_message_identifier_enum() {
         r#"invalid type: map, expected something strange..."#,
     );
 }
+
+#[test]
+fn test_non_string_renames() {
+    #[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
+    #[serde(tag = "op")]
+    enum SpecialEnum {
+        #[serde(rename = 1)]
+        A,
+        #[serde(rename = true)]
+        B,
+    }
+
+    assert_de_tokens(
+        &SpecialEnum::A,
+        &[
+            Token::Map { len: None },
+            Token::Str("op"),
+            Token::I32(1),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &SpecialEnum::B,
+        &[
+            Token::Map { len: None },
+            Token::Str("op"),
+            Token::Bool(true),
+            Token::MapEnd,
+        ]
+    );
+
+    assert_ser_tokens(
+        &SpecialEnum::A,
+        &[
+            Token::Struct { name: "SpecialEnum", len: 1 },
+            Token::Str("op"),
+            Token::I64(1),
+            Token::StructEnd,
+        ],
+    );
+}

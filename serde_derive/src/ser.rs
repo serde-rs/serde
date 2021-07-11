@@ -9,6 +9,8 @@ use internals::ast::{Container, Data, Field, Style, Variant};
 use internals::{attr, replace_receiver, Ctxt, Derive};
 use pretend;
 
+use crate::internals::attr::VariantName;
+
 pub fn expand_derive_serialize(
     input: &mut syn::DeriveInput,
 ) -> Result<TokenStream, Vec<syn::Error>> {
@@ -501,7 +503,13 @@ fn serialize_externally_tagged_variant(
     cattrs: &attr::Container,
 ) -> Fragment {
     let type_name = cattrs.name().serialize_name();
-    let variant_name = variant.attrs.name().serialize_name();
+
+    let variant_name = match variant.attrs.name().serialize_name() {
+        VariantName::String(name) => name,
+        // An externally tagged variant with a non-string name will fail to
+        // check, so this branch _should_ be unreachable.
+        _ => unreachable!(),
+    };
 
     if let Some(path) = variant.attrs.serialize_with() {
         let ser = wrap_serialize_variant_with(params, path, variant);
@@ -581,13 +589,14 @@ fn serialize_internally_tagged_variant(
 
     if let Some(path) = variant.attrs.serialize_with() {
         let ser = wrap_serialize_variant_with(params, path, variant);
+        let variant_name = serialize_variant_name(&variant_name);
         return quote_expr! {
             _serde::__private::ser::serialize_tagged_newtype(
                 __serializer,
                 #enum_ident_str,
                 #variant_ident_str,
                 #tag,
-                #variant_name,
+                &#variant_name,
                 #ser,
             )
         };
@@ -595,11 +604,12 @@ fn serialize_internally_tagged_variant(
 
     match effective_style(variant) {
         Style::Unit => {
+            let variant_name = serialize_variant_name(&variant_name);
             quote_block! {
                 let mut __struct = try!(_serde::Serializer::serialize_struct(
                     __serializer, #type_name, 1));
                 try!(_serde::ser::SerializeStruct::serialize_field(
-                    &mut __struct, #tag, #variant_name));
+                    &mut __struct, #tag, &#variant_name));
                 _serde::ser::SerializeStruct::end(__struct)
             }
         }
@@ -612,13 +622,14 @@ fn serialize_internally_tagged_variant(
 
             let span = field.original.span();
             let func = quote_spanned!(span=> _serde::__private::ser::serialize_tagged_newtype);
+            let variant_name = serialize_variant_name(&variant_name);
             quote_expr! {
                 #func(
                     __serializer,
                     #enum_ident_str,
                     #variant_ident_str,
                     #tag,
-                    #variant_name,
+                    &#variant_name,
                     #field_expr,
                 )
             }
@@ -686,7 +697,8 @@ fn serialize_adjacently_tagged_variant(
                 StructVariant::Untagged,
                 params,
                 &variant.fields,
-                &variant_name,
+                // TODO: Is this correct?
+                &variant_name.to_string(),
             ),
         }
     });
@@ -861,7 +873,7 @@ enum StructVariant<'a> {
     },
     InternallyTagged {
         tag: &'a str,
-        variant_name: String,
+        variant_name: VariantName,
     },
     Untagged,
 }
@@ -921,16 +933,21 @@ fn serialize_struct_variant<'a>(
             }
         }
         StructVariant::InternallyTagged { tag, variant_name } => {
+            let variant_name = serialize_variant_name(&variant_name);
+
             quote_block! {
                 let mut __serde_state = try!(_serde::Serializer::serialize_struct(
                     __serializer,
                     #name,
                     #len + 1,
                 ));
+
+                // MARKER: is-problematic-borrow?
+
                 try!(_serde::ser::SerializeStruct::serialize_field(
                     &mut __serde_state,
                     #tag,
-                    #variant_name,
+                    &#variant_name,
                 ));
                 #(#serialize_fields)*
                 _serde::ser::SerializeStruct::end(__serde_state)
@@ -1011,6 +1028,7 @@ fn serialize_struct_variant_with_flatten<'a>(
             }
         }
         StructVariant::InternallyTagged { tag, variant_name } => {
+            let variant_name = serialize_variant_name(&variant_name);
             quote_block! {
                 let #let_mut __serde_state = try!(_serde::Serializer::serialize_map(
                     __serializer,
@@ -1018,7 +1036,7 @@ fn serialize_struct_variant_with_flatten<'a>(
                 try!(_serde::ser::SerializeMap::serialize_entry(
                     &mut __serde_state,
                     #tag,
-                    #variant_name,
+                    &#variant_name,
                 ));
                 #(#serialize_fields)*
                 _serde::ser::SerializeMap::end(__serde_state)
@@ -1334,5 +1352,13 @@ impl TupleTrait {
                 quote_spanned!(span=> _serde::ser::SerializeTupleVariant::serialize_field)
             }
         }
+    }
+}
+
+fn serialize_variant_name(name: &VariantName) -> TokenStream {
+    match name {
+        VariantName::String(s) => quote!(_serde::__private::ser::VariantName::String(#s)),
+        VariantName::Integer(i) => quote!(_serde::__private::ser::VariantName::Integer(#i)),
+        VariantName::Boolean(b) => quote!(_serde::__private::ser::VariantName::Boolean(#b)),
     }
 }

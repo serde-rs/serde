@@ -19,7 +19,7 @@ pub fn serialize_tagged_newtype<S, T>(
     type_ident: &'static str,
     variant_ident: &'static str,
     tag: &'static str,
-    variant_name: &'static str,
+    variant_name: &'static VariantName,
     value: &T,
 ) -> Result<S::Ok, S::Error>
 where
@@ -39,7 +39,7 @@ struct TaggedSerializer<S> {
     type_ident: &'static str,
     variant_ident: &'static str,
     tag: &'static str,
-    variant_name: &'static str,
+    variant_name: &'static VariantName,
     delegate: S,
 }
 
@@ -1306,5 +1306,24 @@ where
             .map
             .serialize_value(&Content::Struct(self.name, self.fields)));
         Ok(())
+    }
+}
+
+pub enum VariantName {
+    String(&'static str),
+    Integer(i64),
+    Boolean(bool),
+}
+
+impl Serialize for VariantName {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer
+    {
+        match self {
+            Self::String(s) => serializer.serialize_str(s),
+            Self::Integer(i) => serializer.serialize_i64(*i),
+            Self::Boolean(b) => serializer.serialize_bool(*b),
+        }
     }
 }
