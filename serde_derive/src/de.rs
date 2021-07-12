@@ -2276,7 +2276,7 @@ fn deserialize_identifier(
     let visit_int = if constructor_ints.is_empty() {
         let variant_indices = 0_u64..;
 
-        Some(quote! {
+        quote! {
             fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
@@ -2288,11 +2288,18 @@ fn deserialize_identifier(
                     _ => #u64_fallthrough_arm,
                 }
             }
-        })
+        }
     } else if collect_other_fields {
-        None
+        quote! {
+            fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U64(__value)))
+            }
+        }
     } else {
-        Some(quote! {
+        quote! {
             fn visit_i64<__E>(self, __value: i64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
@@ -2326,7 +2333,7 @@ fn deserialize_identifier(
                     },
                 }
             }
-        })
+        }
     };
 
     let visit_str_and_bytes = if constructor_strs.is_empty() {
@@ -2498,13 +2505,6 @@ fn deserialize_identifier(
                 __E: _serde::de::Error,
             {
                 _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U32(__value)))
-            }
-
-            fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U64(__value)))
             }
 
             fn visit_f32<__E>(self, __value: f32) -> _serde::__private::Result<Self::Value, __E>
