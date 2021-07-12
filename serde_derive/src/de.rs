@@ -2233,7 +2233,7 @@ fn deserialize_identifier(
             // it is safe to use VARIANTS unconditionally here, as bool variants 
             // only appear in enums, which means is_variant is always true.
             Some(quote! {
-                true => #fallthrough_arm
+                true => #fallthrough_arm,
             })
         } else {
             None
@@ -2241,7 +2241,7 @@ fn deserialize_identifier(
 
         let fallthrough_false_arm = if missing_false_arm {
             Some(quote! {
-                false => #fallthrough_arm
+                false => #fallthrough_arm,
             })
         } else {
             None
@@ -2257,8 +2257,8 @@ fn deserialize_identifier(
                     #(
                         #field_bools => _serde::__private::Ok(#constructor_bools),
                     )*
-                    #fallthrough_true_arm,
-                    #fallthrough_false_arm,
+                    #fallthrough_true_arm
+                    #fallthrough_false_arm
                 }
             }
         })
