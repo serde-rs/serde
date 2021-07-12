@@ -2225,7 +2225,9 @@ fn deserialize_identifier(
     };
 
     // TODO: handle collect_other_fields here
-    let visit_bool = if constructor_bools.len() > 0 {
+    let visit_bool = if constructor_bools.is_empty() {
+        None
+    } else {
         let missing_true_arm = field_bools.iter().all(|b| !**b);
         let missing_false_arm = field_bools.iter().all(|b| **b);
 
@@ -2268,12 +2270,28 @@ fn deserialize_identifier(
                 }
             }
         })
-    } else {
-        None
     };
 
     // TODO: handle collect_other_fields here
-    let visit_int = if constructor_ints.len() > 0 {
+    let visit_int = if constructor_ints.is_empty() {
+        let variant_indices = 0_u64..;
+
+        Some(quote! {
+            fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                match __value {
+                    #(
+                        #variant_indices => _serde::__private::Ok(#main_constructors),
+                    )*
+                    _ => #u64_fallthrough_arm,
+                }
+            }
+        })
+    } else if collect_other_fields {
+        None
+    } else {
         Some(quote! {
             fn visit_i64<__E>(self, __value: i64) -> _serde::__private::Result<Self::Value, __E>
             where
@@ -2309,27 +2327,54 @@ fn deserialize_identifier(
                 }
             }
         })
-    } else if !collect_other_fields {
-        let variant_indices = 0_u64..;
+    };
 
-        Some(quote! {
-            fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
+    let visit_str_and_bytes = if constructor_strs.is_empty() {
+        let visit_borrowed = if fallthrough_borrowed.is_some() || collect_other_fields {
+            let fallthrough_borrowed_arm = fallthrough_borrowed.as_ref().unwrap_or(fallthrough_arm);
+            Some(quote! {
+                fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    #value_as_borrowed_str_content
+                    #fallthrough_borrowed_arm
+                }
+
+                fn visit_borrowed_bytes<__E>(self, __value: &'de [u8]) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    #bytes_to_str
+                    #value_as_borrowed_bytes_content
+                    #fallthrough_borrowed_arm
+                }
+            })
+        } else {
+            None
+        };
+
+        quote! {
+            fn visit_str<__E>(self, __value: &str) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                match __value {
-                    #(
-                        #variant_indices => _serde::__private::Ok(#main_constructors),
-                    )*
-                    _ => #u64_fallthrough_arm,
-                }
+                #value_as_str_content
+                #fallthrough_arm
             }
-        })
-    } else {
-        None
-    };
 
-    let visit_str_and_bytes = if constructor_strs.len() > 0 {
+            fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                #bytes_to_str
+                #value_as_bytes_content
+                #fallthrough_arm
+            }
+
+            #visit_borrowed
+        }
+    } else {
         let visit_borrowed = if fallthrough_borrowed.is_some() || collect_other_fields {
             let fallthrough_borrowed_arm = fallthrough_borrowed.as_ref().unwrap_or(fallthrough_arm);
             Some(quote! {
@@ -2398,51 +2443,6 @@ fn deserialize_identifier(
                         #fallthrough_arm
                     }
                 }
-            }
-
-            #visit_borrowed
-        }
-    } else {
-        let visit_borrowed = if fallthrough_borrowed.is_some() || collect_other_fields {
-            let fallthrough_borrowed_arm = fallthrough_borrowed.as_ref().unwrap_or(fallthrough_arm);
-            Some(quote! {
-                fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::__private::Result<Self::Value, __E>
-                where
-                    __E: _serde::de::Error,
-                {
-                    #value_as_borrowed_str_content
-                    #fallthrough_borrowed_arm
-                }
-
-                fn visit_borrowed_bytes<__E>(self, __value: &'de [u8]) -> _serde::__private::Result<Self::Value, __E>
-                where
-                    __E: _serde::de::Error,
-                {
-                    #bytes_to_str
-                    #value_as_borrowed_bytes_content
-                    #fallthrough_borrowed_arm
-                }
-            })
-        } else {
-            None
-        };
-
-        quote! {
-            fn visit_str<__E>(self, __value: &str) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                #value_as_str_content
-                #fallthrough_arm
-            }
-
-            fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                #bytes_to_str
-                #value_as_bytes_content
-                #fallthrough_arm
             }
 
             #visit_borrowed

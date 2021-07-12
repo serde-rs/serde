@@ -161,8 +161,10 @@ impl VariantName {
             _ => None,
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
+impl ToString for VariantName {
+    fn to_string(&self) -> String {
         match self {
             VariantName::String(s) => s.clone(),
             VariantName::Integer(i) => i.to_string(),
@@ -1599,9 +1601,9 @@ fn get_renames<'a>(
     Ok((ser.at_most_one()?, de.at_most_one()?))
 }
 
-fn get_multiple_variant_renames<'a>(
+fn get_multiple_variant_renames(
     cx: &Ctxt,
-    items: &'a Punctuated<syn::NestedMeta, Token![,]>,
+    items: &Punctuated<syn::NestedMeta, Token![,]>,
 ) -> Result<(Option<VariantName>, Vec<VariantName>), ()> {
     let (ser, de) = get_ser_and_de(cx, RENAME, items, get_variant_name2)?;
     Ok((ser.at_most_one()?, de.get()))
@@ -1645,7 +1647,7 @@ fn get_lit_str<'a>(cx: &Ctxt, attr_name: Symbol, lit: &'a syn::Lit) -> Result<&'
     get_lit_str2(cx, attr_name, attr_name, lit)
 }
 
-fn try_get_lit_str<'a>(lit: &'a syn::Lit) -> Result<&'a syn::LitStr, ()> {
+fn try_get_lit_str(lit: &syn::Lit) -> Result<&syn::LitStr, ()> {
     if let syn::Lit::Str(lit) = lit {
         Ok(lit)
     } else {
@@ -1653,7 +1655,7 @@ fn try_get_lit_str<'a>(lit: &'a syn::Lit) -> Result<&'a syn::LitStr, ()> {
     }
 }
 
-fn try_get_lit_int<'a>(lit: &'a syn::Lit) -> Result<&'a syn::LitInt, ()> {
+fn try_get_lit_int(lit: &syn::Lit) -> Result<&syn::LitInt, ()> {
     if let syn::Lit::Int(lit) = lit {
         Ok(lit)
     } else {
@@ -1661,7 +1663,7 @@ fn try_get_lit_int<'a>(lit: &'a syn::Lit) -> Result<&'a syn::LitInt, ()> {
     }
 }
 
-fn try_get_lit_bool<'a>(lit: &'a syn::Lit) -> Result<&'a syn::LitBool, ()> {
+fn try_get_lit_bool(lit: &syn::Lit) -> Result<&syn::LitBool, ()> {
     if let syn::Lit::Bool(lit) = lit {
         Ok(lit)
     } else {
@@ -1669,24 +1671,24 @@ fn try_get_lit_bool<'a>(lit: &'a syn::Lit) -> Result<&'a syn::LitBool, ()> {
     }
 }
 
-fn get_variant_name<'a>(cx: &Ctxt, attr_name: Symbol, lit: &'a syn::Lit) -> Result<VariantName, ()> {
+fn get_variant_name(cx: &Ctxt, attr_name: Symbol, lit: &syn::Lit) -> Result<VariantName, ()> {
     get_variant_name2(cx, attr_name, attr_name, lit)
 }
 
 // meta_item_name is unused but is present to comply with the contract for
 // get_ser_and_de.
-fn get_variant_name2<'a>(cx: &Ctxt, attr_name: Symbol, _meta_item_name: Symbol, lit: &'a syn::Lit) -> Result<VariantName, ()> {
+fn get_variant_name2(cx: &Ctxt, attr_name: Symbol, _meta_item_name: Symbol, lit: &syn::Lit) -> Result<VariantName, ()> {
     if let Ok(lit) = try_get_lit_str(lit) {
         Ok(VariantName::String(lit.value()))
     }
     else if let Ok(lit) = try_get_lit_int(lit) {
         let parse_result = lit.base10_parse();
 
-        if parse_result.is_err() {
+        if let Ok(i) = parse_result {
+            Ok(VariantName::Integer(i))
+        } else {
             cx.error_spanned_by(lit, format!("serde {} attribute has an integer value that cannot be represented as an i64", attr_name));
             Err(())
-        } else {
-            Ok(VariantName::Integer(parse_result.unwrap()))
         }
     }
     else if let Ok(lit) = try_get_lit_bool(lit) {

@@ -400,26 +400,23 @@ fn check_non_string_renames(cx: &Ctxt, cont: &mut Container) {
         Data::Struct(_, _) => return,
     };
 
-    match &cont.data {
-        Data::Enum(variants) => {
-            for v in variants {
-                let name = v.attrs.name();
-                let ser_name = name.serialize_name();
+    if let Data::Enum(variants) = &cont.data {
+        for v in variants {
+            let name = v.attrs.name();
+            let ser_name = name.serialize_name();
 
-                match ser_name {
+            match ser_name {
+                VariantName::String(_) => {},
+                _ => cx.error_spanned_by(v.original, format!("#[serde(rename)] must use a string name in {}", details)),
+            }
+
+            for alias in v.attrs.aliases() {
+                match alias {
                     VariantName::String(_) => {},
                     _ => cx.error_spanned_by(v.original, format!("#[serde(rename)] must use a string name in {}", details)),
                 }
-
-                for alias in v.attrs.aliases() {
-                    match alias {
-                        VariantName::String(_) => {},
-                        _ => cx.error_spanned_by(v.original, format!("#[serde(rename)] must use a string name in {}", details)),
-                    }
-                }
             }
-        },
-        _ => {},
+        }
     }
 }
 
