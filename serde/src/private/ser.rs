@@ -1321,9 +1321,9 @@ impl Serialize for VariantName {
         S: Serializer
     {
         match self {
-            Self::String(s) => serializer.serialize_str(s),
-            Self::Integer(i) => serializer.serialize_i64(*i),
-            Self::Boolean(b) => serializer.serialize_bool(*b),
+            VariantName::String(s) => serializer.serialize_str(s),
+            VariantName::Integer(i) => serializer.serialize_i64(*i),
+            VariantName::Boolean(b) => serializer.serialize_bool(*b),
         }
     }
 }
