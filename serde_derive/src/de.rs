@@ -2200,7 +2200,7 @@ fn deserialize_identifier(
         fallthrough
     } else if is_variant {
         fallthrough_arm_tokens = quote! {
-            _serde::__private::Err(_serde::de::Error::unknown_variant(&__value.to_string(), VARIANTS))
+            _serde::__private::Err(_serde::de::Error::unknown_variant(__value, VARIANTS))
         };
         &fallthrough_arm_tokens
     } else {
@@ -2233,7 +2233,10 @@ fn deserialize_identifier(
             // it is safe to use VARIANTS unconditionally here, as bool variants 
             // only appear in enums, which means is_variant is always true.
             Some(quote! {
-                true => #fallthrough_arm,
+                true => {
+                    let __value = "true";
+                    #fallthrough_arm
+                },
             })
         } else {
             None
@@ -2241,7 +2244,10 @@ fn deserialize_identifier(
 
         let fallthrough_false_arm = if missing_false_arm {
             Some(quote! {
-                false => #fallthrough_arm,
+                false => {
+                    let __value = "false";
+                    #fallthrough_arm
+                },
             })
         } else {
             None
@@ -2278,7 +2284,11 @@ fn deserialize_identifier(
                     #(
                         #field_ints => _serde::__private::Ok(#constructor_ints),
                     )*
-                    _ => #fallthrough_arm,
+                    _ => {
+                        let __value_bytes = __value.to_le_bytes();
+                        let __value = &_serde::__private::from_utf8_lossy(&bytes);
+                        #fallthrough_arm
+                    },
                 }
             }
 
@@ -2291,7 +2301,11 @@ fn deserialize_identifier(
                     #(
                         #field_ints => _serde::__private::Ok(#constructor_ints),
                     )*
-                    _ => #fallthrough_arm,
+                    _ => {
+                        let __value_bytes = __value.to_le_bytes();
+                        let __value = &_serde::__private::from_utf8_lossy(&bytes);
+                        #fallthrough_arm
+                    },
                 }
             }
         })
