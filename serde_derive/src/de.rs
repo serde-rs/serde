@@ -2304,7 +2304,7 @@ fn deserialize_identifier(
                     )*
                     _ => {
                         let __value_bytes = __value.to_le_bytes();
-                        let __value = &_serde::__private::from_utf8_lossy(&bytes);
+                        let __value = &_serde::__private::from_utf8_lossy(&__value_bytes);
                         #fallthrough_arm
                     },
                 }
@@ -2321,7 +2321,7 @@ fn deserialize_identifier(
                     )*
                     _ => {
                         let __value_bytes = __value.to_le_bytes();
-                        let __value = &_serde::__private::from_utf8_lossy(&bytes);
+                        let __value = &_serde::__private::from_utf8_lossy(&__value_bytes);
                         #fallthrough_arm
                     },
                 }
