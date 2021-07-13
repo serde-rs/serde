@@ -2654,6 +2654,28 @@ where
     }
 }
 
+impl<'de, E> IdentifierDeserializer<'de, E> for i64
+where
+    E: Error
+{
+    type Deserializer = <i64 as IntoDeserializer<'de, E>>::Deserializer;
+
+    fn from(self) -> Self::Deserializer {
+        self.into_deserializer()
+    }
+}
+
+impl<'de, E> IdentifierDeserializer<'de, E> for bool
+where
+    E: Error
+{
+    type Deserializer = <bool as IntoDeserializer<'de, E>>::Deserializer;
+
+    fn from(self) -> Self::Deserializer {
+        self.into_deserializer()
+    }
+}
+
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub struct FlatMapDeserializer<'a, 'de: 'a, E>(
     pub &'a mut Vec<Option<(Content<'de>, Content<'de>)>>,

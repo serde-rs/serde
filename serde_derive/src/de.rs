@@ -2156,12 +2156,20 @@ fn deserialize_identifier(
         "field identifier"
     });
 
-    let bytes_to_str = if fallthrough.is_some() || collect_other_fields {
-        None
+    let (bytes_to_str, int_to_bytes, bool_to_str) = if fallthrough.is_some() || collect_other_fields {
+        (None, None, None)
     } else {
-        Some(quote! {
-            let __value = &_serde::__private::from_utf8_lossy(__value);
-        })
+        (
+            Some(quote! {
+                let __value = &_serde::__private::from_utf8_lossy(__value);
+            }),
+            Some(quote! {
+                let __value = &__value.to_le_bytes();
+            }),
+            Some(quote! {
+                let __value = if __value { "true" } else { "false" };
+            })
+        )
     };
 
     let (
@@ -2169,6 +2177,9 @@ fn deserialize_identifier(
         value_as_borrowed_str_content,
         value_as_bytes_content,
         value_as_borrowed_bytes_content,
+        value_as_i64_content,
+        value_as_u64_content,
+        value_as_bool_content,
     ) = if collect_other_fields {
         (
             Some(quote! {
@@ -2183,9 +2194,18 @@ fn deserialize_identifier(
             Some(quote! {
                 let __value = _serde::__private::de::Content::Bytes(__value);
             }),
+            Some(quote! {
+                let __value = _serde::__private::de::Content::I64(__value);
+            }),
+            Some(quote! {
+                let __value = _serde::__private::de::Content::U64(__value);
+            }),
+            Some(quote! {
+                let __value = _serde::__private::de::Content::Bool(__value);
+            }),
         )
     } else {
-        (None, None, None, None)
+        (None, None, None, None, None, None, None)
     };
 
     let fallthrough_arm_tokens;
@@ -2203,43 +2223,15 @@ fn deserialize_identifier(
         &fallthrough_arm_tokens
     };
 
-    let visit_bool = if constructor_bools.is_empty() && collect_other_fields {
-        Some(quote! {
-            fn visit_bool<__E>(self, __value: bool) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Bool(__value)))
-            }
-        })
-    } else if collect_other_fields {
-        // We are collecting other fields and we have bool constructors.
-        Some(quote! {
-            fn visit_bool<__E>(self, __value: bool) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                match __value {
-                    #(
-                        #field_bools => _serde::__private::Ok(#constructor_bools),
-                    )*
-                    _ => _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Bool(__value)))
-                }
-            }
-        })
-    } else if constructor_bools.is_empty() {
-        // We are not collecting unknown fields, and there are no bool constructors.
-        // We want to error upon visiting a bool.
-        None
-    } else {
-        // We are not collecting unknown fields, but there are bool constructors.
+    let visit_bool = {
         let missing_true_arm = field_bools.iter().all(|b| !**b);
         let missing_false_arm = field_bools.iter().all(|b| **b);
 
         let fallthrough_true_arm = if missing_true_arm {
             Some(quote! {
                 true => {
-                    let __value = "true";
+                    #bool_to_str
+                    #value_as_bool_content
                     #fallthrough_arm
                 },
             })
@@ -2250,7 +2242,8 @@ fn deserialize_identifier(
         let fallthrough_false_arm = if missing_false_arm {
             Some(quote! {
                 false => {
-                    let __value = "false";
+                    #bool_to_str
+                    #value_as_bool_content
                     #fallthrough_arm
                 },
             })
@@ -2258,7 +2251,7 @@ fn deserialize_identifier(
             None
         };
 
-        Some(quote! {
+        quote! {
             fn visit_bool<__E>(self, __value: bool) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
@@ -2272,56 +2265,10 @@ fn deserialize_identifier(
                     #fallthrough_false_arm
                 }
             }
-        })
+        }
     };
 
-    let visit_int = if constructor_ints.is_empty() && collect_other_fields {
-        quote! {
-            fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U64(__value)))
-            }
-
-            fn visit_i64<__E>(self, __value: i64) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I64(__value)))
-            }
-        }
-    } else if collect_other_fields {
-        // We are collecting other fields and we have int constructors.
-        quote! {
-            fn visit_i64<__E>(self, __value: i64) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                match __value {
-                    #(
-                        #field_ints => _serde::__private::Ok(#constructor_ints),
-                    )*
-                    _ => _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I64(__value)))
-                }
-            }
-
-            fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                match __value {
-                    #(
-                        #field_ints => _serde::__private::Ok(#constructor_ints),
-                    )*
-                    _ => _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U64(__value)))
-                }
-            }
-        }
-    } else if constructor_ints.is_empty() {
-        // We are not collecting unknown fields, and there are no int constructors.
-        // We want to error upon visiting an i64. For u64, we want to construct variants
-        // based on their indices.
+    let visit_int = if constructor_ints.is_empty() {
         let variant_indices = 0_u64..;
         let u64_fallthrough_arm_tokens;
         let u64_fallthrough_arm = if let Some(fallthrough) = &fallthrough {
@@ -2352,27 +2299,29 @@ fn deserialize_identifier(
                     #(
                         #variant_indices => _serde::__private::Ok(#main_constructors),
                     )*
-                    _ => #u64_fallthrough_arm,
+                    _ => {
+                        #value_as_u64_content
+                        #u64_fallthrough_arm
+                    },
                 }
             }
         }
     } else {
-        // We are not collecting unknown fields, but there are int constructors.
         quote! {
             fn visit_i64<__E>(self, __value: i64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                #[allow(unreachable_patterns)]
                 match __value {
                     #(
                         #field_ints => _serde::__private::Ok(#constructor_ints),
                     )*
                     _ => {
-                        let __value_bytes = __value.to_le_bytes();
-                        let __value = &_serde::__private::from_utf8_lossy(&__value_bytes);
+                        #int_to_bytes
+                        #bytes_to_str
+                        #value_as_i64_content
                         #fallthrough_arm
-                    },
+                    }
                 }
             }
 
@@ -2380,16 +2329,16 @@ fn deserialize_identifier(
             where
                 __E: _serde::de::Error,
             {
-                #[allow(unreachable_patterns)]
                 match __value {
                     #(
                         #field_ints => _serde::__private::Ok(#constructor_ints),
                     )*
                     _ => {
-                        let __value_bytes = __value.to_le_bytes();
-                        let __value = &_serde::__private::from_utf8_lossy(&__value_bytes);
+                        #int_to_bytes
+                        #bytes_to_str
+                        #value_as_u64_content
                         #fallthrough_arm
-                    },
+                    }
                 }
             }
         }
@@ -2434,96 +2383,37 @@ fn deserialize_identifier(
         None
     };
 
-    let visit_str_and_bytes = if constructor_strs.is_empty() && collect_other_fields {
-        Some(quote! {
-            fn visit_str<__E>(self, __value: &str) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                #value_as_str_content
-                #fallthrough_arm
+    let visit_str_and_bytes = quote! {
+        fn visit_str<__E>(self, __value: &str) -> _serde::__private::Result<Self::Value, __E>
+        where
+            __E: _serde::de::Error,
+        {
+            match __value {
+                #(
+                    #field_strs => _serde::__private::Ok(#constructor_strs),
+                )*
+                _ => {
+                    #value_as_str_content
+                    #fallthrough_arm
+                }
             }
+        }
 
-            fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                #bytes_to_str
-                #value_as_bytes_content
-                #fallthrough_arm
-            }
-        })
-    } else if collect_other_fields {
-        // We have string constructors and we are collecting other fields.
-        Some(quote! {
-            fn visit_str<__E>(self, __value: &str) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                match __value {
-                    #(
-                        #field_strs => _serde::__private::Ok(#constructor_strs),
-                    )*
-                    _ => {
-                        #value_as_str_content
-                        #fallthrough_arm
-                    }
+        fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::__private::Result<Self::Value, __E>
+        where
+            __E: _serde::de::Error,
+        {
+            match __value {
+                #(
+                    #field_bytes => _serde::__private::Ok(#constructor_strs),
+                )*
+                _ => {
+                    #bytes_to_str
+                    #value_as_bytes_content
+                    #fallthrough_arm
                 }
             }
-
-            fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                match __value {
-                    #(
-                        #field_bytes => _serde::__private::Ok(#constructor_strs),
-                    )*
-                    _ => {
-                        #bytes_to_str
-                        #value_as_bytes_content
-                        #fallthrough_arm
-                    }
-                }
-            }
-        })
-    } else if constructor_strs.is_empty() {
-        // We have no string constructors and we are not collecting other fields.
-        None
-    } else {
-        // We have string constructors, but we are not collecting other fields.
-        Some(quote! {
-            fn visit_str<__E>(self, __value: &str) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                match __value {
-                    #(
-                        #field_strs => _serde::__private::Ok(#constructor_strs),
-                    )*
-                    _ => {
-                        #value_as_str_content
-                        #fallthrough_arm
-                    }
-                }
-            }
-
-            fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                match __value {
-                    #(
-                        #field_bytes => _serde::__private::Ok(#constructor_strs),
-                    )*
-                    _ => {
-                        #bytes_to_str
-                        #value_as_bytes_content
-                        #fallthrough_arm
-                    }
-                }
-            }
-        })
+        }
     };
 
     let visit_other = if collect_other_fields {
