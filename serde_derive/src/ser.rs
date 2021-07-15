@@ -596,7 +596,7 @@ fn serialize_internally_tagged_variant(
                 #enum_ident_str,
                 #variant_ident_str,
                 #tag,
-                &#variant_name,
+                #variant_name,
                 #ser,
             )
         };
@@ -629,7 +629,7 @@ fn serialize_internally_tagged_variant(
                     #enum_ident_str,
                     #variant_ident_str,
                     #tag,
-                    &#variant_name,
+                    #variant_name,
                     #field_expr,
                 )
             }
