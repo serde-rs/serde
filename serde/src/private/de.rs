@@ -55,77 +55,165 @@ where
     Deserialize::deserialize(deserializer)
 }
 
+struct CowStrVisitor;
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a> Visitor<'a> for CowStrVisitor {
+    type Value = Cow<'a, str>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a string")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Ok(Cow::Owned(v.to_owned()))
+    }
+
+    fn visit_borrowed_str<E>(self, v: &'a str) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Ok(Cow::Borrowed(v))
+    }
+
+    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Ok(Cow::Owned(v))
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        match str::from_utf8(v) {
+            Ok(s) => Ok(Cow::Owned(s.to_owned())),
+            Err(_) => Err(Error::invalid_value(Unexpected::Bytes(v), &self)),
+        }
+    }
+
+    fn visit_borrowed_bytes<E>(self, v: &'a [u8]) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        match str::from_utf8(v) {
+            Ok(s) => Ok(Cow::Borrowed(s)),
+            Err(_) => Err(Error::invalid_value(Unexpected::Bytes(v), &self)),
+        }
+    }
+
+    fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        match String::from_utf8(v) {
+            Ok(s) => Ok(Cow::Owned(s)),
+            Err(e) => Err(Error::invalid_value(
+                Unexpected::Bytes(&e.into_bytes()),
+                &self,
+            )),
+        }
+    }
+}
+
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub fn borrow_cow_str<'de: 'a, 'a, D, R>(deserializer: D) -> Result<R, D::Error>
 where
     D: Deserializer<'de>,
     R: From<Cow<'a, str>>,
 {
-    struct CowStrVisitor;
+    deserializer.deserialize_str(CowStrVisitor).map(From::from)
+}
 
-    impl<'a> Visitor<'a> for CowStrVisitor {
-        type Value = Cow<'a, str>;
+struct OptionCowStrVisitor;
 
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("a string")
-        }
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a> Visitor<'a> for OptionCowStrVisitor {
+    type Value = Option<Cow<'a, str>>;
 
-        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            Ok(Cow::Owned(v.to_owned()))
-        }
-
-        fn visit_borrowed_str<E>(self, v: &'a str) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            Ok(Cow::Borrowed(v))
-        }
-
-        fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            Ok(Cow::Owned(v))
-        }
-
-        fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            match str::from_utf8(v) {
-                Ok(s) => Ok(Cow::Owned(s.to_owned())),
-                Err(_) => Err(Error::invalid_value(Unexpected::Bytes(v), &self)),
-            }
-        }
-
-        fn visit_borrowed_bytes<E>(self, v: &'a [u8]) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            match str::from_utf8(v) {
-                Ok(s) => Ok(Cow::Borrowed(s)),
-                Err(_) => Err(Error::invalid_value(Unexpected::Bytes(v), &self)),
-            }
-        }
-
-        fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            match String::from_utf8(v) {
-                Ok(s) => Ok(Cow::Owned(s)),
-                Err(e) => Err(Error::invalid_value(
-                    Unexpected::Bytes(&e.into_bytes()),
-                    &self,
-                )),
-            }
-        }
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a string or null")
     }
 
-    deserializer.deserialize_str(CowStrVisitor).map(From::from)
+    fn visit_none<E>(self) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Ok(None)
+    }
+
+    fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'a>,
+    {
+        Ok(Some(deserializer.deserialize_str(CowStrVisitor)?))
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub fn borrow_option_cow_str<'de: 'a, 'a, D, R>(deserializer: D) -> Result<R, D::Error>
+where
+    D: Deserializer<'de>,
+    R: From<Option<Cow<'a, str>>>,
+{
+    deserializer.deserialize_option(OptionCowStrVisitor).map(From::from)
+}
+
+struct CowBytesVisitor;
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a> Visitor<'a> for CowBytesVisitor {
+    type Value = Cow<'a, [u8]>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a byte array")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Ok(Cow::Owned(v.as_bytes().to_vec()))
+    }
+
+    fn visit_borrowed_str<E>(self, v: &'a str) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Ok(Cow::Borrowed(v.as_bytes()))
+    }
+
+    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Ok(Cow::Owned(v.into_bytes()))
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Ok(Cow::Owned(v.to_vec()))
+    }
+
+    fn visit_borrowed_bytes<E>(self, v: &'a [u8]) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Ok(Cow::Borrowed(v))
+    }
+
+    fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Ok(Cow::Owned(v))
+    }
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
@@ -134,61 +222,43 @@ where
     D: Deserializer<'de>,
     R: From<Cow<'a, [u8]>>,
 {
-    struct CowBytesVisitor;
-
-    impl<'a> Visitor<'a> for CowBytesVisitor {
-        type Value = Cow<'a, [u8]>;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("a byte array")
-        }
-
-        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            Ok(Cow::Owned(v.as_bytes().to_vec()))
-        }
-
-        fn visit_borrowed_str<E>(self, v: &'a str) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            Ok(Cow::Borrowed(v.as_bytes()))
-        }
-
-        fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            Ok(Cow::Owned(v.into_bytes()))
-        }
-
-        fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            Ok(Cow::Owned(v.to_vec()))
-        }
-
-        fn visit_borrowed_bytes<E>(self, v: &'a [u8]) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            Ok(Cow::Borrowed(v))
-        }
-
-        fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            Ok(Cow::Owned(v))
-        }
-    }
-
     deserializer
         .deserialize_bytes(CowBytesVisitor)
         .map(From::from)
+}
+
+struct OptionCowBytesVisitor;
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a> Visitor<'a> for OptionCowBytesVisitor {
+    type Value = Option<Cow<'a, [u8]>>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a byte array or null")
+    }
+
+    fn visit_none<E>(self) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Ok(None)
+    }
+
+    fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'a>,
+    {
+        Ok(Some(deserializer.deserialize_str(CowBytesVisitor)?))
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub fn borrow_option_cow_bytes<'de: 'a, 'a, D, R>(deserializer: D) -> Result<R, D::Error>
+where
+    D: Deserializer<'de>,
+    R: From<Option<Cow<'a, [u8]>>>,
+{
+    deserializer.deserialize_option(OptionCowBytesVisitor).map(From::from)
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]

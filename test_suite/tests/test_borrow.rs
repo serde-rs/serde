@@ -122,6 +122,17 @@ fn test_cow() {
 
         #[serde(borrow)]
         borrowed: Cow<'b, str>,
+
+        copied_option: Option<Cow<'b, str>>,
+
+        #[serde(borrow)]
+        borrowed_option: Option<Cow<'b, str>>,
+
+        #[serde(borrow)]
+        borrowed_u8: Cow<'b, [u8]>,
+
+        #[serde(borrow)]
+        borrowed_option_u8: Option<Cow<'b, [u8]>>,
     }
 
     let tokens = &[
@@ -133,6 +144,17 @@ fn test_cow() {
         Token::BorrowedStr("copied"),
         Token::Str("borrowed"),
         Token::BorrowedStr("borrowed"),
+        Token::Str("copied_option"),
+        Token::Some,
+        Token::BorrowedStr("copied_option"),
+        Token::Str("borrowed_option"),
+        Token::Some,
+        Token::BorrowedStr("borrowed_option"),
+        Token::Str("borrowed_u8"),
+        Token::BorrowedBytes(b"borrowed_u8"),
+        Token::Str("borrowed_option_u8"),
+        Token::Some,
+        Token::BorrowedBytes(b"borrowed_option_u8"),
         Token::StructEnd,
     ];
 
@@ -147,6 +169,26 @@ fn test_cow() {
     match cows.borrowed {
         Cow::Borrowed("borrowed") => {}
         _ => panic!("expected a borrowed string"),
+    }
+
+    match cows.copied_option {
+        Some(Cow::Owned(ref s)) if s == "copied_option" => {}
+        _ => panic!("expected a copied option string"),
+    }
+
+    match cows.borrowed_option {
+        Some(Cow::Borrowed("borrowed_option")) => {}
+        _ => panic!("expected a borrowed option string"),
+    }
+
+    match cows.borrowed_u8 {
+        Cow::Borrowed(b"borrowed_u8") => {}
+        _ => panic!("expected a borrowed u8 buffer"),
+    }
+
+    match cows.borrowed_option_u8 {
+        Some(Cow::Borrowed(b"borrowed_option_u8")) => {}
+        _ => panic!("expected a borrowed option u8 buffer"),
     }
 }
 

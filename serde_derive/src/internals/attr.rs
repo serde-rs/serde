@@ -1367,24 +1367,18 @@ impl Field {
             //
             //     impl<'de: 'a, 'a> Deserialize<'de> for Cow<'a, str>
             //     impl<'de: 'a, 'a> Deserialize<'de> for Cow<'a, [u8]>
-            if is_cow(&field.ty, is_str) {
-                let mut path = syn::Path {
-                    leading_colon: None,
-                    segments: Punctuated::new(),
-                };
-                let span = Span::call_site();
-                path.segments.push(Ident::new("_serde", span).into());
-                path.segments.push(Ident::new("__private", span).into());
-                path.segments.push(Ident::new("de", span).into());
-                path.segments
-                    .push(Ident::new("borrow_cow_str", span).into());
-                let expr = syn::ExprPath {
-                    attrs: Vec::new(),
-                    qself: None,
-                    path,
-                };
-                deserialize_with.set_if_none(expr);
+            let de_fn_name = if is_cow(&field.ty, is_str) {
+                Some("borrow_cow_str")
             } else if is_cow(&field.ty, is_slice_u8) {
+                Some("borrow_cow_bytes")
+            } else if is_option(&field.ty, |v| is_cow(v, is_str)) {
+                Some("borrow_option_cow_str")
+            } else if is_option(&field.ty, |v| is_cow(v, is_slice_u8)) {
+                Some("borrow_option_cow_bytes")
+            } else {
+                None
+            };
+            if let Some(de_fn_name) = de_fn_name {
                 let mut path = syn::Path {
                     leading_colon: None,
                     segments: Punctuated::new(),
@@ -1394,7 +1388,7 @@ impl Field {
                 path.segments.push(Ident::new("__private", span).into());
                 path.segments.push(Ident::new("de", span).into());
                 path.segments
-                    .push(Ident::new("borrow_cow_bytes", span).into());
+                    .push(Ident::new(de_fn_name, span).into());
                 let expr = syn::ExprPath {
                     attrs: Vec::new(),
                     qself: None,
