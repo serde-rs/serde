@@ -1387,8 +1387,7 @@ impl Field {
                 path.segments.push(Ident::new("_serde", span).into());
                 path.segments.push(Ident::new("__private", span).into());
                 path.segments.push(Ident::new("de", span).into());
-                path.segments
-                    .push(Ident::new(de_fn_name, span).into());
+                path.segments.push(Ident::new(de_fn_name, span).into());
                 let expr = syn::ExprPath {
                     attrs: Vec::new(),
                     qself: None,

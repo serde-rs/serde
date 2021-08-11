@@ -160,7 +160,9 @@ where
     D: Deserializer<'de>,
     R: From<Option<Cow<'a, str>>>,
 {
-    deserializer.deserialize_option(OptionCowStrVisitor).map(From::from)
+    deserializer
+        .deserialize_option(OptionCowStrVisitor)
+        .map(From::from)
 }
 
 struct CowBytesVisitor;
@@ -258,7 +260,9 @@ where
     D: Deserializer<'de>,
     R: From<Option<Cow<'a, [u8]>>>,
 {
-    deserializer.deserialize_option(OptionCowBytesVisitor).map(From::from)
+    deserializer
+        .deserialize_option(OptionCowBytesVisitor)
+        .map(From::from)
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
