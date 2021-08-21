@@ -823,3 +823,26 @@ where
 {
     vec.first().serialize(serializer)
 }
+
+//////////////////////////////////////////////////////////////////////////
+
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(tag = "tag")]
+enum InternallyTagged {
+    #[serde(deserialize_with = "deserialize_generic")]
+    Unit,
+
+    #[serde(deserialize_with = "deserialize_generic")]
+    Newtype(i32),
+
+    #[serde(deserialize_with = "deserialize_generic")]
+    Struct { f1: String, f2: u8 },
+}
+
+fn deserialize_generic<'de, T, D>(deserializer: D) -> StdResult<T, D::Error>
+where
+    T: Deserialize<'de>,
+    D: Deserializer<'de>,
+{
+    T::deserialize(deserializer)
+}
