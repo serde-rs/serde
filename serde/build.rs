@@ -53,9 +53,10 @@ fn main() {
     // 128-bit integers stabilized in Rust 1.26:
     // https://blog.rust-lang.org/2018/05/10/Rust-1.26.html
     //
-    // Disabled on Emscripten targets as Emscripten doesn't
-    // currently support integers larger than 64 bits.
-    if minor >= 26 && !emscripten {
+    // Disabled on Emscripten targets before Rust 1.40 since
+    // Emscripten did not support 128-bit integers until Rust 1.40
+    // (https://github.com/rust-lang/rust/pull/65251)
+    if minor >= 26 && (!emscripten || minor >= 40) {
         println!("cargo:rustc-cfg=integer128");
     }
 
