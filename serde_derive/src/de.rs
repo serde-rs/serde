@@ -2902,16 +2902,10 @@ fn unwrap_to_variant_closure(
     let variant_ident = &variant.ident;
 
     let (arg, wrapper) = if with_wrapper {
-        (
-            quote!{ __wrap },
-            quote!{ __wrap.value },
-        )
+        (quote! { __wrap }, quote! { __wrap.value })
     } else {
         let field_tys = variant.fields.iter().map(|field| field.ty);
-        (
-            quote!{ __wrap: (#(#field_tys),*) },
-            quote!{ __wrap },
-        )
+        (quote! { __wrap: (#(#field_tys),*) }, quote! { __wrap })
     };
 
     let field_access = (0..variant.fields.len()).map(|n| {
