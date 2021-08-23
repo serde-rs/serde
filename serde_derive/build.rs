@@ -16,6 +16,12 @@ fn main() {
     if minor >= 37 {
         println!("cargo:rustc-cfg=underscore_consts");
     }
+
+    // The ptr::addr_of! macro stabilized in Rust 1.51:
+    // https://blog.rust-lang.org/2021/03/25/Rust-1.51.0.html#stabilized-apis
+    if minor >= 51 {
+        println!("cargo:rustc-cfg=ptr_addr_of");
+    }
 }
 
 fn rustc_minor_version() -> Option<u32> {
