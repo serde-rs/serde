@@ -36,7 +36,7 @@ pub fn expand_derive_deserialize(
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
         let vis = &input.vis;
-        let used = pretend::pretend_used(&cont);
+        let used = pretend::pretend_used(&cont, params.is_packed);
         quote! {
             impl #de_impl_generics #ident #ty_generics #where_clause {
                 #vis fn deserialize<__D>(__deserializer: __D) -> #serde::__private::Result<#remote #ty_generics, __D::Error>
@@ -125,6 +125,9 @@ struct Parameters {
     /// At least one field has a serde(getter) attribute, implying that the
     /// remote type has a private field.
     has_getter: bool,
+
+    /// Type has a repr(packed) attribute.
+    is_packed: bool,
 }
 
 impl Parameters {
@@ -137,6 +140,7 @@ impl Parameters {
         let borrowed = borrowed_lifetimes(cont);
         let generics = build_generics(cont, &borrowed);
         let has_getter = cont.data.has_getter();
+        let is_packed = cont.attrs.is_packed();
 
         Parameters {
             local,
@@ -144,6 +148,7 @@ impl Parameters {
             generics,
             borrowed,
             has_getter,
+            is_packed,
         }
     }
 

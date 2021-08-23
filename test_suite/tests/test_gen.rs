@@ -846,3 +846,19 @@ where
 {
     T::deserialize(deserializer)
 }
+
+//////////////////////////////////////////////////////////////////////////
+
+#[repr(packed)]
+pub struct RemotePacked {
+    pub a: u8,
+    pub b: u16,
+}
+
+#[derive(Serialize, Deserialize)]
+#[repr(packed)]
+#[serde(remote = "RemotePacked")]
+pub struct RemotePackedDef {
+    a: u8,
+    b: u16,
+}
