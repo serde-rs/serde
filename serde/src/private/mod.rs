@@ -14,6 +14,7 @@ pub use lib::default::Default;
 pub use lib::fmt::{self, Formatter};
 pub use lib::marker::PhantomData;
 pub use lib::option::Option::{self, None, Some};
+pub use lib::ptr;
 pub use lib::result::Result::{self, Err, Ok};
 
 pub use self::string::from_utf8_lossy;

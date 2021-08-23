@@ -851,14 +851,36 @@ where
 
 #[repr(packed)]
 pub struct RemotePacked {
-    pub a: u8,
-    pub b: u16,
+    pub a: u16,
+    pub b: u32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 #[repr(packed)]
 #[serde(remote = "RemotePacked")]
 pub struct RemotePackedDef {
-    a: u8,
-    b: u16,
+    a: u16,
+    b: u32,
+}
+
+impl Drop for RemotePackedDef {
+    fn drop(&mut self) {}
+}
+
+#[repr(packed)]
+pub struct RemotePackedNonCopy {
+    pub a: u16,
+    pub b: String,
+}
+
+#[derive(Deserialize)]
+#[repr(packed)]
+#[serde(remote = "RemotePackedNonCopy")]
+pub struct RemotePackedNonCopyDef {
+    a: u16,
+    b: String,
+}
+
+impl Drop for RemotePackedNonCopyDef {
+    fn drop(&mut self) {}
 }
