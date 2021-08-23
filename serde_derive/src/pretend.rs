@@ -20,8 +20,8 @@ use internals::ast::{Container, Data, Field, Style};
 //     8 | enum EnumDef { V }
 //       |                ^
 //
-pub fn pretend_used(cont: &Container) -> TokenStream {
-    let pretend_fields = pretend_fields_used(cont);
+pub fn pretend_used(cont: &Container, is_packed: bool) -> TokenStream {
+    let pretend_fields = pretend_fields_used(cont, is_packed);
     let pretend_variants = pretend_variants_used(cont);
 
     quote! {
@@ -48,7 +48,7 @@ pub fn pretend_used(cont: &Container) -> TokenStream {
 // The `ref` is important in case the user has written a Drop impl on their
 // type. Rust does not allow destructuring a struct or enum that has a Drop
 // impl.
-fn pretend_fields_used(cont: &Container) -> TokenStream {
+fn pretend_fields_used(cont: &Container, is_packed: bool) -> TokenStream {
     let type_ident = &cont.ident;
     let (_, ty_generics, _) = cont.generics.split_for_impl();
 
@@ -58,14 +58,14 @@ fn pretend_fields_used(cont: &Container) -> TokenStream {
             .filter_map(|variant| match variant.style {
                 Style::Struct => {
                     let variant_ident = &variant.ident;
-                    let pat = struct_pattern(&variant.fields);
+                    let pat = struct_pattern(&variant.fields, is_packed);
                     Some(quote!(#type_ident::#variant_ident #pat))
                 }
                 _ => None,
             })
             .collect::<Vec<_>>(),
         Data::Struct(Style::Struct, fields) => {
-            let pat = struct_pattern(fields);
+            let pat = struct_pattern(fields, is_packed);
             vec![quote!(#type_ident #pat)]
         }
         Data::Struct(_, _) => {
@@ -132,9 +132,14 @@ fn pretend_variants_used(cont: &Container) -> TokenStream {
     quote!(#(#cases)*)
 }
 
-fn struct_pattern(fields: &[Field]) -> TokenStream {
+fn struct_pattern(fields: &[Field], is_packed: bool) -> TokenStream {
     let members = fields.iter().map(|field| &field.member);
     let placeholders =
         (0..fields.len()).map(|i| Ident::new(&format!("__v{}", i), Span::call_site()));
-    quote!({ #(#members: ref #placeholders),* })
+    let take_reference = if is_packed {
+        None
+    } else {
+        Some(quote!(ref))
+    };
+    quote!({ #(#members: #take_reference #placeholders),* })
 }
