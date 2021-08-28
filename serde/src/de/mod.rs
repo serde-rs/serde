@@ -1714,7 +1714,7 @@ pub trait SeqAccess<'de> {
     }
 }
 
-impl<'de, 'a, A> SeqAccess<'de> for &'a mut A
+impl<'de, 'a, A: ?Sized> SeqAccess<'de> for &'a mut A
 where
     A: SeqAccess<'de>,
 {
@@ -1867,7 +1867,7 @@ pub trait MapAccess<'de> {
     }
 }
 
-impl<'de, 'a, A> MapAccess<'de> for &'a mut A
+impl<'de, 'a, A: ?Sized> MapAccess<'de> for &'a mut A
 where
     A: MapAccess<'de>,
 {
