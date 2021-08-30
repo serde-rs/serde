@@ -80,3 +80,62 @@ macro_rules! serde_if_integer128 {
 macro_rules! serde_if_integer128 {
     ($($tt:tt)*) => {};
 }
+
+/// Conditional compilation depending on whether Serde is built without support for
+/// 128-bit integers.
+///
+/// This macro may be used in the case of building data formats that may support i128 / u128 integers.
+///
+/// ```edition2018
+/// use serde::{serde_if_integer128, serde_if_no_integer128};
+///
+/// serde_if_no_integer128! {
+///     enum N {
+///         PosInt(u64),
+///         NegInt(i64),
+///         Float(f64),
+///     }
+/// }
+///
+/// serde_if_integer128! {
+///     enum N {
+///         PosInt(u128),
+///         NegInt(i128),
+///         Float(f64),
+///     }
+/// }
+/// ```
+///
+/// When Serde is built without support for 128-bit integers, this macro expands
+/// transparently into just the input tokens.
+///
+/// ```edition2018
+/// macro_rules! serde_if_no_integer128 {
+///     ($($tt:tt)*) => {
+///         $($tt)*
+///     };
+/// }
+/// ```
+///
+/// When built with support for 128-bit integers, this macro expands to
+/// nothing.
+///
+/// ```edition2018
+/// macro_rules! serde_if_no_integer128 {
+///     ($($tt:tt)*) => {};
+/// }
+/// ```
+#[cfg(integer128)]
+#[macro_export]
+macro_rules! serde_if_no_integer128 {
+    ($($tt:tt)*) => {};
+}
+
+#[cfg(not(integer128))]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! serde_if_no_integer128 {
+    ($($tt:tt)*) => {
+        $($tt)*
+    };
+}
