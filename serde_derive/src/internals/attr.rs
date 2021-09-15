@@ -225,6 +225,8 @@ pub struct Container {
     is_packed: bool,
     /// Error message generated when type can't be deserialized
     expecting: Option<String>,
+    ser_impl_attrs: Vec<Punctuated<syn::NestedMeta, syn::token::Comma>>,
+    de_impl_attrs: Vec<Punctuated<syn::NestedMeta, syn::token::Comma>>,
 }
 
 /// Styles of representing an enum.
@@ -308,6 +310,8 @@ impl Container {
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
         let mut serde_path = Attr::none(cx, CRATE);
         let mut expecting = Attr::none(cx, EXPECTING);
+        let mut ser_impl_attrs = VecAttr::none(cx, SER_IMPL_ATTR);
+        let mut de_impl_attrs = VecAttr::none(cx, DE_IMPL_ATTR);
 
         for meta_item in item
             .attrs
@@ -567,6 +571,22 @@ impl Container {
                     }
                 }
 
+                // Parse `#[serde(impl_attr(foo))]`
+                Meta(List(m)) if m.path == IMPL_ATTR => {
+                    ser_impl_attrs.insert(&m.path, m.nested.clone());
+                    de_impl_attrs.insert(&m.path, m.nested.clone());
+                }
+
+                // Parse `#[serde(ser_impl_attr(foo))]`
+                Meta(List(m)) if m.path == SER_IMPL_ATTR => {
+                    ser_impl_attrs.insert(&m.path, m.nested.clone());
+                }
+
+                // Parse `#[serde(de_impl_attr(foo))]`
+                Meta(List(m)) if m.path == DE_IMPL_ATTR => {
+                    de_impl_attrs.insert(&m.path, m.nested.clone());
+                }
+
                 Meta(meta_item) => {
                     let path = meta_item
                         .path()
@@ -620,6 +640,8 @@ impl Container {
             serde_path: serde_path.get(),
             is_packed,
             expecting: expecting.get(),
+            de_impl_attrs: de_impl_attrs.values,
+            ser_impl_attrs: ser_impl_attrs.values,
         }
     }
 
@@ -700,6 +722,14 @@ impl Container {
     /// If `None`, default message will be used
     pub fn expecting(&self) -> Option<&str> {
         self.expecting.as_ref().map(String::as_ref)
+    }
+
+    pub fn ser_impl_attrs(&self) -> &[Punctuated<syn::NestedMeta, syn::token::Comma>] {
+        &self.ser_impl_attrs
+    }
+
+    pub fn de_impl_attrs(&self) -> &[Punctuated<syn::NestedMeta, syn::token::Comma>] {
+        &self.de_impl_attrs
     }
 }
 
