@@ -24,6 +24,7 @@
     // clippy bug: https://github.com/rust-lang/rust-clippy/issues/7575
     clippy::collapsible_match,
     clippy::enum_variant_names,
+    clippy::if_then_panic,
     // clippy bug: https://github.com/rust-lang/rust-clippy/issues/6797
     clippy::manual_map,
     clippy::match_like_matches_macro,

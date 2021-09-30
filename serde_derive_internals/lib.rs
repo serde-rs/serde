@@ -6,6 +6,7 @@
     clippy::cognitive_complexity,
     // clippy bug: https://github.com/rust-lang/rust-clippy/issues/7575
     clippy::collapsible_match,
+    clippy::if_then_panic,
     // clippy bug: https://github.com/rust-lang/rust-clippy/issues/6797
     clippy::manual_map,
     clippy::missing_panics_doc,
