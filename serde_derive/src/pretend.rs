@@ -65,11 +65,13 @@ pub fn pretend_used(cont: &Container, is_packed: bool) -> TokenStream {
 fn pretend_fields_used(cont: &Container, is_packed: bool) -> TokenStream {
     match &cont.data {
         Data::Enum(variants) => pretend_fields_used_enum(cont, variants),
-        Data::Struct(Style::Struct, fields) => if is_packed {
-            pretend_fields_used_struct_packed(cont, fields)
-        } else {
-            pretend_fields_used_struct(cont, fields)
-        },
+        Data::Struct(Style::Struct, fields) => {
+            if is_packed {
+                pretend_fields_used_struct_packed(cont, fields)
+            } else {
+                pretend_fields_used_struct(cont, fields)
+            }
+        }
         Data::Struct(_, _) => quote!(),
     }
 }
