@@ -2,6 +2,7 @@
 name = "serde"
 version = "1.0.130" # remember to update html_root_url and serde_derive dependency
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
+rust-version = "1.15"
 license = "MIT OR Apache-2.0"
 description = "A generic serialization/deserialization framework"
 homepage = "https://serde.rs"
