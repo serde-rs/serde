@@ -101,6 +101,8 @@
     allow(
         // clippy bug: https://github.com/rust-lang/rust-clippy/issues/5704
         unnested_or_patterns,
+        // clippy bug: https://github.com/rust-lang/rust-clippy/issues/7768
+        semicolon_if_nothing_returned,
         // not available in our oldest supported compiler
         checked_conversions,
         empty_enum,
