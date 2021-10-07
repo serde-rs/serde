@@ -1,5 +1,5 @@
 error[E0308]: mismatched types
- --> $DIR/wrong_de.rs:7:10
+ --> $DIR/tests/ui/remote/wrong_de.rs:7:10
   |
 7 | #[derive(Deserialize)]
   |          ^^^^^^^^^^^ expected `u16`, found `u8`

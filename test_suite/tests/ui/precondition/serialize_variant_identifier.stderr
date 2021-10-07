@@ -1,5 +1,5 @@
 error: variant identifiers cannot be serialized
- --> $DIR/serialize_variant_identifier.rs:4:1
+ --> $DIR/tests/ui/precondition/serialize_variant_identifier.rs:4:1
   |
 4 | / #[serde(variant_identifier)]
 5 | | enum F {

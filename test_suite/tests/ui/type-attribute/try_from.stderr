@@ -1,5 +1,5 @@
 error: failed to parse type: try_from = "Option<T"
- --> $DIR/try_from.rs:4:20
+ --> $DIR/tests/ui/type-attribute/try_from.rs:4:20
   |
 4 | #[serde(try_from = "Option<T")]
   |                    ^^^^^^^^^^

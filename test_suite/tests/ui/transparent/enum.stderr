@@ -1,5 +1,5 @@
 error: #[serde(transparent)] is not allowed on an enum
- --> $DIR/enum.rs:4:1
+ --> $DIR/tests/ui/transparent/enum.rs:4:1
   |
 4 | / #[serde(transparent)]
 5 | | enum E {}

@@ -1,5 +1,5 @@
 error: unexpected literal in serde container attribute
- --> $DIR/container.rs:4:9
+ --> $DIR/tests/ui/unexpected-literal/container.rs:4:9
   |
 4 | #[serde("literal")]
   |         ^^^^^^^^^

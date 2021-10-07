@@ -1,5 +1,5 @@
 error: duplicate serde attribute `serialize_with`
- --> $DIR/with-and-serialize-with.rs:5:25
+ --> $DIR/tests/ui/duplicate-attribute/with-and-serialize-with.rs:5:25
   |
 5 |     #[serde(with = "w", serialize_with = "s")]
   |                         ^^^^^^^^^^^^^^

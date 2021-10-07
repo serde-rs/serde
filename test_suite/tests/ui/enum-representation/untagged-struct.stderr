@@ -1,5 +1,5 @@
 error: #[serde(untagged)] can only be used on enums
- --> $DIR/untagged-struct.rs:5:1
+ --> $DIR/tests/ui/enum-representation/untagged-struct.rs:5:1
   |
 5 | struct S;
   | ^^^^^^

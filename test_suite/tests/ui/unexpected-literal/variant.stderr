@@ -1,5 +1,5 @@
 error: unexpected literal in serde variant attribute
- --> $DIR/variant.rs:5:13
+ --> $DIR/tests/ui/unexpected-literal/variant.rs:5:13
   |
 5 |     #[serde("literal")]
   |             ^^^^^^^^^

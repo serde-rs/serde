@@ -1,5 +1,5 @@
 error: #[serde(getter = "...")] is not allowed in an enum
-  --> $DIR/enum_getter.rs:10:1
+  --> $DIR/tests/ui/remote/enum_getter.rs:10:1
    |
 10 | / #[serde(remote = "remote::E")]
 11 | | pub enum E {

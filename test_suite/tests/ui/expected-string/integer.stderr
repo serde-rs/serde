@@ -1,5 +1,5 @@
 error: expected serde rename attribute to be a string: `rename = "..."`
- --> $DIR/integer.rs:5:22
+ --> $DIR/tests/ui/expected-string/integer.rs:5:22
   |
 5 |     #[serde(rename = 100)]
   |                      ^^^

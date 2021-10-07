@@ -1,5 +1,5 @@
 error: unknown serde field attribute `serialize`
- --> $DIR/rename-and-ser.rs:5:27
+ --> $DIR/tests/ui/duplicate-attribute/rename-and-ser.rs:5:27
   |
 5 |     #[serde(rename = "x", serialize = "y")]
   |                           ^^^^^^^^^
