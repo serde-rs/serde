@@ -1,11 +1,11 @@
 error: expected #[serde(...)]
- --> $DIR/tests/ui/malformed/not_list.rs:4:3
+ --> tests/ui/malformed/not_list.rs:4:3
   |
 4 | #[serde]
   |   ^^^^^
 
 error: expected #[serde(...)]
- --> $DIR/tests/ui/malformed/not_list.rs:5:3
+ --> tests/ui/malformed/not_list.rs:5:3
   |
 5 | #[serde = "?"]
   |   ^^^^^^^^^^^

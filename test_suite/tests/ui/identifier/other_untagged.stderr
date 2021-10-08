@@ -1,5 +1,5 @@
 error: #[serde(other)] cannot appear on untagged enum
- --> $DIR/tests/ui/identifier/other_untagged.rs:6:5
+ --> tests/ui/identifier/other_untagged.rs:6:5
   |
 6 | /     #[serde(other)]
 7 | |     Other,

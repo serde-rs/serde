@@ -1,5 +1,5 @@
 error: unknown serde field attribute `abc`
- --> $DIR/tests/ui/unknown-attribute/field.rs:5:13
+ --> tests/ui/unknown-attribute/field.rs:5:13
   |
 5 |     #[serde(abc = "xyz")]
   |             ^^^

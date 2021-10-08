@@ -1,5 +1,5 @@
 error: #[serde(variant_identifier)] may only contain unit variants
- --> $DIR/tests/ui/identifier/variant_tuple.rs:7:5
+ --> tests/ui/identifier/variant_tuple.rs:7:5
   |
 7 |     B(u8, u8),
   |     ^^^^^^^^^

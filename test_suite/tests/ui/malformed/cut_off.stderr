@@ -1,5 +1,5 @@
 error: unexpected end of input, expected literal
- --> $DIR/tests/ui/malformed/cut_off.rs:4:17
+ --> tests/ui/malformed/cut_off.rs:4:17
   |
 4 | #[serde(rename =)]
   |                 ^

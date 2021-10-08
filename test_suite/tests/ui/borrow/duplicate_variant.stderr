@@ -1,5 +1,5 @@
 error: duplicate serde attribute `borrow`
- --> $DIR/tests/ui/borrow/duplicate_variant.rs:8:13
+ --> tests/ui/borrow/duplicate_variant.rs:8:13
   |
 8 |     #[serde(borrow)]
   |             ^^^^^^

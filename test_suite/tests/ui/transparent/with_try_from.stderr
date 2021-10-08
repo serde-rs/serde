@@ -1,5 +1,5 @@
 error: #[serde(transparent)] is not allowed with #[serde(try_from = "...")]
- --> $DIR/tests/ui/transparent/with_try_from.rs:4:1
+ --> tests/ui/transparent/with_try_from.rs:4:1
   |
 4 | / #[serde(transparent, try_from = "u64")]
 5 | | struct S {

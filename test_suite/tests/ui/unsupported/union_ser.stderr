@@ -1,5 +1,5 @@
 error: Serde does not support derive for unions
- --> $DIR/tests/ui/unsupported/union_ser.rs:4:1
+ --> tests/ui/unsupported/union_ser.rs:4:1
   |
 4 | / union Union {
 5 | |     x: u8,

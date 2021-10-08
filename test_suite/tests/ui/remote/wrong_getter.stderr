@@ -1,5 +1,5 @@
 error[E0308]: mismatched types
-  --> $DIR/tests/ui/remote/wrong_getter.rs:15:10
+  --> tests/ui/remote/wrong_getter.rs:15:10
    |
 15 | #[derive(Serialize)]
    |          ^^^^^^^^^ expected `u8`, found `u16`

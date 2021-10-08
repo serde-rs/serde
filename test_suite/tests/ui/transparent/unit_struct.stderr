@@ -1,5 +1,5 @@
 error: #[serde(transparent)] is not allowed on a unit struct
- --> $DIR/tests/ui/transparent/unit_struct.rs:4:1
+ --> tests/ui/transparent/unit_struct.rs:4:1
   |
 4 | / #[serde(transparent)]
 5 | | struct S;

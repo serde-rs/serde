@@ -1,5 +1,5 @@
 error: field `s` does not have lifetime 'b
- --> $DIR/tests/ui/borrow/wrong_lifetime.rs:5:5
+ --> tests/ui/borrow/wrong_lifetime.rs:5:5
   |
 5 | /     #[serde(borrow = "'b")]
 6 | |     s: &'a str,

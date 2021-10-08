@@ -1,5 +1,5 @@
 error: variant field name `conflict` conflicts with internal tag
-  --> $DIR/tests/ui/conflict/internal-tag-alias.rs:4:1
+  --> tests/ui/conflict/internal-tag-alias.rs:4:1
    |
 4  | / #[serde(tag = "conflict")]
 5  | | enum E {

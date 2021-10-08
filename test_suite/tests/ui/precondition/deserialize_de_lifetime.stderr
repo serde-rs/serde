@@ -1,5 +1,5 @@
 error: cannot deserialize when there is a lifetime parameter called 'de
- --> $DIR/tests/ui/precondition/deserialize_de_lifetime.rs:4:10
+ --> tests/ui/precondition/deserialize_de_lifetime.rs:4:10
   |
 4 | struct S<'de> {
   |          ^^^
