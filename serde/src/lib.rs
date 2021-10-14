@@ -73,7 +73,7 @@
 //! [URL]: https://docs.rs/serde_qs
 //! [Envy]: https://github.com/softprops/envy
 //! [Envy Store]: https://github.com/softprops/envy-store
-//! [Cargo]: http://doc.crates.io/manifest.html
+//! [Cargo]: https://doc.rust-lang.org/cargo/reference/manifest.html
 //! [AWS Parameter Store]: https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-paramstore.html
 //! [S-expressions]: https://github.com/rotty/lexpr-rs
 //! [D-Bus]: https://docs.rs/zvariant
