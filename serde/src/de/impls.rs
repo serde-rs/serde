@@ -50,6 +50,32 @@ impl<'de> Deserialize<'de> for ! {
     }
 }
 
+#[cfg(feature = "unstable")]
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for core::lazy::OnceCell<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(match Option::<T>::deserialize(deserializer)? {
+            Some(value) => core::lazy::OnceCell::from(value),
+            None => core::lazy::OnceCell::new(),
+        })
+    }
+}
+
+#[cfg(all(feature = "unstable", feature = "std"))]
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for std::lazy::SyncOnceCell<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(match Option::<T>::deserialize(deserializer)? {
+            Some(value) => std::lazy::SyncOnceCell::from(value),
+            None => std::lazy::SyncOnceCell::new(),
+        })
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 struct BoolVisitor;

@@ -301,6 +301,32 @@ impl Serialize for ! {
     }
 }
 
+#[cfg(feature = "unstable")]
+impl<T: Serialize> Serialize for core::lazy::OnceCell<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self.get() {
+            Some(value) => serializer.serialize_some(value),
+            None => serializer.serialize_none(),
+        }
+    }
+}
+
+#[cfg(all(feature = "unstable", feature = "std"))]
+impl<T: Serialize> Serialize for std::lazy::SyncOnceCell<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self.get() {
+            Some(value) => serializer.serialize_some(value),
+            None => serializer.serialize_none(),
+        }
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 macro_rules! tuple_impls {
