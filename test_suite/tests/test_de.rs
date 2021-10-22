@@ -972,7 +972,7 @@ declare_tests! {
                 Token::Str("secs_since_epoch"),
                 Token::U64(1),
 
-                Token::Str("nanos_since_epoch"),
+                Token::Str("subnanos"),
                 Token::U32(2),
             Token::StructEnd,
         ],
@@ -1637,7 +1637,7 @@ declare_error_tests! {
                 Token::Str("secs_since_epoch"),
                 Token::U64(u64::max_value()),
 
-                Token::Str("nanos_since_epoch"),
+                Token::Str("subnanos"),
                 Token::U32(1_000_000_000),
             Token::StructEnd,
         ],

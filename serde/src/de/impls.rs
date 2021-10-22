@@ -2013,7 +2013,7 @@ impl<'de> Deserialize<'de> for SystemTime {
                     type Value = Field;
 
                     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                        formatter.write_str("`secs_since_epoch` or `nanos_since_epoch`")
+                        formatter.write_str("`secs_since_epoch` or `subnanos`")
                     }
 
                     fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
@@ -2022,7 +2022,7 @@ impl<'de> Deserialize<'de> for SystemTime {
                     {
                         match value {
                             "secs_since_epoch" => Ok(Field::Secs),
-                            "nanos_since_epoch" => Ok(Field::Nanos),
+                            "subnanos" => Ok(Field::Nanos),
                             _ => Err(Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -2033,7 +2033,7 @@ impl<'de> Deserialize<'de> for SystemTime {
                     {
                         match value {
                             b"secs_since_epoch" => Ok(Field::Secs),
-                            b"nanos_since_epoch" => Ok(Field::Nanos),
+                            b"subnanos" => Ok(Field::Nanos),
                             _ => {
                                 let value = String::from_utf8_lossy(value);
                                 Err(Error::unknown_field(&value, FIELDS))
@@ -2105,7 +2105,7 @@ impl<'de> Deserialize<'de> for SystemTime {
                         Field::Nanos => {
                             if nanos.is_some() {
                                 return Err(<A::Error as Error>::duplicate_field(
-                                    "nanos_since_epoch",
+                                    "subnanos",
                                 ));
                             }
                             nanos = Some(try!(map.next_value()));
@@ -2118,14 +2118,14 @@ impl<'de> Deserialize<'de> for SystemTime {
                 };
                 let nanos = match nanos {
                     Some(nanos) => nanos,
-                    None => return Err(<A::Error as Error>::missing_field("nanos_since_epoch")),
+                    None => return Err(<A::Error as Error>::missing_field("subnanos")),
                 };
                 try!(check_overflow(secs, nanos));
                 Ok(Duration::new(secs, nanos))
             }
         }
 
-        const FIELDS: &'static [&'static str] = &["secs_since_epoch", "nanos_since_epoch"];
+        const FIELDS: &'static [&'static str] = &["secs_since_epoch", "subnanos"];
         let duration = try!(deserializer.deserialize_struct("SystemTime", FIELDS, DurationVisitor));
         #[cfg(systemtime_checked_add)]
         let ret = UNIX_EPOCH

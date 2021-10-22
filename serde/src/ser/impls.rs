@@ -619,7 +619,7 @@ impl Serialize for SystemTime {
             .map_err(|_| S::Error::custom("SystemTime must be later than UNIX_EPOCH"))?;
         let mut state = try!(serializer.serialize_struct("SystemTime", 2));
         try!(state.serialize_field("secs_since_epoch", &duration_since_epoch.as_secs()));
-        try!(state.serialize_field("nanos_since_epoch", &duration_since_epoch.subsec_nanos()));
+        try!(state.serialize_field("subnanos", &duration_since_epoch.subsec_nanos()));
         state.end()
     }
 }

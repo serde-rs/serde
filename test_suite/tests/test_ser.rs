@@ -368,7 +368,7 @@ declare_tests! {
                 Token::Str("secs_since_epoch"),
                 Token::U64(1),
 
-                Token::Str("nanos_since_epoch"),
+                Token::Str("subnanos"),
                 Token::U32(200),
             Token::StructEnd,
         ],
