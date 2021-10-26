@@ -364,7 +364,7 @@ fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
     let path = match transparent_field.attrs.deserialize_with() {
         Some(path) => quote!(#path),
         None => {
-            let span = transparent_field.original.span();
+            let span = transparent_field.original.ty.span();
             quote_spanned!(span=> _serde::Deserialize::deserialize)
         }
     };
@@ -375,7 +375,10 @@ fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
             quote!(#member: __transparent)
         } else {
             let value = match field.attrs.default() {
-                attr::Default::Default => quote!(_serde::__private::Default::default()),
+                attr::Default::Default => {
+                    let span = transparent_field.original.ty.span();
+                    quote_spanned!(span=> _serde::__private::Default::default())
+                },
                 attr::Default::Path(path) => quote!(#path()),
                 attr::Default::None => quote!(_serde::__private::PhantomData),
             };
@@ -658,7 +661,7 @@ fn deserialize_seq(
             let visit = match field.attrs.deserialize_with() {
                 None => {
                     let field_ty = field.ty;
-                    let span = field.original.span();
+                    let span = field.original.ty.span();
                     let func =
                         quote_spanned!(span=> _serde::de::SeqAccess::next_element::<#field_ty>);
                     quote!(try!(#func(&mut __seq)))
@@ -674,7 +677,10 @@ fn deserialize_seq(
                 }
             };
             let value_if_none = match field.attrs.default() {
-                attr::Default::Default => quote!(_serde::__private::Default::default()),
+                attr::Default::Default => {
+                    let span = field.original.ty.span();
+                    quote_spanned!(span=>  _serde::__private::Default::default())
+                },
                 attr::Default::Path(path) => quote!(#path()),
                 attr::Default::None => quote!(
                     return _serde::__private::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
@@ -761,9 +767,11 @@ fn deserialize_seq_in_place(
             }
         } else {
             let value_if_none = match field.attrs.default() {
-                attr::Default::Default => quote!(
-                    self.place.#member = _serde::__private::Default::default();
-                ),
+                attr::Default::Default => {
+                    let span = field.original.ty.span();
+                    let default = quote_spanned!(span=> _serde::__private::Default::default(););
+                    quote!(self.place.#member = #default)
+                },
                 attr::Default::Path(path) => quote!(
                     self.place.#member = #path();
                 ),
@@ -834,7 +842,7 @@ fn deserialize_newtype_struct(
 
     let value = match field.attrs.deserialize_with() {
         None => {
-            let span = field.original.span();
+            let span = field.original.ty.span();
             let func = quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize);
             quote! {
                 try!(#func(__e))
@@ -1857,7 +1865,7 @@ fn deserialize_externally_tagged_newtype_variant(
     match field.attrs.deserialize_with() {
         None => {
             let field_ty = field.ty;
-            let span = field.original.span();
+            let span = field.original.ty.span();
             let func =
                 quote_spanned!(span=> _serde::de::VariantAccess::newtype_variant::<#field_ty>);
             quote_expr! {
@@ -1886,7 +1894,7 @@ fn deserialize_untagged_newtype_variant(
     let field_ty = field.ty;
     match field.attrs.deserialize_with() {
         None => {
-            let span = field.original.span();
+            let span = field.original.ty.span();
             let func = quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize);
             quote_expr! {
                 _serde::__private::Result::map(#func(#deserializer), #this::#variant_ident)
@@ -2476,7 +2484,7 @@ fn deserialize_map(
             let visit = match field.attrs.deserialize_with() {
                 None => {
                     let field_ty = field.ty;
-                    let span = field.original.span();
+                    let span = field.original.ty.span();
                     let func =
                         quote_spanned!(span=> _serde::de::MapAccess::next_value::<#field_ty>);
                     quote! {
@@ -2564,7 +2572,7 @@ fn deserialize_map(
             let field_ty = field.ty;
             let func = match field.attrs.deserialize_with() {
                 None => {
-                    let span = field.original.span();
+                    let span = field.original.ty.span();
                     quote_spanned!(span=> _serde::de::Deserialize::deserialize)
                 }
                 Some(path) => quote!(#path),
@@ -2948,7 +2956,7 @@ fn unwrap_to_variant_closure(
 fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
     match field.attrs.default() {
         attr::Default::Default => {
-            let span = field.original.span();
+            let span = field.original.ty.span();
             let func = quote_spanned!(span=> _serde::__private::Default::default);
             return quote_expr!(#func());
         }

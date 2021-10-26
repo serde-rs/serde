@@ -201,7 +201,7 @@ fn serialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
     let path = match transparent_field.attrs.serialize_with() {
         Some(path) => quote!(#path),
         None => {
-            let span = transparent_field.original.span();
+            let span = transparent_field.original.ty.span();
             quote_spanned!(span=> _serde::Serialize::serialize)
         }
     };
@@ -247,7 +247,7 @@ fn serialize_newtype_struct(
         field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
     }
 
-    let span = field.original.span();
+    let span = field.original.ty.span();
     let func = quote_spanned!(span=> _serde::Serializer::serialize_newtype_struct);
     quote_expr! {
         #func(__serializer, #type_name, #field_expr)
@@ -534,7 +534,7 @@ fn serialize_externally_tagged_variant(
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
             }
 
-            let span = field.original.span();
+            let span = field.original.ty.span();
             let func = quote_spanned!(span=> _serde::Serializer::serialize_newtype_variant);
             quote_expr! {
                 #func(
@@ -610,7 +610,7 @@ fn serialize_internally_tagged_variant(
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
             }
 
-            let span = field.original.span();
+            let span = field.original.ty.span();
             let func = quote_spanned!(span=> _serde::__private::ser::serialize_tagged_newtype);
             quote_expr! {
                 #func(
@@ -667,7 +667,7 @@ fn serialize_adjacently_tagged_variant(
                     field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
                 }
 
-                let span = field.original.span();
+                let span = field.original.ty.span();
                 let func = quote_spanned!(span=> _serde::ser::SerializeStruct::serialize_field);
                 return quote_block! {
                     let mut __struct = try!(_serde::Serializer::serialize_struct(
@@ -772,7 +772,7 @@ fn serialize_untagged_variant(
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
             }
 
-            let span = field.original.span();
+            let span = field.original.ty.span();
             let func = quote_spanned!(span=> _serde::Serialize::serialize);
             quote_expr! {
                 #func(#field_expr, __serializer)
@@ -1070,7 +1070,7 @@ fn serialize_tuple_struct_visitor(
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
             }
 
-            let span = field.original.span();
+            let span = field.original.ty.span();
             let func = tuple_trait.serialize_element(span);
             let ser = quote! {
                 try!(#func(&mut __serde_state, #field_expr));
@@ -1113,7 +1113,7 @@ fn serialize_struct_visitor(
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
             }
 
-            let span = field.original.span();
+            let span = field.original.ty.span();
             let ser = if field.attrs.flatten() {
                 let func = quote_spanned!(span=> _serde::Serialize::serialize);
                 quote! {
