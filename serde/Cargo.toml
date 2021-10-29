@@ -16,6 +16,9 @@ build = "build.rs"
 
 [dependencies]
 serde_derive = { version = "=1.0.130", optional = true, path = "../serde_derive" }
+core = { version = "1.0.0", optional = true, package = "rustc-std-workspace-core" }
+alloc = { version = "1.0.0", optional = true, package = "rustc-std-workspace-alloc" }
+compiler_builtins = { version = "0.1.0", optional = true }
 
 [dev-dependencies]
 serde_derive = { version = "1.0", path = "../serde_derive" }
@@ -48,9 +51,10 @@ unstable = []
 # Provide impls for types in the Rust core allocation and collections library
 # including String, Box<T>, Vec<T>, and Cow<T>. This is a subset of std but may
 # be enabled without depending on all of std.
-alloc = []
+#alloc = []
 
 # Opt into impls for Rc<T> and Arc<T>. Serializing and deserializing these types
 # does not preserve identity and may result in multiple copies of the same data.
 # Be sure that this is what you want before enabling this feature.
 rc = []
+rustc-dep-of-std = ["core", "alloc", "compiler_builtins/rustc-dep-of-std"]
