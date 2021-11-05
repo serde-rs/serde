@@ -1,6 +1,6 @@
 #![allow(
     clippy::decimal_literal_representation,
-    clippy::if_then_panic,
+    clippy::manual_assert,
     clippy::unreadable_literal
 )]
 #![cfg_attr(feature = "unstable", feature(never_type))]

@@ -155,7 +155,7 @@
     allow(
         cloned_instead_of_copied,
         empty_line_after_outer_attr,
-        if_then_panic,
+        manual_assert,
         missing_docs_in_private_items,
         missing_panics_doc,
         module_name_repetitions,
