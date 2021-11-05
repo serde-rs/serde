@@ -94,7 +94,6 @@
 #![cfg_attr(feature = "unstable", feature(never_type))]
 #![allow(unknown_lints, bare_trait_objects, deprecated)]
 #![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
-#![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 // Ignored clippy and clippy_pedantic lints
 #![cfg_attr(
     feature = "cargo-clippy",

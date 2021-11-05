@@ -1,6 +1,5 @@
 #![doc(html_root_url = "https://docs.rs/serde_derive_internals/0.26.0")]
 #![allow(unknown_lints, bare_trait_objects)]
-#![deny(clippy::all, clippy::pedantic)]
 // Ignored clippy lints
 #![allow(
     clippy::cognitive_complexity,

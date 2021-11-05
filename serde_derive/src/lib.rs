@@ -15,7 +15,6 @@
 
 #![doc(html_root_url = "https://docs.rs/serde_derive/1.0.130")]
 #![allow(unknown_lints, bare_trait_objects)]
-#![deny(clippy::all, clippy::pedantic)]
 // Ignored clippy lints
 #![allow(
     // clippy false positive: https://github.com/rust-lang/rust-clippy/issues/7054
