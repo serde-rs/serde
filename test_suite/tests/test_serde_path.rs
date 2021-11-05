@@ -1,3 +1,5 @@
+#![allow(clippy::type_repetition_in_bounds)]
+
 #[test]
 fn test_gen_custom_serde() {
     #[derive(serde::Serialize, serde::Deserialize)]

@@ -1,3 +1,5 @@
+#![allow(clippy::items_after_statements, clippy::used_underscore_binding)]
+
 use serde::{Deserialize, Deserializer};
 use serde_test::{assert_de_tokens, assert_de_tokens_error, Token};
 

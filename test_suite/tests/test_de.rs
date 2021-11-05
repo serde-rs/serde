@@ -1,6 +1,8 @@
 #![allow(
     clippy::decimal_literal_representation,
+    clippy::empty_enum,
     clippy::manual_assert,
+    clippy::needless_pass_by_value,
     clippy::unreadable_literal
 )]
 #![cfg_attr(feature = "unstable", feature(never_type))]

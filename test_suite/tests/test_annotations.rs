@@ -3,6 +3,7 @@
     clippy::from_over_into,
     // Clippy bug: https://github.com/rust-lang/rust-clippy/issues/7422
     clippy::nonstandard_macro_braces,
+    clippy::too_many_lines,
     clippy::trivially_copy_pass_by_ref
 )]
 

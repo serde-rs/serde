@@ -1,3 +1,5 @@
+#![allow(clippy::similar_names)]
+
 use serde::de::value::{self, MapAccessDeserializer};
 use serde::de::{IntoDeserializer, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};

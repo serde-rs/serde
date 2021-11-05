@@ -1,3 +1,5 @@
+#![allow(clippy::used_underscore_binding)]
+
 use serde::{Deserialize, Serialize};
 
 #[test]

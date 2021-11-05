@@ -6,9 +6,14 @@
 #![allow(
     unknown_lints,
     mixed_script_confusables,
+    clippy::items_after_statements,
+    clippy::missing_errors_doc,
+    clippy::missing_panics_doc,
+    clippy::must_use_candidate,
     // Clippy bug: https://github.com/rust-lang/rust-clippy/issues/7422
     clippy::nonstandard_macro_braces,
     clippy::ptr_arg,
+    clippy::too_many_lines,
     clippy::trivially_copy_pass_by_ref
 )]
 
