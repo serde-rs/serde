@@ -1,5 +1,5 @@
 #![deny(trivial_numeric_casts)]
-#![allow(clippy::redundant_field_names)]
+#![allow(clippy::enum_variant_names, clippy::redundant_field_names)]
 
 mod bytes;
 
