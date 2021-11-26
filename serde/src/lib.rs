@@ -60,7 +60,7 @@
 //!
 //! [JSON]: https://github.com/serde-rs/json
 //! [Bincode]: https://github.com/servo/bincode
-//! [CBOR]: https://github.com/pyfisch/cbor
+//! [CBOR]: https://github.com/enarx/ciborium
 //! [YAML]: https://github.com/dtolnay/serde-yaml
 //! [MessagePack]: https://github.com/3Hren/msgpack-rust
 //! [TOML]: https://github.com/alexcrichton/toml-rs
