@@ -97,7 +97,8 @@ fn main() {
             || target.starts_with("aarch64")
             || target.starts_with("powerpc64")
             || target.starts_with("sparc64")
-            || target.starts_with("mips64el");
+            || target.starts_with("mips64el")
+            || target.starts_with("riscv64");
         let has_atomic32 = has_atomic64 || emscripten;
         if has_atomic64 {
             println!("cargo:rustc-cfg=std_atomic64");
