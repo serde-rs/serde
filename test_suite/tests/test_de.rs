@@ -1347,7 +1347,7 @@ fn test_atomics() {
         let mut de = serde_test::Deserializer::new(tokens);
         match A::deserialize(&mut de) {
             Ok(v) => {
-                let loaded = load(&v, Ordering::SeqCst);
+                let loaded = load(&v, Ordering::Relaxed);
                 assert_eq!(val, loaded);
             }
             Err(e) => panic!("tokens failed to deserialize: {}", e),
