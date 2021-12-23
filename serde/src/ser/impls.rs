@@ -915,6 +915,7 @@ macro_rules! atomic_impl {
                 where
                     S: Serializer,
                 {
+                    // Matches the atomic ordering used in libcore for the Debug impl
                     self.load(Ordering::SeqCst).serialize(serializer)
                 }
             }
