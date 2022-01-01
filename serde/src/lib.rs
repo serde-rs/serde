@@ -141,7 +141,7 @@
 )]
 // Rustc lints.
 #![deny(missing_docs, unused_imports)]
-
+#![feature(specialization)]
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "alloc")]
