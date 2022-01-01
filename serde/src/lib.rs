@@ -295,3 +295,8 @@ extern crate serde_derive;
 #[cfg(feature = "serde_derive")]
 #[doc(hidden)]
 pub use serde_derive::*;
+
+#[cfg(all(serde_derive, any(feature = "std", feature = "alloc")))]
+mod actually_private {
+    pub struct T;
+}

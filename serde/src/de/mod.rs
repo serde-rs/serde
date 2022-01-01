@@ -1213,6 +1213,20 @@ pub trait Deserializer<'de>: Sized {
     fn is_human_readable(&self) -> bool {
         true
     }
+
+    // Not public API.
+    #[cfg(all(serde_derive, any(feature = "std", feature = "alloc")))]
+    #[doc(hidden)]
+    fn __deserialize_content<V>(
+        self,
+        _: ::actually_private::T,
+        visitor: V,
+    ) -> Result<::private::de::Content<'de>, Self::Error>
+    where
+        V: Visitor<'de, Value = ::private::de::Content<'de>>,
+    {
+        self.deserialize_any(visitor)
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
