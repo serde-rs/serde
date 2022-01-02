@@ -4,7 +4,7 @@ use de::{
     Deserialize, Deserializer, EnumAccess, Error, SeqAccess, Unexpected, VariantAccess, Visitor,
 };
 
-#[cfg(any(core_duration, feature = "std", feature = "alloc"))]
+#[cfg(any(feature = "std", feature = "alloc", not(no_core_duration)))]
 use de::MapAccess;
 
 use seed::InPlaceSeed;
@@ -637,10 +637,10 @@ macro_rules! forwarded_impl {
     }
 }
 
-#[cfg(all(feature = "std", de_boxed_c_str))]
+#[cfg(all(feature = "std", not(no_de_boxed_c_str)))]
 forwarded_impl!((), Box<CStr>, CString::into_boxed_c_str);
 
-#[cfg(core_reverse)]
+#[cfg(not(no_core_reverse))]
 forwarded_impl!((T), Reverse<T>, Reverse);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1604,7 +1604,7 @@ impl<'de> Deserialize<'de> for PathBuf {
     }
 }
 
-#[cfg(all(feature = "std", de_boxed_path))]
+#[cfg(all(feature = "std", not(no_de_boxed_path)))]
 forwarded_impl!((), Box<Path>, PathBuf::into_boxed_path);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1685,11 +1685,7 @@ forwarded_impl!((T), Box<[T]>, Vec::into_boxed_slice);
 #[cfg(any(feature = "std", feature = "alloc"))]
 forwarded_impl!((), Box<str>, String::into_boxed_str);
 
-#[cfg(all(
-    not(de_rc_dst),
-    feature = "rc",
-    any(feature = "std", feature = "alloc")
-))]
+#[cfg(all(no_de_rc_dst, feature = "rc", any(feature = "std", feature = "alloc")))]
 forwarded_impl! {
     /// This impl requires the [`"rc"`] Cargo feature of Serde.
     ///
@@ -1701,11 +1697,7 @@ forwarded_impl! {
     (T), Arc<T>, Arc::new
 }
 
-#[cfg(all(
-    not(de_rc_dst),
-    feature = "rc",
-    any(feature = "std", feature = "alloc")
-))]
+#[cfg(all(no_de_rc_dst, feature = "rc", any(feature = "std", feature = "alloc")))]
 forwarded_impl! {
     /// This impl requires the [`"rc"`] Cargo feature of Serde.
     ///
@@ -1772,7 +1764,11 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(all(de_rc_dst, feature = "rc", any(feature = "std", feature = "alloc")))]
+#[cfg(all(
+    not(no_de_rc_dst),
+    feature = "rc",
+    any(feature = "std", feature = "alloc")
+))]
 macro_rules! box_forwarded_impl {
     (
         $(#[doc = $doc:tt])*
@@ -1793,7 +1789,11 @@ macro_rules! box_forwarded_impl {
     };
 }
 
-#[cfg(all(de_rc_dst, feature = "rc", any(feature = "std", feature = "alloc")))]
+#[cfg(all(
+    not(no_de_rc_dst),
+    feature = "rc",
+    any(feature = "std", feature = "alloc")
+))]
 box_forwarded_impl! {
     /// This impl requires the [`"rc"`] Cargo feature of Serde.
     ///
@@ -1805,7 +1805,11 @@ box_forwarded_impl! {
     Rc
 }
 
-#[cfg(all(de_rc_dst, feature = "rc", any(feature = "std", feature = "alloc")))]
+#[cfg(all(
+    not(no_de_rc_dst),
+    feature = "rc",
+    any(feature = "std", feature = "alloc")
+))]
 box_forwarded_impl! {
     /// This impl requires the [`"rc"`] Cargo feature of Serde.
     ///
@@ -1849,7 +1853,7 @@ forwarded_impl!((T), RwLock<T>, RwLock::new);
 //         secs: u64,
 //         nanos: u32,
 //     }
-#[cfg(any(core_duration, feature = "std"))]
+#[cfg(any(feature = "std", not(no_core_duration)))]
 impl<'de> Deserialize<'de> for Duration {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -2127,11 +2131,11 @@ impl<'de> Deserialize<'de> for SystemTime {
 
         const FIELDS: &'static [&'static str] = &["secs_since_epoch", "nanos_since_epoch"];
         let duration = try!(deserializer.deserialize_struct("SystemTime", FIELDS, DurationVisitor));
-        #[cfg(systemtime_checked_add)]
+        #[cfg(not(no_systemtime_checked_add))]
         let ret = UNIX_EPOCH
             .checked_add(duration)
             .ok_or_else(|| D::Error::custom("overflow deserializing SystemTime"));
-        #[cfg(not(systemtime_checked_add))]
+        #[cfg(no_systemtime_checked_add)]
         let ret = Ok(UNIX_EPOCH + duration);
         ret
     }
@@ -2167,7 +2171,7 @@ where
     }
 }
 
-#[cfg(range_inclusive)]
+#[cfg(not(no_range_inclusive))]
 impl<'de, Idx> Deserialize<'de> for RangeInclusive<Idx>
 where
     Idx: Deserialize<'de>,
@@ -2319,7 +2323,7 @@ mod range {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(ops_bound, collections_bound))]
+#[cfg(any(not(no_ops_bound), all(feature = "std", not(no_collections_bound))))]
 impl<'de, T> Deserialize<'de> for Bound<T>
 where
     T: Deserialize<'de>,
@@ -2430,7 +2434,7 @@ where
 macro_rules! nonzero_integers {
     ( $( $T: ident, )+ ) => {
         $(
-            #[cfg(num_nonzero)]
+            #[cfg(not(no_num_nonzero))]
             impl<'de> Deserialize<'de> for num::$T {
                 fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
                 where
@@ -2455,7 +2459,7 @@ nonzero_integers! {
     NonZeroUsize,
 }
 
-#[cfg(num_nonzero_signed)]
+#[cfg(not(no_num_nonzero_signed))]
 nonzero_integers! {
     NonZeroI8,
     NonZeroI16,
@@ -2471,7 +2475,7 @@ serde_if_integer128! {
         NonZeroU128,
     }
 
-    #[cfg(num_nonzero_signed)]
+    #[cfg(not(no_num_nonzero_signed))]
     nonzero_integers! {
         NonZeroI128,
     }
@@ -2599,7 +2603,7 @@ where
     }
 }
 
-#[cfg(all(feature = "std", std_atomic))]
+#[cfg(all(feature = "std", not(no_std_atomic)))]
 macro_rules! atomic_impl {
     ($($ty:ident)*) => {
         $(
@@ -2615,14 +2619,14 @@ macro_rules! atomic_impl {
     };
 }
 
-#[cfg(all(feature = "std", std_atomic))]
+#[cfg(all(feature = "std", not(no_std_atomic)))]
 atomic_impl! {
     AtomicBool
     AtomicI8 AtomicI16 AtomicI32 AtomicIsize
     AtomicU8 AtomicU16 AtomicU32 AtomicUsize
 }
 
-#[cfg(all(feature = "std", std_atomic64))]
+#[cfg(all(feature = "std", not(no_std_atomic64)))]
 atomic_impl! {
     AtomicI64 AtomicU64
 }

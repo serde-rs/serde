@@ -239,7 +239,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(range_inclusive)]
+#[cfg(not(no_range_inclusive))]
 impl<Idx> Serialize for RangeInclusive<Idx>
 where
     Idx: Serialize,
@@ -258,7 +258,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(ops_bound, collections_bound))]
+#[cfg(any(not(no_ops_bound), all(feature = "std", not(no_collections_bound))))]
 impl<T> Serialize for Bound<T>
 where
     T: Serialize,
@@ -467,7 +467,7 @@ where
 macro_rules! nonzero_integers {
     ( $( $T: ident, )+ ) => {
         $(
-            #[cfg(num_nonzero)]
+            #[cfg(not(no_num_nonzero))]
             impl Serialize for num::$T {
                 fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
                 where
@@ -488,7 +488,7 @@ nonzero_integers! {
     NonZeroUsize,
 }
 
-#[cfg(num_nonzero_signed)]
+#[cfg(not(no_num_nonzero_signed))]
 nonzero_integers! {
     NonZeroI8,
     NonZeroI16,
@@ -504,7 +504,7 @@ serde_if_integer128! {
         NonZeroU128,
     }
 
-    #[cfg(num_nonzero_signed)]
+    #[cfg(not(no_num_nonzero_signed))]
     nonzero_integers! {
         NonZeroI128,
     }
@@ -591,7 +591,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(core_duration, feature = "std"))]
+#[cfg(any(feature = "std", not(no_core_duration)))]
 impl Serialize for Duration {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -890,7 +890,7 @@ where
     }
 }
 
-#[cfg(core_reverse)]
+#[cfg(not(no_core_reverse))]
 impl<T> Serialize for Reverse<T>
 where
     T: Serialize,
@@ -906,7 +906,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(all(feature = "std", std_atomic))]
+#[cfg(all(feature = "std", not(no_std_atomic)))]
 macro_rules! atomic_impl {
     ($($ty:ident)*) => {
         $(
@@ -923,14 +923,14 @@ macro_rules! atomic_impl {
     }
 }
 
-#[cfg(all(feature = "std", std_atomic))]
+#[cfg(all(feature = "std", not(no_std_atomic)))]
 atomic_impl! {
     AtomicBool
     AtomicI8 AtomicI16 AtomicI32 AtomicIsize
     AtomicU8 AtomicU16 AtomicU32 AtomicUsize
 }
 
-#[cfg(all(feature = "std", std_atomic64))]
+#[cfg(all(feature = "std", not(no_std_atomic64)))]
 atomic_impl! {
     AtomicI64 AtomicU64
 }

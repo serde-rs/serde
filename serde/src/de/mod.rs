@@ -1215,7 +1215,7 @@ pub trait Deserializer<'de>: Sized {
     }
 
     // Not public API.
-    #[cfg(all(serde_derive, any(feature = "std", feature = "alloc")))]
+    #[cfg(all(not(no_serde_derive), any(feature = "std", feature = "alloc")))]
     #[doc(hidden)]
     fn __deserialize_content<V>(
         self,
