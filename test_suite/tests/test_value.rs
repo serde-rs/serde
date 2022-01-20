@@ -19,7 +19,6 @@ fn test_u32_to_enum() {
     assert_eq!(E::B, e);
 }
 
-#[cfg(not(any(target_arch = "asmjs", target_arch = "wasm32")))]
 #[test]
 fn test_integer128() {
     let de_u128 = IntoDeserializer::<value::Error>::into_deserializer(1u128);
