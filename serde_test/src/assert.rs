@@ -60,7 +60,7 @@ where
 /// ]);
 /// ```
 #[cfg_attr(track_caller, track_caller)]
-pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token])
+pub fn assert_ser_tokens<T: ?Sized>(value: &T, tokens: &[Token])
 where
     T: Serialize,
 {
@@ -113,7 +113,7 @@ where
 /// }
 /// ```
 #[cfg_attr(track_caller, track_caller)]
-pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token], error: &str)
+pub fn assert_ser_tokens_error<T: ?Sized>(value: &T, tokens: &[Token], error: &str)
 where
     T: Serialize,
 {
