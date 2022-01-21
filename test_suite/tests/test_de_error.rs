@@ -60,302 +60,399 @@ enum EnumSkipAll {
     Skipped,
 }
 
-macro_rules! declare_error_tests {
-    ($(
-        $(#[$cfg:meta])*
-        $name:ident<$target:ty> { $tokens:expr, $expected:expr, }
-    )+) => {
-        $(
-            $(#[$cfg])*
-            #[test]
-            fn $name() {
-                assert_de_tokens_error::<$target>($tokens, $expected);
-            }
-        )+
-    }
-}
-
-declare_error_tests! {
-    test_unknown_field<StructDenyUnknown> {
+#[test]
+fn test_unknown_field() {
+    assert_de_tokens_error::<StructDenyUnknown>(
         &[
-            Token::Struct { name: "StructDenyUnknown", len: 1 },
-                Token::Str("a"),
-                Token::I32(0),
-
-                Token::Str("d"),
+            Token::Struct {
+                name: "StructDenyUnknown",
+                len: 1,
+            },
+            Token::Str("a"),
+            Token::I32(0),
+            Token::Str("d"),
         ],
         "unknown field `d`, expected `a`",
-    }
-    test_skipped_field_is_unknown<StructDenyUnknown> {
+    );
+}
+
+#[test]
+fn test_skipped_field_is_unknown() {
+    assert_de_tokens_error::<StructDenyUnknown>(
         &[
-            Token::Struct { name: "StructDenyUnknown", len: 1 },
-                Token::Str("b"),
+            Token::Struct {
+                name: "StructDenyUnknown",
+                len: 1,
+            },
+            Token::Str("b"),
         ],
         "unknown field `b`, expected `a`",
-    }
-    test_skip_all_deny_unknown<StructSkipAllDenyUnknown> {
+    );
+}
+
+#[test]
+fn test_skip_all_deny_unknown() {
+    assert_de_tokens_error::<StructSkipAllDenyUnknown>(
         &[
-            Token::Struct { name: "StructSkipAllDenyUnknown", len: 0 },
-                Token::Str("a"),
+            Token::Struct {
+                name: "StructSkipAllDenyUnknown",
+                len: 0,
+            },
+            Token::Str("a"),
         ],
         "unknown field `a`, there are no fields",
-    }
-    test_unknown_variant<Enum> {
-        &[
-            Token::UnitVariant { name: "Enum", variant: "Foo" },
-        ],
-        "unknown variant `Foo`, expected one of `Unit`, `Simple`, `Seq`, `Map`, `SimpleWithSkipped`",
-    }
-    test_enum_skipped_variant<Enum> {
-        &[
-            Token::UnitVariant { name: "Enum", variant: "Skipped" },
-        ],
-        "unknown variant `Skipped`, expected one of `Unit`, `Simple`, `Seq`, `Map`, `SimpleWithSkipped`",
-    }
-    test_enum_skip_all<EnumSkipAll> {
-        &[
-            Token::UnitVariant { name: "EnumSkipAll", variant: "Skipped" },
-        ],
+    );
+}
+
+#[test]
+fn test_unknown_variant() {
+    assert_de_tokens_error::<Enum>(
+    &[
+        Token::UnitVariant { name: "Enum", variant: "Foo" },
+    ],
+    "unknown variant `Foo`, expected one of `Unit`, `Simple`, `Seq`, `Map`, `SimpleWithSkipped`",
+    );
+}
+
+#[test]
+fn test_enum_skipped_variant() {
+    assert_de_tokens_error::<Enum>(
+    &[
+        Token::UnitVariant { name: "Enum", variant: "Skipped" },
+    ],
+    "unknown variant `Skipped`, expected one of `Unit`, `Simple`, `Seq`, `Map`, `SimpleWithSkipped`",
+    );
+}
+
+#[test]
+fn test_enum_skip_all() {
+    assert_de_tokens_error::<EnumSkipAll>(
+        &[Token::UnitVariant {
+            name: "EnumSkipAll",
+            variant: "Skipped",
+        }],
         "unknown variant `Skipped`, there are no variants",
-    }
-    test_duplicate_field_struct<Struct> {
+    );
+}
+
+#[test]
+fn test_duplicate_field_struct() {
+    assert_de_tokens_error::<Struct>(
         &[
             Token::Map { len: Some(3) },
-                Token::Str("a"),
-                Token::I32(1),
-
-                Token::Str("a"),
+            Token::Str("a"),
+            Token::I32(1),
+            Token::Str("a"),
         ],
         "duplicate field `a`",
-    }
-    test_duplicate_field_enum<Enum> {
-        &[
-            Token::StructVariant { name: "Enum", variant: "Map", len: 3 },
-                Token::Str("a"),
-                Token::I32(1),
+    );
+}
 
-                Token::Str("a"),
+#[test]
+fn test_duplicate_field_enum() {
+    assert_de_tokens_error::<Enum>(
+        &[
+            Token::StructVariant {
+                name: "Enum",
+                variant: "Map",
+                len: 3,
+            },
+            Token::Str("a"),
+            Token::I32(1),
+            Token::Str("a"),
         ],
         "duplicate field `a`",
-    }
-    test_enum_out_of_range<Enum> {
-        &[
-            Token::Enum { name: "Enum" },
-            Token::U32(5),
-            Token::Unit,
-        ],
+    );
+}
+
+#[test]
+fn test_enum_out_of_range() {
+    assert_de_tokens_error::<Enum>(
+        &[Token::Enum { name: "Enum" }, Token::U32(5), Token::Unit],
         "invalid value: integer `5`, expected variant index 0 <= i < 5",
-    }
-    test_short_tuple<(u8, u8, u8)> {
-        &[
-            Token::Tuple { len: 1 },
-            Token::U8(1),
-            Token::TupleEnd,
-        ],
+    );
+}
+
+#[test]
+fn test_short_tuple() {
+    assert_de_tokens_error::<(u8, u8, u8)>(
+        &[Token::Tuple { len: 1 }, Token::U8(1), Token::TupleEnd],
         "invalid length 1, expected a tuple of size 3",
-    }
-    test_short_array<[u8; 3]> {
-        &[
-            Token::Seq { len: Some(1) },
-            Token::U8(1),
-            Token::SeqEnd,
-        ],
+    );
+}
+
+#[test]
+fn test_short_array() {
+    assert_de_tokens_error::<[u8; 3]>(
+        &[Token::Seq { len: Some(1) }, Token::U8(1), Token::SeqEnd],
         "invalid length 1, expected an array of length 3",
-    }
-    test_cstring_internal_null<CString> {
-        &[
-            Token::Bytes(b"a\0c"),
-        ],
+    );
+}
+
+#[test]
+fn test_cstring_internal_null() {
+    assert_de_tokens_error::<CString>(
+        &[Token::Bytes(b"a\0c")],
         "nul byte found in provided data at position: 1",
-    }
-    test_cstring_internal_null_end<CString> {
-        &[
-            Token::Bytes(b"ac\0"),
-        ],
+    );
+}
+
+#[test]
+fn test_cstring_internal_null_end() {
+    assert_de_tokens_error::<CString>(
+        &[Token::Bytes(b"ac\0")],
         "nul byte found in provided data at position: 2",
-    }
-    test_unit_from_empty_seq<()> {
-        &[
-            Token::Seq { len: Some(0) },
-            Token::SeqEnd,
-        ],
+    );
+}
+
+#[test]
+fn test_unit_from_empty_seq() {
+    assert_de_tokens_error::<()>(
+        &[Token::Seq { len: Some(0) }, Token::SeqEnd],
         "invalid type: sequence, expected unit",
-    }
-    test_unit_from_empty_seq_without_len<()> {
-        &[
-            Token::Seq { len: None },
-            Token::SeqEnd,
-        ],
+    );
+}
+
+#[test]
+fn test_unit_from_empty_seq_without_len() {
+    assert_de_tokens_error::<()>(
+        &[Token::Seq { len: None }, Token::SeqEnd],
         "invalid type: sequence, expected unit",
-    }
-    test_unit_from_tuple_struct<()> {
+    );
+}
+
+#[test]
+fn test_unit_from_tuple_struct() {
+    assert_de_tokens_error::<()>(
         &[
-            Token::TupleStruct { name: "Anything", len: 0 },
+            Token::TupleStruct {
+                name: "Anything",
+                len: 0,
+            },
             Token::TupleStructEnd,
         ],
         "invalid type: sequence, expected unit",
-    }
-    test_string_from_unit<String> {
-        &[
-            Token::Unit,
-        ],
+    );
+}
+
+#[test]
+fn test_string_from_unit() {
+    assert_de_tokens_error::<String>(
+        &[Token::Unit],
         "invalid type: unit value, expected a string",
-    }
-    test_btreeset_from_unit<BTreeSet<isize>> {
-        &[
-            Token::Unit,
-        ],
+    );
+}
+
+#[test]
+fn test_btreeset_from_unit() {
+    assert_de_tokens_error::<BTreeSet<isize>>(
+        &[Token::Unit],
         "invalid type: unit value, expected a sequence",
-    }
-    test_btreeset_from_unit_struct<BTreeSet<isize>> {
-        &[
-            Token::UnitStruct { name: "Anything" },
-        ],
+    );
+}
+
+#[test]
+fn test_btreeset_from_unit_struct() {
+    assert_de_tokens_error::<BTreeSet<isize>>(
+        &[Token::UnitStruct { name: "Anything" }],
         "invalid type: unit value, expected a sequence",
-    }
-    test_hashset_from_unit<HashSet<isize>> {
-        &[
-            Token::Unit,
-        ],
+    );
+}
+
+#[test]
+fn test_hashset_from_unit() {
+    assert_de_tokens_error::<HashSet<isize>>(
+        &[Token::Unit],
         "invalid type: unit value, expected a sequence",
-    }
-    test_hashset_from_unit_struct<HashSet<isize>> {
-        &[
-            Token::UnitStruct { name: "Anything" },
-        ],
+    );
+}
+
+#[test]
+fn test_hashset_from_unit_struct() {
+    assert_de_tokens_error::<HashSet<isize>>(
+        &[Token::UnitStruct { name: "Anything" }],
         "invalid type: unit value, expected a sequence",
-    }
-    test_vec_from_unit<Vec<isize>> {
-        &[
-            Token::Unit,
-        ],
+    );
+}
+
+#[test]
+fn test_vec_from_unit() {
+    assert_de_tokens_error::<Vec<isize>>(
+        &[Token::Unit],
         "invalid type: unit value, expected a sequence",
-    }
-    test_vec_from_unit_struct<Vec<isize>> {
-        &[
-            Token::UnitStruct { name: "Anything" },
-        ],
+    );
+}
+
+#[test]
+fn test_vec_from_unit_struct() {
+    assert_de_tokens_error::<Vec<isize>>(
+        &[Token::UnitStruct { name: "Anything" }],
         "invalid type: unit value, expected a sequence",
-    }
-    test_zero_array_from_unit<[isize; 0]> {
-        &[
-            Token::Unit,
-        ],
+    );
+}
+
+#[test]
+fn test_zero_array_from_unit() {
+    assert_de_tokens_error::<[isize; 0]>(
+        &[Token::Unit],
         "invalid type: unit value, expected an empty array",
-    }
-    test_zero_array_from_unit_struct<[isize; 0]> {
-        &[
-            Token::UnitStruct { name: "Anything" },
-        ],
+    );
+}
+
+#[test]
+fn test_zero_array_from_unit_struct() {
+    assert_de_tokens_error::<[isize; 0]>(
+        &[Token::UnitStruct { name: "Anything" }],
         "invalid type: unit value, expected an empty array",
-    }
-    test_btreemap_from_unit<BTreeMap<isize, isize>> {
-        &[
-            Token::Unit,
-        ],
+    );
+}
+
+#[test]
+fn test_btreemap_from_unit() {
+    assert_de_tokens_error::<BTreeMap<isize, isize>>(
+        &[Token::Unit],
         "invalid type: unit value, expected a map",
-    }
-    test_btreemap_from_unit_struct<BTreeMap<isize, isize>> {
-        &[
-            Token::UnitStruct { name: "Anything" },
-        ],
+    );
+}
+
+#[test]
+fn test_btreemap_from_unit_struct() {
+    assert_de_tokens_error::<BTreeMap<isize, isize>>(
+        &[Token::UnitStruct { name: "Anything" }],
         "invalid type: unit value, expected a map",
-    }
-    test_hashmap_from_unit<HashMap<isize, isize>> {
-        &[
-            Token::Unit,
-        ],
+    );
+}
+
+#[test]
+fn test_hashmap_from_unit() {
+    assert_de_tokens_error::<HashMap<isize, isize>>(
+        &[Token::Unit],
         "invalid type: unit value, expected a map",
-    }
-    test_hashmap_from_unit_struct<HashMap<isize, isize>> {
-        &[
-            Token::UnitStruct { name: "Anything" },
-        ],
+    );
+}
+
+#[test]
+fn test_hashmap_from_unit_struct() {
+    assert_de_tokens_error::<HashMap<isize, isize>>(
+        &[Token::UnitStruct { name: "Anything" }],
         "invalid type: unit value, expected a map",
-    }
-    test_bool_from_string<bool> {
-        &[
-            Token::Str("false"),
-        ],
+    );
+}
+
+#[test]
+fn test_bool_from_string() {
+    assert_de_tokens_error::<bool>(
+        &[Token::Str("false")],
         "invalid type: string \"false\", expected a boolean",
-    }
-    test_number_from_string<isize> {
-        &[
-            Token::Str("1"),
-        ],
+    );
+}
+
+#[test]
+fn test_number_from_string() {
+    assert_de_tokens_error::<isize>(
+        &[Token::Str("1")],
         "invalid type: string \"1\", expected isize",
-    }
-    test_integer_from_float<isize> {
-        &[
-            Token::F32(0.0),
-        ],
+    );
+}
+
+#[test]
+fn test_integer_from_float() {
+    assert_de_tokens_error::<isize>(
+        &[Token::F32(0.0)],
         "invalid type: floating point `0`, expected isize",
-    }
-    test_unit_struct_from_seq<UnitStruct> {
-        &[
-            Token::Seq { len: Some(0) },
-            Token::SeqEnd,
-        ],
+    );
+}
+
+#[test]
+fn test_unit_struct_from_seq() {
+    assert_de_tokens_error::<UnitStruct>(
+        &[Token::Seq { len: Some(0) }, Token::SeqEnd],
         "invalid type: sequence, expected unit struct UnitStruct",
-    }
-    test_wrapping_overflow<Wrapping<u16>> {
-        &[
-            Token::U32(65_536),
-        ],
+    );
+}
+
+#[test]
+fn test_wrapping_overflow() {
+    assert_de_tokens_error::<Wrapping<u16>>(
+        &[Token::U32(65_536)],
         "invalid value: integer `65536`, expected u16",
-    }
-    test_duration_overflow_seq<Duration> {
+    );
+}
+
+#[test]
+fn test_duration_overflow_seq() {
+    assert_de_tokens_error::<Duration>(
         &[
             Token::Seq { len: Some(2) },
-                Token::U64(u64::max_value()),
-                Token::U32(1_000_000_000),
+            Token::U64(u64::max_value()),
+            Token::U32(1_000_000_000),
             Token::SeqEnd,
         ],
         "overflow deserializing Duration",
-    }
-    test_duration_overflow_struct<Duration> {
-        &[
-            Token::Struct { name: "Duration", len: 2 },
-                Token::Str("secs"),
-                Token::U64(u64::max_value()),
+    );
+}
 
-                Token::Str("nanos"),
-                Token::U32(1_000_000_000),
+#[test]
+fn test_duration_overflow_struct() {
+    assert_de_tokens_error::<Duration>(
+        &[
+            Token::Struct {
+                name: "Duration",
+                len: 2,
+            },
+            Token::Str("secs"),
+            Token::U64(u64::max_value()),
+            Token::Str("nanos"),
+            Token::U32(1_000_000_000),
             Token::StructEnd,
         ],
         "overflow deserializing Duration",
-    }
-    test_systemtime_overflow_seq<SystemTime> {
+    );
+}
+
+#[test]
+fn test_systemtime_overflow_seq() {
+    assert_de_tokens_error::<SystemTime>(
         &[
             Token::Seq { len: Some(2) },
-                Token::U64(u64::max_value()),
-                Token::U32(1_000_000_000),
+            Token::U64(u64::max_value()),
+            Token::U32(1_000_000_000),
             Token::SeqEnd,
         ],
         "overflow deserializing SystemTime epoch offset",
-    }
-    test_systemtime_overflow_struct<SystemTime> {
-        &[
-            Token::Struct { name: "SystemTime", len: 2 },
-                Token::Str("secs_since_epoch"),
-                Token::U64(u64::max_value()),
+    );
+}
 
-                Token::Str("nanos_since_epoch"),
-                Token::U32(1_000_000_000),
+#[test]
+fn test_systemtime_overflow_struct() {
+    assert_de_tokens_error::<SystemTime>(
+        &[
+            Token::Struct {
+                name: "SystemTime",
+                len: 2,
+            },
+            Token::Str("secs_since_epoch"),
+            Token::U64(u64::max_value()),
+            Token::Str("nanos_since_epoch"),
+            Token::U32(1_000_000_000),
             Token::StructEnd,
         ],
         "overflow deserializing SystemTime epoch offset",
-    }
-    #[cfg(systemtime_checked_add)]
-    test_systemtime_overflow<SystemTime> {
+    );
+}
+
+#[cfg(systemtime_checked_add)]
+#[test]
+fn test_systemtime_overflow() {
+    assert_de_tokens_error::<SystemTime>(
         &[
             Token::Seq { len: Some(2) },
-                Token::U64(u64::max_value()),
-                Token::U32(0),
+            Token::U64(u64::max_value()),
+            Token::U32(0),
             Token::SeqEnd,
         ],
         "overflow deserializing SystemTime",
-    }
+    );
 }
 
 #[test]
