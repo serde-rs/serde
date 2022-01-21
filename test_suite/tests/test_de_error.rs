@@ -5,7 +5,10 @@ use serde::Deserialize;
 use serde_test::{assert_de_tokens_error, Token};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ffi::{CStr, CString};
-use std::num::Wrapping;
+use std::num::{
+    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
+    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize, Wrapping,
+};
 use std::time::{Duration, SystemTime};
 
 #[derive(Copy, Clone, PartialEq, Debug, Deserialize)]
@@ -351,6 +354,447 @@ fn test_u128() {
 #[test]
 fn test_usize() {
     let test = assert_de_tokens_error::<usize>;
+
+    // from signed
+    test(
+        &[Token::I8(-1)],
+        "invalid value: integer `-1`, expected usize",
+    );
+    test(
+        &[Token::I16(-1)],
+        "invalid value: integer `-1`, expected usize",
+    );
+    test(
+        &[Token::I32(-1)],
+        "invalid value: integer `-1`, expected usize",
+    );
+    test(
+        &[Token::I64(-1)],
+        "invalid value: integer `-1`, expected usize",
+    );
+}
+
+#[test]
+fn test_nonzero_i8() {
+    let test = assert_de_tokens_error::<NonZeroI8>;
+
+    // from zero
+    test(&[Token::I8(0)], "expected a non-zero value");
+    test(&[Token::I16(0)], "expected a non-zero value");
+    test(&[Token::I32(0)], "expected a non-zero value");
+    test(&[Token::I64(0)], "expected a non-zero value");
+    test(&[Token::U8(0)], "expected a non-zero value");
+    test(&[Token::U16(0)], "expected a non-zero value");
+    test(&[Token::U32(0)], "expected a non-zero value");
+    test(&[Token::U64(0)], "expected a non-zero value");
+
+    // from signed
+    test(
+        &[Token::I16(-129)],
+        "invalid value: integer `-129`, expected i8",
+    );
+    test(
+        &[Token::I32(-129)],
+        "invalid value: integer `-129`, expected i8",
+    );
+    test(
+        &[Token::I64(-129)],
+        "invalid value: integer `-129`, expected i8",
+    );
+    test(
+        &[Token::I16(128)],
+        "invalid value: integer `128`, expected i8",
+    );
+    test(
+        &[Token::I32(128)],
+        "invalid value: integer `128`, expected i8",
+    );
+    test(
+        &[Token::I64(128)],
+        "invalid value: integer `128`, expected i8",
+    );
+
+    // from unsigned
+    test(
+        &[Token::U8(128)],
+        "invalid value: integer `128`, expected i8",
+    );
+    test(
+        &[Token::U16(128)],
+        "invalid value: integer `128`, expected i8",
+    );
+    test(
+        &[Token::U32(128)],
+        "invalid value: integer `128`, expected i8",
+    );
+    test(
+        &[Token::U64(128)],
+        "invalid value: integer `128`, expected i8",
+    );
+}
+
+#[test]
+fn test_nonzero_i16() {
+    let test = assert_de_tokens_error::<NonZeroI16>;
+
+    // from zero
+    test(&[Token::I8(0)], "expected a non-zero value");
+    test(&[Token::I16(0)], "expected a non-zero value");
+    test(&[Token::I32(0)], "expected a non-zero value");
+    test(&[Token::I64(0)], "expected a non-zero value");
+    test(&[Token::U8(0)], "expected a non-zero value");
+    test(&[Token::U16(0)], "expected a non-zero value");
+    test(&[Token::U32(0)], "expected a non-zero value");
+    test(&[Token::U64(0)], "expected a non-zero value");
+
+    // from signed
+    test(
+        &[Token::I32(-32769)],
+        "invalid value: integer `-32769`, expected i16",
+    );
+    test(
+        &[Token::I64(-32769)],
+        "invalid value: integer `-32769`, expected i16",
+    );
+    test(
+        &[Token::I32(32768)],
+        "invalid value: integer `32768`, expected i16",
+    );
+    test(
+        &[Token::I64(32768)],
+        "invalid value: integer `32768`, expected i16",
+    );
+
+    // from unsigned
+    test(
+        &[Token::U16(32768)],
+        "invalid value: integer `32768`, expected i16",
+    );
+    test(
+        &[Token::U32(32768)],
+        "invalid value: integer `32768`, expected i16",
+    );
+    test(
+        &[Token::U64(32768)],
+        "invalid value: integer `32768`, expected i16",
+    );
+}
+
+#[test]
+fn test_nonzero_i32() {
+    let test = assert_de_tokens_error::<NonZeroI32>;
+
+    // from zero
+    test(&[Token::I8(0)], "expected a non-zero value");
+    test(&[Token::I16(0)], "expected a non-zero value");
+    test(&[Token::I32(0)], "expected a non-zero value");
+    test(&[Token::I64(0)], "expected a non-zero value");
+    test(&[Token::U8(0)], "expected a non-zero value");
+    test(&[Token::U16(0)], "expected a non-zero value");
+    test(&[Token::U32(0)], "expected a non-zero value");
+    test(&[Token::U64(0)], "expected a non-zero value");
+
+    // from signed
+    test(
+        &[Token::I64(-2147483649)],
+        "invalid value: integer `-2147483649`, expected i32",
+    );
+    test(
+        &[Token::I64(2147483648)],
+        "invalid value: integer `2147483648`, expected i32",
+    );
+
+    // from unsigned
+    test(
+        &[Token::U32(2147483648)],
+        "invalid value: integer `2147483648`, expected i32",
+    );
+    test(
+        &[Token::U64(2147483648)],
+        "invalid value: integer `2147483648`, expected i32",
+    );
+}
+
+#[test]
+fn test_nonzero_i64() {
+    let test = assert_de_tokens_error::<NonZeroI64>;
+
+    // from zero
+    test(&[Token::I8(0)], "expected a non-zero value");
+    test(&[Token::I16(0)], "expected a non-zero value");
+    test(&[Token::I32(0)], "expected a non-zero value");
+    test(&[Token::I64(0)], "expected a non-zero value");
+    test(&[Token::U8(0)], "expected a non-zero value");
+    test(&[Token::U16(0)], "expected a non-zero value");
+    test(&[Token::U32(0)], "expected a non-zero value");
+    test(&[Token::U64(0)], "expected a non-zero value");
+
+    // from unsigned
+    test(
+        &[Token::U64(9223372036854775808)],
+        "invalid value: integer `9223372036854775808`, expected i64",
+    );
+}
+
+#[test]
+fn test_nonzero_i128() {
+    let test = assert_de_tokens_error::<NonZeroI128>;
+
+    // from zero
+    test(&[Token::I8(0)], "expected a non-zero value");
+    test(&[Token::I16(0)], "expected a non-zero value");
+    test(&[Token::I32(0)], "expected a non-zero value");
+    test(&[Token::I64(0)], "expected a non-zero value");
+    test(&[Token::U8(0)], "expected a non-zero value");
+    test(&[Token::U16(0)], "expected a non-zero value");
+    test(&[Token::U32(0)], "expected a non-zero value");
+    test(&[Token::U64(0)], "expected a non-zero value");
+}
+
+#[test]
+fn test_nonzero_isize() {
+    let test = assert_de_tokens_error::<NonZeroIsize>;
+
+    // from zero
+    test(&[Token::I8(0)], "expected a non-zero value");
+    test(&[Token::I16(0)], "expected a non-zero value");
+    test(&[Token::I32(0)], "expected a non-zero value");
+    test(&[Token::I64(0)], "expected a non-zero value");
+    test(&[Token::U8(0)], "expected a non-zero value");
+    test(&[Token::U16(0)], "expected a non-zero value");
+    test(&[Token::U32(0)], "expected a non-zero value");
+    test(&[Token::U64(0)], "expected a non-zero value");
+}
+
+#[test]
+fn test_nonzero_u8() {
+    let test = assert_de_tokens_error::<NonZeroU8>;
+
+    // from zero
+    test(&[Token::I8(0)], "expected a non-zero value");
+    test(&[Token::I16(0)], "expected a non-zero value");
+    test(&[Token::I32(0)], "expected a non-zero value");
+    test(&[Token::I64(0)], "expected a non-zero value");
+    test(&[Token::U8(0)], "expected a non-zero value");
+    test(&[Token::U16(0)], "expected a non-zero value");
+    test(&[Token::U32(0)], "expected a non-zero value");
+    test(&[Token::U64(0)], "expected a non-zero value");
+
+    // from signed
+    test(&[Token::I8(-1)], "invalid value: integer `-1`, expected u8");
+    test(
+        &[Token::I16(-1)],
+        "invalid value: integer `-1`, expected u8",
+    );
+    test(
+        &[Token::I32(-1)],
+        "invalid value: integer `-1`, expected u8",
+    );
+    test(
+        &[Token::I64(-1)],
+        "invalid value: integer `-1`, expected u8",
+    );
+    test(
+        &[Token::I16(256)],
+        "invalid value: integer `256`, expected u8",
+    );
+    test(
+        &[Token::I32(256)],
+        "invalid value: integer `256`, expected u8",
+    );
+    test(
+        &[Token::I64(256)],
+        "invalid value: integer `256`, expected u8",
+    );
+
+    // from unsigned
+    test(
+        &[Token::U16(256)],
+        "invalid value: integer `256`, expected u8",
+    );
+    test(
+        &[Token::U32(256)],
+        "invalid value: integer `256`, expected u8",
+    );
+    test(
+        &[Token::U64(256)],
+        "invalid value: integer `256`, expected u8",
+    );
+}
+
+#[test]
+fn test_nonzero_u16() {
+    let test = assert_de_tokens_error::<NonZeroU16>;
+
+    // from zero
+    test(&[Token::I8(0)], "expected a non-zero value");
+    test(&[Token::I16(0)], "expected a non-zero value");
+    test(&[Token::I32(0)], "expected a non-zero value");
+    test(&[Token::I64(0)], "expected a non-zero value");
+    test(&[Token::U8(0)], "expected a non-zero value");
+    test(&[Token::U16(0)], "expected a non-zero value");
+    test(&[Token::U32(0)], "expected a non-zero value");
+    test(&[Token::U64(0)], "expected a non-zero value");
+
+    // from signed
+    test(
+        &[Token::I8(-1)],
+        "invalid value: integer `-1`, expected u16",
+    );
+    test(
+        &[Token::I16(-1)],
+        "invalid value: integer `-1`, expected u16",
+    );
+    test(
+        &[Token::I32(-1)],
+        "invalid value: integer `-1`, expected u16",
+    );
+    test(
+        &[Token::I64(-1)],
+        "invalid value: integer `-1`, expected u16",
+    );
+    test(
+        &[Token::I32(65536)],
+        "invalid value: integer `65536`, expected u16",
+    );
+    test(
+        &[Token::I64(65536)],
+        "invalid value: integer `65536`, expected u16",
+    );
+
+    // from unsigned
+    test(
+        &[Token::U32(65536)],
+        "invalid value: integer `65536`, expected u16",
+    );
+    test(
+        &[Token::U64(65536)],
+        "invalid value: integer `65536`, expected u16",
+    );
+}
+
+#[test]
+fn test_nonzero_u32() {
+    let test = assert_de_tokens_error::<NonZeroU32>;
+
+    // from zero
+    test(&[Token::I8(0)], "expected a non-zero value");
+    test(&[Token::I16(0)], "expected a non-zero value");
+    test(&[Token::I32(0)], "expected a non-zero value");
+    test(&[Token::I64(0)], "expected a non-zero value");
+    test(&[Token::U8(0)], "expected a non-zero value");
+    test(&[Token::U16(0)], "expected a non-zero value");
+    test(&[Token::U32(0)], "expected a non-zero value");
+    test(&[Token::U64(0)], "expected a non-zero value");
+
+    // from signed
+    test(
+        &[Token::I8(-1)],
+        "invalid value: integer `-1`, expected u32",
+    );
+    test(
+        &[Token::I16(-1)],
+        "invalid value: integer `-1`, expected u32",
+    );
+    test(
+        &[Token::I32(-1)],
+        "invalid value: integer `-1`, expected u32",
+    );
+    test(
+        &[Token::I64(-1)],
+        "invalid value: integer `-1`, expected u32",
+    );
+    test(
+        &[Token::I64(4294967296)],
+        "invalid value: integer `4294967296`, expected u32",
+    );
+
+    // from unsigned
+    test(
+        &[Token::U64(4294967296)],
+        "invalid value: integer `4294967296`, expected u32",
+    );
+}
+
+#[test]
+fn test_nonzero_u64() {
+    let test = assert_de_tokens_error::<NonZeroU64>;
+
+    // from zero
+    test(&[Token::I8(0)], "expected a non-zero value");
+    test(&[Token::I16(0)], "expected a non-zero value");
+    test(&[Token::I32(0)], "expected a non-zero value");
+    test(&[Token::I64(0)], "expected a non-zero value");
+    test(&[Token::U8(0)], "expected a non-zero value");
+    test(&[Token::U16(0)], "expected a non-zero value");
+    test(&[Token::U32(0)], "expected a non-zero value");
+    test(&[Token::U64(0)], "expected a non-zero value");
+
+    // from signed
+    test(
+        &[Token::I8(-1)],
+        "invalid value: integer `-1`, expected u64",
+    );
+    test(
+        &[Token::I16(-1)],
+        "invalid value: integer `-1`, expected u64",
+    );
+    test(
+        &[Token::I32(-1)],
+        "invalid value: integer `-1`, expected u64",
+    );
+    test(
+        &[Token::I64(-1)],
+        "invalid value: integer `-1`, expected u64",
+    );
+}
+
+#[test]
+fn test_nonzero_u128() {
+    let test = assert_de_tokens_error::<NonZeroU128>;
+
+    // from zero
+    test(&[Token::I8(0)], "expected a non-zero value");
+    test(&[Token::I16(0)], "expected a non-zero value");
+    test(&[Token::I32(0)], "expected a non-zero value");
+    test(&[Token::I64(0)], "expected a non-zero value");
+    test(&[Token::U8(0)], "expected a non-zero value");
+    test(&[Token::U16(0)], "expected a non-zero value");
+    test(&[Token::U32(0)], "expected a non-zero value");
+    test(&[Token::U64(0)], "expected a non-zero value");
+
+    // from signed
+    test(
+        &[Token::I8(-1)],
+        "invalid value: integer `-1`, expected u128",
+    );
+    test(
+        &[Token::I16(-1)],
+        "invalid value: integer `-1`, expected u128",
+    );
+    test(
+        &[Token::I32(-1)],
+        "invalid value: integer `-1`, expected u128",
+    );
+    test(
+        &[Token::I64(-1)],
+        "invalid value: integer `-1`, expected u128",
+    );
+}
+
+#[test]
+fn test_nonzero_usize() {
+    let test = assert_de_tokens_error::<NonZeroUsize>;
+
+    // from zero
+    test(&[Token::I8(0)], "expected a non-zero value");
+    test(&[Token::I16(0)], "expected a non-zero value");
+    test(&[Token::I32(0)], "expected a non-zero value");
+    test(&[Token::I64(0)], "expected a non-zero value");
+    test(&[Token::U8(0)], "expected a non-zero value");
+    test(&[Token::U16(0)], "expected a non-zero value");
+    test(&[Token::U32(0)], "expected a non-zero value");
+    test(&[Token::U64(0)], "expected a non-zero value");
 
     // from signed
     test(

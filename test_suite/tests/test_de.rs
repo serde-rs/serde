@@ -13,7 +13,10 @@ use std::default::Default;
 use std::ffi::{CStr, CString, OsString};
 use std::fmt::Debug;
 use std::net;
-use std::num::Wrapping;
+use std::num::{
+    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
+    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize, Wrapping,
+};
 use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak as RcWeak};
@@ -504,6 +507,306 @@ fn test_usize() {
     test(0, &[Token::U16(0)]);
     test(0, &[Token::U32(0)]);
     test(0, &[Token::U64(0)]);
+    test(10, &[Token::U8(10)]);
+    test(10, &[Token::U16(10)]);
+    test(10, &[Token::U32(10)]);
+    test(10, &[Token::U64(10)]);
+}
+
+#[test]
+fn test_nonzero_i8() {
+    let test = |value, tokens| test(NonZeroI8::new(value).unwrap(), tokens);
+
+    // from signed
+    test(-128, &[Token::I8(-128)]);
+    test(-128, &[Token::I16(-128)]);
+    test(-128, &[Token::I32(-128)]);
+    test(-128, &[Token::I64(-128)]);
+    test(127, &[Token::I8(127)]);
+    test(127, &[Token::I16(127)]);
+    test(127, &[Token::I32(127)]);
+    test(127, &[Token::I64(127)]);
+
+    // from unsigned
+    test(1, &[Token::U8(1)]);
+    test(1, &[Token::U16(1)]);
+    test(1, &[Token::U32(1)]);
+    test(1, &[Token::U64(1)]);
+    test(127, &[Token::U8(127)]);
+    test(127, &[Token::U16(127)]);
+    test(127, &[Token::U32(127)]);
+    test(127, &[Token::U64(127)]);
+}
+
+#[test]
+fn test_nonzero_i16() {
+    let test = |value, tokens| test(NonZeroI16::new(value).unwrap(), tokens);
+
+    // from signed
+    test(-128, &[Token::I8(-128)]);
+    test(-32768, &[Token::I16(-32768)]);
+    test(-32768, &[Token::I32(-32768)]);
+    test(-32768, &[Token::I64(-32768)]);
+    test(127, &[Token::I8(127)]);
+    test(32767, &[Token::I16(32767)]);
+    test(32767, &[Token::I32(32767)]);
+    test(32767, &[Token::I64(32767)]);
+
+    // from unsigned
+    test(1, &[Token::U8(1)]);
+    test(1, &[Token::U16(1)]);
+    test(1, &[Token::U32(1)]);
+    test(1, &[Token::U64(1)]);
+    test(255, &[Token::U8(255)]);
+    test(32767, &[Token::U16(32767)]);
+    test(32767, &[Token::U32(32767)]);
+    test(32767, &[Token::U64(32767)]);
+}
+
+#[test]
+fn test_nonzero_i32() {
+    let test = |value, tokens| test(NonZeroI32::new(value).unwrap(), tokens);
+
+    // from signed
+    test(-128, &[Token::I8(-128)]);
+    test(-32768, &[Token::I16(-32768)]);
+    test(-2147483648, &[Token::I32(-2147483648)]);
+    test(-2147483648, &[Token::I64(-2147483648)]);
+    test(127, &[Token::I8(127)]);
+    test(32767, &[Token::I16(32767)]);
+    test(2147483647, &[Token::I32(2147483647)]);
+    test(2147483647, &[Token::I64(2147483647)]);
+
+    // from unsigned
+    test(1, &[Token::U8(1)]);
+    test(1, &[Token::U16(1)]);
+    test(1, &[Token::U32(1)]);
+    test(1, &[Token::U64(1)]);
+    test(255, &[Token::U8(255)]);
+    test(65535, &[Token::U16(65535)]);
+    test(2147483647, &[Token::U32(2147483647)]);
+    test(2147483647, &[Token::U64(2147483647)]);
+}
+
+#[test]
+fn test_nonzero_i64() {
+    let test = |value, tokens| test(NonZeroI64::new(value).unwrap(), tokens);
+
+    // from signed
+    test(-128, &[Token::I8(-128)]);
+    test(-32768, &[Token::I16(-32768)]);
+    test(-2147483648, &[Token::I32(-2147483648)]);
+    test(-9223372036854775808, &[Token::I64(-9223372036854775808)]);
+    test(127, &[Token::I8(127)]);
+    test(32767, &[Token::I16(32767)]);
+    test(2147483647, &[Token::I32(2147483647)]);
+    test(9223372036854775807, &[Token::I64(9223372036854775807)]);
+
+    // from unsigned
+    test(1, &[Token::U8(1)]);
+    test(1, &[Token::U16(1)]);
+    test(1, &[Token::U32(1)]);
+    test(1, &[Token::U64(1)]);
+    test(255, &[Token::U8(255)]);
+    test(65535, &[Token::U16(65535)]);
+    test(4294967295, &[Token::U32(4294967295)]);
+    test(9223372036854775807, &[Token::U64(9223372036854775807)]);
+}
+
+#[test]
+fn test_nonzero_i128() {
+    let test = |value, tokens| test(NonZeroI128::new(value).unwrap(), tokens);
+
+    // from signed
+    test(-128, &[Token::I8(-128)]);
+    test(-32768, &[Token::I16(-32768)]);
+    test(-2147483648, &[Token::I32(-2147483648)]);
+    test(-9223372036854775808, &[Token::I64(-9223372036854775808)]);
+    test(127, &[Token::I8(127)]);
+    test(32767, &[Token::I16(32767)]);
+    test(2147483647, &[Token::I32(2147483647)]);
+    test(9223372036854775807, &[Token::I64(9223372036854775807)]);
+
+    // from unsigned
+    test(1, &[Token::U8(1)]);
+    test(1, &[Token::U16(1)]);
+    test(1, &[Token::U32(1)]);
+    test(1, &[Token::U64(1)]);
+    test(255, &[Token::U8(255)]);
+    test(65535, &[Token::U16(65535)]);
+    test(4294967295, &[Token::U32(4294967295)]);
+    test(18446744073709551615, &[Token::U64(18446744073709551615)]);
+}
+
+#[test]
+fn test_nonzero_isize() {
+    let test = |value, tokens| test(NonZeroIsize::new(value).unwrap(), tokens);
+
+    // from signed
+    test(-10, &[Token::I8(-10)]);
+    test(-10, &[Token::I16(-10)]);
+    test(-10, &[Token::I32(-10)]);
+    test(-10, &[Token::I64(-10)]);
+    test(10, &[Token::I8(10)]);
+    test(10, &[Token::I16(10)]);
+    test(10, &[Token::I32(10)]);
+    test(10, &[Token::I64(10)]);
+
+    // from unsigned
+    test(1, &[Token::U8(1)]);
+    test(1, &[Token::U16(1)]);
+    test(1, &[Token::U32(1)]);
+    test(1, &[Token::U64(1)]);
+    test(10, &[Token::U8(10)]);
+    test(10, &[Token::U16(10)]);
+    test(10, &[Token::U32(10)]);
+    test(10, &[Token::U64(10)]);
+}
+
+#[test]
+fn test_nonzero_u8() {
+    let test = |value, tokens| test(NonZeroU8::new(value).unwrap(), tokens);
+
+    // from signed
+    test(1, &[Token::I8(1)]);
+    test(1, &[Token::I16(1)]);
+    test(1, &[Token::I32(1)]);
+    test(1, &[Token::I64(1)]);
+    test(127, &[Token::I8(127)]);
+    test(255, &[Token::I16(255)]);
+    test(255, &[Token::I32(255)]);
+    test(255, &[Token::I64(255)]);
+
+    // from unsigned
+    test(1, &[Token::U8(1)]);
+    test(1, &[Token::U16(1)]);
+    test(1, &[Token::U32(1)]);
+    test(1, &[Token::U64(1)]);
+    test(255, &[Token::U8(255)]);
+    test(255, &[Token::U16(255)]);
+    test(255, &[Token::U32(255)]);
+    test(255, &[Token::U64(255)]);
+}
+
+#[test]
+fn test_nonzero_u16() {
+    let test = |value, tokens| test(NonZeroU16::new(value).unwrap(), tokens);
+
+    // from signed
+    test(1, &[Token::I8(1)]);
+    test(1, &[Token::I16(1)]);
+    test(1, &[Token::I32(1)]);
+    test(1, &[Token::I64(1)]);
+    test(127, &[Token::I8(127)]);
+    test(32767, &[Token::I16(32767)]);
+    test(65535, &[Token::I32(65535)]);
+    test(65535, &[Token::I64(65535)]);
+
+    // from unsigned
+    test(1, &[Token::U8(1)]);
+    test(1, &[Token::U16(1)]);
+    test(1, &[Token::U32(1)]);
+    test(1, &[Token::U64(1)]);
+    test(255, &[Token::U8(255)]);
+    test(65535, &[Token::U16(65535)]);
+    test(65535, &[Token::U32(65535)]);
+    test(65535, &[Token::U64(65535)]);
+}
+
+#[test]
+fn test_nonzero_u32() {
+    let test = |value, tokens| test(NonZeroU32::new(value).unwrap(), tokens);
+
+    // from signed
+    test(1, &[Token::I8(1)]);
+    test(1, &[Token::I16(1)]);
+    test(1, &[Token::I32(1)]);
+    test(1, &[Token::I64(1)]);
+    test(127, &[Token::I8(127)]);
+    test(32767, &[Token::I16(32767)]);
+    test(2147483647, &[Token::I32(2147483647)]);
+    test(4294967295, &[Token::I64(4294967295)]);
+
+    // from unsigned
+    test(1, &[Token::U8(1)]);
+    test(1, &[Token::U16(1)]);
+    test(1, &[Token::U32(1)]);
+    test(1, &[Token::U64(1)]);
+    test(255, &[Token::U8(255)]);
+    test(65535, &[Token::U16(65535)]);
+    test(4294967295, &[Token::U32(4294967295)]);
+    test(4294967295, &[Token::U64(4294967295)]);
+}
+
+#[test]
+fn test_nonzero_u64() {
+    let test = |value, tokens| test(NonZeroU64::new(value).unwrap(), tokens);
+
+    // from signed
+    test(1, &[Token::I8(1)]);
+    test(1, &[Token::I16(1)]);
+    test(1, &[Token::I32(1)]);
+    test(1, &[Token::I64(1)]);
+    test(127, &[Token::I8(127)]);
+    test(32767, &[Token::I16(32767)]);
+    test(2147483647, &[Token::I32(2147483647)]);
+    test(9223372036854775807, &[Token::I64(9223372036854775807)]);
+
+    // from unsigned
+    test(1, &[Token::U8(1)]);
+    test(1, &[Token::U16(1)]);
+    test(1, &[Token::U32(1)]);
+    test(1, &[Token::U64(1)]);
+    test(255, &[Token::U8(255)]);
+    test(65535, &[Token::U16(65535)]);
+    test(4294967295, &[Token::U32(4294967295)]);
+    test(18446744073709551615, &[Token::U64(18446744073709551615)]);
+}
+
+#[test]
+fn test_nonzero_u128() {
+    let test = |value, tokens| test(NonZeroU128::new(value).unwrap(), tokens);
+
+    // from signed
+    test(1, &[Token::I8(1)]);
+    test(1, &[Token::I16(1)]);
+    test(1, &[Token::I32(1)]);
+    test(1, &[Token::I64(1)]);
+    test(127, &[Token::I8(127)]);
+    test(32767, &[Token::I16(32767)]);
+    test(2147483647, &[Token::I32(2147483647)]);
+    test(9223372036854775807, &[Token::I64(9223372036854775807)]);
+
+    // from unsigned
+    test(1, &[Token::U8(1)]);
+    test(1, &[Token::U16(1)]);
+    test(1, &[Token::U32(1)]);
+    test(1, &[Token::U64(1)]);
+    test(255, &[Token::U8(255)]);
+    test(65535, &[Token::U16(65535)]);
+    test(4294967295, &[Token::U32(4294967295)]);
+    test(18446744073709551615, &[Token::U64(18446744073709551615)]);
+}
+
+#[test]
+fn test_nonzero_usize() {
+    let test = |value, tokens| test(NonZeroUsize::new(value).unwrap(), tokens);
+
+    // from signed
+    test(1, &[Token::I8(1)]);
+    test(1, &[Token::I16(1)]);
+    test(1, &[Token::I32(1)]);
+    test(1, &[Token::I64(1)]);
+    test(10, &[Token::I8(10)]);
+    test(10, &[Token::I16(10)]);
+    test(10, &[Token::I32(10)]);
+    test(10, &[Token::I64(10)]);
+
+    // from unsigned
+    test(1, &[Token::U8(1)]);
+    test(1, &[Token::U16(1)]);
+    test(1, &[Token::U32(1)]);
+    test(1, &[Token::U64(1)]);
     test(10, &[Token::U8(10)]);
     test(10, &[Token::U16(10)]);
     test(10, &[Token::U32(10)]);
