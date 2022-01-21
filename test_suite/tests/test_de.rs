@@ -1552,7 +1552,7 @@ fn test_net_ipv4addr_compact() {
         net::Ipv4Addr::from(*b"1234").compact(),
         &seq![
             Token::Tuple { len: 4 },
-            seq b"1234".iter().map(|&b| Token::U8(b)),
+            ..b"1234".iter().map(|&b| Token::U8(b)),
             Token::TupleEnd
         ],
     );
@@ -1564,7 +1564,7 @@ fn test_net_ipv6addr_compact() {
         net::Ipv6Addr::from(*b"1234567890123456").compact(),
         &seq![
             Token::Tuple { len: 4 },
-            seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
+            ..b"1234567890123456".iter().map(|&b| Token::U8(b)),
             Token::TupleEnd
         ],
     );
@@ -1575,10 +1575,12 @@ fn test_net_ipaddr_compact() {
     test(
         net::IpAddr::from(*b"1234").compact(),
         &seq![
-            Token::NewtypeVariant { name: "IpAddr", variant: "V4" },
-
+            Token::NewtypeVariant {
+                name: "IpAddr",
+                variant: "V4"
+            },
             Token::Tuple { len: 4 },
-            seq b"1234".iter().map(|&b| Token::U8(b)),
+            ..b"1234".iter().map(|&b| Token::U8(b)),
             Token::TupleEnd
         ],
     );
@@ -1589,14 +1591,14 @@ fn test_net_socketaddr_compact() {
     test(
         net::SocketAddr::from((*b"1234567890123456", 1234)).compact(),
         &seq![
-            Token::NewtypeVariant { name: "SocketAddr", variant: "V6" },
-
+            Token::NewtypeVariant {
+                name: "SocketAddr",
+                variant: "V6"
+            },
             Token::Tuple { len: 2 },
-
             Token::Tuple { len: 16 },
-            seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
+            ..b"1234567890123456".iter().map(|&b| Token::U8(b)),
             Token::TupleEnd,
-
             Token::U16(1234),
             Token::TupleEnd
         ],
@@ -1604,14 +1606,14 @@ fn test_net_socketaddr_compact() {
     test(
         net::SocketAddr::from((*b"1234", 1234)).compact(),
         &seq![
-            Token::NewtypeVariant { name: "SocketAddr", variant: "V4" },
-
+            Token::NewtypeVariant {
+                name: "SocketAddr",
+                variant: "V4"
+            },
             Token::Tuple { len: 2 },
-
             Token::Tuple { len: 4 },
-            seq b"1234".iter().map(|&b| Token::U8(b)),
+            ..b"1234".iter().map(|&b| Token::U8(b)),
             Token::TupleEnd,
-
             Token::U16(1234),
             Token::TupleEnd
         ],
@@ -1620,11 +1622,9 @@ fn test_net_socketaddr_compact() {
         net::SocketAddrV4::new(net::Ipv4Addr::from(*b"1234"), 1234).compact(),
         &seq![
             Token::Tuple { len: 2 },
-
             Token::Tuple { len: 4 },
-            seq b"1234".iter().map(|&b| Token::U8(b)),
+            ..b"1234".iter().map(|&b| Token::U8(b)),
             Token::TupleEnd,
-
             Token::U16(1234),
             Token::TupleEnd
         ],
@@ -1633,11 +1633,9 @@ fn test_net_socketaddr_compact() {
         net::SocketAddrV6::new(net::Ipv6Addr::from(*b"1234567890123456"), 1234, 0, 0).compact(),
         &seq![
             Token::Tuple { len: 2 },
-
             Token::Tuple { len: 16 },
-            seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
+            ..b"1234567890123456".iter().map(|&b| Token::U8(b)),
             Token::TupleEnd,
-
             Token::U16(1234),
             Token::TupleEnd
         ],
