@@ -144,7 +144,10 @@ impl<'de> Deserialize<'de> for IgnoredAny {
 //////////////////////////////////////////////////////////////////////////
 
 #[track_caller]
-fn test<'de>(value: impl Deserialize<'de> + PartialEq + Debug, tokens: &'de [Token]) {
+fn test<'de, T>(value: T, tokens: &'de [Token])
+where
+    T: Deserialize<'de> + PartialEq + Debug,
+{
     // Test ser/de roundtripping
     assert_de_tokens(&value, tokens);
 
@@ -207,60 +210,319 @@ fn test_bool() {
 }
 
 #[test]
+fn test_i8() {
+    let test = test::<i8>;
+
+    // from signed
+    test(-128, &[Token::I8(-128)]);
+    test(-128, &[Token::I16(-128)]);
+    test(-128, &[Token::I32(-128)]);
+    test(-128, &[Token::I64(-128)]);
+    test(127, &[Token::I8(127)]);
+    test(127, &[Token::I16(127)]);
+    test(127, &[Token::I32(127)]);
+    test(127, &[Token::I64(127)]);
+
+    // from unsigned
+    test(0, &[Token::U8(0)]);
+    test(0, &[Token::U16(0)]);
+    test(0, &[Token::U32(0)]);
+    test(0, &[Token::U64(0)]);
+    test(127, &[Token::U8(127)]);
+    test(127, &[Token::U16(127)]);
+    test(127, &[Token::U32(127)]);
+    test(127, &[Token::U64(127)]);
+}
+
+#[test]
+fn test_i16() {
+    let test = test::<i16>;
+
+    // from signed
+    test(-128, &[Token::I8(-128)]);
+    test(-32768, &[Token::I16(-32768)]);
+    test(-32768, &[Token::I32(-32768)]);
+    test(-32768, &[Token::I64(-32768)]);
+    test(127, &[Token::I8(127)]);
+    test(32767, &[Token::I16(32767)]);
+    test(32767, &[Token::I32(32767)]);
+    test(32767, &[Token::I64(32767)]);
+
+    // from unsigned
+    test(0, &[Token::U8(0)]);
+    test(0, &[Token::U16(0)]);
+    test(0, &[Token::U32(0)]);
+    test(0, &[Token::U64(0)]);
+    test(255, &[Token::U8(255)]);
+    test(32767, &[Token::U16(32767)]);
+    test(32767, &[Token::U32(32767)]);
+    test(32767, &[Token::U64(32767)]);
+}
+
+#[test]
+fn test_i32() {
+    let test = test::<i32>;
+
+    // from signed
+    test(-128, &[Token::I8(-128)]);
+    test(-32768, &[Token::I16(-32768)]);
+    test(-2147483648, &[Token::I32(-2147483648)]);
+    test(-2147483648, &[Token::I64(-2147483648)]);
+    test(127, &[Token::I8(127)]);
+    test(32767, &[Token::I16(32767)]);
+    test(2147483647, &[Token::I32(2147483647)]);
+    test(2147483647, &[Token::I64(2147483647)]);
+
+    // from unsigned
+    test(0, &[Token::U8(0)]);
+    test(0, &[Token::U16(0)]);
+    test(0, &[Token::U32(0)]);
+    test(0, &[Token::U64(0)]);
+    test(255, &[Token::U8(255)]);
+    test(65535, &[Token::U16(65535)]);
+    test(2147483647, &[Token::U32(2147483647)]);
+    test(2147483647, &[Token::U64(2147483647)]);
+}
+
+#[test]
+fn test_i64() {
+    let test = test::<i64>;
+
+    // from signed
+    test(-128, &[Token::I8(-128)]);
+    test(-32768, &[Token::I16(-32768)]);
+    test(-2147483648, &[Token::I32(-2147483648)]);
+    test(-9223372036854775808, &[Token::I64(-9223372036854775808)]);
+    test(127, &[Token::I8(127)]);
+    test(32767, &[Token::I16(32767)]);
+    test(2147483647, &[Token::I32(2147483647)]);
+    test(9223372036854775807, &[Token::I64(9223372036854775807)]);
+
+    // from unsigned
+    test(0, &[Token::U8(0)]);
+    test(0, &[Token::U16(0)]);
+    test(0, &[Token::U32(0)]);
+    test(0, &[Token::U64(0)]);
+    test(255, &[Token::U8(255)]);
+    test(65535, &[Token::U16(65535)]);
+    test(4294967295, &[Token::U32(4294967295)]);
+    test(9223372036854775807, &[Token::U64(9223372036854775807)]);
+}
+
+#[test]
+fn test_i128() {
+    let test = test::<i128>;
+
+    // from signed
+    test(-128, &[Token::I8(-128)]);
+    test(-32768, &[Token::I16(-32768)]);
+    test(-2147483648, &[Token::I32(-2147483648)]);
+    test(-9223372036854775808, &[Token::I64(-9223372036854775808)]);
+    test(127, &[Token::I8(127)]);
+    test(32767, &[Token::I16(32767)]);
+    test(2147483647, &[Token::I32(2147483647)]);
+    test(9223372036854775807, &[Token::I64(9223372036854775807)]);
+
+    // from unsigned
+    test(0, &[Token::U8(0)]);
+    test(0, &[Token::U16(0)]);
+    test(0, &[Token::U32(0)]);
+    test(0, &[Token::U64(0)]);
+    test(255, &[Token::U8(255)]);
+    test(65535, &[Token::U16(65535)]);
+    test(4294967295, &[Token::U32(4294967295)]);
+    test(18446744073709551615, &[Token::U64(18446744073709551615)]);
+}
+
+#[test]
 fn test_isize() {
-    test(0isize, &[Token::I8(0)]);
-    test(0isize, &[Token::I16(0)]);
-    test(0isize, &[Token::I32(0)]);
-    test(0isize, &[Token::I64(0)]);
-    test(0isize, &[Token::U8(0)]);
-    test(0isize, &[Token::U16(0)]);
-    test(0isize, &[Token::U32(0)]);
-    test(0isize, &[Token::U64(0)]);
+    let test = test::<isize>;
+
+    // from signed
+    test(-10, &[Token::I8(-10)]);
+    test(-10, &[Token::I16(-10)]);
+    test(-10, &[Token::I32(-10)]);
+    test(-10, &[Token::I64(-10)]);
+    test(10, &[Token::I8(10)]);
+    test(10, &[Token::I16(10)]);
+    test(10, &[Token::I32(10)]);
+    test(10, &[Token::I64(10)]);
+
+    // from unsigned
+    test(0, &[Token::U8(0)]);
+    test(0, &[Token::U16(0)]);
+    test(0, &[Token::U32(0)]);
+    test(0, &[Token::U64(0)]);
+    test(10, &[Token::U8(10)]);
+    test(10, &[Token::U16(10)]);
+    test(10, &[Token::U32(10)]);
+    test(10, &[Token::U64(10)]);
 }
 
 #[test]
-fn test_ints() {
-    test(0i8, &[Token::I8(0)]);
-    test(0i16, &[Token::I16(0)]);
-    test(0i32, &[Token::I32(0)]);
-    test(0i64, &[Token::I64(0)]);
+fn test_u8() {
+    let test = test::<u8>;
+
+    // from signed
+    test(0, &[Token::I8(0)]);
+    test(0, &[Token::I16(0)]);
+    test(0, &[Token::I32(0)]);
+    test(0, &[Token::I64(0)]);
+    test(127, &[Token::I8(127)]);
+    test(255, &[Token::I16(255)]);
+    test(255, &[Token::I32(255)]);
+    test(255, &[Token::I64(255)]);
+
+    // from unsigned
+    test(0, &[Token::U8(0)]);
+    test(0, &[Token::U16(0)]);
+    test(0, &[Token::U32(0)]);
+    test(0, &[Token::U64(0)]);
+    test(255, &[Token::U8(255)]);
+    test(255, &[Token::U16(255)]);
+    test(255, &[Token::U32(255)]);
+    test(255, &[Token::U64(255)]);
 }
 
 #[test]
-fn test_uints() {
-    test(0u8, &[Token::U8(0)]);
-    test(0u16, &[Token::U16(0)]);
-    test(0u32, &[Token::U32(0)]);
-    test(0u64, &[Token::U64(0)]);
+fn test_u16() {
+    let test = test::<u16>;
+
+    // from signed
+    test(0, &[Token::I8(0)]);
+    test(0, &[Token::I16(0)]);
+    test(0, &[Token::I32(0)]);
+    test(0, &[Token::I64(0)]);
+    test(127, &[Token::I8(127)]);
+    test(32767, &[Token::I16(32767)]);
+    test(65535, &[Token::I32(65535)]);
+    test(65535, &[Token::I64(65535)]);
+
+    // from unsigned
+    test(0, &[Token::U8(0)]);
+    test(0, &[Token::U16(0)]);
+    test(0, &[Token::U32(0)]);
+    test(0, &[Token::U64(0)]);
+    test(255, &[Token::U8(255)]);
+    test(65535, &[Token::U16(65535)]);
+    test(65535, &[Token::U32(65535)]);
+    test(65535, &[Token::U64(65535)]);
 }
 
 #[test]
-fn test_floats() {
-    test(0f32, &[Token::F32(0.)]);
-    test(0f64, &[Token::F64(0.)]);
+fn test_u32() {
+    let test = test::<u32>;
+
+    // from signed
+    test(0, &[Token::I8(0)]);
+    test(0, &[Token::I16(0)]);
+    test(0, &[Token::I32(0)]);
+    test(0, &[Token::I64(0)]);
+    test(127, &[Token::I8(127)]);
+    test(32767, &[Token::I16(32767)]);
+    test(2147483647, &[Token::I32(2147483647)]);
+    test(4294967295, &[Token::I64(4294967295)]);
+
+    // from unsigned
+    test(0, &[Token::U8(0)]);
+    test(0, &[Token::U16(0)]);
+    test(0, &[Token::U32(0)]);
+    test(0, &[Token::U64(0)]);
+    test(255, &[Token::U8(255)]);
+    test(65535, &[Token::U16(65535)]);
+    test(4294967295, &[Token::U32(4294967295)]);
+    test(4294967295, &[Token::U64(4294967295)]);
 }
 
 #[test]
-fn test_small_int_to_128() {
-    test(1i128, &[Token::I8(1)]);
-    test(1i128, &[Token::I16(1)]);
-    test(1i128, &[Token::I32(1)]);
-    test(1i128, &[Token::I64(1)]);
+fn test_u64() {
+    let test = test::<u64>;
 
-    test(1i128, &[Token::U8(1)]);
-    test(1i128, &[Token::U16(1)]);
-    test(1i128, &[Token::U32(1)]);
-    test(1i128, &[Token::U64(1)]);
+    // from signed
+    test(0, &[Token::I8(0)]);
+    test(0, &[Token::I16(0)]);
+    test(0, &[Token::I32(0)]);
+    test(0, &[Token::I64(0)]);
+    test(127, &[Token::I8(127)]);
+    test(32767, &[Token::I16(32767)]);
+    test(2147483647, &[Token::I32(2147483647)]);
+    test(9223372036854775807, &[Token::I64(9223372036854775807)]);
 
-    test(1u128, &[Token::I8(1)]);
-    test(1u128, &[Token::I16(1)]);
-    test(1u128, &[Token::I32(1)]);
-    test(1u128, &[Token::I64(1)]);
+    // from unsigned
+    test(0, &[Token::U8(0)]);
+    test(0, &[Token::U16(0)]);
+    test(0, &[Token::U32(0)]);
+    test(0, &[Token::U64(0)]);
+    test(255, &[Token::U8(255)]);
+    test(65535, &[Token::U16(65535)]);
+    test(4294967295, &[Token::U32(4294967295)]);
+    test(18446744073709551615, &[Token::U64(18446744073709551615)]);
+}
 
-    test(1u128, &[Token::U8(1)]);
-    test(1u128, &[Token::U16(1)]);
-    test(1u128, &[Token::U32(1)]);
-    test(1u128, &[Token::U64(1)]);
+#[test]
+fn test_u128() {
+    let test = test::<u128>;
+
+    // from signed
+    test(0, &[Token::I8(0)]);
+    test(0, &[Token::I16(0)]);
+    test(0, &[Token::I32(0)]);
+    test(0, &[Token::I64(0)]);
+    test(127, &[Token::I8(127)]);
+    test(32767, &[Token::I16(32767)]);
+    test(2147483647, &[Token::I32(2147483647)]);
+    test(9223372036854775807, &[Token::I64(9223372036854775807)]);
+
+    // from unsigned
+    test(0, &[Token::U8(0)]);
+    test(0, &[Token::U16(0)]);
+    test(0, &[Token::U32(0)]);
+    test(0, &[Token::U64(0)]);
+    test(255, &[Token::U8(255)]);
+    test(65535, &[Token::U16(65535)]);
+    test(4294967295, &[Token::U32(4294967295)]);
+    test(18446744073709551615, &[Token::U64(18446744073709551615)]);
+}
+
+#[test]
+fn test_usize() {
+    let test = test::<usize>;
+
+    // from signed
+    test(0, &[Token::I8(0)]);
+    test(0, &[Token::I16(0)]);
+    test(0, &[Token::I32(0)]);
+    test(0, &[Token::I64(0)]);
+    test(10, &[Token::I8(10)]);
+    test(10, &[Token::I16(10)]);
+    test(10, &[Token::I32(10)]);
+    test(10, &[Token::I64(10)]);
+
+    // from unsigned
+    test(0, &[Token::U8(0)]);
+    test(0, &[Token::U16(0)]);
+    test(0, &[Token::U32(0)]);
+    test(0, &[Token::U64(0)]);
+    test(10, &[Token::U8(10)]);
+    test(10, &[Token::U16(10)]);
+    test(10, &[Token::U32(10)]);
+    test(10, &[Token::U64(10)]);
+}
+
+#[test]
+fn test_f32() {
+    let test = test::<f32>;
+
+    test(1.11, &[Token::F32(1.11)]);
+    test(1.11, &[Token::F64(1.11)]);
+}
+
+#[test]
+fn test_f64() {
+    let test = test::<f64>;
+
+    test(1.11f32 as f64, &[Token::F32(1.11)]);
+    test(1.11, &[Token::F64(1.11)]);
 }
 
 #[test]
