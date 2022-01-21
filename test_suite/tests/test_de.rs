@@ -1552,7 +1552,7 @@ fn test_net_ipv4addr_compact() {
         net::Ipv4Addr::from(*b"1234").compact(),
         &seq![
             Token::Tuple { len: 4 },
-            ..b"1234".iter().copied().map(Token::U8),
+            b"1234".iter().copied().map(Token::U8),
             Token::TupleEnd
         ],
     );
@@ -1564,7 +1564,7 @@ fn test_net_ipv6addr_compact() {
         net::Ipv6Addr::from(*b"1234567890123456").compact(),
         &seq![
             Token::Tuple { len: 4 },
-            ..b"1234567890123456".iter().copied().map(Token::U8),
+            b"1234567890123456".iter().copied().map(Token::U8),
             Token::TupleEnd
         ],
     );
@@ -1580,7 +1580,7 @@ fn test_net_ipaddr_compact() {
                 variant: "V4"
             },
             Token::Tuple { len: 4 },
-            ..b"1234".iter().copied().map(Token::U8),
+            b"1234".iter().copied().map(Token::U8),
             Token::TupleEnd
         ],
     );
@@ -1597,7 +1597,7 @@ fn test_net_socketaddr_compact() {
             },
             Token::Tuple { len: 2 },
             Token::Tuple { len: 16 },
-            ..b"1234567890123456".iter().copied().map(Token::U8),
+            b"1234567890123456".iter().copied().map(Token::U8),
             Token::TupleEnd,
             Token::U16(1234),
             Token::TupleEnd
@@ -1612,7 +1612,7 @@ fn test_net_socketaddr_compact() {
             },
             Token::Tuple { len: 2 },
             Token::Tuple { len: 4 },
-            ..b"1234".iter().copied().map(Token::U8),
+            b"1234".iter().copied().map(Token::U8),
             Token::TupleEnd,
             Token::U16(1234),
             Token::TupleEnd
@@ -1623,7 +1623,7 @@ fn test_net_socketaddr_compact() {
         &seq![
             Token::Tuple { len: 2 },
             Token::Tuple { len: 4 },
-            ..b"1234".iter().copied().map(Token::U8),
+            b"1234".iter().copied().map(Token::U8),
             Token::TupleEnd,
             Token::U16(1234),
             Token::TupleEnd
@@ -1634,7 +1634,7 @@ fn test_net_socketaddr_compact() {
         &seq![
             Token::Tuple { len: 2 },
             Token::Tuple { len: 16 },
-            ..b"1234567890123456".iter().copied().map(Token::U8),
+            b"1234567890123456".iter().copied().map(Token::U8),
             Token::TupleEnd,
             Token::U16(1234),
             Token::TupleEnd

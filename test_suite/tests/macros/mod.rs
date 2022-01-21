@@ -1,3 +1,6 @@
+use serde_test::Token;
+use std::iter;
+
 macro_rules! btreeset {
     () => {
         BTreeSet::new()
@@ -54,23 +57,21 @@ macro_rules! hashmap {
     }};
 }
 
-macro_rules! seq_impl {
-    (.. $first:expr $(,)?) => {
-        $first.into_iter()
-    };
-    (.. $first:expr, $($elem:tt)*) => {
-        $first.into_iter().chain(seq!($($elem)*))
-    };
-    ($first:expr $(,)?) => {
-        Some($first).into_iter()
-    };
-    ($first:expr, $($elem:tt)*) => {
-        Some($first).into_iter().chain(seq!($($elem)*))
-    };
+pub trait SingleTokenIntoIterator {
+    fn into_iter(self) -> iter::Once<Token>;
+}
+
+impl SingleTokenIntoIterator for Token {
+    fn into_iter(self) -> iter::Once<Token> {
+        iter::once(self)
+    }
 }
 
 macro_rules! seq {
-    ($($tt: tt)*) => {
-        seq_impl!($($tt)*).collect::<Vec<_>>()
-    };
+    ($($elem:expr),* $(,)?) => {{
+        use crate::macros::SingleTokenIntoIterator;
+        let mut vec = Vec::new();
+        $(<Vec<Token> as Extend<Token>>::extend(&mut vec, $elem.into_iter());)*
+        vec
+    }};
 }

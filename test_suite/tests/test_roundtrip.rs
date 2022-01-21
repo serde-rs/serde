@@ -16,7 +16,7 @@ fn ip_addr_roundtrip() {
                 variant: "V4"
             },
             Token::Tuple { len: 4 },
-            ..b"1234".iter().copied().map(Token::U8),
+            b"1234".iter().copied().map(Token::U8),
             Token::TupleEnd,
         ],
     );
@@ -33,7 +33,7 @@ fn socket_addr_roundtrip() {
             },
             Token::Tuple { len: 2 },
             Token::Tuple { len: 16 },
-            ..b"1234567890123456".iter().copied().map(Token::U8),
+            b"1234567890123456".iter().copied().map(Token::U8),
             Token::TupleEnd,
             Token::U16(1234),
             Token::TupleEnd,
