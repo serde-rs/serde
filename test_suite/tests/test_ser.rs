@@ -549,14 +549,14 @@ declare_tests! {
     test_net_ipv4addr_compact {
         net::Ipv4Addr::from(*b"1234") => &seq![
             Token::Tuple { len: 4 },
-            ..b"1234".iter().map(|&b| Token::U8(b)),
+            ..b"1234".iter().copied().map(Token::U8),
             Token::TupleEnd,
         ],
     }
     test_net_ipv6addr_compact {
         net::Ipv6Addr::from(*b"1234567890123456") => &seq![
             Token::Tuple { len: 16 },
-            ..b"1234567890123456".iter().map(|&b| Token::U8(b)),
+            ..b"1234567890123456".iter().copied().map(Token::U8),
             Token::TupleEnd,
         ],
     }
@@ -565,7 +565,7 @@ declare_tests! {
             Token::NewtypeVariant { name: "IpAddr", variant: "V4" },
 
             Token::Tuple { len: 4 },
-            ..b"1234".iter().map(|&b| Token::U8(b)),
+            ..b"1234".iter().copied().map(Token::U8),
             Token::TupleEnd,
         ],
     }
@@ -576,7 +576,7 @@ declare_tests! {
             Token::Tuple { len: 2 },
 
             Token::Tuple { len: 16 },
-            ..b"1234567890123456".iter().map(|&b| Token::U8(b)),
+            ..b"1234567890123456".iter().copied().map(Token::U8),
             Token::TupleEnd,
 
             Token::U16(1234),
@@ -586,7 +586,7 @@ declare_tests! {
             Token::Tuple { len: 2 },
 
             Token::Tuple { len: 4 },
-            ..b"1234".iter().map(|&b| Token::U8(b)),
+            ..b"1234".iter().copied().map(Token::U8),
             Token::TupleEnd,
 
             Token::U16(1234),
@@ -596,7 +596,7 @@ declare_tests! {
             Token::Tuple { len: 2 },
 
             Token::Tuple { len: 16 },
-            ..b"1234567890123456".iter().map(|&b| Token::U8(b)),
+            ..b"1234567890123456".iter().copied().map(Token::U8),
             Token::TupleEnd,
 
             Token::U16(1234),
