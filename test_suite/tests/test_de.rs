@@ -158,43 +158,13 @@ impl<'de> Deserialize<'de> for IgnoredAny {
 
 //////////////////////////////////////////////////////////////////////////
 
-macro_rules! declare_tests {
-    (
-        $readable:tt
-        $($name:ident { $($value:expr => $tokens:expr,)+ })+
-    ) => {
-        $(
-            #[test]
-            fn $name() {
-                $(
-                    // Test ser/de roundtripping
-                    assert_de_tokens(&$value.$readable(), $tokens);
+#[track_caller]
+fn test<'de>(value: impl Deserialize<'de> + PartialEq + Debug, tokens: &'de [Token]) {
+    // Test ser/de roundtripping
+    assert_de_tokens(&value, tokens);
 
-                    // Test that the tokens are ignorable
-                    assert_de_tokens_ignore($tokens);
-                )+
-            }
-        )+
-    };
-
-    ($(
-        $(#[$cfg:meta])*
-        $name:ident { $($value:expr => $tokens:expr,)+ }
-    )+) => {
-        $(
-            $(#[$cfg])*
-            #[test]
-            fn $name() {
-                $(
-                    // Test ser/de roundtripping
-                    assert_de_tokens(&$value, $tokens);
-
-                    // Test that the tokens are ignorable
-                    assert_de_tokens_ignore($tokens);
-                )+
-            }
-        )+
-    }
+    // Test that the tokens are ignorable
+    assert_de_tokens_ignore(tokens);
 }
 
 macro_rules! declare_error_tests {
@@ -233,6 +203,7 @@ impl<T> PartialEq for SkipPartialEq<T> {
     }
 }
 
+#[track_caller]
 fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
     #[derive(PartialEq, Debug, Deserialize)]
     struct IgnoreBase {
@@ -259,1001 +230,1122 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
 
 //////////////////////////////////////////////////////////////////////////
 
-declare_tests! {
-    test_bool {
-        true => &[Token::Bool(true)],
-        false => &[Token::Bool(false)],
-    }
-    test_isize {
-        0isize => &[Token::I8(0)],
-        0isize => &[Token::I16(0)],
-        0isize => &[Token::I32(0)],
-        0isize => &[Token::I64(0)],
-        0isize => &[Token::U8(0)],
-        0isize => &[Token::U16(0)],
-        0isize => &[Token::U32(0)],
-        0isize => &[Token::U64(0)],
-    }
-    test_ints {
-        0i8 => &[Token::I8(0)],
-        0i16 => &[Token::I16(0)],
-        0i32 => &[Token::I32(0)],
-        0i64 => &[Token::I64(0)],
-    }
-    test_uints {
-        0u8 => &[Token::U8(0)],
-        0u16 => &[Token::U16(0)],
-        0u32 => &[Token::U32(0)],
-        0u64 => &[Token::U64(0)],
-    }
-    test_floats {
-        0f32 => &[Token::F32(0.)],
-        0f64 => &[Token::F64(0.)],
-    }
-    test_small_int_to_128 {
-        1i128 => &[Token::I8(1)],
-        1i128 => &[Token::I16(1)],
-        1i128 => &[Token::I32(1)],
-        1i128 => &[Token::I64(1)],
+#[test]
+fn test_bool() {
+    test(true, &[Token::Bool(true)]);
+    test(false, &[Token::Bool(false)]);
+}
 
-        1i128 => &[Token::U8(1)],
-        1i128 => &[Token::U16(1)],
-        1i128 => &[Token::U32(1)],
-        1i128 => &[Token::U64(1)],
+#[test]
+fn test_isize() {
+    test(0isize, &[Token::I8(0)]);
+    test(0isize, &[Token::I16(0)]);
+    test(0isize, &[Token::I32(0)]);
+    test(0isize, &[Token::I64(0)]);
+    test(0isize, &[Token::U8(0)]);
+    test(0isize, &[Token::U16(0)]);
+    test(0isize, &[Token::U32(0)]);
+    test(0isize, &[Token::U64(0)]);
+}
 
-        1u128 => &[Token::I8(1)],
-        1u128 => &[Token::I16(1)],
-        1u128 => &[Token::I32(1)],
-        1u128 => &[Token::I64(1)],
+#[test]
+fn test_ints() {
+    test(0i8, &[Token::I8(0)]);
+    test(0i16, &[Token::I16(0)]);
+    test(0i32, &[Token::I32(0)]);
+    test(0i64, &[Token::I64(0)]);
+}
 
-        1u128 => &[Token::U8(1)],
-        1u128 => &[Token::U16(1)],
-        1u128 => &[Token::U32(1)],
-        1u128 => &[Token::U64(1)],
-    }
-    test_char {
-        'a' => &[Token::Char('a')],
-        'a' => &[Token::Str("a")],
-        'a' => &[Token::String("a")],
-    }
-    test_string {
-        "abc".to_owned() => &[Token::Str("abc")],
-        "abc".to_owned() => &[Token::String("abc")],
-        "a".to_owned() => &[Token::Char('a')],
-    }
-    test_option {
-        None::<i32> => &[Token::Unit],
-        None::<i32> => &[Token::None],
-        Some(1) => &[
-            Token::Some,
+#[test]
+fn test_uints() {
+    test(0u8, &[Token::U8(0)]);
+    test(0u16, &[Token::U16(0)]);
+    test(0u32, &[Token::U32(0)]);
+    test(0u64, &[Token::U64(0)]);
+}
+
+#[test]
+fn test_floats() {
+    test(0f32, &[Token::F32(0.)]);
+    test(0f64, &[Token::F64(0.)]);
+}
+
+#[test]
+fn test_small_int_to_128() {
+    test(1i128, &[Token::I8(1)]);
+    test(1i128, &[Token::I16(1)]);
+    test(1i128, &[Token::I32(1)]);
+    test(1i128, &[Token::I64(1)]);
+
+    test(1i128, &[Token::U8(1)]);
+    test(1i128, &[Token::U16(1)]);
+    test(1i128, &[Token::U32(1)]);
+    test(1i128, &[Token::U64(1)]);
+
+    test(1u128, &[Token::I8(1)]);
+    test(1u128, &[Token::I16(1)]);
+    test(1u128, &[Token::I32(1)]);
+    test(1u128, &[Token::I64(1)]);
+
+    test(1u128, &[Token::U8(1)]);
+    test(1u128, &[Token::U16(1)]);
+    test(1u128, &[Token::U32(1)]);
+    test(1u128, &[Token::U64(1)]);
+}
+
+#[test]
+fn test_char() {
+    test('a', &[Token::Char('a')]);
+    test('a', &[Token::Str("a")]);
+    test('a', &[Token::String("a")]);
+}
+
+#[test]
+fn test_string() {
+    test("abc".to_owned(), &[Token::Str("abc")]);
+    test("abc".to_owned(), &[Token::String("abc")]);
+    test("a".to_owned(), &[Token::Char('a')]);
+}
+
+#[test]
+fn test_option() {
+    test(None::<i32>, &[Token::Unit]);
+    test(None::<i32>, &[Token::None]);
+    test(Some(1), &[
+        Token::Some,
+        Token::I32(1),
+    ]);
+}
+
+#[test]
+fn test_result() {
+    test(Ok::<i32, i32>(0), &[
+        Token::Enum { name: "Result" },
+        Token::Str("Ok"),
+        Token::I32(0),
+    ]);
+    test(Err::<i32, i32>(1), &[
+        Token::Enum { name: "Result" },
+        Token::Str("Err"),
+        Token::I32(1),
+    ]);
+}
+
+#[test]
+fn test_unit() {
+    test((), &[Token::Unit]);
+}
+
+#[test]
+fn test_unit_struct() {
+    test(UnitStruct, &[Token::Unit]);
+    test(UnitStruct, &[
+        Token::UnitStruct { name: "UnitStruct" },
+    ]);
+}
+
+#[test]
+fn test_newtype_struct() {
+    test(NewtypeStruct(1), &[
+        Token::NewtypeStruct { name: "NewtypeStruct" },
+        Token::I32(1),
+    ]);
+}
+
+#[test]
+fn test_tuple_struct() {
+    test(TupleStruct(1, 2, 3), &[
+        Token::Seq { len: Some(3) },
             Token::I32(1),
-        ],
-    }
-    test_result {
-        Ok::<i32, i32>(0) => &[
-            Token::Enum { name: "Result" },
-            Token::Str("Ok"),
-            Token::I32(0),
-        ],
-        Err::<i32, i32>(1) => &[
-            Token::Enum { name: "Result" },
-            Token::Str("Err"),
+            Token::I32(2),
+            Token::I32(3),
+        Token::SeqEnd,
+    ]);
+    test(TupleStruct(1, 2, 3), &[
+        Token::Seq { len: None },
             Token::I32(1),
-        ],
-    }
-    test_unit {
-        () => &[Token::Unit],
-    }
-    test_unit_struct {
-        UnitStruct => &[Token::Unit],
-        UnitStruct => &[
-            Token::UnitStruct { name: "UnitStruct" },
-        ],
-    }
-    test_newtype_struct {
-        NewtypeStruct(1) => &[
-            Token::NewtypeStruct { name: "NewtypeStruct" },
+            Token::I32(2),
+            Token::I32(3),
+        Token::SeqEnd,
+    ]);
+    test(TupleStruct(1, 2, 3), &[
+        Token::TupleStruct { name: "TupleStruct", len: 3 },
             Token::I32(1),
-        ],
-    }
-    test_tuple_struct {
-        TupleStruct(1, 2, 3) => &[
-            Token::Seq { len: Some(3) },
-                Token::I32(1),
-                Token::I32(2),
-                Token::I32(3),
-            Token::SeqEnd,
-        ],
-        TupleStruct(1, 2, 3) => &[
-            Token::Seq { len: None },
-                Token::I32(1),
-                Token::I32(2),
-                Token::I32(3),
-            Token::SeqEnd,
-        ],
-        TupleStruct(1, 2, 3) => &[
-            Token::TupleStruct { name: "TupleStruct", len: 3 },
-                Token::I32(1),
-                Token::I32(2),
-                Token::I32(3),
-            Token::TupleStructEnd,
-        ],
-        TupleStruct(1, 2, 3) => &[
-            Token::TupleStruct { name: "TupleStruct", len: 3 },
-                Token::I32(1),
-                Token::I32(2),
-                Token::I32(3),
-            Token::TupleStructEnd,
-        ],
-    }
-    test_btreeset {
-        BTreeSet::<isize>::new() => &[
+            Token::I32(2),
+            Token::I32(3),
+        Token::TupleStructEnd,
+    ]);
+    test(TupleStruct(1, 2, 3), &[
+        Token::TupleStruct { name: "TupleStruct", len: 3 },
+            Token::I32(1),
+            Token::I32(2),
+            Token::I32(3),
+        Token::TupleStructEnd,
+    ]);
+}
+
+#[test]
+fn test_btreeset() {
+    test(BTreeSet::<isize>::new(), &[
+        Token::Seq { len: Some(0) },
+        Token::SeqEnd,
+    ]);
+    test(btreeset![btreeset![], btreeset![1], btreeset![2, 3]], &[
+        Token::Seq { len: Some(3) },
             Token::Seq { len: Some(0) },
             Token::SeqEnd,
-        ],
-        btreeset![btreeset![], btreeset![1], btreeset![2, 3]] => &[
-            Token::Seq { len: Some(3) },
-                Token::Seq { len: Some(0) },
-                Token::SeqEnd,
 
-                Token::Seq { len: Some(1) },
-                    Token::I32(1),
-                Token::SeqEnd,
-
-                Token::Seq { len: Some(2) },
-                    Token::I32(2),
-                    Token::I32(3),
-                Token::SeqEnd,
-            Token::SeqEnd,
-        ],
-        BTreeSet::<isize>::new() => &[
-            Token::TupleStruct { name: "Anything", len: 0 },
-            Token::TupleStructEnd,
-        ],
-    }
-    test_hashset {
-        HashSet::<isize>::new() => &[
-            Token::Seq { len: Some(0) },
-            Token::SeqEnd,
-        ],
-        hashset![1, 2, 3] => &[
-            Token::Seq { len: Some(3) },
-                Token::I32(1),
-                Token::I32(2),
-                Token::I32(3),
-            Token::SeqEnd,
-        ],
-        HashSet::<isize>::new() => &[
-            Token::TupleStruct { name: "Anything", len: 0 },
-            Token::TupleStructEnd,
-        ],
-        hashset![FnvHasher @ 1, 2, 3] => &[
-            Token::Seq { len: Some(3) },
-                Token::I32(1),
-                Token::I32(2),
-                Token::I32(3),
-            Token::SeqEnd,
-        ],
-    }
-    test_vec {
-        Vec::<isize>::new() => &[
-            Token::Seq { len: Some(0) },
-            Token::SeqEnd,
-        ],
-        vec![vec![], vec![1], vec![2, 3]] => &[
-            Token::Seq { len: Some(3) },
-                Token::Seq { len: Some(0) },
-                Token::SeqEnd,
-
-                Token::Seq { len: Some(1) },
-                    Token::I32(1),
-                Token::SeqEnd,
-
-                Token::Seq { len: Some(2) },
-                    Token::I32(2),
-                    Token::I32(3),
-                Token::SeqEnd,
-            Token::SeqEnd,
-        ],
-        Vec::<isize>::new() => &[
-            Token::TupleStruct { name: "Anything", len: 0 },
-            Token::TupleStructEnd,
-        ],
-    }
-    test_array {
-        [0; 0] => &[
-            Token::Seq { len: Some(0) },
-            Token::SeqEnd,
-        ],
-        [0; 0] => &[
-            Token::Tuple { len: 0 },
-            Token::TupleEnd,
-        ],
-        ([0; 0], [1], [2, 3]) => &[
-            Token::Seq { len: Some(3) },
-                Token::Seq { len: Some(0) },
-                Token::SeqEnd,
-
-                Token::Seq { len: Some(1) },
-                    Token::I32(1),
-                Token::SeqEnd,
-
-                Token::Seq { len: Some(2) },
-                    Token::I32(2),
-                    Token::I32(3),
-                Token::SeqEnd,
-            Token::SeqEnd,
-        ],
-        ([0; 0], [1], [2, 3]) => &[
-            Token::Tuple { len: 3 },
-                Token::Tuple { len: 0 },
-                Token::TupleEnd,
-
-                Token::Tuple { len: 1 },
-                    Token::I32(1),
-                Token::TupleEnd,
-
-                Token::Tuple { len: 2 },
-                    Token::I32(2),
-                    Token::I32(3),
-                Token::TupleEnd,
-            Token::TupleEnd,
-        ],
-        [0; 0] => &[
-            Token::TupleStruct { name: "Anything", len: 0 },
-            Token::TupleStructEnd,
-        ],
-    }
-    test_tuple {
-        (1,) => &[
             Token::Seq { len: Some(1) },
                 Token::I32(1),
             Token::SeqEnd,
-        ],
-        (1, 2, 3) => &[
-            Token::Seq { len: Some(3) },
-                Token::I32(1),
+
+            Token::Seq { len: Some(2) },
                 Token::I32(2),
                 Token::I32(3),
             Token::SeqEnd,
-        ],
-        (1,) => &[
+        Token::SeqEnd,
+    ]);
+    test(BTreeSet::<isize>::new(), &[
+        Token::TupleStruct { name: "Anything", len: 0 },
+        Token::TupleStructEnd,
+    ]);
+}
+
+#[test]
+fn test_hashset() {
+    test(HashSet::<isize>::new(), &[
+        Token::Seq { len: Some(0) },
+        Token::SeqEnd,
+    ]);
+    test(hashset![1, 2, 3], &[
+        Token::Seq { len: Some(3) },
+            Token::I32(1),
+            Token::I32(2),
+            Token::I32(3),
+        Token::SeqEnd,
+    ]);
+    test(HashSet::<isize>::new(), &[
+        Token::TupleStruct { name: "Anything", len: 0 },
+        Token::TupleStructEnd,
+    ]);
+    test(hashset![FnvHasher @ 1, 2, 3], &[
+        Token::Seq { len: Some(3) },
+            Token::I32(1),
+            Token::I32(2),
+            Token::I32(3),
+        Token::SeqEnd,
+    ]);
+}
+
+#[test]
+fn test_vec() {
+    test(Vec::<isize>::new(), &[
+        Token::Seq { len: Some(0) },
+        Token::SeqEnd,
+    ]);
+
+    test(vec![vec![], vec![1], vec![2, 3]], &[
+        Token::Seq { len: Some(3) },
+            Token::Seq { len: Some(0) },
+            Token::SeqEnd,
+
+            Token::Seq { len: Some(1) },
+                Token::I32(1),
+            Token::SeqEnd,
+
+            Token::Seq { len: Some(2) },
+                Token::I32(2),
+                Token::I32(3),
+            Token::SeqEnd,
+        Token::SeqEnd,
+    ]);
+    test(Vec::<isize>::new(), &[
+        Token::TupleStruct { name: "Anything", len: 0 },
+        Token::TupleStructEnd,
+    ]);
+}
+
+#[test]
+fn test_array() {
+    test([0; 0], &[
+        Token::Seq { len: Some(0) },
+        Token::SeqEnd,
+    ]);
+    test([0; 0], &[
+        Token::Tuple { len: 0 },
+        Token::TupleEnd,
+    ]);
+    test(([0; 0], [1], [2, 3]), &[
+        Token::Seq { len: Some(3) },
+            Token::Seq { len: Some(0) },
+            Token::SeqEnd,
+
+            Token::Seq { len: Some(1) },
+                Token::I32(1),
+            Token::SeqEnd,
+
+            Token::Seq { len: Some(2) },
+                Token::I32(2),
+                Token::I32(3),
+            Token::SeqEnd,
+        Token::SeqEnd,
+    ]);
+    test(([0; 0], [1], [2, 3]), &[
+        Token::Tuple { len: 3 },
+            Token::Tuple { len: 0 },
+            Token::TupleEnd,
+
             Token::Tuple { len: 1 },
                 Token::I32(1),
             Token::TupleEnd,
-        ],
-        (1, 2, 3) => &[
-            Token::Tuple { len: 3 },
-                Token::I32(1),
+
+            Token::Tuple { len: 2 },
                 Token::I32(2),
                 Token::I32(3),
             Token::TupleEnd,
-        ],
-    }
-    test_btreemap {
-        BTreeMap::<isize, isize>::new() => &[
-            Token::Map { len: Some(0) },
-            Token::MapEnd,
-        ],
-        btreemap![1 => 2] => &[
-            Token::Map { len: Some(1) },
-                Token::I32(1),
-                Token::I32(2),
-            Token::MapEnd,
-        ],
-        btreemap![1 => 2, 3 => 4] => &[
-            Token::Map { len: Some(2) },
-                Token::I32(1),
-                Token::I32(2),
+        Token::TupleEnd,
+    ]);
+    test([0; 0], &[
+        Token::TupleStruct { name: "Anything", len: 0 },
+        Token::TupleStructEnd,
+    ]);
+}
 
-                Token::I32(3),
-                Token::I32(4),
-            Token::MapEnd,
-        ],
-        btreemap![1 => btreemap![], 2 => btreemap![3 => 4, 5 => 6]] => &[
-            Token::Map { len: Some(2) },
-                Token::I32(1),
-                Token::Map { len: Some(0) },
-                Token::MapEnd,
-
-                Token::I32(2),
-                Token::Map { len: Some(2) },
-                    Token::I32(3),
-                    Token::I32(4),
-
-                    Token::I32(5),
-                    Token::I32(6),
-                Token::MapEnd,
-            Token::MapEnd,
-        ],
-        BTreeMap::<isize, isize>::new() => &[
-            Token::Struct { name: "Anything", len: 0 },
-            Token::StructEnd,
-        ],
-    }
-    test_hashmap {
-        HashMap::<isize, isize>::new() => &[
-            Token::Map { len: Some(0) },
-            Token::MapEnd,
-        ],
-        hashmap![1 => 2] => &[
-            Token::Map { len: Some(1) },
-                Token::I32(1),
-                Token::I32(2),
-            Token::MapEnd,
-        ],
-        hashmap![1 => 2, 3 => 4] => &[
-            Token::Map { len: Some(2) },
-                Token::I32(1),
-                Token::I32(2),
-
-                Token::I32(3),
-                Token::I32(4),
-            Token::MapEnd,
-        ],
-        hashmap![1 => hashmap![], 2 => hashmap![3 => 4, 5 => 6]] => &[
-            Token::Map { len: Some(2) },
-                Token::I32(1),
-                Token::Map { len: Some(0) },
-                Token::MapEnd,
-
-                Token::I32(2),
-                Token::Map { len: Some(2) },
-                    Token::I32(3),
-                    Token::I32(4),
-
-                    Token::I32(5),
-                    Token::I32(6),
-                Token::MapEnd,
-            Token::MapEnd,
-        ],
-        HashMap::<isize, isize>::new() => &[
-            Token::Struct { name: "Anything", len: 0 },
-            Token::StructEnd,
-        ],
-        hashmap![FnvHasher @ 1 => 2, 3 => 4] => &[
-            Token::Map { len: Some(2) },
-                Token::I32(1),
-                Token::I32(2),
-
-                Token::I32(3),
-                Token::I32(4),
-            Token::MapEnd,
-        ],
-    }
-    test_struct {
-        Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Map { len: Some(3) },
-                Token::Str("a"),
-                Token::I32(1),
-
-                Token::Str("b"),
-                Token::I32(2),
-            Token::MapEnd,
-        ],
-        Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Map { len: Some(3) },
-                Token::U8(0),
-                Token::I32(1),
-
-                Token::U8(1),
-                Token::I32(2),
-            Token::MapEnd,
-        ],
-        Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Map { len: Some(3) },
-                Token::U16(0),
-                Token::I32(1),
-
-                Token::U16(1),
-                Token::I32(2),
-            Token::MapEnd,
-        ],
-        Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Map { len: Some(3) },
-                Token::U32(0),
-                Token::I32(1),
-
-                Token::U32(1),
-                Token::I32(2),
-            Token::MapEnd,
-        ],
-        Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Map { len: Some(3) },
-                Token::U64(0),
-                Token::I32(1),
-
-                Token::U64(1),
-                Token::I32(2),
-            Token::MapEnd,
-        ],
-        // Mixed key types
-        Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Map { len: Some(3) },
-                Token::U8(0),
-                Token::I32(1),
-
-                Token::U64(1),
-                Token::I32(2),
-            Token::MapEnd,
-        ],
-        Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Map { len: Some(3) },
-                Token::U8(0),
-                Token::I32(1),
-
-                Token::Str("b"),
-                Token::I32(2),
-            Token::MapEnd,
-        ],
-        Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Struct { name: "Struct", len: 2 },
-                Token::Str("a"),
-                Token::I32(1),
-
-                Token::Str("b"),
-                Token::I32(2),
-            Token::StructEnd,
-        ],
-        Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Seq { len: Some(3) },
-                Token::I32(1),
-                Token::I32(2),
-            Token::SeqEnd,
-        ],
-    }
-    test_struct_borrowed_keys {
-        Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Map { len: Some(3) },
-                Token::BorrowedStr("a"),
-                Token::I32(1),
-
-                Token::BorrowedStr("b"),
-                Token::I32(2),
-            Token::MapEnd,
-        ],
-        Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Struct { name: "Struct", len: 2 },
-                Token::BorrowedStr("a"),
-                Token::I32(1),
-
-                Token::BorrowedStr("b"),
-                Token::I32(2),
-            Token::StructEnd,
-        ],
-    }
-    test_struct_owned_keys {
-        Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Map { len: Some(3) },
-                Token::String("a"),
-                Token::I32(1),
-
-                Token::String("b"),
-                Token::I32(2),
-            Token::MapEnd,
-        ],
-        Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Struct { name: "Struct", len: 2 },
-                Token::String("a"),
-                Token::I32(1),
-
-                Token::String("b"),
-                Token::I32(2),
-            Token::StructEnd,
-        ],
-    }
-    test_struct_with_skip {
-        Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Map { len: Some(3) },
-                Token::Str("a"),
-                Token::I32(1),
-
-                Token::Str("b"),
-                Token::I32(2),
-
-                Token::Str("c"),
-                Token::I32(3),
-
-                Token::Str("d"),
-                Token::I32(4),
-            Token::MapEnd,
-        ],
-        Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Map { len: Some(3) },
-                Token::U8(0),
-                Token::I32(1),
-
-                Token::U16(1),
-                Token::I32(2),
-
-                Token::U32(2),
-                Token::I32(3),
-
-                Token::U64(3),
-                Token::I32(4),
-            Token::MapEnd,
-        ],
-        Struct { a: 1, b: 2, c: 0 } => &[
-            Token::Struct { name: "Struct", len: 2 },
-                Token::Str("a"),
-                Token::I32(1),
-
-                Token::Str("b"),
-                Token::I32(2),
-
-                Token::Str("c"),
-                Token::I32(3),
-
-                Token::Str("d"),
-                Token::I32(4),
-            Token::StructEnd,
-        ],
-    }
-    test_struct_skip_all {
-        StructSkipAll { a: 0 } => &[
-            Token::Struct { name: "StructSkipAll", len: 0 },
-            Token::StructEnd,
-        ],
-        StructSkipAll { a: 0 } => &[
-            Token::Struct { name: "StructSkipAll", len: 0 },
-                Token::Str("a"),
-                Token::I32(1),
-
-                Token::Str("b"),
-                Token::I32(2),
-            Token::StructEnd,
-        ],
-    }
-    test_struct_skip_default {
-        StructSkipDefault { a: 16 } => &[
-            Token::Struct { name: "StructSkipDefault", len: 0 },
-            Token::StructEnd,
-        ],
-    }
-    test_struct_skip_all_deny_unknown {
-        StructSkipAllDenyUnknown { a: 0 } => &[
-            Token::Struct { name: "StructSkipAllDenyUnknown", len: 0 },
-            Token::StructEnd,
-        ],
-    }
-    test_struct_default {
-        StructDefault { a: 50, b: "overwritten".to_string() } => &[
-            Token::Struct { name: "StructDefault", len: 2 },
-                Token::Str("a"),
-                Token::I32(50),
-
-                Token::Str("b"),
-                Token::String("overwritten"),
-            Token::StructEnd,
-        ],
-        StructDefault { a: 100, b: "default".to_string() } => &[
-            Token::Struct { name: "StructDefault",  len: 2 },
-            Token::StructEnd,
-        ],
-    }
-    test_enum_unit {
-        Enum::Unit => &[
-            Token::UnitVariant { name: "Enum", variant: "Unit" },
-        ],
-    }
-    test_enum_simple {
-        Enum::Simple(1) => &[
-            Token::NewtypeVariant { name: "Enum", variant: "Simple" },
+#[test]
+fn test_tuple() {
+    test((1,), &[
+        Token::Seq { len: Some(1) },
             Token::I32(1),
-        ],
-    }
-    test_enum_simple_with_skipped {
-        Enum::SimpleWithSkipped(NotDeserializable) => &[
-            Token::UnitVariant { name: "Enum", variant: "SimpleWithSkipped" },
-        ],
-    }
-    test_enum_seq {
-        Enum::Seq(1, 2, 3) => &[
-            Token::TupleVariant { name: "Enum", variant: "Seq", len: 3 },
-                Token::I32(1),
-                Token::I32(2),
-                Token::I32(3),
-            Token::TupleVariantEnd,
-        ],
-    }
-    test_enum_map {
-        Enum::Map { a: 1, b: 2, c: 3 } => &[
-            Token::StructVariant { name: "Enum", variant: "Map", len: 3 },
-                Token::Str("a"),
-                Token::I32(1),
-
-                Token::Str("b"),
-                Token::I32(2),
-
-                Token::Str("c"),
-                Token::I32(3),
-            Token::StructVariantEnd,
-        ],
-    }
-    test_enum_unit_usize {
-        Enum::Unit => &[
-            Token::Enum { name: "Enum" },
-            Token::U32(0),
-            Token::Unit,
-        ],
-    }
-    test_enum_unit_bytes {
-        Enum::Unit => &[
-            Token::Enum { name: "Enum" },
-            Token::Bytes(b"Unit"),
-            Token::Unit,
-        ],
-    }
-    test_enum_other_unit {
-        EnumOther::Unit => &[
-            Token::Enum { name: "EnumOther" },
-            Token::Str("Unit"),
-            Token::Unit,
-        ],
-        EnumOther::Unit => &[
-            Token::Enum { name: "EnumOther" },
-            Token::U8(0),
-            Token::Unit,
-        ],
-        EnumOther::Unit => &[
-            Token::Enum { name: "EnumOther" },
-            Token::U16(0),
-            Token::Unit,
-        ],
-        EnumOther::Unit => &[
-            Token::Enum { name: "EnumOther" },
-            Token::U32(0),
-            Token::Unit,
-        ],
-        EnumOther::Unit => &[
-            Token::Enum { name: "EnumOther" },
-            Token::U64(0),
-            Token::Unit,
-        ],
-    }
-    test_enum_other {
-        EnumOther::Other => &[
-            Token::Enum { name: "EnumOther" },
-            Token::Str("Foo"),
-            Token::Unit,
-        ],
-        EnumOther::Other => &[
-            Token::Enum { name: "EnumOther" },
-            Token::U8(42),
-            Token::Unit,
-        ],
-        EnumOther::Other => &[
-            Token::Enum { name: "EnumOther" },
-            Token::U16(42),
-            Token::Unit,
-        ],
-        EnumOther::Other => &[
-            Token::Enum { name: "EnumOther" },
-            Token::U32(42),
-            Token::Unit,
-        ],
-        EnumOther::Other => &[
-            Token::Enum { name: "EnumOther" },
-            Token::U64(42),
-            Token::Unit,
-        ],
-    }
-    test_box {
-        Box::new(0i32) => &[Token::I32(0)],
-    }
-    test_boxed_slice {
-        Box::new([0, 1, 2]) => &[
-            Token::Seq { len: Some(3) },
-            Token::I32(0),
+        Token::SeqEnd,
+    ]);
+    test((1, 2, 3), &[
+        Token::Seq { len: Some(3) },
             Token::I32(1),
             Token::I32(2),
-            Token::SeqEnd,
-        ],
-    }
-    test_duration {
-        Duration::new(1, 2) => &[
-            Token::Struct { name: "Duration", len: 2 },
-                Token::Str("secs"),
-                Token::U64(1),
+            Token::I32(3),
+        Token::SeqEnd,
+    ]);
+    test((1,), &[
+        Token::Tuple { len: 1 },
+            Token::I32(1),
+        Token::TupleEnd,
+    ]);
+    test((1, 2, 3), &[
+        Token::Tuple { len: 3 },
+            Token::I32(1),
+            Token::I32(2),
+            Token::I32(3),
+        Token::TupleEnd,
+    ]);
+}
 
-                Token::Str("nanos"),
-                Token::U32(2),
-            Token::StructEnd,
-        ],
-        Duration::new(1, 2) => &[
-            Token::Seq { len: Some(2) },
-                Token::I64(1),
-                Token::I64(2),
-            Token::SeqEnd,
-        ],
-    }
-    test_system_time {
-        UNIX_EPOCH + Duration::new(1, 2) => &[
-            Token::Struct { name: "SystemTime", len: 2 },
-                Token::Str("secs_since_epoch"),
-                Token::U64(1),
+#[test]
+fn test_btreemap() {
+    test(BTreeMap::<isize, isize>::new(), &[
+        Token::Map { len: Some(0) },
+        Token::MapEnd,
+    ]);
+    test(btreemap![1 => 2], &[
+        Token::Map { len: Some(1) },
+            Token::I32(1),
+            Token::I32(2),
+        Token::MapEnd,
+    ]);
+    test(btreemap![1 => 2, 3 => 4], &[
+        Token::Map { len: Some(2) },
+            Token::I32(1),
+            Token::I32(2),
 
-                Token::Str("nanos_since_epoch"),
-                Token::U32(2),
-            Token::StructEnd,
-        ],
-        UNIX_EPOCH + Duration::new(1, 2) => &[
-            Token::Seq { len: Some(2) },
-                Token::I64(1),
-                Token::I64(2),
-            Token::SeqEnd,
-        ],
-    }
-    test_range {
-        1u32..2u32 => &[
-            Token::Struct { name: "Range", len: 2 },
-                Token::Str("start"),
-                Token::U32(1),
+            Token::I32(3),
+            Token::I32(4),
+        Token::MapEnd,
+    ]);
+    test(btreemap![1 => btreemap![], 2 => btreemap![3 => 4, 5 => 6]], &[
+        Token::Map { len: Some(2) },
+            Token::I32(1),
+            Token::Map { len: Some(0) },
+            Token::MapEnd,
 
-                Token::Str("end"),
-                Token::U32(2),
-            Token::StructEnd,
-        ],
-        1u32..2u32 => &[
-            Token::Seq { len: Some(2) },
-                Token::U64(1),
-                Token::U64(2),
-            Token::SeqEnd,
-        ],
-    }
-    test_range_inclusive {
-        1u32..=2u32 => &[
-            Token::Struct { name: "RangeInclusive", len: 2 },
-                Token::Str("start"),
-                Token::U32(1),
+            Token::I32(2),
+            Token::Map { len: Some(2) },
+                Token::I32(3),
+                Token::I32(4),
 
-                Token::Str("end"),
-                Token::U32(2),
-            Token::StructEnd,
-        ],
-        1u32..=2u32 => &[
-            Token::Seq { len: Some(2) },
-                Token::U64(1),
-                Token::U64(2),
-            Token::SeqEnd,
-        ],
-    }
-    test_bound {
-        Bound::Unbounded::<()> => &[
-            Token::Enum { name: "Bound" },
-            Token::Str("Unbounded"),
-            Token::Unit,
-        ],
-        Bound::Included(0) => &[
-            Token::Enum { name: "Bound" },
-            Token::Str("Included"),
+                Token::I32(5),
+                Token::I32(6),
+            Token::MapEnd,
+        Token::MapEnd,
+    ]);
+    test(BTreeMap::<isize, isize>::new(), &[
+        Token::Struct { name: "Anything", len: 0 },
+        Token::StructEnd,
+    ]);
+}
+
+#[test]
+fn test_hashmap() {
+    test(HashMap::<isize, isize>::new(), &[
+        Token::Map { len: Some(0) },
+        Token::MapEnd,
+    ]);
+    test(hashmap![1 => 2], &[
+        Token::Map { len: Some(1) },
+            Token::I32(1),
+            Token::I32(2),
+        Token::MapEnd,
+    ]);
+    test(hashmap![1 => 2, 3 => 4], &[
+        Token::Map { len: Some(2) },
+            Token::I32(1),
+            Token::I32(2),
+
+            Token::I32(3),
+            Token::I32(4),
+        Token::MapEnd,
+    ]);
+    test(hashmap![1 => hashmap![], 2 => hashmap![3 => 4, 5 => 6]], &[
+        Token::Map { len: Some(2) },
+            Token::I32(1),
+            Token::Map { len: Some(0) },
+            Token::MapEnd,
+
+            Token::I32(2),
+            Token::Map { len: Some(2) },
+                Token::I32(3),
+                Token::I32(4),
+
+                Token::I32(5),
+                Token::I32(6),
+            Token::MapEnd,
+        Token::MapEnd,
+    ]);
+    test(HashMap::<isize, isize>::new(), &[
+        Token::Struct { name: "Anything", len: 0 },
+        Token::StructEnd,
+    ]);
+    test(hashmap![FnvHasher @ 1 => 2, 3 => 4], &[
+        Token::Map { len: Some(2) },
+            Token::I32(1),
+            Token::I32(2),
+
+            Token::I32(3),
+            Token::I32(4),
+        Token::MapEnd,
+    ]);
+}
+
+#[test]
+fn test_struct() {
+    test(Struct { a: 1, b: 2, c: 0 }, &[
+        Token::Map { len: Some(3) },
+            Token::Str("a"),
+            Token::I32(1),
+
+            Token::Str("b"),
+            Token::I32(2),
+        Token::MapEnd,
+    ]);
+    test(Struct { a: 1, b: 2, c: 0 }, &[
+        Token::Map { len: Some(3) },
             Token::U8(0),
-        ],
-        Bound::Excluded(0) => &[
-            Token::Enum { name: "Bound" },
-            Token::Str("Excluded"),
-            Token::U8(0),
-        ],
-    }
-    test_path {
-        Path::new("/usr/local/lib") => &[
-            Token::BorrowedStr("/usr/local/lib"),
-        ],
-        Path::new("/usr/local/lib") => &[
-            Token::BorrowedBytes(b"/usr/local/lib"),
-        ],
-    }
-    test_path_buf {
-        PathBuf::from("/usr/local/lib") => &[
-            Token::Str("/usr/local/lib"),
-        ],
-        PathBuf::from("/usr/local/lib") => &[
-            Token::String("/usr/local/lib"),
-        ],
-        PathBuf::from("/usr/local/lib") => &[
-            Token::Bytes(b"/usr/local/lib"),
-        ],
-        PathBuf::from("/usr/local/lib") => &[
-            Token::ByteBuf(b"/usr/local/lib"),
-        ],
-    }
-    test_boxed_path {
-        PathBuf::from("/usr/local/lib").into_boxed_path() => &[
-            Token::Str("/usr/local/lib"),
-        ],
-        PathBuf::from("/usr/local/lib").into_boxed_path() => &[
-            Token::String("/usr/local/lib"),
-        ],
-        PathBuf::from("/usr/local/lib").into_boxed_path() => &[
-            Token::Bytes(b"/usr/local/lib"),
-        ],
-        PathBuf::from("/usr/local/lib").into_boxed_path() => &[
-            Token::ByteBuf(b"/usr/local/lib"),
-        ],
-    }
-    test_cstring {
-        CString::new("abc").unwrap() => &[
-            Token::Bytes(b"abc"),
-        ],
-    }
-    test_rc {
-        Rc::new(true) => &[
-            Token::Bool(true),
-        ],
-    }
-    test_rc_weak_some {
-        SkipPartialEq(RcWeak::<bool>::new()) => &[
-            Token::Some,
-            Token::Bool(true),
-        ],
-    }
-    test_rc_weak_none {
-        SkipPartialEq(RcWeak::<bool>::new()) => &[
-            Token::None,
-        ],
-    }
-    test_arc {
-        Arc::new(true) => &[
-            Token::Bool(true),
-        ],
-    }
-    test_arc_weak_some {
-        SkipPartialEq(ArcWeak::<bool>::new()) => &[
-            Token::Some,
-            Token::Bool(true),
-        ],
-    }
-    test_arc_weak_none {
-        SkipPartialEq(ArcWeak::<bool>::new()) => &[
-            Token::None,
-        ],
-    }
-    test_wrapping {
-        Wrapping(1usize) => &[
+            Token::I32(1),
+
+            Token::U8(1),
+            Token::I32(2),
+        Token::MapEnd,
+    ]);
+    test(Struct { a: 1, b: 2, c: 0 }, &[
+        Token::Map { len: Some(3) },
+            Token::U16(0),
+            Token::I32(1),
+
+            Token::U16(1),
+            Token::I32(2),
+        Token::MapEnd,
+    ]);
+    test(Struct { a: 1, b: 2, c: 0 }, &[
+        Token::Map { len: Some(3) },
+            Token::U32(0),
+            Token::I32(1),
+
             Token::U32(1),
-        ],
-        Wrapping(1usize) => &[
+            Token::I32(2),
+        Token::MapEnd,
+    ]);
+    test(Struct { a: 1, b: 2, c: 0 }, &[
+        Token::Map { len: Some(3) },
+            Token::U64(0),
+            Token::I32(1),
+
             Token::U64(1),
-        ],
-    }
-    test_rc_dst {
-        Rc::<str>::from("s") => &[
-            Token::Str("s"),
-        ],
-        Rc::<[bool]>::from(&[true][..]) => &[
-            Token::Seq { len: Some(1) },
-            Token::Bool(true),
-            Token::SeqEnd,
-        ],
-    }
-    test_arc_dst {
-        Arc::<str>::from("s") => &[
-            Token::Str("s"),
-        ],
-        Arc::<[bool]>::from(&[true][..]) => &[
-            Token::Seq { len: Some(1) },
-            Token::Bool(true),
-            Token::SeqEnd,
-        ],
-    }
-    test_ignored_any {
-        IgnoredAny => &[
-            Token::Str("s"),
-        ],
-        IgnoredAny => &[
-            Token::Seq { len: Some(1) },
-            Token::Bool(true),
-            Token::SeqEnd,
-        ],
-        IgnoredAny => &[
-            Token::Enum { name: "E" },
-            Token::Str("Rust"),
-            Token::Unit,
-        ],
-    }
+            Token::I32(2),
+        Token::MapEnd,
+    ]);
+    // Mixed key types
+    test(Struct { a: 1, b: 2, c: 0 }, &[
+        Token::Map { len: Some(3) },
+            Token::U8(0),
+            Token::I32(1),
+
+            Token::U64(1),
+            Token::I32(2),
+        Token::MapEnd,
+    ]);
+    test(Struct { a: 1, b: 2, c: 0 }, &[
+        Token::Map { len: Some(3) },
+            Token::U8(0),
+            Token::I32(1),
+
+            Token::Str("b"),
+            Token::I32(2),
+        Token::MapEnd,
+    ]);
+    test(Struct { a: 1, b: 2, c: 0 }, &[
+        Token::Struct { name: "Struct", len: 2 },
+            Token::Str("a"),
+            Token::I32(1),
+
+            Token::Str("b"),
+            Token::I32(2),
+        Token::StructEnd,
+    ]);
+    test(Struct { a: 1, b: 2, c: 0 }, &[
+        Token::Seq { len: Some(3) },
+            Token::I32(1),
+            Token::I32(2),
+        Token::SeqEnd,
+    ]);
 }
 
-declare_tests! {
-    readable
+#[test]
+fn test_struct_borrowed_keys() {
+    test(Struct { a: 1, b: 2, c: 0 }, &[
+        Token::Map { len: Some(3) },
+            Token::BorrowedStr("a"),
+            Token::I32(1),
 
-    test_net_ipv4addr_readable {
-        "1.2.3.4".parse::<net::Ipv4Addr>().unwrap() => &[Token::Str("1.2.3.4")],
-    }
-    test_net_ipv6addr_readable {
-        "::1".parse::<net::Ipv6Addr>().unwrap() => &[Token::Str("::1")],
-    }
-    test_net_ipaddr_readable {
-        "1.2.3.4".parse::<net::IpAddr>().unwrap() => &[Token::Str("1.2.3.4")],
-    }
-    test_net_socketaddr_readable {
-        "1.2.3.4:1234".parse::<net::SocketAddr>().unwrap() => &[Token::Str("1.2.3.4:1234")],
-        "1.2.3.4:1234".parse::<net::SocketAddrV4>().unwrap() => &[Token::Str("1.2.3.4:1234")],
-        "[::1]:1234".parse::<net::SocketAddrV6>().unwrap() => &[Token::Str("[::1]:1234")],
-    }
+            Token::BorrowedStr("b"),
+            Token::I32(2),
+        Token::MapEnd,
+    ]);
+    test(Struct { a: 1, b: 2, c: 0 }, &[
+        Token::Struct { name: "Struct", len: 2 },
+            Token::BorrowedStr("a"),
+            Token::I32(1),
+
+            Token::BorrowedStr("b"),
+            Token::I32(2),
+        Token::StructEnd,
+    ]);
 }
 
-declare_tests! {
-    compact
+#[test]
+fn test_struct_owned_keys() {
+    test(Struct { a: 1, b: 2, c: 0 }, &[
+        Token::Map { len: Some(3) },
+            Token::String("a"),
+            Token::I32(1),
 
-    test_net_ipv4addr_compact {
-        net::Ipv4Addr::from(*b"1234") => &seq![
-            Token::Tuple { len: 4 },
-            seq b"1234".iter().map(|&b| Token::U8(b)),
-            Token::TupleEnd
-        ],
-    }
-    test_net_ipv6addr_compact {
-        net::Ipv6Addr::from(*b"1234567890123456") => &seq![
-            Token::Tuple { len: 4 },
-            seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
-            Token::TupleEnd
-        ],
-    }
-    test_net_ipaddr_compact {
-        net::IpAddr::from(*b"1234") => &seq![
-            Token::NewtypeVariant { name: "IpAddr", variant: "V4" },
+            Token::String("b"),
+            Token::I32(2),
+        Token::MapEnd,
+    ]);
+    test(Struct { a: 1, b: 2, c: 0 }, &[
+        Token::Struct { name: "Struct", len: 2 },
+            Token::String("a"),
+            Token::I32(1),
 
-            Token::Tuple { len: 4 },
-            seq b"1234".iter().map(|&b| Token::U8(b)),
-            Token::TupleEnd
-        ],
-    }
-    test_net_socketaddr_compact {
-        net::SocketAddr::from((*b"1234567890123456", 1234)) => &seq![
-            Token::NewtypeVariant { name: "SocketAddr", variant: "V6" },
+            Token::String("b"),
+            Token::I32(2),
+        Token::StructEnd,
+    ]);
+}
 
-            Token::Tuple { len: 2 },
+#[test]
+fn test_struct_with_skip() {
+    test(Struct { a: 1, b: 2, c: 0 }, &[
+        Token::Map { len: Some(3) },
+            Token::Str("a"),
+            Token::I32(1),
 
-            Token::Tuple { len: 16 },
-            seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
-            Token::TupleEnd,
+            Token::Str("b"),
+            Token::I32(2),
 
-            Token::U16(1234),
-            Token::TupleEnd
-        ],
-        net::SocketAddr::from((*b"1234", 1234)) => &seq![
-            Token::NewtypeVariant { name: "SocketAddr", variant: "V4" },
+            Token::Str("c"),
+            Token::I32(3),
 
-            Token::Tuple { len: 2 },
+            Token::Str("d"),
+            Token::I32(4),
+        Token::MapEnd,
+    ]);
+    test(Struct { a: 1, b: 2, c: 0 }, &[
+        Token::Map { len: Some(3) },
+            Token::U8(0),
+            Token::I32(1),
 
-            Token::Tuple { len: 4 },
-            seq b"1234".iter().map(|&b| Token::U8(b)),
-            Token::TupleEnd,
+            Token::U16(1),
+            Token::I32(2),
 
-            Token::U16(1234),
-            Token::TupleEnd
-        ],
-        net::SocketAddrV4::new(net::Ipv4Addr::from(*b"1234"), 1234) => &seq![
-            Token::Tuple { len: 2 },
+            Token::U32(2),
+            Token::I32(3),
 
-            Token::Tuple { len: 4 },
-            seq b"1234".iter().map(|&b| Token::U8(b)),
-            Token::TupleEnd,
+            Token::U64(3),
+            Token::I32(4),
+        Token::MapEnd,
+    ]);
+    test(Struct { a: 1, b: 2, c: 0 }, &[
+        Token::Struct { name: "Struct", len: 2 },
+            Token::Str("a"),
+            Token::I32(1),
 
-            Token::U16(1234),
-            Token::TupleEnd
-        ],
-        net::SocketAddrV6::new(net::Ipv6Addr::from(*b"1234567890123456"), 1234, 0, 0) => &seq![
-            Token::Tuple { len: 2 },
+            Token::Str("b"),
+            Token::I32(2),
 
-            Token::Tuple { len: 16 },
-            seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
-            Token::TupleEnd,
+            Token::Str("c"),
+            Token::I32(3),
 
-            Token::U16(1234),
-            Token::TupleEnd
-        ],
-    }
+            Token::Str("d"),
+            Token::I32(4),
+        Token::StructEnd,
+    ]);
+}
+
+#[test]
+fn test_struct_skip_all() {
+    test(StructSkipAll { a: 0 }, &[
+        Token::Struct { name: "StructSkipAll", len: 0 },
+        Token::StructEnd,
+    ]);
+    test(StructSkipAll { a: 0 }, &[
+        Token::Struct { name: "StructSkipAll", len: 0 },
+            Token::Str("a"),
+            Token::I32(1),
+
+            Token::Str("b"),
+            Token::I32(2),
+        Token::StructEnd,
+    ]);
+}
+
+#[test]
+fn test_struct_skip_default() {
+    test(StructSkipDefault { a: 16 }, &[
+        Token::Struct { name: "StructSkipDefault", len: 0 },
+        Token::StructEnd,
+    ]);
+}
+
+#[test]
+fn test_struct_skip_all_deny_unknown() {
+    test(StructSkipAllDenyUnknown { a: 0 }, &[
+        Token::Struct { name: "StructSkipAllDenyUnknown", len: 0 },
+        Token::StructEnd,
+    ]);
+}
+
+#[test]
+fn test_struct_default() {
+    test(StructDefault { a: 50, b: "overwritten".to_string() }, &[
+        Token::Struct { name: "StructDefault", len: 2 },
+            Token::Str("a"),
+            Token::I32(50),
+
+            Token::Str("b"),
+            Token::String("overwritten"),
+        Token::StructEnd,
+    ]);
+    test(StructDefault { a: 100, b: "default".to_string() }, &[
+        Token::Struct { name: "StructDefault",  len: 2 },
+        Token::StructEnd,
+    ]);
+}
+
+#[test]
+fn test_enum_unit() {
+    test(Enum::Unit, &[
+        Token::UnitVariant { name: "Enum", variant: "Unit" },
+    ]);
+}
+
+#[test]
+fn test_enum_simple() {
+    test(Enum::Simple(1), &[
+        Token::NewtypeVariant { name: "Enum", variant: "Simple" },
+        Token::I32(1),
+    ]);
+}
+
+#[test]
+fn test_enum_simple_with_skipped() {
+    test(Enum::SimpleWithSkipped(NotDeserializable), &[
+        Token::UnitVariant { name: "Enum", variant: "SimpleWithSkipped" },
+    ]);
+}
+
+#[test]
+fn test_enum_seq() {
+    test(Enum::Seq(1, 2, 3), &[
+        Token::TupleVariant { name: "Enum", variant: "Seq", len: 3 },
+            Token::I32(1),
+            Token::I32(2),
+            Token::I32(3),
+        Token::TupleVariantEnd,
+    ]);
+}
+
+#[test]
+fn test_enum_map() {
+    test(Enum::Map { a: 1, b: 2, c: 3 }, &[
+        Token::StructVariant { name: "Enum", variant: "Map", len: 3 },
+            Token::Str("a"),
+            Token::I32(1),
+
+            Token::Str("b"),
+            Token::I32(2),
+
+            Token::Str("c"),
+            Token::I32(3),
+        Token::StructVariantEnd,
+    ]);
+}
+
+#[test]
+fn test_enum_unit_usize() {
+    test(Enum::Unit, &[
+        Token::Enum { name: "Enum" },
+        Token::U32(0),
+        Token::Unit,
+    ]);
+}
+
+#[test]
+fn test_enum_unit_bytes() {
+    test(Enum::Unit, &[
+        Token::Enum { name: "Enum" },
+        Token::Bytes(b"Unit"),
+        Token::Unit,
+    ]);
+}
+
+#[test]
+fn test_enum_other_unit() {
+    test(EnumOther::Unit, &[
+        Token::Enum { name: "EnumOther" },
+        Token::Str("Unit"),
+        Token::Unit,
+    ]);
+    test(EnumOther::Unit, &[
+        Token::Enum { name: "EnumOther" },
+        Token::U8(0),
+        Token::Unit,
+    ]);
+    test(EnumOther::Unit, &[
+        Token::Enum { name: "EnumOther" },
+        Token::U16(0),
+        Token::Unit,
+    ]);
+    test(EnumOther::Unit, &[
+        Token::Enum { name: "EnumOther" },
+        Token::U32(0),
+        Token::Unit,
+    ]);
+    test(EnumOther::Unit, &[
+        Token::Enum { name: "EnumOther" },
+        Token::U64(0),
+        Token::Unit,
+    ]);
+}
+
+#[test]
+fn test_enum_other() {
+    test(EnumOther::Other, &[
+        Token::Enum { name: "EnumOther" },
+        Token::Str("Foo"),
+        Token::Unit,
+    ]);
+    test(EnumOther::Other, &[
+        Token::Enum { name: "EnumOther" },
+        Token::U8(42),
+        Token::Unit,
+    ]);
+    test(EnumOther::Other, &[
+        Token::Enum { name: "EnumOther" },
+        Token::U16(42),
+        Token::Unit,
+    ]);
+    test(EnumOther::Other, &[
+        Token::Enum { name: "EnumOther" },
+        Token::U32(42),
+        Token::Unit,
+    ]);
+    test(EnumOther::Other, &[
+        Token::Enum { name: "EnumOther" },
+        Token::U64(42),
+        Token::Unit,
+    ]);
+}
+
+#[test]
+fn test_box() {
+    test(Box::new(0i32), &[Token::I32(0)]);
+}
+
+#[test]
+fn test_boxed_slice() {
+    test(Box::new([0, 1, 2]), &[
+        Token::Seq { len: Some(3) },
+        Token::I32(0),
+        Token::I32(1),
+        Token::I32(2),
+        Token::SeqEnd,
+    ]);
+}
+
+#[test]
+fn test_duration() {
+    test(Duration::new(1, 2), &[
+        Token::Struct { name: "Duration", len: 2 },
+            Token::Str("secs"),
+            Token::U64(1),
+
+            Token::Str("nanos"),
+            Token::U32(2),
+        Token::StructEnd,
+    ]);
+    test(Duration::new(1, 2), &[
+        Token::Seq { len: Some(2) },
+            Token::I64(1),
+            Token::I64(2),
+        Token::SeqEnd,
+    ]);
+}
+
+#[test]
+fn test_system_time() {
+    test(UNIX_EPOCH + Duration::new(1, 2), &[
+        Token::Struct { name: "SystemTime", len: 2 },
+            Token::Str("secs_since_epoch"),
+            Token::U64(1),
+
+            Token::Str("nanos_since_epoch"),
+            Token::U32(2),
+        Token::StructEnd,
+    ]);
+    test(UNIX_EPOCH + Duration::new(1, 2), &[
+        Token::Seq { len: Some(2) },
+            Token::I64(1),
+            Token::I64(2),
+        Token::SeqEnd,
+    ]);
+}
+
+#[test]
+fn test_range() {
+    test(1u32..2u32, &[
+        Token::Struct { name: "Range", len: 2 },
+            Token::Str("start"),
+            Token::U32(1),
+
+            Token::Str("end"),
+            Token::U32(2),
+        Token::StructEnd,
+    ]);
+    test(1u32..2u32, &[
+        Token::Seq { len: Some(2) },
+            Token::U64(1),
+            Token::U64(2),
+        Token::SeqEnd,
+    ]);
+}
+
+#[test]
+fn test_range_inclusive() {
+    test(1u32..=2u32, &[
+        Token::Struct { name: "RangeInclusive", len: 2 },
+            Token::Str("start"),
+            Token::U32(1),
+
+            Token::Str("end"),
+            Token::U32(2),
+        Token::StructEnd,
+    ]);
+    test(1u32..=2u32, &[
+        Token::Seq { len: Some(2) },
+            Token::U64(1),
+            Token::U64(2),
+        Token::SeqEnd,
+    ]);
+}
+
+#[test]
+fn test_bound() {
+    test(Bound::Unbounded::<()>, &[
+        Token::Enum { name: "Bound" },
+        Token::Str("Unbounded"),
+        Token::Unit,
+    ]);
+    test(Bound::Included(0), &[
+        Token::Enum { name: "Bound" },
+        Token::Str("Included"),
+        Token::U8(0),
+    ]);
+    test(Bound::Excluded(0), &[
+        Token::Enum { name: "Bound" },
+        Token::Str("Excluded"),
+        Token::U8(0),
+    ]);
+}
+
+#[test]
+fn test_path() {
+    test(Path::new("/usr/local/lib"), &[
+        Token::BorrowedStr("/usr/local/lib"),
+    ]);
+    test(Path::new("/usr/local/lib"), &[
+        Token::BorrowedBytes(b"/usr/local/lib"),
+    ]);
+}
+
+#[test]
+fn test_path_buf() {
+    test(PathBuf::from("/usr/local/lib"), &[
+        Token::Str("/usr/local/lib"),
+    ]);
+    test(PathBuf::from("/usr/local/lib"), &[
+        Token::String("/usr/local/lib"),
+    ]);
+    test(PathBuf::from("/usr/local/lib"), &[
+        Token::Bytes(b"/usr/local/lib"),
+    ]);
+    test(PathBuf::from("/usr/local/lib"), &[
+        Token::ByteBuf(b"/usr/local/lib"),
+    ]);
+}
+
+#[test]
+fn test_boxed_path() {
+    test(PathBuf::from("/usr/local/lib").into_boxed_path(), &[
+        Token::Str("/usr/local/lib"),
+    ]);
+    test(PathBuf::from("/usr/local/lib").into_boxed_path(), &[
+        Token::String("/usr/local/lib"),
+    ]);
+    test(PathBuf::from("/usr/local/lib").into_boxed_path(), &[
+        Token::Bytes(b"/usr/local/lib"),
+    ]);
+    test(PathBuf::from("/usr/local/lib").into_boxed_path(), &[
+        Token::ByteBuf(b"/usr/local/lib"),
+    ]);
+}
+
+#[test]
+fn test_cstring() {
+    test(CString::new("abc").unwrap(), &[
+        Token::Bytes(b"abc"),
+    ]);
+}
+
+#[test]
+fn test_rc() {
+    test(Rc::new(true), &[
+        Token::Bool(true),
+    ]);
+}
+
+#[test]
+fn test_rc_weak_some() {
+    test(SkipPartialEq(RcWeak::<bool>::new()), &[
+        Token::Some,
+        Token::Bool(true),
+    ]);
+}
+
+#[test]
+fn test_rc_weak_none() {
+    test(SkipPartialEq(RcWeak::<bool>::new()), &[
+        Token::None,
+    ]);
+}
+
+#[test]
+fn test_arc() {
+    test(Arc::new(true), &[
+        Token::Bool(true),
+    ]);
+}
+
+#[test]
+fn test_arc_weak_some() {
+    test(SkipPartialEq(ArcWeak::<bool>::new()), &[
+        Token::Some,
+        Token::Bool(true),
+    ]);
+}
+
+#[test]
+fn test_arc_weak_none() {
+    test(SkipPartialEq(ArcWeak::<bool>::new()), &[
+        Token::None,
+    ]);
+}
+
+#[test]
+fn test_wrapping() {
+    test(Wrapping(1usize), &[
+        Token::U32(1),
+    ]);
+    test(Wrapping(1usize), &[
+        Token::U64(1),
+    ]);
+}
+
+#[test]
+fn test_rc_dst() {
+    test(Rc::<str>::from("s"), &[
+        Token::Str("s"),
+    ]);
+    test(Rc::<[bool]>::from(&[true][..]), &[
+        Token::Seq { len: Some(1) },
+        Token::Bool(true),
+        Token::SeqEnd,
+    ]);
+}
+
+#[test]
+fn test_arc_dst() {
+    test(Arc::<str>::from("s"), &[
+        Token::Str("s"),
+    ]);
+    test(Arc::<[bool]>::from(&[true][..]), &[
+        Token::Seq { len: Some(1) },
+        Token::Bool(true),
+        Token::SeqEnd,
+    ]);
+}
+
+#[test]
+fn test_ignored_any() {
+    test(IgnoredAny, &[
+        Token::Str("s"),
+    ]);
+    test(IgnoredAny, &[
+        Token::Seq { len: Some(1) },
+        Token::Bool(true),
+        Token::SeqEnd,
+    ]);
+    test(IgnoredAny, &[
+        Token::Enum { name: "E" },
+        Token::Str("Rust"),
+        Token::Unit,
+    ]);
+}
+
+#[test]
+fn test_net_ipv4addr_readable() {
+    test("1.2.3.4".parse::<net::Ipv4Addr>().unwrap().readable(), &[Token::Str("1.2.3.4")]);
+}
+
+#[test]
+fn test_net_ipv6addr_readable() {
+    test("::1".parse::<net::Ipv6Addr>().unwrap().readable(), &[Token::Str("::1")]);
+}
+
+#[test]
+fn test_net_ipaddr_readable() {
+    test("1.2.3.4".parse::<net::IpAddr>().unwrap().readable(), &[Token::Str("1.2.3.4")]);
+}
+
+#[test]
+fn test_net_socketaddr_readable() {
+    test("1.2.3.4:1234".parse::<net::SocketAddr>().unwrap().readable(), &[Token::Str("1.2.3.4:1234")]);
+    test("1.2.3.4:1234".parse::<net::SocketAddrV4>().unwrap().readable(), &[Token::Str("1.2.3.4:1234")]);
+    test("[::1]:1234".parse::<net::SocketAddrV6>().unwrap().readable(), &[Token::Str("[::1]:1234")]);
+}
+
+#[test]
+fn test_net_ipv4addr_compact() {
+    test(net::Ipv4Addr::from(*b"1234").compact(), &seq![
+        Token::Tuple { len: 4 },
+        seq b"1234".iter().map(|&b| Token::U8(b)),
+        Token::TupleEnd
+    ]);
+}
+
+#[test]
+fn test_net_ipv6addr_compact() {
+    test(net::Ipv6Addr::from(*b"1234567890123456").compact(), &seq![
+        Token::Tuple { len: 4 },
+        seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
+        Token::TupleEnd
+    ]);
+}
+
+#[test]
+fn test_net_ipaddr_compact() {
+    test(net::IpAddr::from(*b"1234").compact(), &seq![
+        Token::NewtypeVariant { name: "IpAddr", variant: "V4" },
+
+        Token::Tuple { len: 4 },
+        seq b"1234".iter().map(|&b| Token::U8(b)),
+        Token::TupleEnd
+    ]);
+}
+
+#[test]
+fn test_net_socketaddr_compact() {
+    test(net::SocketAddr::from((*b"1234567890123456", 1234)).compact(), &seq![
+        Token::NewtypeVariant { name: "SocketAddr", variant: "V6" },
+
+        Token::Tuple { len: 2 },
+
+        Token::Tuple { len: 16 },
+        seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
+        Token::TupleEnd,
+
+        Token::U16(1234),
+        Token::TupleEnd
+    ]);
+    test(net::SocketAddr::from((*b"1234", 1234)).compact(), &seq![
+        Token::NewtypeVariant { name: "SocketAddr", variant: "V4" },
+
+        Token::Tuple { len: 2 },
+
+        Token::Tuple { len: 4 },
+        seq b"1234".iter().map(|&b| Token::U8(b)),
+        Token::TupleEnd,
+
+        Token::U16(1234),
+        Token::TupleEnd
+    ]);
+    test(net::SocketAddrV4::new(net::Ipv4Addr::from(*b"1234"), 1234).compact(), &seq![
+        Token::Tuple { len: 2 },
+
+        Token::Tuple { len: 4 },
+        seq b"1234".iter().map(|&b| Token::U8(b)),
+        Token::TupleEnd,
+
+        Token::U16(1234),
+        Token::TupleEnd
+    ]);
+    test(net::SocketAddrV6::new(net::Ipv6Addr::from(*b"1234567890123456"), 1234, 0, 0).compact(), &seq![
+        Token::Tuple { len: 2 },
+
+        Token::Tuple { len: 16 },
+        seq b"1234567890123456".iter().map(|&b| Token::U8(b)),
+        Token::TupleEnd,
+
+        Token::U16(1234),
+        Token::TupleEnd
+    ]);
 }
 
 #[cfg(feature = "unstable")]
-declare_tests! {
-    test_never_result {
-        Ok::<u8, !>(0) => &[
-            Token::NewtypeVariant { name: "Result", variant: "Ok" },
-            Token::U8(0),
-        ],
-    }
+#[test]
+fn test_never_result() {
+    test(Ok::<u8, !>(0), &[
+        Token::NewtypeVariant { name: "Result", variant: "Ok" },
+        Token::U8(0),
+    ]);
 }
 
 #[cfg(unix)]
