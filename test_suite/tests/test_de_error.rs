@@ -1,4 +1,4 @@
-#![allow(clippy::empty_enum)]
+#![allow(clippy::empty_enum, clippy::unreadable_literal)]
 #![cfg_attr(feature = "unstable", feature(never_type))]
 
 use serde::Deserialize;

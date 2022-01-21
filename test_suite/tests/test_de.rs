@@ -1,4 +1,5 @@
 #![allow(
+    clippy::cast_lossless,
     clippy::decimal_literal_representation,
     clippy::empty_enum,
     clippy::manual_assert,
