@@ -1934,6 +1934,7 @@ fn deserialize_generated_identifier(
         None,
         !is_variant && cattrs.has_flatten(),
         None,
+        cattrs.name_eq(),
     ));
 
     let lifetime = if !is_variant && cattrs.has_flatten() {
@@ -2057,6 +2058,7 @@ fn deserialize_custom_identifier(
         fallthrough_borrowed,
         false,
         cattrs.expecting(),
+        cattrs.name_eq(),
     ));
 
     quote_block! {
@@ -2089,13 +2091,18 @@ fn deserialize_identifier(
     fallthrough_borrowed: Option<TokenStream>,
     collect_other_fields: bool,
     expecting: Option<&str>,
+    name_eq: Option<&syn::ExprPath>,
 ) -> Fragment {
     let mut flat_fields = Vec::new();
     for (_, ident, aliases) in fields {
         flat_fields.extend(aliases.iter().map(|alias| (alias, ident)));
     }
 
-    let field_strs: &Vec<_> = &flat_fields.iter().map(|(name, _)| name).collect();
+    let field_strs: &Vec<_> = &flat_fields
+        .iter()
+        .map(|(name, _)| Literal::string(name))
+        .collect();
+
     let field_bytes: &Vec<_> = &flat_fields
         .iter()
         .map(|(name, _)| Literal::byte_string(name.as_bytes()))
@@ -2178,6 +2185,28 @@ fn deserialize_identifier(
         };
         &u64_fallthrough_arm_tokens
     };
+
+    let build_visit_arms = |field_strs: &[Literal], fields: &[Literal], is_str: bool| {
+        let value_bytes = if is_str {
+            quote!(__value.as_bytes())
+        } else {
+            quote!(__value)
+        };
+        if let Some(name_eq) = name_eq {
+            quote! {
+                #(
+                    __value if #name_eq(#field_strs, #value_bytes) => _serde::__private::Ok(#constructors),
+                )*
+            }
+        } else {
+            quote! {
+                #( #fields => _serde::__private::Ok(#constructors), )*
+            }
+        }
+    };
+
+    let visit_arms_str = build_visit_arms(&field_strs, &field_strs, true);
+    let visit_arms_bytes = build_visit_arms(&field_strs, &field_bytes, false);
 
     let variant_indices = 0_u64..;
     let visit_other = if collect_other_fields {
@@ -2297,9 +2326,7 @@ fn deserialize_identifier(
                 __E: _serde::de::Error,
             {
                 match __value {
-                    #(
-                        #field_strs => _serde::__private::Ok(#constructors),
-                    )*
+                    #visit_arms_str
                     _ => {
                         #value_as_borrowed_str_content
                         #fallthrough_borrowed_arm
@@ -2312,9 +2339,7 @@ fn deserialize_identifier(
                 __E: _serde::de::Error,
             {
                 match __value {
-                    #(
-                        #field_bytes => _serde::__private::Ok(#constructors),
-                    )*
+                    #visit_arms_bytes
                     _ => {
                         #bytes_to_str
                         #value_as_borrowed_bytes_content
@@ -2339,9 +2364,7 @@ fn deserialize_identifier(
             __E: _serde::de::Error,
         {
             match __value {
-                #(
-                    #field_strs => _serde::__private::Ok(#constructors),
-                )*
+                #visit_arms_str
                 _ => {
                     #value_as_str_content
                     #fallthrough_arm
@@ -2354,9 +2377,7 @@ fn deserialize_identifier(
             __E: _serde::de::Error,
         {
             match __value {
-                #(
-                    #field_bytes => _serde::__private::Ok(#constructors),
-                )*
+                #visit_arms_bytes
                 _ => {
                     #bytes_to_str
                     #value_as_bytes_content
@@ -2569,11 +2590,17 @@ fn deserialize_map(
                 }
                 Some(path) => quote!(#path),
             };
+            let name_eq = match cattrs.name_eq() {
+                None => quote! { _serde::__private::de::ExactNameEq },
+                Some(path) => quote!(#path),
+            };
             quote! {
                 let #name: #field_ty = try!(#func(
-                    _serde::__private::de::FlatMapDeserializer(
-                        &mut __collect,
-                        _serde::__private::PhantomData)));
+                    _serde::__private::de::FlatMapDeserializer {
+                        items: &mut __collect,
+                        name_eq: #name_eq,
+                        _marker: _serde::__private::PhantomData
+                    }));
             }
         });
 

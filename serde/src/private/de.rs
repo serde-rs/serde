@@ -2679,14 +2679,37 @@ where
     }
 }
 
-#[cfg(any(feature = "std", feature = "alloc"))]
-pub struct FlatMapDeserializer<'a, 'de: 'a, E>(
-    pub &'a mut Vec<Option<(Content<'de>, Content<'de>)>>,
-    pub PhantomData<E>,
-);
+pub trait NameEq {
+    fn name_eq(&self, name: &str, value: &[u8]) -> bool;
+}
+
+impl<F> NameEq for F
+where
+    F: Fn(&str, &[u8]) -> bool,
+{
+    fn name_eq(&self, name: &str, value: &[u8]) -> bool {
+        (self)(name, value)
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct ExactNameEq;
+
+impl NameEq for ExactNameEq {
+    fn name_eq(&self, name: &str, value: &[u8]) -> bool {
+        name.as_bytes() == value
+    }
+}
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<'a, 'de, E> FlatMapDeserializer<'a, 'de, E>
+pub struct FlatMapDeserializer<'a, 'de: 'a, E, N> {
+    pub items: &'a mut Vec<Option<(Content<'de>, Content<'de>)>>,
+    pub name_eq: N,
+    pub _marker: PhantomData<E>,
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, 'de, E, N> FlatMapDeserializer<'a, 'de, E, N>
 where
     E: Error,
 {
@@ -2710,9 +2733,10 @@ macro_rules! forward_to_deserialize_other {
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
+impl<'a, 'de, E, N> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E, N>
 where
     E: Error,
+    N: NameEq,
 {
     type Error = E;
 
@@ -2721,7 +2745,7 @@ where
         V: Visitor<'de>,
     {
         visitor.visit_map(FlatInternallyTaggedAccess {
-            iter: self.0.iter_mut(),
+            iter: self.items.iter_mut(),
             pending: None,
             _marker: PhantomData,
         })
@@ -2736,13 +2760,19 @@ where
     where
         V: Visitor<'de>,
     {
-        for item in self.0.iter_mut() {
+        let Self { items, name_eq, .. } = self;
+
+        for item in items.iter_mut() {
             // items in the vector are nulled out when used.  So we can only use
             // an item if it's still filled in and if the field is one we care
             // about.
             let use_item = match *item {
                 None => false,
-                Some((ref c, _)) => c.as_str().map_or(false, |x| variants.contains(&x)),
+                Some((ref c, _)) => c.as_str().map_or(false, |key| {
+                    variants
+                        .iter()
+                        .any(|variant| name_eq.name_eq(variant, key.as_bytes()))
+                }),
             };
 
             if use_item {
@@ -2761,7 +2791,7 @@ where
     where
         V: Visitor<'de>,
     {
-        visitor.visit_map(FlatMapAccess::new(self.0.iter()))
+        visitor.visit_map(FlatMapAccess::new(self.items.iter()))
     }
 
     fn deserialize_struct<V>(
@@ -2773,7 +2803,11 @@ where
     where
         V: Visitor<'de>,
     {
-        visitor.visit_map(FlatStructAccess::new(self.0.iter_mut(), fields))
+        visitor.visit_map(FlatStructAccess::new(
+            self.items.iter_mut(),
+            fields,
+            self.name_eq,
+        ))
     }
 
     fn deserialize_newtype_struct<V>(self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
@@ -2879,32 +2913,36 @@ where
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub struct FlatStructAccess<'a, 'de: 'a, E> {
+pub struct FlatStructAccess<'a, 'de: 'a, E, N> {
     iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
     pending_content: Option<Content<'de>>,
     fields: &'static [&'static str],
+    name_eq: N,
     _marker: PhantomData<E>,
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<'a, 'de, E> FlatStructAccess<'a, 'de, E> {
+impl<'a, 'de, E, N> FlatStructAccess<'a, 'de, E, N> {
     fn new(
         iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
         fields: &'static [&'static str],
-    ) -> FlatStructAccess<'a, 'de, E> {
+        name_eq: N,
+    ) -> FlatStructAccess<'a, 'de, E, N> {
         FlatStructAccess {
             iter: iter,
             pending_content: None,
             fields: fields,
+            name_eq: name_eq,
             _marker: PhantomData,
         }
     }
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<'a, 'de, E> MapAccess<'de> for FlatStructAccess<'a, 'de, E>
+impl<'a, 'de, E, N> MapAccess<'de> for FlatStructAccess<'a, 'de, E, N>
 where
     E: Error,
+    N: NameEq,
 {
     type Error = E;
 
@@ -2918,7 +2956,11 @@ where
             // about.  In case we do not know which fields we want, we take them all.
             let use_item = match *item {
                 None => false,
-                Some((ref c, _)) => c.as_str().map_or(false, |key| self.fields.contains(&key)),
+                Some((ref c, _)) => c.as_str().map_or(false, |key| {
+                    self.fields
+                        .iter()
+                        .any(|field| self.name_eq.name_eq(field, key.as_bytes()))
+                }),
             };
 
             if use_item {

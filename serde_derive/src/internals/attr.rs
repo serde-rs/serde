@@ -219,6 +219,7 @@ pub struct Container {
     type_try_from: Option<syn::Type>,
     type_into: Option<syn::Type>,
     remote: Option<syn::Path>,
+    name_eq: Option<syn::ExprPath>,
     identifier: Identifier,
     has_flatten: bool,
     serde_path: Option<syn::Path>,
@@ -307,6 +308,7 @@ impl Container {
         let mut field_identifier = BoolAttr::none(cx, FIELD_IDENTIFIER);
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
         let mut serde_path = Attr::none(cx, CRATE);
+        let mut name_eq = Attr::none(cx, NAME_EQ);
         let mut expecting = Attr::none(cx, EXPECTING);
 
         for meta_item in item
@@ -543,6 +545,13 @@ impl Container {
                     }
                 }
 
+                // Parse `#[serde(name_eq = "...")]`
+                Meta(NameValue(m)) if m.path == NAME_EQ => {
+                    if let Ok(path) = parse_lit_into_expr_path(cx, NAME_EQ, &m.lit) {
+                        name_eq.set(&m.path, path);
+                    }
+                }
+
                 // Parse `#[serde(field_identifier)]`
                 Meta(Path(word)) if word == FIELD_IDENTIFIER => {
                     field_identifier.set_true(word);
@@ -615,6 +624,7 @@ impl Container {
             type_try_from: type_try_from.get(),
             type_into: type_into.get(),
             remote: remote.get(),
+            name_eq: name_eq.get(),
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
             has_flatten: false,
             serde_path: serde_path.get(),
@@ -669,6 +679,10 @@ impl Container {
 
     pub fn remote(&self) -> Option<&syn::Path> {
         self.remote.as_ref()
+    }
+
+    pub fn name_eq(&self) -> Option<&syn::ExprPath> {
+        self.name_eq.as_ref()
     }
 
     pub fn is_packed(&self) -> bool {
