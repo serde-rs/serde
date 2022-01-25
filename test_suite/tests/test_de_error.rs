@@ -1,6 +1,7 @@
 #![allow(clippy::empty_enum, clippy::unreadable_literal)]
 #![cfg_attr(feature = "unstable", feature(never_type))]
 
+use serde::de::IntoDeserializer;
 use serde::Deserialize;
 use serde_test::{assert_de_tokens_error, Token};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
@@ -186,6 +187,16 @@ fn test_i64() {
 }
 
 #[test]
+fn test_i128() {
+    let deserializer = <i128 as IntoDeserializer>::into_deserializer(1);
+    let error = <&str>::deserialize(deserializer).unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "invalid type: i128, expected a borrowed string",
+    );
+}
+
+#[test]
 fn test_u8() {
     let test = assert_de_tokens_error::<u8>;
 
@@ -326,6 +337,13 @@ fn test_u64() {
         &[Token::I64(-1)],
         "invalid value: integer `-1`, expected u64",
     );
+
+    let deserializer = <u64 as IntoDeserializer>::into_deserializer(1);
+    let error = <&str>::deserialize(deserializer).unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "invalid type: integer `1`, expected a borrowed string",
+    );
 }
 
 #[test]
@@ -348,6 +366,13 @@ fn test_u128() {
     test(
         &[Token::I64(-1)],
         "invalid value: integer `-1`, expected u128",
+    );
+
+    let deserializer = <u128 as IntoDeserializer>::into_deserializer(1);
+    let error = <&str>::deserialize(deserializer).unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "invalid type: u128, expected a borrowed string",
     );
 }
 
