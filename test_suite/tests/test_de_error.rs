@@ -192,7 +192,7 @@ fn test_i128() {
     let error = <&str>::deserialize(deserializer).unwrap_err();
     assert_eq!(
         error.to_string(),
-        "invalid type: i128, expected a borrowed string",
+        "invalid type: integer `1` as i128, expected a borrowed string",
     );
 }
 
@@ -372,7 +372,7 @@ fn test_u128() {
     let error = <&str>::deserialize(deserializer).unwrap_err();
     assert_eq!(
         error.to_string(),
-        "invalid type: u128, expected a borrowed string",
+        "invalid type: integer `1` as u128, expected a borrowed string",
     );
 }
 
