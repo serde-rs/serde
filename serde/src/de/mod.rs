@@ -118,6 +118,8 @@ use lib::*;
 
 pub mod value;
 
+#[cfg(not(no_integer128))]
+mod format;
 mod ignored_any;
 mod impls;
 mod utf8;
@@ -1213,6 +1215,20 @@ pub trait Deserializer<'de>: Sized {
     fn is_human_readable(&self) -> bool {
         true
     }
+
+    // Not public API.
+    #[cfg(all(not(no_serde_derive), any(feature = "std", feature = "alloc")))]
+    #[doc(hidden)]
+    fn __deserialize_content<V>(
+        self,
+        _: ::actually_private::T,
+        visitor: V,
+    ) -> Result<::private::de::Content<'de>, Self::Error>
+    where
+        V: Visitor<'de, Value = ::private::de::Content<'de>>,
+    {
+        self.deserialize_any(visitor)
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1352,8 +1368,10 @@ pub trait Visitor<'de>: Sized {
         where
             E: Error,
         {
-            let _ = v;
-            Err(Error::invalid_type(Unexpected::Other("i128"), &self))
+            let mut buf = [0u8; 58];
+            let mut writer = format::Buf::new(&mut buf);
+            fmt::Write::write_fmt(&mut writer, format_args!("integer `{}` as i128", v)).unwrap();
+            Err(Error::invalid_type(Unexpected::Other(writer.as_str()), &self))
         }
     }
 
@@ -1412,8 +1430,10 @@ pub trait Visitor<'de>: Sized {
         where
             E: Error,
         {
-            let _ = v;
-            Err(Error::invalid_type(Unexpected::Other("u128"), &self))
+            let mut buf = [0u8; 57];
+            let mut writer = format::Buf::new(&mut buf);
+            fmt::Write::write_fmt(&mut writer, format_args!("integer `{}` as u128", v)).unwrap();
+            Err(Error::invalid_type(Unexpected::Other(writer.as_str()), &self))
         }
     }
 

@@ -84,7 +84,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Serde types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/serde/1.0.132")]
+#![doc(html_root_url = "https://docs.rs/serde/1.0.136")]
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
 // Unstable functionality only if the user asks for it. For tracking and
@@ -227,27 +227,27 @@ mod lib {
     #[cfg(feature = "std")]
     pub use std::time::{SystemTime, UNIX_EPOCH};
 
-    #[cfg(all(feature = "std", collections_bound))]
+    #[cfg(all(feature = "std", not(no_collections_bound), no_ops_bound))]
     pub use std::collections::Bound;
 
-    #[cfg(core_reverse)]
+    #[cfg(not(no_core_reverse))]
     pub use self::core::cmp::Reverse;
 
-    #[cfg(ops_bound)]
+    #[cfg(not(no_ops_bound))]
     pub use self::core::ops::Bound;
 
-    #[cfg(range_inclusive)]
+    #[cfg(not(no_range_inclusive))]
     pub use self::core::ops::RangeInclusive;
 
-    #[cfg(all(feature = "std", std_atomic))]
+    #[cfg(all(feature = "std", not(no_std_atomic)))]
     pub use std::sync::atomic::{
         AtomicBool, AtomicI16, AtomicI32, AtomicI8, AtomicIsize, AtomicU16, AtomicU32, AtomicU8,
         AtomicUsize, Ordering,
     };
-    #[cfg(all(feature = "std", std_atomic64))]
+    #[cfg(all(feature = "std", not(no_std_atomic64)))]
     pub use std::sync::atomic::{AtomicI64, AtomicU64};
 
-    #[cfg(any(core_duration, feature = "std"))]
+    #[cfg(any(feature = "std", not(no_core_duration)))]
     pub use self::core::time::Duration;
 }
 
@@ -295,3 +295,8 @@ extern crate serde_derive;
 #[cfg(feature = "serde_derive")]
 #[doc(hidden)]
 pub use serde_derive::*;
+
+#[cfg(all(not(no_serde_derive), any(feature = "std", feature = "alloc")))]
+mod actually_private {
+    pub struct T;
+}
