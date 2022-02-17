@@ -1954,3 +1954,77 @@ fn test_packed_struct_can_derive_serialize() {
         t: f32,
     }
 }
+
+#[test]
+fn test_sequentially_adjacent_tagged_enum() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(sequentially_adjacent_tag)]
+    enum SeqAdjacentlyTagged<T> {
+        Unit,
+        Newtype(T),
+        Tuple(u8, u8),
+        Struct { f: u8 },
+    }
+
+    // unit with no content
+    assert_tokens(
+        &SeqAdjacentlyTagged::Unit::<u8>,
+        &[
+            Token::Seq { len: Some(1) },
+            Token::Str("Unit"),
+            Token::SeqEnd,
+        ],
+    );
+
+    // newtype with tag first
+    assert_tokens(
+        &SeqAdjacentlyTagged::Newtype::<u8>(1),
+        &[
+            Token::Seq { len: Some(2) },
+            Token::Str("Newtype"),
+            Token::U8(1),
+            Token::SeqEnd,
+        ],
+    );
+
+    // optional newtype with no content field
+    assert_de_tokens(
+        &SeqAdjacentlyTagged::Newtype::<Option<u8>>(None),
+        &[
+            Token::Seq { len: Some(1) },
+            Token::Str("Newtype"),
+            Token::SeqEnd,
+        ],
+    );
+
+    // tuple with tag first
+    assert_tokens(
+        &SeqAdjacentlyTagged::Tuple::<u8>(1, 1),
+        &[
+            Token::Seq { len: Some(2) },
+            Token::Str("Tuple"),
+            Token::Tuple { len: 2 },
+            Token::U8(1),
+            Token::U8(1),
+            Token::TupleEnd,
+            Token::SeqEnd,
+        ],
+    );
+
+    // struct with tag first
+    assert_tokens(
+        &SeqAdjacentlyTagged::Struct::<u8> { f: 1 },
+        &[
+            Token::Seq { len: Some(2) },
+            Token::Str("Struct"),
+            Token::Struct {
+                name: "Struct",
+                len: 1,
+            },
+            Token::Str("f"),
+            Token::U8(1),
+            Token::StructEnd,
+            Token::SeqEnd,
+        ],
+    );
+}

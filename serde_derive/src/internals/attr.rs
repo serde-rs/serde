@@ -250,6 +250,13 @@ pub enum TagType {
     /// ```
     Adjacent { tag: String, content: String },
 
+    /// `#[serde(sequentially_adjacent_tag)]`
+    ///
+    /// ```json
+    /// ["variant1", {"key1": "value1", "key2": "value2"}]
+    /// ```
+    SeqAdjacent,
+
     /// `#[serde(untagged)]`
     ///
     /// ```json
@@ -300,6 +307,7 @@ impl Container {
         let mut untagged = BoolAttr::none(cx, UNTAGGED);
         let mut internal_tag = Attr::none(cx, TAG);
         let mut content = Attr::none(cx, CONTENT);
+        let mut seq_adj_tag = BoolAttr::none(cx, SEQ_ADJ_TAG);
         let mut type_from = Attr::none(cx, FROM);
         let mut type_try_from = Attr::none(cx, TRY_FROM);
         let mut type_into = Attr::none(cx, INTO);
@@ -511,6 +519,25 @@ impl Container {
                     }
                 }
 
+                // Parse `#[serde(sequentially_adjacent_tag)]`
+                Meta(Path(word)) if word == SEQ_ADJ_TAG => match item.data {
+                    syn::Data::Enum(_) => {
+                        seq_adj_tag.set_true(word);
+                    }
+                    syn::Data::Struct(syn::DataStruct { struct_token, .. }) => {
+                        cx.error_spanned_by(
+                            struct_token,
+                            "#[serde(sequentially_adjacent_tag)] can only be used on enums",
+                        );
+                    }
+                    syn::Data::Union(syn::DataUnion { union_token, .. }) => {
+                        cx.error_spanned_by(
+                            union_token,
+                            "#[serde(sequentially_adjacent_tag)] can only be used on enums",
+                        );
+                    }
+                },
+
                 // Parse `#[serde(from = "Type")]
                 Meta(NameValue(m)) if m.path == FROM => {
                     if let Ok(from_ty) = parse_lit_into_ty(cx, FROM, &m.lit) {
@@ -610,7 +637,7 @@ impl Container {
             },
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
-            tag: decide_tag(cx, item, untagged, internal_tag, content),
+            tag: decide_tag(cx, item, untagged, internal_tag, content, seq_adj_tag),
             type_from: type_from.get(),
             type_try_from: type_try_from.get(),
             type_into: type_into.get(),
@@ -709,15 +736,17 @@ fn decide_tag(
     untagged: BoolAttr,
     internal_tag: Attr<String>,
     content: Attr<String>,
+    seq_adj_tag: BoolAttr,
 ) -> TagType {
     match (
         untagged.0.get_with_tokens(),
         internal_tag.get_with_tokens(),
         content.get_with_tokens(),
+        seq_adj_tag.0.get_with_tokens(),
     ) {
-        (None, None, None) => TagType::External,
-        (Some(_), None, None) => TagType::None,
-        (None, Some((_, tag)), None) => {
+        (None, None, None, None) => TagType::External,
+        (Some(_), None, None, None) => TagType::None,
+        (None, Some((_, tag)), None, None) => {
             // Check that there are no tuple variants.
             if let syn::Data::Enum(data) = &item.data {
                 for variant in &data.variants {
@@ -737,7 +766,7 @@ fn decide_tag(
             }
             TagType::Internal { tag }
         }
-        (Some((untagged_tokens, _)), Some((tag_tokens, _)), None) => {
+        (Some((untagged_tokens, _)), Some((tag_tokens, _)), None, None) => {
             cx.error_spanned_by(
                 untagged_tokens,
                 "enum cannot be both untagged and internally tagged",
@@ -748,14 +777,14 @@ fn decide_tag(
             );
             TagType::External // doesn't matter, will error
         }
-        (None, None, Some((content_tokens, _))) => {
+        (None, None, Some((content_tokens, _)), None) => {
             cx.error_spanned_by(
                 content_tokens,
                 "#[serde(tag = \"...\", content = \"...\")] must be used together",
             );
             TagType::External
         }
-        (Some((untagged_tokens, _)), None, Some((content_tokens, _))) => {
+        (Some((untagged_tokens, _)), None, Some((content_tokens, _)), None) => {
             cx.error_spanned_by(
                 untagged_tokens,
                 "untagged enum cannot have #[serde(content = \"...\")]",
@@ -766,8 +795,8 @@ fn decide_tag(
             );
             TagType::External
         }
-        (None, Some((_, tag)), Some((_, content))) => TagType::Adjacent { tag, content },
-        (Some((untagged_tokens, _)), Some((tag_tokens, _)), Some((content_tokens, _))) => {
+        (None, Some((_, tag)), Some((_, content)), None) => TagType::Adjacent { tag, content },
+        (Some((untagged_tokens, _)), Some((tag_tokens, _)), Some((content_tokens, _)), None) => {
             cx.error_spanned_by(
                 untagged_tokens,
                 "untagged enum cannot have #[serde(tag = \"...\", content = \"...\")]",
@@ -781,6 +810,27 @@ fn decide_tag(
                 "untagged enum cannot have #[serde(tag = \"...\", content = \"...\")]",
             );
             TagType::External
+        }
+        (untagged, tag, content, Some(_)) => {
+            if let Some((untagged, _)) = untagged {
+                cx.error_spanned_by(
+                    untagged,
+                    "sequentially adjacent tagged enum cannot have #[serde(untagged)]",
+                )
+            }
+            if let Some((tag, _)) = tag {
+                cx.error_spanned_by(
+                    tag,
+                    "sequentially adjacent tagged enum cannot have #[serde(tag = \"...\")]",
+                )
+            }
+            if let Some((content, _)) = content {
+                cx.error_spanned_by(
+                    content,
+                    "sequentially adjacent tagged enum cannot have #[serde(content = \"...\")]",
+                )
+            }
+            TagType::SeqAdjacent
         }
     }
 }

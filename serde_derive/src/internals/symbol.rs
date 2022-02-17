@@ -33,6 +33,7 @@ pub const TAG: Symbol = Symbol("tag");
 pub const TRANSPARENT: Symbol = Symbol("transparent");
 pub const TRY_FROM: Symbol = Symbol("try_from");
 pub const UNTAGGED: Symbol = Symbol("untagged");
+pub const SEQ_ADJ_TAG: Symbol = Symbol("sequentially_adjacent_tag");
 pub const VARIANT_IDENTIFIER: Symbol = Symbol("variant_identifier");
 pub const WITH: Symbol = Symbol("with");
 pub const EXPECTING: Symbol = Symbol("expecting");

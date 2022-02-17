@@ -1165,6 +1165,9 @@ fn deserialize_enum(
             deserialize_adjacently_tagged_enum(params, variants, cattrs, tag, content)
         }
         attr::TagType::None => deserialize_untagged_enum(params, variants, cattrs),
+        attr::TagType::SeqAdjacent => {
+            deserialize_sequentially_adjacently_tagged_enum(params, variants, cattrs)
+        }
     }
 }
 
@@ -1686,6 +1689,146 @@ fn deserialize_untagged_enum(
         )*
 
         _serde::__private::Err(_serde::de::Error::custom(#fallthrough_msg))
+    }
+}
+
+fn deserialize_sequentially_adjacently_tagged_enum(
+    params: &Parameters,
+    variants: &[Variant],
+    cattrs: &attr::Container,
+) -> Fragment {
+    let this = &params.this;
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
+        split_with_de_lifetime(params);
+    let delife = params.borrowed.de_lifetime();
+
+    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants, cattrs);
+
+    let variant_arms: &Vec<_> = &variants
+        .iter()
+        .enumerate()
+        .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
+        .map(|(i, variant)| {
+            let variant_index = field_i(i);
+
+            let block = Match(deserialize_untagged_variant(
+                params,
+                variant,
+                cattrs,
+                quote!(__deserializer),
+            ));
+
+            quote! {
+                __Field::#variant_index => #block
+            }
+        })
+        .collect();
+
+    let expecting = format!("sequentially adjacent tagged enum {}", params.type_name());
+    let expecting = cattrs.expecting().unwrap_or(&expecting);
+
+    let (variants, missing_content_arms) = variants
+        .iter()
+        .enumerate()
+        .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
+        .map(|(i, variant)| {
+            let variant_index = field_i(i);
+            let variant_ident = &variant.ident;
+
+            let arm = match variant.style {
+                Style::Unit => quote! {
+                    _serde::__private::Ok(#this::#variant_ident)
+                },
+                Style::Newtype if variant.attrs.deserialize_with().is_none() => {
+                    let span = variant.original.span();
+                    let func = quote_spanned!(span=> _serde::__private::de::missing_field);
+                    quote! {
+                        #func("content").map(#this::#variant_ident)
+                    }
+                }
+                _ => quote! {
+                    _serde::__private::Err(<__A::Error as _serde::de::Error>::missing_field("content"))
+                },
+            };
+            (quote! { __Field::#variant_index }, arm)
+        })
+        .unzip::<_, _, Vec<_>, Vec<_>>();
+
+    quote_block! {
+        #variant_visitor
+
+        #variants_stmt
+
+        struct __Seed #de_impl_generics #where_clause {
+            field: __Field,
+            marker: _serde::__private::PhantomData<#this #ty_generics>,
+            lifetime: _serde::__private::PhantomData<&#delife ()>,
+        }
+
+        impl #de_impl_generics _serde::de::DeserializeSeed<#delife> for __Seed #de_ty_generics #where_clause {
+            type Value = #this #ty_generics;
+
+            fn deserialize<__D>(self, __deserializer: __D) -> _serde::__private::Result<Self::Value, __D::Error>
+            where
+                __D: _serde::Deserializer<#delife>,
+            {
+                match self.field {
+                    #(#variant_arms)*
+                }
+            }
+        }
+
+        struct __Visitor #de_impl_generics #where_clause {
+            marker: _serde::__private::PhantomData<#this #ty_generics>,
+            lifetime: _serde::__private::PhantomData<&#delife ()>,
+        }
+
+        impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
+            type Value = #this #ty_generics;
+
+            fn expecting(&self, __formatter: &mut _serde::__private::Formatter) -> _serde::__private::fmt::Result {
+                _serde::__private::Formatter::write_str(__formatter, #expecting)
+            }
+
+            fn visit_seq<__A>(self, mut __seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
+            where
+                __A: _serde::de::SeqAccess<#delife>,
+            {
+                // Visit the first element - the tag.
+                match try!(_serde::de::SeqAccess::next_element(&mut __seq)) {
+                    #(
+                        _serde::__private::Some(#variants) => {
+                            // Visit the second element - the content.
+                            match try!(_serde::de::SeqAccess::next_element_seed(
+                                &mut __seq,
+                                __Seed {
+                                    field: #variants,
+                                    marker: _serde::__private::PhantomData,
+                                    lifetime: _serde::__private::PhantomData,
+                                },
+                            )) {
+                                _serde::__private::Some(__ret) => _serde::__private::Ok(__ret),
+                                // There is no second element.
+                                _serde::__private::None => #missing_content_arms,
+                            }
+                        },
+                    )*
+                    // There is no first element.
+                    _serde::__private::None => {
+                        _serde::__private::Err(_serde::de::Error::invalid_length(0, &self))
+                    }
+                }
+            }
+        }
+
+        const FIELDS: &'static [&'static str] = &["tag", "content"];
+        _serde::Deserializer::deserialize_seq(
+            __deserializer,
+            __Visitor {
+                marker: _serde::__private::PhantomData::<#this #ty_generics>,
+                lifetime: _serde::__private::PhantomData,
+            },
+        )
     }
 }
 

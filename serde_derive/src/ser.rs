@@ -485,6 +485,9 @@ fn serialize_variant(
             attr::TagType::Adjacent { tag, content } => {
                 serialize_adjacently_tagged_variant(params, variant, cattrs, tag, content)
             }
+            attr::TagType::SeqAdjacent => {
+                serialize_seq_adjacently_tagged_variant(params, variant, cattrs)
+            }
             attr::TagType::None => serialize_untagged_variant(params, variant, cattrs),
         });
 
@@ -744,6 +747,110 @@ fn serialize_adjacently_tagged_variant(
                 phantom: _serde::__private::PhantomData::<#this #ty_generics>,
             }));
         _serde::ser::SerializeStruct::end(__struct)
+    }
+}
+
+fn serialize_seq_adjacently_tagged_variant(
+    params: &Parameters,
+    variant: &Variant,
+    _cattrs: &attr::Container,
+) -> Fragment {
+    let this = &params.this;
+    let variant_name = variant.attrs.name().serialize_name();
+
+    let inner = Stmts(if let Some(path) = variant.attrs.serialize_with() {
+        let ser = wrap_serialize_variant_with(params, path, variant);
+        quote_expr! {
+            _serde::Serialize::serialize(#ser, __serializer)
+        }
+    } else {
+        match effective_style(variant) {
+            Style::Unit => {
+                return quote_block! {
+                    let mut __seq = try!(_serde::Serializer::serialize_seq(__serializer, Some(1)));
+                    try!(_serde::ser::SerializeSeq::serialize_element(&mut __seq, #variant_name));
+                    _serde::ser::SerializeSeq::end(__seq)
+                };
+            }
+            Style::Newtype => {
+                let field = &variant.fields[0];
+                let mut field_expr = quote!(__field0);
+                if let Some(path) = field.attrs.serialize_with() {
+                    field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
+                }
+
+                let span = field.original.span();
+                let func = quote_spanned!(span=> _serde::ser::SerializeSeq::serialize_element);
+                return quote_block! {
+                    let mut __seq = try!(_serde::Serializer::serialize_seq(__serializer, Some(2)));
+                    try!(_serde::ser::SerializeSeq::serialize_element(&mut __seq, #variant_name));
+                    try!(#func(&mut __seq, #field_expr));
+                    _serde::ser::SerializeSeq::end(__seq)
+                };
+            }
+            Style::Tuple => {
+                serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields)
+            }
+            Style::Struct => serialize_struct_variant(
+                StructVariant::Untagged,
+                params,
+                &variant.fields,
+                &variant_name,
+            ),
+        }
+    });
+
+    let fields_ty = variant.fields.iter().map(|f| &f.ty);
+    let fields_ident: &Vec<_> = &match variant.style {
+        Style::Unit => {
+            if variant.attrs.serialize_with().is_some() {
+                vec![]
+            } else {
+                unreachable!()
+            }
+        }
+        Style::Newtype => vec![Member::Named(Ident::new("__field0", Span::call_site()))],
+        Style::Tuple => (0..variant.fields.len())
+            .map(|i| Member::Named(Ident::new(&format!("__field{}", i), Span::call_site())))
+            .collect(),
+        Style::Struct => variant.fields.iter().map(|f| f.member.clone()).collect(),
+    };
+
+    let (_, ty_generics, where_clause) = params.generics.split_for_impl();
+
+    let wrapper_generics = if fields_ident.is_empty() {
+        params.generics.clone()
+    } else {
+        bound::with_lifetime_bound(&params.generics, "'__a")
+    };
+    let (wrapper_impl_generics, wrapper_ty_generics, _) = wrapper_generics.split_for_impl();
+
+    quote_block! {
+        struct __AdjacentlyTagged #wrapper_generics #where_clause {
+            data: (#(&'__a #fields_ty,)*),
+            phantom: _serde::__private::PhantomData<#this #ty_generics>,
+        }
+
+        impl #wrapper_impl_generics _serde::Serialize for __AdjacentlyTagged #wrapper_ty_generics #where_clause {
+            fn serialize<__S>(&self, __serializer: __S) -> _serde::__private::Result<__S::Ok, __S::Error>
+            where
+                __S: _serde::Serializer,
+            {
+                // Elements that have skip_serializing will be unused.
+                #[allow(unused_variables)]
+                let (#(#fields_ident,)*) = self.data;
+                #inner
+            }
+        }
+
+        let mut __seq = try!(_serde::Serializer::serialize_seq(__serializer, Some(2)));
+        try!(_serde::ser::SerializeSeq::serialize_element(&mut __seq, #variant_name));
+        try!(_serde::ser::SerializeSeq::serialize_element(
+            &mut __seq, &__AdjacentlyTagged {
+                data: (#(#fields_ident,)*),
+                phantom: _serde::__private::PhantomData::<#this #ty_generics>,
+            }));
+        _serde::ser::SerializeSeq::end(__seq)
     }
 }
 
