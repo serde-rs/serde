@@ -184,9 +184,7 @@ pub fn with_bound(
 
                 syn::Type::Infer(_) | syn::Type::Never(_) | syn::Type::Verbatim(_) => {}
 
-                #[cfg(test)]
-                syn::Type::__TestExhaustive(_) => unimplemented!(),
-                #[cfg(not(test))]
+                #[cfg_attr(all(test, exhaustive), deny(non_exhaustive_omitted_patterns))]
                 _ => {}
             }
         }

@@ -60,6 +60,7 @@
     clippy::use_self,
     clippy::wildcard_imports
 )]
+#![cfg_attr(all(test, exhaustive), feature(non_exhaustive_omitted_patterns_lint))]
 
 #[macro_use]
 extern crate quote;

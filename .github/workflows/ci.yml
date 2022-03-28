@@ -59,6 +59,10 @@ jobs:
       - run: cd serde && cargo test --features derive,rc,unstable
       - run: cd test_suite/no_std && cargo build
         if: matrix.os != 'windows'
+      - run: cd serde_derive && cargo check --tests
+        env:
+          RUSTFLAGS: --cfg exhaustive ${{env.RUSTFLAGS}}
+        if: matrix.os != 'windows'
 
   msrv:
     name: Rust 1.13.0
