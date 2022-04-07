@@ -786,11 +786,11 @@ fn serialize_untagged_variant(
     }
 }
 
-enum TupleVariant {
+enum TupleVariant<'a> {
     ExternallyTagged {
-        type_name: String,
+        type_name: &'a str,
         variant_index: u32,
-        variant_name: String,
+        variant_name: &'a str,
     },
     Untagged,
 }
@@ -857,11 +857,11 @@ fn serialize_tuple_variant(
 enum StructVariant<'a> {
     ExternallyTagged {
         variant_index: u32,
-        variant_name: String,
+        variant_name: &'a str,
     },
     InternallyTagged {
         tag: &'a str,
-        variant_name: String,
+        variant_name: &'a str,
     },
     Untagged,
 }

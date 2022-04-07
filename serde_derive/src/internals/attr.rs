@@ -180,8 +180,8 @@ impl Name {
     }
 
     /// Return the container name for the container when serializing.
-    pub fn serialize_name(&self) -> String {
-        self.serialize.clone()
+    pub fn serialize_name(&self) -> &str {
+        self.serialize.as_str()
     }
 
     /// Return the container name for the container when deserializing.
