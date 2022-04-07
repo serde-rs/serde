@@ -315,8 +315,9 @@ impl Container {
                 // Parse `#[serde(rename = "foo")]`
                 Meta(NameValue(m)) if m.path == RENAME => {
                     if let Ok(s) = get_lit_str(cx, RENAME, &m.lit) {
-                        ser_name.set(&m.path, s.value());
-                        de_name.set(&m.path, s.value());
+                        let s_value = s.value();
+                        ser_name.set(&m.path, s_value.clone());
+                        de_name.set(&m.path, s_value);
                     }
                 }
 
@@ -877,9 +878,10 @@ impl Variant {
                 // Parse `#[serde(rename = "foo")]`
                 Meta(NameValue(m)) if m.path == RENAME => {
                     if let Ok(s) = get_lit_str(cx, RENAME, &m.lit) {
-                        ser_name.set(&m.path, s.value());
-                        de_name.set_if_none(s.value());
-                        de_aliases.insert(&m.path, s.value());
+                        let s_value = s.value();
+                        ser_name.set(&m.path, s_value.clone());
+                        de_name.set_if_none(s_value.clone());
+                        de_aliases.insert(&m.path, s_value);
                     }
                 }
 
@@ -888,8 +890,9 @@ impl Variant {
                     if let Ok((ser, de)) = get_multiple_renames(cx, &m.nested) {
                         ser_name.set_opt(&m.path, ser.map(syn::LitStr::value));
                         for de_value in de {
-                            de_name.set_if_none(de_value.value());
-                            de_aliases.insert(&m.path, de_value.value());
+                            let de_value_str = de_value.value();
+                            de_name.set_if_none(de_value_str.clone());
+                            de_aliases.insert(&m.path, de_value_str);
                         }
                     }
                 }
@@ -1179,9 +1182,10 @@ impl Field {
                 // Parse `#[serde(rename = "foo")]`
                 Meta(NameValue(m)) if m.path == RENAME => {
                     if let Ok(s) = get_lit_str(cx, RENAME, &m.lit) {
-                        ser_name.set(&m.path, s.value());
-                        de_name.set_if_none(s.value());
-                        de_aliases.insert(&m.path, s.value());
+                        let s_value = s.value();
+                        ser_name.set(&m.path, s_value.clone());
+                        de_name.set_if_none(s_value.clone());
+                        de_aliases.insert(&m.path, s_value);
                     }
                 }
 
@@ -1190,8 +1194,9 @@ impl Field {
                     if let Ok((ser, de)) = get_multiple_renames(cx, &m.nested) {
                         ser_name.set_opt(&m.path, ser.map(syn::LitStr::value));
                         for de_value in de {
-                            de_name.set_if_none(de_value.value());
-                            de_aliases.insert(&m.path, de_value.value());
+                            let de_value_str = de_value.value();
+                            de_name.set_if_none(de_value_str.clone());
+                            de_aliases.insert(&m.path, de_value_str);
                         }
                     }
                 }
@@ -1627,11 +1632,12 @@ fn parse_lit_into_where(
     lit: &syn::Lit,
 ) -> Result<Vec<syn::WherePredicate>, ()> {
     let string = get_lit_str2(cx, attr_name, meta_item_name, lit)?;
-    if string.value().is_empty() {
+    let string_value = string.value();
+    if string_value.is_empty() {
         return Ok(Vec::new());
     }
 
-    let where_string = syn::LitStr::new(&format!("where {}", string.value()), string.span());
+    let where_string = syn::LitStr::new(&format!("where {}", string_value), string.span());
 
     parse_lit_str::<syn::WhereClause>(&where_string)
         .map(|wh| wh.predicates.into_iter().collect())
