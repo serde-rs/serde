@@ -57,9 +57,12 @@ impl<'c, T> Attr<'c, T> {
         }
     }
 
-    fn set_if_none(&mut self, value: T) {
+    fn set_if_none<F>(&mut self, value: F)
+    where
+        F: FnOnce() -> T,
+    {
         if self.value.is_none() {
-            self.value = Some(value);
+            self.value = Some(value());
         }
     }
 
@@ -880,7 +883,7 @@ impl Variant {
                     if let Ok(s) = get_lit_str(cx, RENAME, &m.lit) {
                         let s_value = s.value();
                         ser_name.set(&m.path, s_value.clone());
-                        de_name.set_if_none(s_value.clone());
+                        de_name.set_if_none(|| s_value.clone());
                         de_aliases.insert(&m.path, s_value);
                     }
                 }
@@ -891,7 +894,7 @@ impl Variant {
                         ser_name.set_opt(&m.path, ser.map(syn::LitStr::value));
                         for de_value in de {
                             let de_value_str = de_value.value();
-                            de_name.set_if_none(de_value_str.clone());
+                            de_name.set_if_none(|| de_value_str.clone());
                             de_aliases.insert(&m.path, de_value_str);
                         }
                     }
@@ -1184,7 +1187,7 @@ impl Field {
                     if let Ok(s) = get_lit_str(cx, RENAME, &m.lit) {
                         let s_value = s.value();
                         ser_name.set(&m.path, s_value.clone());
-                        de_name.set_if_none(s_value.clone());
+                        de_name.set_if_none(|| s_value.clone());
                         de_aliases.insert(&m.path, s_value);
                     }
                 }
@@ -1195,7 +1198,7 @@ impl Field {
                         ser_name.set_opt(&m.path, ser.map(syn::LitStr::value));
                         for de_value in de {
                             let de_value_str = de_value.value();
-                            de_name.set_if_none(de_value_str.clone());
+                            de_name.set_if_none(|| de_value_str.clone());
                             de_aliases.insert(&m.path, de_value_str);
                         }
                     }
@@ -1353,7 +1356,7 @@ impl Field {
         // ourselves or our container (e.g. the struct we are in).
         if let Default::None = *container_default {
             if skip_deserializing.0.value.is_some() {
-                default.set_if_none(Default::Default);
+                default.set_if_none(|| Default::Default);
             }
         }
 
@@ -1369,38 +1372,46 @@ impl Field {
             //     impl<'de: 'a, 'a> Deserialize<'de> for Cow<'a, str>
             //     impl<'de: 'a, 'a> Deserialize<'de> for Cow<'a, [u8]>
             if is_cow(&field.ty, is_str) {
-                let mut path = syn::Path {
-                    leading_colon: None,
-                    segments: Punctuated::new(),
+                let expr = || {
+                    let mut path = syn::Path {
+                        leading_colon: None,
+                        segments: Punctuated::new(),
+                    };
+                    let span = Span::call_site();
+                    path.segments.push(Ident::new("_serde", span).into());
+                    path.segments.push(Ident::new("__private", span).into());
+                    path.segments.push(Ident::new("de", span).into());
+                    path.segments
+                        .push(Ident::new("borrow_cow_str", span).into());
+
+                    syn::ExprPath {
+                        attrs: Vec::new(),
+                        qself: None,
+                        path,
+                    }
                 };
-                let span = Span::call_site();
-                path.segments.push(Ident::new("_serde", span).into());
-                path.segments.push(Ident::new("__private", span).into());
-                path.segments.push(Ident::new("de", span).into());
-                path.segments
-                    .push(Ident::new("borrow_cow_str", span).into());
-                let expr = syn::ExprPath {
-                    attrs: Vec::new(),
-                    qself: None,
-                    path,
-                };
+
                 deserialize_with.set_if_none(expr);
             } else if is_cow(&field.ty, is_slice_u8) {
-                let mut path = syn::Path {
-                    leading_colon: None,
-                    segments: Punctuated::new(),
+                let expr = || {
+                    let mut path = syn::Path {
+                        leading_colon: None,
+                        segments: Punctuated::new(),
+                    };
+                    let span = Span::call_site();
+                    path.segments.push(Ident::new("_serde", span).into());
+                    path.segments.push(Ident::new("__private", span).into());
+                    path.segments.push(Ident::new("de", span).into());
+                    path.segments
+                        .push(Ident::new("borrow_cow_bytes", span).into());
+
+                    syn::ExprPath {
+                        attrs: Vec::new(),
+                        qself: None,
+                        path,
+                    }
                 };
-                let span = Span::call_site();
-                path.segments.push(Ident::new("_serde", span).into());
-                path.segments.push(Ident::new("__private", span).into());
-                path.segments.push(Ident::new("de", span).into());
-                path.segments
-                    .push(Ident::new("borrow_cow_bytes", span).into());
-                let expr = syn::ExprPath {
-                    attrs: Vec::new(),
-                    qself: None,
-                    path,
-                };
+
                 deserialize_with.set_if_none(expr);
             }
         } else if is_implicitly_borrowed(&field.ty) {
