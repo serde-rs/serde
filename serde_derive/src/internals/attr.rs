@@ -185,15 +185,15 @@ impl Name {
     }
 
     /// Return the container name for the container when deserializing.
-    pub fn deserialize_name(&self) -> String {
-        self.deserialize.clone()
+    pub fn deserialize_name(&self) -> &str {
+        self.deserialize.as_str()
     }
 
     fn deserialize_aliases(&self) -> Vec<String> {
         let mut aliases = self.deserialize_aliases.clone();
         let main_name = self.deserialize_name();
-        if !aliases.contains(&main_name) {
-            aliases.push(main_name);
+        if !aliases.iter().any(|s| s == main_name) {
+            aliases.push(main_name.to_owned());
         }
         aliases
     }
