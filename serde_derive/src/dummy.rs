@@ -4,6 +4,8 @@ use quote::format_ident;
 use syn;
 use try;
 
+use internals::attr::unraw;
+
 pub fn wrap_in_const(
     serde_path: Option<&syn::Path>,
     trait_: &str,
@@ -37,12 +39,4 @@ pub fn wrap_in_const(
             #code
         };
     }
-}
-
-#[allow(deprecated)]
-fn unraw(ident: &Ident) -> String {
-    // str::trim_start_matches was added in 1.30, trim_left_matches deprecated
-    // in 1.33. We currently support rustc back to 1.15 so we need to continue
-    // to use the deprecated one.
-    ident.to_string().trim_left_matches("r#").to_owned()
 }
