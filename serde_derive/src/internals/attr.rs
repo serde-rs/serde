@@ -189,13 +189,15 @@ impl Name {
         self.deserialize.as_str()
     }
 
-    fn deserialize_aliases(&self) -> Vec<String> {
-        let mut aliases = self.deserialize_aliases.clone();
+    fn deserialize_aliases(&self) -> Cow<[String]> {
         let main_name = self.deserialize_name();
-        if !aliases.iter().any(|s| s == main_name) {
+        if !self.deserialize_aliases.iter().any(|s| s == main_name) {
+            let mut aliases = self.deserialize_aliases.clone();
             aliases.push(main_name.to_owned());
+            Cow::Owned(aliases)
+        } else {
+            Cow::Borrowed(&self.deserialize_aliases)
         }
-        aliases
     }
 }
 
@@ -1060,7 +1062,7 @@ impl Variant {
     }
 
     pub fn aliases(&self) -> Vec<String> {
-        self.name.deserialize_aliases()
+        self.name.deserialize_aliases().into()
     }
 
     pub fn rename_by_rules(&mut self, rules: &RenameAllRules) {
@@ -1442,7 +1444,7 @@ impl Field {
     }
 
     pub fn aliases(&self) -> Vec<String> {
-        self.name.deserialize_aliases()
+        self.name.deserialize_aliases().into()
     }
 
     pub fn rename_by_rules(&mut self, rules: &RenameAllRules) {
