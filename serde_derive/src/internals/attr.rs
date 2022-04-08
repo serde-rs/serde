@@ -1061,8 +1061,8 @@ impl Variant {
         &self.name
     }
 
-    pub fn aliases(&self) -> Vec<String> {
-        self.name.deserialize_aliases().into()
+    pub fn aliases(&self) -> Cow<[String]> {
+        self.name.deserialize_aliases()
     }
 
     pub fn rename_by_rules(&mut self, rules: &RenameAllRules) {
@@ -1443,8 +1443,8 @@ impl Field {
         &self.name
     }
 
-    pub fn aliases(&self) -> Vec<String> {
-        self.name.deserialize_aliases().into()
+    pub fn aliases(&self) -> Cow<[String]> {
+        self.name.deserialize_aliases()
     }
 
     pub fn rename_by_rules(&mut self, rules: &RenameAllRules) {

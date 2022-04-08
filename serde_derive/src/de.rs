@@ -11,6 +11,7 @@ use internals::ast::{Container, Data, Field, Style, Variant};
 use internals::{attr, replace_receiver, ungroup, Ctxt, Derive};
 use pretend;
 
+use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::ptr;
 
@@ -1902,7 +1903,7 @@ fn deserialize_untagged_newtype_variant(
 }
 
 fn deserialize_generated_identifier(
-    fields: &[(&str, Ident, Vec<String>)],
+    fields: &[(&str, Ident, Cow<[String]>)],
     cattrs: &attr::Container,
     is_variant: bool,
     other_idx: Option<usize>,
@@ -2083,7 +2084,7 @@ fn deserialize_custom_identifier(
 
 fn deserialize_identifier(
     this: &TokenStream,
-    fields: &[(&str, Ident, Vec<String>)],
+    fields: &[(&str, Ident, Cow<[String]>)],
     is_variant: bool,
     fallthrough: Option<TokenStream>,
     fallthrough_borrowed: Option<TokenStream>,

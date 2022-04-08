@@ -277,7 +277,7 @@ fn check_internal_tag_field_name_conflict(cx: &Ctxt, cont: &Container) {
                         return;
                     }
 
-                    for de_name in field.attrs.aliases() {
+                    for de_name in field.attrs.aliases().iter() {
                         if check_de && de_name == tag {
                             diagnose_conflict();
                             return;
