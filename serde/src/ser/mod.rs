@@ -99,7 +99,7 @@
 //! [`LinkedHashMap<K, V>`]: https://docs.rs/linked-hash-map/*/linked_hash_map/struct.LinkedHashMap.html
 //! [`Serialize`]: ../trait.Serialize.html
 //! [`Serializer`]: ../trait.Serializer.html
-//! [`bincode`]: https://github.com/servo/bincode
+//! [`bincode`]: https://github.com/bincode-org/bincode
 //! [`linked-hash-map`]: https://crates.io/crates/linked-hash-map
 //! [`serde_derive`]: https://crates.io/crates/serde_derive
 //! [`serde_json`]: https://github.com/serde-rs/json
