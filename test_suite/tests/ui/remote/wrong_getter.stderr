@@ -2,8 +2,16 @@ error[E0308]: mismatched types
   --> tests/ui/remote/wrong_getter.rs:15:10
    |
 15 | #[derive(Serialize)]
-   |          ^^^^^^^^^ expected `u8`, found `u16`
+   |          ^^^^^^^^^
+   |          |
+   |          expected `u8`, found `u16`
+   |          arguments to this function are incorrect
    |
    = note: expected reference `&u8`
               found reference `&u16`
+note: function defined here
+  --> $WORKSPACE/serde/src/private/ser.rs
+   |
+   | pub fn constrain<T: ?Sized>(t: &T) -> &T {
+   |        ^^^^^^^^^
    = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)
