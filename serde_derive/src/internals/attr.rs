@@ -133,12 +133,35 @@ impl<'c, T> VecAttr<'c, T> {
     }
 }
 
+/// Literal types used for names.
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord)]
+pub enum NameType {
+    Str(String),
+}
+
+impl NameType {
+    pub fn as_str(&self) -> Option<&str> {
+        match self {
+            Self::Str(s) => Some(s),
+            _ => None,
+        }
+    }
+}
+
+impl ToTokens for NameType {
+    fn to_tokens(&self, out: &mut TokenStream) {
+        match self {
+            Self::Str(s) => s.to_tokens(out),
+        }
+    }
+}
+
 pub struct Name {
-    serialize: String,
+    serialize: NameType,
     serialize_renamed: bool,
-    deserialize: String,
+    deserialize: NameType,
     deserialize_renamed: bool,
-    deserialize_aliases: Vec<String>,
+    deserialize_aliases: Vec<NameType>,
 }
 
 #[allow(deprecated)]
@@ -151,10 +174,10 @@ fn unraw(ident: &Ident) -> String {
 
 impl Name {
     fn from_attrs(
-        source_name: String,
-        ser_name: Attr<String>,
-        de_name: Attr<String>,
-        de_aliases: Option<VecAttr<String>>,
+        source_name: NameType,
+        ser_name: Attr<NameType>,
+        de_name: Attr<NameType>,
+        de_aliases: Option<VecAttr<NameType>>,
     ) -> Name {
         let deserialize_aliases = match de_aliases {
             Some(de_aliases) => {
@@ -181,16 +204,16 @@ impl Name {
     }
 
     /// Return the container name for the container when serializing.
-    pub fn serialize_name(&self) -> String {
+    pub fn serialize_name(&self) -> NameType {
         self.serialize.clone()
     }
 
     /// Return the container name for the container when deserializing.
-    pub fn deserialize_name(&self) -> String {
+    pub fn deserialize_name(&self) -> NameType {
         self.deserialize.clone()
     }
 
-    fn deserialize_aliases(&self) -> Vec<String> {
+    fn deserialize_aliases(&self) -> Vec<NameType> {
         let mut aliases = self.deserialize_aliases.clone();
         let main_name = self.deserialize_name();
         if !aliases.contains(&main_name) {
@@ -319,16 +342,16 @@ impl Container {
                 // Parse `#[serde(rename = "foo")]`
                 Meta(NameValue(m)) if m.path == RENAME => {
                     if let Ok(s) = get_lit_str(cx, RENAME, &m.lit) {
-                        ser_name.set(&m.path, s.value());
-                        de_name.set(&m.path, s.value());
+                        ser_name.set(&m.path, NameType::Str(s.value()));
+                        de_name.set(&m.path, NameType::Str(s.value()));
                     }
                 }
 
                 // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
                 Meta(List(m)) if m.path == RENAME => {
                     if let Ok((ser, de)) = get_renames(cx, &m.nested) {
-                        ser_name.set_opt(&m.path, ser.map(syn::LitStr::value));
-                        de_name.set_opt(&m.path, de.map(syn::LitStr::value));
+                        ser_name.set_opt(&m.path, ser.map(syn::LitStr::value).map(NameType::Str));
+                        de_name.set_opt(&m.path, de.map(syn::LitStr::value).map(NameType::Str));
                     }
                 }
 
@@ -600,7 +623,7 @@ impl Container {
         }
 
         Container {
-            name: Name::from_attrs(unraw(&item.ident), ser_name, de_name, None),
+            name: Name::from_attrs(NameType::Str(unraw(&item.ident)), ser_name, de_name, None),
             transparent: transparent.get(),
             deny_unknown_fields: deny_unknown_fields.get(),
             default: default.get().unwrap_or(Default::None),
@@ -885,19 +908,19 @@ impl Variant {
                 // Parse `#[serde(rename = "foo")]`
                 Meta(NameValue(m)) if m.path == RENAME => {
                     if let Ok(s) = get_lit_str(cx, RENAME, &m.lit) {
-                        ser_name.set(&m.path, s.value());
-                        de_name.set_if_none(s.value());
-                        de_aliases.insert(&m.path, s.value());
+                        ser_name.set(&m.path, NameType::Str(s.value()));
+                        de_name.set_if_none(NameType::Str(s.value()));
+                        de_aliases.insert(&m.path, NameType::Str(s.value()));
                     }
                 }
 
                 // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
                 Meta(List(m)) if m.path == RENAME => {
                     if let Ok((ser, de)) = get_multiple_renames(cx, &m.nested) {
-                        ser_name.set_opt(&m.path, ser.map(syn::LitStr::value));
+                        ser_name.set_opt(&m.path, ser.map(syn::LitStr::value).map(NameType::Str));
                         for de_value in de {
-                            de_name.set_if_none(de_value.value());
-                            de_aliases.insert(&m.path, de_value.value());
+                            de_name.set_if_none(NameType::Str(de_value.value()));
+                            de_aliases.insert(&m.path, NameType::Str(de_value.value()));
                         }
                     }
                 }
@@ -905,7 +928,7 @@ impl Variant {
                 // Parse `#[serde(alias = "foo")]`
                 Meta(NameValue(m)) if m.path == ALIAS => {
                     if let Ok(s) = get_lit_str(cx, ALIAS, &m.lit) {
-                        de_aliases.insert(&m.path, s.value());
+                        de_aliases.insert(&m.path, NameType::Str(s.value()));
                     }
                 }
 
@@ -1041,7 +1064,12 @@ impl Variant {
         }
 
         Variant {
-            name: Name::from_attrs(unraw(&variant.ident), ser_name, de_name, Some(de_aliases)),
+            name: Name::from_attrs(
+                NameType::Str(unraw(&variant.ident)),
+                ser_name,
+                de_name,
+                Some(de_aliases),
+            ),
             rename_all_rules: RenameAllRules {
                 serialize: rename_all_ser_rule.get().unwrap_or(RenameRule::None),
                 deserialize: rename_all_de_rule.get().unwrap_or(RenameRule::None),
@@ -1061,16 +1089,20 @@ impl Variant {
         &self.name
     }
 
-    pub fn aliases(&self) -> Vec<String> {
+    pub fn aliases(&self) -> Vec<NameType> {
         self.name.deserialize_aliases()
     }
 
     pub fn rename_by_rules(&mut self, rules: &RenameAllRules) {
         if !self.name.serialize_renamed {
-            self.name.serialize = rules.serialize.apply_to_variant(&self.name.serialize);
+            if let NameType::Str(ser) = &self.name.serialize {
+                self.name.serialize = NameType::Str(rules.serialize.apply_to_variant(ser));
+            }
         }
         if !self.name.deserialize_renamed {
-            self.name.deserialize = rules.deserialize.apply_to_variant(&self.name.deserialize);
+            if let NameType::Str(de) = &self.name.deserialize {
+                self.name.deserialize = NameType::Str(rules.deserialize.apply_to_variant(de));
+            }
         }
     }
 
@@ -1187,19 +1219,19 @@ impl Field {
                 // Parse `#[serde(rename = "foo")]`
                 Meta(NameValue(m)) if m.path == RENAME => {
                     if let Ok(s) = get_lit_str(cx, RENAME, &m.lit) {
-                        ser_name.set(&m.path, s.value());
-                        de_name.set_if_none(s.value());
-                        de_aliases.insert(&m.path, s.value());
+                        ser_name.set(&m.path, NameType::Str(s.value()));
+                        de_name.set_if_none(NameType::Str(s.value()));
+                        de_aliases.insert(&m.path, NameType::Str(s.value()));
                     }
                 }
 
                 // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
                 Meta(List(m)) if m.path == RENAME => {
                     if let Ok((ser, de)) = get_multiple_renames(cx, &m.nested) {
-                        ser_name.set_opt(&m.path, ser.map(syn::LitStr::value));
+                        ser_name.set_opt(&m.path, ser.map(syn::LitStr::value).map(NameType::Str));
                         for de_value in de {
-                            de_name.set_if_none(de_value.value());
-                            de_aliases.insert(&m.path, de_value.value());
+                            de_name.set_if_none(NameType::Str(de_value.value()));
+                            de_aliases.insert(&m.path, NameType::Str(de_value.value()));
                         }
                     }
                 }
@@ -1207,7 +1239,7 @@ impl Field {
                 // Parse `#[serde(alias = "foo")]`
                 Meta(NameValue(m)) if m.path == ALIAS => {
                     if let Ok(s) = get_lit_str(cx, ALIAS, &m.lit) {
-                        de_aliases.insert(&m.path, s.value());
+                        de_aliases.insert(&m.path, NameType::Str(s.value()));
                     }
                 }
 
@@ -1413,7 +1445,7 @@ impl Field {
         }
 
         Field {
-            name: Name::from_attrs(ident, ser_name, de_name, Some(de_aliases)),
+            name: Name::from_attrs(NameType::Str(ident), ser_name, de_name, Some(de_aliases)),
             skip_serializing: skip_serializing.get(),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing_if: skip_serializing_if.get(),
@@ -1433,16 +1465,20 @@ impl Field {
         &self.name
     }
 
-    pub fn aliases(&self) -> Vec<String> {
+    pub fn aliases(&self) -> Vec<NameType> {
         self.name.deserialize_aliases()
     }
 
     pub fn rename_by_rules(&mut self, rules: &RenameAllRules) {
-        if !self.name.serialize_renamed {
-            self.name.serialize = rules.serialize.apply_to_field(&self.name.serialize);
+        if let NameType::Str(ser) = &self.name.serialize {
+            if !self.name.serialize_renamed {
+                self.name.serialize = NameType::Str(rules.serialize.apply_to_field(ser));
+            }
         }
-        if !self.name.deserialize_renamed {
-            self.name.deserialize = rules.deserialize.apply_to_field(&self.name.deserialize);
+        if let NameType::Str(de) = &self.name.deserialize {
+            if !self.name.deserialize_renamed {
+                self.name.deserialize = NameType::Str(rules.deserialize.apply_to_field(de));
+            }
         }
     }
 

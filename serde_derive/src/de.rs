@@ -1902,7 +1902,7 @@ fn deserialize_untagged_newtype_variant(
 }
 
 fn deserialize_generated_identifier(
-    fields: &[(String, Ident, Vec<String>)],
+    fields: &[(attr::NameType, Ident, Vec<attr::NameType>)],
     cattrs: &attr::Container,
     is_variant: bool,
     other_idx: Option<usize>,
@@ -2084,7 +2084,7 @@ fn deserialize_custom_identifier(
 
 fn deserialize_identifier(
     this: &TokenStream,
-    fields: &[(String, Ident, Vec<String>)],
+    fields: &[(attr::NameType, Ident, Vec<attr::NameType>)],
     is_variant: bool,
     fallthrough: Option<TokenStream>,
     fallthrough_borrowed: Option<TokenStream>,
@@ -2096,10 +2096,13 @@ fn deserialize_identifier(
         flat_fields.extend(aliases.iter().map(|alias| (alias, ident)));
     }
 
-    let field_strs: &Vec<_> = &flat_fields.iter().map(|(name, _)| name).collect();
-    let field_bytes: &Vec<_> = &flat_fields
+    let field_strs: &Vec<_> = &flat_fields
         .iter()
-        .map(|(name, _)| Literal::byte_string(name.as_bytes()))
+        .filter_map(|(name, _)| name.as_str())
+        .collect();
+    let field_bytes: &Vec<_> = &field_strs
+        .iter()
+        .map(|name| Literal::byte_string(name.as_bytes()))
         .collect();
 
     let constructors: &Vec<_> = &flat_fields
