@@ -930,7 +930,7 @@ fn deserialize_struct(
         &type_path, params, fields, true, cattrs, expecting,
     ));
 
-    let (field_visitor, fields_stmt, visit_map) = if cattrs.has_flatten() {
+    let (field_visitor, fields_stmt, visit_map) = if cattrs.struct_as_map() {
         deserialize_struct_as_map_visitor(&type_path, params, fields, cattrs)
     } else {
         deserialize_struct_as_struct_visitor(&type_path, params, fields, cattrs)
@@ -957,7 +957,7 @@ fn deserialize_struct(
         quote! {
             _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
         }
-    } else if cattrs.has_flatten() {
+    } else if cattrs.struct_as_map() {
         quote! {
             _serde::Deserializer::deserialize_map(__deserializer, #visitor_expr)
         }
@@ -978,7 +978,7 @@ fn deserialize_struct(
     // untagged struct variants do not get a visit_seq method. The same applies to
     // structs that only have a map representation.
     let visit_seq = match *untagged {
-        Untagged::No if !cattrs.has_flatten() => Some(quote! {
+        Untagged::No if !cattrs.struct_as_map() => Some(quote! {
             #[inline]
             fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::__private::Result<Self::Value, __A::Error>
             where
@@ -1053,7 +1053,7 @@ fn deserialize_struct_in_place(
 
     // for now we do not support in_place deserialization for structs that
     // are represented as map.
-    if cattrs.has_flatten() {
+    if cattrs.struct_as_map() {
         return None;
     }
 
@@ -2389,7 +2389,7 @@ fn deserialize_struct_as_struct_visitor(
     fields: &[Field],
     cattrs: &attr::Container,
 ) -> (Fragment, Option<Fragment>, Fragment) {
-    assert!(!cattrs.has_flatten());
+    assert!(!cattrs.struct_as_map());
 
     let field_names_idents: Vec<_> = fields
         .iter()
@@ -2666,7 +2666,7 @@ fn deserialize_struct_as_struct_in_place_visitor(
     fields: &[Field],
     cattrs: &attr::Container,
 ) -> (Fragment, Fragment, Fragment) {
-    assert!(!cattrs.has_flatten());
+    assert!(!cattrs.struct_as_map());
 
     let field_names_idents: Vec<_> = fields
         .iter()

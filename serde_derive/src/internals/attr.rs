@@ -701,6 +701,10 @@ impl Container {
     pub fn expecting(&self) -> Option<&str> {
         self.expecting.as_ref().map(String::as_ref)
     }
+
+    pub fn struct_as_map(&self) -> bool {
+        self.has_flatten()
+    }
 }
 
 fn decide_tag(
