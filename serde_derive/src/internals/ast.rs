@@ -80,6 +80,7 @@ impl<'a> Container<'a> {
         };
 
         let mut has_flatten = false;
+        let mut has_int_rename = false;
         match &mut data {
             Data::Enum(variants) => {
                 for variant in variants {
@@ -100,12 +101,22 @@ impl<'a> Container<'a> {
                         has_flatten = true;
                     }
                     field.attrs.rename_by_rules(attrs.rename_all_rules());
+                    if field.attrs.name().serialize_name().is_int()
+                        || field.attrs.name().deserialize_name().is_int()
+                        || field.attrs.aliases().iter().any(|name| name.is_int())
+                    {
+                        has_int_rename = true;
+                    }
                 }
             }
         }
 
         if has_flatten {
             attrs.mark_has_flatten();
+        }
+
+        if has_int_rename {
+            attrs.mark_has_int_rename();
         }
 
         let mut item = Container {

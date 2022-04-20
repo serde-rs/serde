@@ -5,6 +5,7 @@ use proc_macro2::{Spacing, Span, TokenStream, TokenTree};
 use quote::ToTokens;
 use std::borrow::Cow;
 use std::collections::BTreeSet;
+use std::convert::TryInto;
 use std::fmt;
 use syn;
 use syn::parse::{self, Parse, ParseStream};
@@ -138,6 +139,14 @@ impl<'c, T> VecAttr<'c, T> {
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub enum NameType {
     Str(String),
+    I8(i8),
+    I16(i16),
+    I32(i32),
+    I64(i64),
+    U8(u8),
+    U16(u16),
+    U32(u32),
+    U64(u64),
 }
 
 impl NameType {
@@ -147,12 +156,58 @@ impl NameType {
             _ => None,
         }
     }
+
+    pub fn as_positive_int(&self) -> Option<u64> {
+        match *self {
+            Self::I8(i) => i.try_into().ok(),
+            Self::I16(i) => i.try_into().ok(),
+            Self::I32(i) => i.try_into().ok(),
+            Self::I64(i) => i.try_into().ok(),
+            Self::U8(n) => Some(n.into()),
+            Self::U16(n) => Some(n.into()),
+            Self::U32(n) => Some(n.into()),
+            Self::U64(n) => Some(n),
+            _ => None,
+        }
+    }
+
+    pub fn as_negative_int(&self) -> Option<i64> {
+        match *self {
+            Self::I8(i) if i < 0 => Some(i.into()),
+            Self::I16(i) if i < 0 => Some(i.into()),
+            Self::I32(i) if i < 0 => Some(i.into()),
+            Self::I64(i) if i < 0 => Some(i),
+            _ => None,
+        }
+    }
+
+    pub fn is_int(&self) -> bool {
+        match self {
+            Self::I8(_)
+            | Self::I16(_)
+            | Self::I32(_)
+            | Self::I64(_)
+            | Self::U8(_)
+            | Self::U16(_)
+            | Self::U32(_)
+            | Self::U64(_) => true,
+            _ => false,
+        }
+    }
 }
 
 impl fmt::Display for NameType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Str(s) => write!(f, "{}", s),
+            Self::I8(i) => write!(f, "{}", i),
+            Self::I16(i) => write!(f, "{}", i),
+            Self::I32(i) => write!(f, "{}", i),
+            Self::I64(i) => write!(f, "{}", i),
+            Self::U8(n) => write!(f, "{}", n),
+            Self::U16(n) => write!(f, "{}", n),
+            Self::U32(n) => write!(f, "{}", n),
+            Self::U64(n) => write!(f, "{}", n),
         }
     }
 }
@@ -161,6 +216,14 @@ impl ToTokens for NameType {
     fn to_tokens(&self, out: &mut TokenStream) {
         match self {
             Self::Str(s) => s.to_tokens(out),
+            Self::I8(i) => i.to_tokens(out),
+            Self::I16(i) => i.to_tokens(out),
+            Self::I32(i) => i.to_tokens(out),
+            Self::I64(i) => i.to_tokens(out),
+            Self::U8(n) => n.to_tokens(out),
+            Self::U16(n) => n.to_tokens(out),
+            Self::U32(n) => n.to_tokens(out),
+            Self::U64(n) => n.to_tokens(out),
         }
     }
 }
@@ -1237,28 +1300,28 @@ impl Field {
             match &meta_item {
                 // Parse `#[serde(rename = "foo")]`
                 Meta(NameValue(m)) if m.path == RENAME => {
-                    if let Ok(s) = get_lit_str(cx, RENAME, &m.lit) {
-                        ser_name.set(&m.path, NameType::Str(s.value()));
-                        de_name.set_if_none(NameType::Str(s.value()));
-                        de_aliases.insert(&m.path, NameType::Str(s.value()));
+                    if let Ok(name) = get_name_type(cx, RENAME, &m.lit) {
+                        ser_name.set(&m.path, name.clone());
+                        de_name.set_if_none(name.clone());
+                        de_aliases.insert(&m.path, name);
                     }
                 }
 
                 // Parse `#[serde(rename(serialize = "foo", deserialize = "bar"))]`
                 Meta(List(m)) if m.path == RENAME => {
-                    if let Ok((ser, de)) = get_multiple_renames(cx, &m.nested) {
-                        ser_name.set_opt(&m.path, ser.map(syn::LitStr::value).map(NameType::Str));
+                    if let Ok((ser, de)) = get_multiple_renames_typed(cx, &m.nested) {
+                        ser_name.set_opt(&m.path, ser);
                         for de_value in de {
-                            de_name.set_if_none(NameType::Str(de_value.value()));
-                            de_aliases.insert(&m.path, NameType::Str(de_value.value()));
+                            de_name.set_if_none(de_value.clone());
+                            de_aliases.insert(&m.path, de_value);
                         }
                     }
                 }
 
                 // Parse `#[serde(alias = "foo")]`
                 Meta(NameValue(m)) if m.path == ALIAS => {
-                    if let Ok(s) = get_lit_str(cx, ALIAS, &m.lit) {
-                        de_aliases.insert(&m.path, NameType::Str(s.value()));
+                    if let Ok(name) = get_name_type(cx, ALIAS, &m.lit) {
+                        de_aliases.insert(&m.path, name);
                     }
                 }
 
@@ -1615,6 +1678,14 @@ fn get_multiple_renames<'a>(
     Ok((ser.at_most_one()?, de.get()))
 }
 
+fn get_multiple_renames_typed<'a>(
+    cx: &Ctxt,
+    items: &'a Punctuated<syn::NestedMeta, Token![,]>,
+) -> Result<(Option<NameType>, Vec<NameType>), ()> {
+    let (ser, de) = get_ser_and_de(cx, RENAME, items, get_name_type2)?;
+    Ok((ser.at_most_one()?, de.get()))
+}
+
 fn get_where_predicates(
     cx: &Ctxt,
     items: &Punctuated<syn::NestedMeta, Token![,]>,
@@ -1662,6 +1733,53 @@ fn get_lit_str2<'a>(
             ),
         );
         Err(())
+    }
+}
+
+fn get_name_type<'a>(cx: &Ctxt, attr_name: Symbol, lit: &'a syn::Lit) -> Result<NameType, ()> {
+    get_name_type2(cx, attr_name, attr_name, lit)
+}
+
+fn get_name_type2<'a>(
+    cx: &Ctxt,
+    attr_name: Symbol,
+    meta_item_name: Symbol,
+    lit: &'a syn::Lit,
+) -> Result<NameType, ()> {
+    match lit {
+        syn::Lit::Str(s) => Ok(NameType::Str(s.value())),
+        syn::Lit::Int(i) => {
+            let diagnose = || -> () {
+                cx.error_spanned_by(
+                    lit,
+                    format!(
+                        "failed to parse integer serde {} attribute: `{} = {}`",
+                        attr_name, meta_item_name, i
+                    ),
+                );
+            };
+            match i.suffix() {
+                "i8" => Ok(NameType::I8(i.base10_parse().map_err(|_| diagnose())?)),
+                "i16" => Ok(NameType::I16(i.base10_parse().map_err(|_| diagnose())?)),
+                "" | "i32" => Ok(NameType::I32(i.base10_parse().map_err(|_| diagnose())?)),
+                "i64" => Ok(NameType::I64(i.base10_parse().map_err(|_| diagnose())?)),
+                "u8" => Ok(NameType::U8(i.base10_parse().map_err(|_| diagnose())?)),
+                "u16" => Ok(NameType::U16(i.base10_parse().map_err(|_| diagnose())?)),
+                "u32" => Ok(NameType::U32(i.base10_parse().map_err(|_| diagnose())?)),
+                "u64" => Ok(NameType::U64(i.base10_parse().map_err(|_| diagnose())?)),
+                _ => Err(diagnose()),
+            }
+        }
+        _ => {
+            cx.error_spanned_by(
+                lit,
+                format!(
+                    "expected serde {} attribute to be a string or integer: `{} = ...`",
+                    attr_name, meta_item_name
+                ),
+            );
+            Err(())
+        }
     }
 }
 

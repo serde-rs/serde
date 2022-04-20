@@ -1,4 +1,4 @@
-error: expected serde rename attribute to be a string: `rename = "..."`
+error: expected serde rename attribute to be a string or integer: `rename = ...`
  --> tests/ui/expected-string/boolean.rs:5:22
   |
 5 |     #[serde(rename = true)]

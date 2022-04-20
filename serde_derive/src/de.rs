@@ -1927,7 +1927,7 @@ fn deserialize_generated_identifier(
         (Some(catchall_variant), Some(fallthrough))
     };
 
-    let visitor_impl = Stmts(deserialize_identifier(
+    let (visitor_impl, visitor_helper_impl) = deserialize_identifier(
         &this,
         fields,
         is_variant,
@@ -1936,12 +1936,28 @@ fn deserialize_generated_identifier(
         collect_other_fields,
         cattrs.has_int_rename(),
         None,
-    ));
+    );
+
+    let visitor_impl = Stmts(visitor_impl);
+    let visitor_helper_impl = visitor_helper_impl.map(Stmts);
+    let visitor_helper = visitor_helper_impl.map(|visitor_helper_impl| {
+        quote! {
+            impl __FieldVisitor {
+                #visitor_helper_impl
+            }
+        }
+    });
 
     let lifetime = if collect_other_fields {
         Some(quote!(<'de>))
     } else {
         None
+    };
+
+    let deserialize_fn = if cattrs.has_int_rename() {
+        quote! { _serde::Deserializer::deserialize_any }
+    } else {
+        quote! { _serde::Deserializer::deserialize_identifier }
     };
 
     quote_block! {
@@ -1952,6 +1968,8 @@ fn deserialize_generated_identifier(
         }
 
         struct __FieldVisitor;
+
+        #visitor_helper
 
         impl<'de> _serde::de::Visitor<'de> for __FieldVisitor {
             type Value = __Field #lifetime;
@@ -1965,7 +1983,7 @@ fn deserialize_generated_identifier(
             where
                 __D: _serde::Deserializer<'de>,
             {
-                _serde::Deserializer::deserialize_identifier(__deserializer, __FieldVisitor)
+                #deserialize_fn(__deserializer, __FieldVisitor)
             }
         }
     }
@@ -2051,7 +2069,7 @@ fn deserialize_custom_identifier(
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
-    let visitor_impl = Stmts(deserialize_identifier(
+    let (visitor_impl, visitor_helper_impl) = deserialize_identifier(
         &this,
         &names_idents,
         is_variant,
@@ -2060,7 +2078,17 @@ fn deserialize_custom_identifier(
         false,
         cattrs.has_int_rename(),
         cattrs.expecting(),
-    ));
+    );
+
+    let visitor_impl = Stmts(visitor_impl);
+    let visitor_helper_impl = visitor_helper_impl.map(Stmts);
+    let visitor_helper = visitor_helper_impl.map(|visitor_helper_impl| {
+        quote! {
+            impl __FieldVisitor {
+                #visitor_helper_impl
+            }
+        }
+    });
 
     quote_block! {
         #names_const
@@ -2069,6 +2097,8 @@ fn deserialize_custom_identifier(
             marker: _serde::__private::PhantomData<#this #ty_generics>,
             lifetime: _serde::__private::PhantomData<&#delife ()>,
         }
+
+        #visitor_helper
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __FieldVisitor #de_ty_generics #where_clause {
             type Value = #this #ty_generics;
@@ -2093,7 +2123,7 @@ fn deserialize_identifier(
     collect_other_fields: bool,
     has_int_rename: bool,
     expecting: Option<&str>,
-) -> Fragment {
+) -> (Fragment, Option<Fragment>) {
     let mut flat_fields = Vec::new();
     for (_, ident, aliases) in fields {
         flat_fields.extend(aliases.iter().map(|alias| (alias, ident)));
@@ -2107,10 +2137,9 @@ fn deserialize_identifier(
         .iter()
         .map(|name| Literal::byte_string(name.as_bytes()))
         .collect();
-
     let constructors: &Vec<_> = &flat_fields
         .iter()
-        .map(|(_, ident)| quote!(#this::#ident))
+        .filter_map(|(name, ident)| name.as_str().map(|_| quote!(#this::#ident)))
         .collect();
 
     let expecting = expecting.unwrap_or(if is_variant {
@@ -2246,70 +2275,138 @@ fn deserialize_identifier(
         None
     };
 
+    let visitor_helper_impl = if collect_other_fields || has_int_rename {
+        let (field_positive_ints, constructors_positive_ints): (Vec<_>, Vec<_>) = flat_fields
+            .iter()
+            .filter_map(|(name, ident)| name.as_positive_int().map(|v| (v, quote!(#this::#ident))))
+            .unzip();
+        let (field_negative_ints, constructors_negative_ints): (Vec<_>, Vec<_>) = flat_fields
+            .iter()
+            .filter_map(|(name, ident)| name.as_negative_int().map(|v| (v, quote!(#this::#ident))))
+            .unzip();
+
+        Some(quote_block! {
+            fn visit_signed<'de>(self, __value: i64) -> _serde::__private::Option<<Self as _serde::de::Visitor<'de>>::Value>
+            {
+                match __value {
+                    #(
+                        #field_negative_ints => _serde::__private::Some(#constructors_negative_ints),
+                    )*
+                    i if i >= 0 => self.visit_unsigned(i as u64),
+                    _ => _serde::__private::None,
+                }
+            }
+
+            fn visit_unsigned<'de>(self, __value: u64) -> _serde::__private::Option<<Self as _serde::de::Visitor<'de>>::Value>
+            {
+                match __value {
+                    #(
+                        #field_positive_ints => _serde::__private::Some(#constructors_positive_ints),
+                    )*
+                    _ => _serde::__private::None,
+                }
+            }
+        })
+    } else {
+        None
+    };
+
     let visit_int = if collect_other_fields || has_int_rename {
         quote! {
             fn visit_i8<__E>(self, __value: i8) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                #value_as_i8_content
-                #fallthrough_arm
+                if let _serde::__private::Some(__value) = self.visit_signed(__value.into()) {
+                    _serde::__private::Ok(__value)
+                } else {
+                    #value_as_i8_content
+                    #fallthrough_arm
+                }
             }
 
             fn visit_i16<__E>(self, __value: i16) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                #value_as_i16_content
-                #fallthrough_arm
+                if let _serde::__private::Some(__value) = self.visit_signed(__value.into()) {
+                    _serde::__private::Ok(__value)
+                } else {
+                    #value_as_i16_content
+                    #fallthrough_arm
+                }
             }
 
             fn visit_i32<__E>(self, __value: i32) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                #value_as_i32_content
-                #fallthrough_arm
+                if let _serde::__private::Some(__value) = self.visit_signed(__value.into()) {
+                    _serde::__private::Ok(__value)
+                } else {
+                    #value_as_i32_content
+                    #fallthrough_arm
+                }
             }
 
             fn visit_i64<__E>(self, __value: i64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                #value_as_i64_content
-                #fallthrough_arm
+                if let _serde::__private::Some(__value) = self.visit_signed(__value) {
+                    _serde::__private::Ok(__value)
+                } else {
+                    #value_as_i64_content
+                    #fallthrough_arm
+                }
             }
 
             fn visit_u8<__E>(self, __value: u8) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                #value_as_u8_content
-                #fallthrough_arm
+                if let _serde::__private::Some(__value) = self.visit_unsigned(__value.into()) {
+                    _serde::__private::Ok(__value)
+                } else {
+                    #value_as_u8_content
+                    #fallthrough_arm
+                }
             }
 
             fn visit_u16<__E>(self, __value: u16) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                #value_as_u16_content
-                #fallthrough_arm
+                if let _serde::__private::Some(__value) = self.visit_unsigned(__value.into()) {
+                    _serde::__private::Ok(__value)
+                } else {
+                    #value_as_u16_content
+                    #fallthrough_arm
+                }
             }
 
             fn visit_u32<__E>(self, __value: u32) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                #value_as_u32_content
-                #fallthrough_arm
+                if let _serde::__private::Some(__value) = self.visit_unsigned(__value.into()) {
+                    _serde::__private::Ok(__value)
+                } else {
+                    #value_as_u32_content
+                    #fallthrough_arm
+                }
             }
 
             fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                #value_as_u64_content
-                #fallthrough_arm
+                if let _serde::__private::Some(__value) = self.visit_unsigned(__value) {
+                    _serde::__private::Ok(__value)
+                } else {
+                    #value_as_u64_content
+                    #fallthrough_arm
+                }
             }
         }
     } else {
@@ -2387,7 +2484,7 @@ fn deserialize_identifier(
         None
     };
 
-    quote_block! {
+    let visitor_impl = quote_block! {
         fn expecting(&self, __formatter: &mut _serde::__private::Formatter) -> _serde::__private::fmt::Result {
             _serde::__private::Formatter::write_str(__formatter, #expecting)
         }
@@ -2427,7 +2524,9 @@ fn deserialize_identifier(
         }
 
         #visit_borrowed
-    }
+    };
+
+    (visitor_impl, visitor_helper_impl)
 }
 
 fn deserialize_struct_as_struct_visitor(
