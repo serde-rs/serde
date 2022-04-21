@@ -1909,8 +1909,9 @@ fn deserialize_generated_identifier(
 ) -> Fragment {
     let this = quote!(__Field);
     let field_idents: &Vec<_> = &fields.iter().map(|(_, ident, _)| ident).collect();
+    let collect_other_fields = !is_variant && cattrs.has_flatten();
 
-    let (ignore_variant, fallthrough) = if !is_variant && cattrs.has_flatten() {
+    let (ignore_variant, fallthrough) = if collect_other_fields {
         let ignore_variant = quote!(__other(_serde::__private::de::Content<'de>),);
         let fallthrough = quote!(_serde::__private::Ok(__Field::__other(__value)));
         (Some(ignore_variant), Some(fallthrough))
@@ -1932,11 +1933,11 @@ fn deserialize_generated_identifier(
         is_variant,
         fallthrough,
         None,
-        !is_variant && cattrs.has_flatten(),
+        collect_other_fields,
         None,
     ));
 
-    let lifetime = if !is_variant && cattrs.has_flatten() {
+    let lifetime = if collect_other_fields {
         Some(quote!(<'de>))
     } else {
         None
