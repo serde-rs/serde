@@ -2166,91 +2166,104 @@ fn deserialize_identifier(
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Bool(__value)))
+                let __value = _serde::__private::de::Content::Bool(__value);
+                #fallthrough
             }
 
             fn visit_i8<__E>(self, __value: i8) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I8(__value)))
+                let __value = _serde::__private::de::Content::I8(__value);
+                #fallthrough
             }
 
             fn visit_i16<__E>(self, __value: i16) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I16(__value)))
+                let __value = _serde::__private::de::Content::I16(__value);
+                #fallthrough
             }
 
             fn visit_i32<__E>(self, __value: i32) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I32(__value)))
+                let __value = _serde::__private::de::Content::I32(__value);
+                #fallthrough
             }
 
             fn visit_i64<__E>(self, __value: i64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I64(__value)))
+                let __value = _serde::__private::de::Content::I64(__value);
+                #fallthrough
             }
 
             fn visit_u8<__E>(self, __value: u8) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U8(__value)))
+                let __value = _serde::__private::de::Content::U8(__value);
+                #fallthrough
             }
 
             fn visit_u16<__E>(self, __value: u16) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U16(__value)))
+                let __value = _serde::__private::de::Content::U16(__value);
+                #fallthrough
             }
 
             fn visit_u32<__E>(self, __value: u32) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U32(__value)))
+                let __value = _serde::__private::de::Content::U32(__value);
+                #fallthrough
             }
 
             fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U64(__value)))
+                let __value = _serde::__private::de::Content::U64(__value);
+                #fallthrough
             }
 
             fn visit_f32<__E>(self, __value: f32) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::F32(__value)))
+                let __value = _serde::__private::de::Content::F32(__value);
+                #fallthrough
             }
 
             fn visit_f64<__E>(self, __value: f64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::F64(__value)))
+                let __value = _serde::__private::de::Content::F64(__value);
+                #fallthrough
             }
 
             fn visit_char<__E>(self, __value: char) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Char(__value)))
+                let __value = _serde::__private::de::Content::Char(__value);
+                #fallthrough
             }
 
             fn visit_unit<__E>(self) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Unit))
+                let __value = _serde::__private::de::Content::Unit;
+                #fallthrough
             }
         }
     } else {
