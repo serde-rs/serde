@@ -1934,6 +1934,7 @@ fn deserialize_generated_identifier(
         fallthrough,
         None,
         collect_other_fields,
+        cattrs.has_int_rename(),
         None,
     ));
 
@@ -2057,6 +2058,7 @@ fn deserialize_custom_identifier(
         fallthrough,
         fallthrough_borrowed,
         false,
+        cattrs.has_int_rename(),
         cattrs.expecting(),
     ));
 
@@ -2089,6 +2091,7 @@ fn deserialize_identifier(
     fallthrough: Option<TokenStream>,
     fallthrough_borrowed: Option<TokenStream>,
     collect_other_fields: bool,
+    has_int_rename: bool,
     expecting: Option<&str>,
 ) -> Fragment {
     let mut flat_fields = Vec::new();
@@ -2129,6 +2132,14 @@ fn deserialize_identifier(
         value_as_borrowed_str_content,
         value_as_bytes_content,
         value_as_borrowed_bytes_content,
+        value_as_i8_content,
+        value_as_i16_content,
+        value_as_i32_content,
+        value_as_i64_content,
+        value_as_u8_content,
+        value_as_u16_content,
+        value_as_u32_content,
+        value_as_u64_content,
     ) = if collect_other_fields {
         (
             Some(quote! {
@@ -2143,9 +2154,35 @@ fn deserialize_identifier(
             Some(quote! {
                 let __value = _serde::__private::de::Content::Bytes(__value);
             }),
+            Some(quote! {
+                let __value = _serde::__private::de::Content::I8(__value);
+            }),
+            Some(quote! {
+                let __value = _serde::__private::de::Content::I16(__value);
+            }),
+            Some(quote! {
+                let __value = _serde::__private::de::Content::I32(__value);
+            }),
+            Some(quote! {
+                let __value = _serde::__private::de::Content::I64(__value);
+            }),
+            Some(quote! {
+                let __value = _serde::__private::de::Content::U8(__value);
+            }),
+            Some(quote! {
+                let __value = _serde::__private::de::Content::U16(__value);
+            }),
+            Some(quote! {
+                let __value = _serde::__private::de::Content::U32(__value);
+            }),
+            Some(quote! {
+                let __value = _serde::__private::de::Content::U64(__value);
+            }),
         )
     } else {
-        (None, None, None, None)
+        (
+            None, None, None, None, None, None, None, None, None, None, None, None,
+        )
     };
 
     let fallthrough_arm_tokens;
@@ -2164,76 +2201,12 @@ fn deserialize_identifier(
     };
 
     let visit_other = if collect_other_fields {
-        quote! {
+        Some(quote! {
             fn visit_bool<__E>(self, __value: bool) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
                 let __value = _serde::__private::de::Content::Bool(__value);
-                #fallthrough
-            }
-
-            fn visit_i8<__E>(self, __value: i8) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                let __value = _serde::__private::de::Content::I8(__value);
-                #fallthrough
-            }
-
-            fn visit_i16<__E>(self, __value: i16) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                let __value = _serde::__private::de::Content::I16(__value);
-                #fallthrough
-            }
-
-            fn visit_i32<__E>(self, __value: i32) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                let __value = _serde::__private::de::Content::I32(__value);
-                #fallthrough
-            }
-
-            fn visit_i64<__E>(self, __value: i64) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                let __value = _serde::__private::de::Content::I64(__value);
-                #fallthrough
-            }
-
-            fn visit_u8<__E>(self, __value: u8) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                let __value = _serde::__private::de::Content::U8(__value);
-                #fallthrough
-            }
-
-            fn visit_u16<__E>(self, __value: u16) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                let __value = _serde::__private::de::Content::U16(__value);
-                #fallthrough
-            }
-
-            fn visit_u32<__E>(self, __value: u32) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                let __value = _serde::__private::de::Content::U32(__value);
-                #fallthrough
-            }
-
-            fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                let __value = _serde::__private::de::Content::U64(__value);
                 #fallthrough
             }
 
@@ -2267,6 +2240,76 @@ fn deserialize_identifier(
             {
                 let __value = _serde::__private::de::Content::Unit;
                 #fallthrough
+            }
+        })
+    } else {
+        None
+    };
+
+    let visit_int = if collect_other_fields || has_int_rename {
+        quote! {
+            fn visit_i8<__E>(self, __value: i8) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                #value_as_i8_content
+                #fallthrough_arm
+            }
+
+            fn visit_i16<__E>(self, __value: i16) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                #value_as_i16_content
+                #fallthrough_arm
+            }
+
+            fn visit_i32<__E>(self, __value: i32) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                #value_as_i32_content
+                #fallthrough_arm
+            }
+
+            fn visit_i64<__E>(self, __value: i64) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                #value_as_i64_content
+                #fallthrough_arm
+            }
+
+            fn visit_u8<__E>(self, __value: u8) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                #value_as_u8_content
+                #fallthrough_arm
+            }
+
+            fn visit_u16<__E>(self, __value: u16) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                #value_as_u16_content
+                #fallthrough_arm
+            }
+
+            fn visit_u32<__E>(self, __value: u32) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                #value_as_u32_content
+                #fallthrough_arm
+            }
+
+            fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                #value_as_u64_content
+                #fallthrough_arm
             }
         }
     } else {
@@ -2350,6 +2393,7 @@ fn deserialize_identifier(
         }
 
         #visit_other
+        #visit_int
 
         fn visit_str<__E>(self, __value: &str) -> _serde::__private::Result<Self::Value, __E>
         where
@@ -2440,11 +2484,22 @@ fn deserialize_struct_as_map_visitor(
         })
         .collect();
 
+    let fields_stmt = if cattrs.deny_unknown_fields() {
+        let field_names = field_names_idents
+            .iter()
+            .map(|(name, _, _)| name.to_string());
+        Some(quote_block! {
+            const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
+        })
+    } else {
+        None
+    };
+
     let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
 
     let visit_map = deserialize_map(struct_path, params, fields, cattrs);
 
-    (field_visitor, None, visit_map)
+    (field_visitor, fields_stmt, visit_map)
 }
 
 fn deserialize_map(
@@ -2488,7 +2543,7 @@ fn deserialize_map(
         .iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
         .map(|(field, name)| {
-            let deser_name = field.attrs.name().deserialize_name();
+            let deser_name = field.attrs.name().deserialize_name().to_string();
 
             let visit = match field.attrs.deserialize_with() {
                 None => {
@@ -2729,7 +2784,7 @@ fn deserialize_map_in_place(
         .iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
         .map(|(field, name)| {
-            let deser_name = field.attrs.name().deserialize_name();
+            let deser_name = field.attrs.name().deserialize_name().to_string();
             let member = &field.member;
 
             let visit = match field.attrs.deserialize_with() {
@@ -2983,7 +3038,7 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
         attr::Default::None => { /* below */ }
     }
 
-    let name = field.attrs.name().deserialize_name();
+    let name = field.attrs.name().deserialize_name().to_string();
     match field.attrs.deserialize_with() {
         None => {
             let span = field.original.span();

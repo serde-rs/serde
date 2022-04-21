@@ -1140,7 +1140,7 @@ fn serialize_struct_visitor(
             } else {
                 let func = struct_trait.serialize_field(span);
                 quote! {
-                    try!(#func(&mut __serde_state, #key_expr, #field_expr));
+                    try!(#func(&mut __serde_state, &#key_expr, #field_expr));
                 }
             };
 

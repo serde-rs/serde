@@ -262,7 +262,9 @@ macro_rules! declare_error_trait {
             /// Raised when a `Deserialize` struct type received a field with an
             /// unrecognized name.
             #[cold]
-            fn unknown_field(field: &str, expected: &'static [&'static str]) -> Self {
+            fn unknown_field<T>(field: T, expected: &'static [&'static str]) -> Self
+            where
+                T: Display {
                 if expected.is_empty() {
                     Error::custom(format_args!(
                         "unknown field `{}`, there are no fields",

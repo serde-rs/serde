@@ -5,6 +5,7 @@ use proc_macro2::{Spacing, Span, TokenStream, TokenTree};
 use quote::ToTokens;
 use std::borrow::Cow;
 use std::collections::BTreeSet;
+use std::fmt;
 use syn;
 use syn::parse::{self, Parse, ParseStream};
 use syn::punctuated::Punctuated;
@@ -144,6 +145,14 @@ impl NameType {
         match self {
             Self::Str(s) => Some(s),
             _ => None,
+        }
+    }
+}
+
+impl fmt::Display for NameType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Str(s) => write!(f, "{}", s),
         }
     }
 }
