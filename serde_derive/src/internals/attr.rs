@@ -244,6 +244,7 @@ pub struct Container {
     remote: Option<syn::Path>,
     identifier: Identifier,
     has_flatten: bool,
+    has_int_rename: bool,
     serde_path: Option<syn::Path>,
     is_packed: bool,
     /// Error message generated when type can't be deserialized
@@ -640,6 +641,7 @@ impl Container {
             remote: remote.get(),
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
             has_flatten: false,
+            has_int_rename: false,
             serde_path: serde_path.get(),
             is_packed,
             expecting: expecting.get(),
@@ -710,6 +712,14 @@ impl Container {
         self.has_flatten = true;
     }
 
+    pub fn has_int_rename(&self) -> bool {
+        self.has_int_rename
+    }
+
+    pub fn mark_has_int_rename(&mut self) {
+        self.has_int_rename = true
+    }
+
     pub fn custom_serde_path(&self) -> Option<&syn::Path> {
         self.serde_path.as_ref()
     }
@@ -726,7 +736,7 @@ impl Container {
     }
 
     pub fn struct_as_map(&self) -> bool {
-        self.has_flatten()
+        self.has_flatten() || self.has_int_rename()
     }
 }
 
