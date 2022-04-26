@@ -1911,20 +1911,20 @@ fn deserialize_generated_identifier(
     let field_idents: &Vec<_> = &fields.iter().map(|(_, ident, _)| ident).collect();
     let collect_other_fields = !is_variant && cattrs.has_flatten();
 
-    let (ignore_variant, fallthrough) = if collect_other_fields {
-        let ignore_variant = quote!(__other(_serde::__private::de::Content<'de>),);
+    let (catchall_variant, fallthrough) = if collect_other_fields {
+        let catchall_variant = quote!(__other(_serde::__private::de::Content<'de>),);
         let fallthrough = quote!(_serde::__private::Ok(__Field::__other(__value)));
-        (Some(ignore_variant), Some(fallthrough))
+        (Some(catchall_variant), Some(fallthrough))
     } else if let Some(other_idx) = other_idx {
-        let ignore_variant = fields[other_idx].1.clone();
-        let fallthrough = quote!(_serde::__private::Ok(__Field::#ignore_variant));
+        let catchall_variant = fields[other_idx].1.clone();
+        let fallthrough = quote!(_serde::__private::Ok(__Field::#catchall_variant));
         (None, Some(fallthrough))
     } else if is_variant || cattrs.deny_unknown_fields() {
         (None, None)
     } else {
-        let ignore_variant = quote!(__ignore,);
+        let catchall_variant = quote!(__ignore,);
         let fallthrough = quote!(_serde::__private::Ok(__Field::__ignore));
-        (Some(ignore_variant), Some(fallthrough))
+        (Some(catchall_variant), Some(fallthrough))
     };
 
     let visitor_impl = Stmts(deserialize_identifier(
@@ -1947,7 +1947,7 @@ fn deserialize_generated_identifier(
         #[allow(non_camel_case_types)]
         enum __Field #lifetime {
             #(#field_idents,)*
-            #ignore_variant
+            #catchall_variant
         }
 
         struct __FieldVisitor;
