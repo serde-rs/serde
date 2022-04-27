@@ -29,6 +29,7 @@ pub const SKIP: Symbol = Symbol("skip");
 pub const SKIP_DESERIALIZING: Symbol = Symbol("skip_deserializing");
 pub const SKIP_SERIALIZING: Symbol = Symbol("skip_serializing");
 pub const SKIP_SERIALIZING_IF: Symbol = Symbol("skip_serializing_if");
+pub const SKIP_SERIALIZING_IF_DEFAULT: Symbol = Symbol("skip_serializing_if_default");
 pub const TAG: Symbol = Symbol("tag");
 pub const TRANSPARENT: Symbol = Symbol("transparent");
 pub const TRY_FROM: Symbol = Symbol("try_from");

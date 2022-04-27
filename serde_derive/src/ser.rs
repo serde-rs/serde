@@ -1104,10 +1104,20 @@ fn serialize_struct_visitor(
 
             let key_expr = field.attrs.name().serialize_name();
 
-            let skip = field
-                .attrs
-                .skip_serializing_if()
-                .map(|path| quote!(#path(#field_expr)));
+            let skip = if field.attrs.skip_serializing_if_default() {
+                let default_value = match field.attrs.default() {
+                    attr::Default::Default => quote!(
+                        _serde::__private::Default::default()
+                    ),
+                    attr::Default::Path(path) => quote!(
+                        #path()
+                    ),
+                    attr::Default::None => panic!("Default function should exist"),
+                };
+                Some(quote!(if *#field_expr == #default_value {true} else {false}))
+            } else {
+                field.attrs.skip_serializing_if().map(|path| quote!(#path(#field_expr)))
+            };
 
             if let Some(path) = field.attrs.serialize_with() {
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
