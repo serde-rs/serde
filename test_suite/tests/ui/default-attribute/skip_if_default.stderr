@@ -1,0 +1,13 @@
+error: #[serde(skip_serializing_if_default)] and #[serde(skip_serializing_if)] conflict with each other
+ --> tests/ui/default-attribute/skip_if_default.rs:5:5
+  |
+5 | /     #[serde(skip_serializing_if = "always", skip_serializing_if_default)]
+6 | |     a: u8,
+  | |_________^
+
+error: #[serde(skip_serializing_if_default)] can only be used in fields that have #[serde(default)]
+ --> tests/ui/default-attribute/skip_if_default.rs:5:5
+  |
+5 | /     #[serde(skip_serializing_if = "always", skip_serializing_if_default)]
+6 | |     a: u8,
+  | |_________^
