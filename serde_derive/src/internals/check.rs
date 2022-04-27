@@ -90,18 +90,14 @@ fn check_field_skip_if_default(cx: &Ctxt, cont: &Container) {
             if field.attrs.skip_serializing_if().is_some() {
                 cx.error_spanned_by(
                     field.original,
-                    format!(
-                        "#[serde(skip_serializing_if_default)] and #[serde(skip_serializing_if)] conflict with each other"
-                    ),
+                    "#[serde(skip_serializing_if_default)] and #[serde(skip_serializing_if)] conflict with each other".to_string()
                 );
             }
 
             if field.attrs.default().is_none() {
                 cx.error_spanned_by(
                     field.original,
-                    format!(
-                        "#[serde(skip_serializing_if_default)] can only be used in fields that have #[serde(default = \"...\")]"
-                    ),
+                    "#[serde(skip_serializing_if_default)] can only be used in fields that have #[serde(default = \"...\")]".to_string()
                 );
             }
         }
