@@ -161,6 +161,7 @@
         must_use_candidate,
         redundant_field_names,
         too_many_lines,
+        type_repetition_in_bounds, // https://github.com/rust-lang/rust-clippy/issues/8772
         use_debug,
         use_self
     )
