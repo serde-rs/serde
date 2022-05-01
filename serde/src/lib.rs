@@ -103,10 +103,7 @@
         // clippy bug: https://github.com/rust-lang/rust-clippy/issues/7768
         semicolon_if_nothing_returned,
         // not available in our oldest supported compiler
-        checked_conversions,
         empty_enum,
-        redundant_field_names,
-        redundant_static_lifetimes,
         type_repetition_in_bounds, // https://github.com/rust-lang/rust-clippy/issues/8772
         // integer and float ser/de requires these sorts of casts
         cast_possible_truncation,
