@@ -175,7 +175,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@miri
       - run: cd serde && cargo miri test --features derive,rc,unstable
         env:
-          MIRIFLAGS: -Zmiri-tag-raw-pointers
+          MIRIFLAGS: -Zmiri-strict-provenance
       - run: cd test_suite && cargo miri test --features unstable
         env:
-          MIRIFLAGS: -Zmiri-tag-raw-pointers
+          MIRIFLAGS: -Zmiri-strict-provenance
