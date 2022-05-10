@@ -793,7 +793,6 @@ where
         T::deserialize(deserializer).map(Some)
     }
 
-    #[doc(hidden)]
     fn __private_visit_untagged_option<D>(self, deserializer: D) -> Result<Self::Value, ()>
     where
         D: Deserializer<'de>,
