@@ -84,7 +84,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Serde types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/serde/1.0.136")]
+#![doc(html_root_url = "https://docs.rs/serde/1.0.137")]
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
 // Unstable functionality only if the user asks for it. For tracking and
@@ -103,10 +103,8 @@
         // clippy bug: https://github.com/rust-lang/rust-clippy/issues/7768
         semicolon_if_nothing_returned,
         // not available in our oldest supported compiler
-        checked_conversions,
         empty_enum,
-        redundant_field_names,
-        redundant_static_lifetimes,
+        type_repetition_in_bounds, // https://github.com/rust-lang/rust-clippy/issues/8772
         // integer and float ser/de requires these sorts of casts
         cast_possible_truncation,
         cast_possible_wrap,

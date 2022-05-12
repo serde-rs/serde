@@ -144,7 +144,7 @@
 //! # }
 //! ```
 
-#![doc(html_root_url = "https://docs.rs/serde_test/1.0.136")]
+#![doc(html_root_url = "https://docs.rs/serde_test/1.0.137")]
 #![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
 // Ignored clippy lints
 #![cfg_attr(feature = "cargo-clippy", allow(float_cmp, needless_doctest_main))]
@@ -161,6 +161,7 @@
         must_use_candidate,
         redundant_field_names,
         too_many_lines,
+        type_repetition_in_bounds, // https://github.com/rust-lang/rust-clippy/issues/8772
         use_debug,
         use_self
     )

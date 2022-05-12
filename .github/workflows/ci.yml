@@ -166,3 +166,16 @@ jobs:
       - run: cd serde_test && cargo clippy -- -Dclippy::all -Dclippy::pedantic
       - run: cd test_suite && cargo clippy --tests --features unstable -- -Dclippy::all -Dclippy::pedantic
       - run: cd test_suite/no_std && cargo clippy -- -Dclippy::all -Dclippy::pedantic
+
+  miri:
+    name: Miri
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@miri
+      - run: cd serde && cargo miri test --features derive,rc,unstable
+        env:
+          MIRIFLAGS: -Zmiri-strict-provenance
+      - run: cd test_suite && cargo miri test --features unstable
+        env:
+          MIRIFLAGS: -Zmiri-strict-provenance

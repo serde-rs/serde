@@ -14,7 +14,8 @@
     clippy::nonstandard_macro_braces,
     clippy::ptr_arg,
     clippy::too_many_lines,
-    clippy::trivially_copy_pass_by_ref
+    clippy::trivially_copy_pass_by_ref,
+    clippy::type_repetition_in_bounds
 )]
 
 use serde::de::DeserializeOwned;

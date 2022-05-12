@@ -604,7 +604,7 @@ where
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<'de, 'a, E> de::EnumAccess<'de> for StringDeserializer<E>
+impl<'de, E> de::EnumAccess<'de> for StringDeserializer<E>
 where
     E: de::Error,
 {
