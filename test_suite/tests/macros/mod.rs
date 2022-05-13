@@ -1,3 +1,5 @@
+#![allow(unused_macro_rules)]
+
 use serde_test::Token;
 use std::iter;
 
