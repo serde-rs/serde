@@ -128,6 +128,15 @@ impl Parameters {
     fn type_name(&self) -> String {
         self.this.segments.last().unwrap().ident.to_string()
     }
+
+    /// Path to the type when used in remote context, `Self` otherwise
+    fn self_type(&self) -> syn::Path {
+        if self.is_remote {
+            self.this.clone()
+        } else {
+            syn::Path::from(syn::PathSegment::from(format_ident!("Self")))
+        }
+    }
 }
 
 // All the generics in the input, plus a bound `T: Serialize` for each generic
@@ -427,7 +436,7 @@ fn serialize_variant(
     variant_index: u32,
     cattrs: &attr::Container,
 ) -> TokenStream {
-    let this = &params.this;
+    let this = &params.self_type();
     let variant_ident = &variant.ident;
 
     if variant.attrs.skip_serializing() {
