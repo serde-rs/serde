@@ -6,6 +6,7 @@
 #![allow(
     unknown_lints,
     mixed_script_confusables,
+    clippy::derive_partial_eq_without_eq,
     clippy::items_after_statements,
     clippy::missing_errors_doc,
     clippy::missing_panics_doc,

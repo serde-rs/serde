@@ -1,4 +1,4 @@
-#![allow(clippy::similar_names)]
+#![allow(clippy::derive_partial_eq_without_eq, clippy::similar_names)]
 
 use serde::de::value::{self, MapAccessDeserializer};
 use serde::de::{IntoDeserializer, MapAccess, Visitor};

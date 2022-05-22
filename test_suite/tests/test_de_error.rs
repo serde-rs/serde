@@ -1,4 +1,8 @@
-#![allow(clippy::empty_enum, clippy::unreadable_literal)]
+#![allow(
+    clippy::derive_partial_eq_without_eq,
+    clippy::empty_enum,
+    clippy::unreadable_literal
+)]
 #![cfg_attr(feature = "unstable", feature(never_type))]
 
 use serde::de::IntoDeserializer;

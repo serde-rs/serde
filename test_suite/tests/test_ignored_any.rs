@@ -1,3 +1,5 @@
+#![allow(clippy::derive_partial_eq_without_eq)]
+
 use serde::de::value::{Error, MapDeserializer, SeqDeserializer};
 use serde::de::{
     DeserializeSeed, EnumAccess, IgnoredAny, IntoDeserializer, VariantAccess, Visitor,

@@ -118,6 +118,7 @@
         use_self,
         zero_prefixed_literal,
         // correctly used
+        derive_partial_eq_without_eq,
         enum_glob_use,
         let_underscore_drop,
         map_err_ignore,

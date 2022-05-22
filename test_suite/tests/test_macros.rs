@@ -1,5 +1,6 @@
 #![deny(trivial_numeric_casts)]
 #![allow(
+    clippy::derive_partial_eq_without_eq,
     clippy::enum_variant_names,
     clippy::redundant_field_names,
     clippy::too_many_lines
