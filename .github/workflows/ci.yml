@@ -179,3 +179,12 @@ jobs:
       - run: cd test_suite && cargo miri test --features unstable
         env:
           MIRIFLAGS: -Zmiri-strict-provenance
+
+  outdated:
+    name: Outdated
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/install@cargo-outdated
+      - run: cargo outdated --workspace --exclude macrotest --exit-code 1
