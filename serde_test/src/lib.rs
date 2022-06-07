@@ -153,6 +153,7 @@
     feature = "cargo-clippy",
     allow(
         cloned_instead_of_copied,
+        doc_link_with_quotes, // https://github.com/rust-lang/rust-clippy/issues/8961
         empty_line_after_outer_attr,
         manual_assert,
         missing_docs_in_private_items,
