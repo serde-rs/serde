@@ -29,7 +29,11 @@ const _: () = {
                     return _serde::__private::Err(__err);
                 }
             };
-            match _serde::ser::SerializeStruct::serialize_field(&mut __serde_state, "x", &self.x) {
+            match _serde::ser::SerializeStruct::serialize_field(
+                &mut __serde_state,
+                "x",
+                &self.x,
+            ) {
                 _serde::__private::Ok(__val) => __val,
                 _serde::__private::Err(__err) => {
                     return _serde::__private::Err(__err);
@@ -49,7 +53,9 @@ const _: () = {
     where
         T: _serde::Deserialize<'de>,
     {
-        fn deserialize<__D>(__deserializer: __D) -> _serde::__private::Result<Self, __D::Error>
+        fn deserialize<__D>(
+            __deserializer: __D,
+        ) -> _serde::__private::Result<Self, __D::Error>
         where
             __D: _serde::Deserializer<'de>,
         {
@@ -65,9 +71,15 @@ const _: () = {
                     &self,
                     __formatter: &mut _serde::__private::Formatter,
                 ) -> _serde::__private::fmt::Result {
-                    _serde::__private::Formatter::write_str(__formatter, "field identifier")
+                    _serde::__private::Formatter::write_str(
+                        __formatter,
+                        "field identifier",
+                    )
                 }
-                fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
+                fn visit_u64<__E>(
+                    self,
+                    __value: u64,
+                ) -> _serde::__private::Result<Self::Value, __E>
                 where
                     __E: _serde::de::Error,
                 {
@@ -109,7 +121,10 @@ const _: () = {
                 where
                     __D: _serde::Deserializer<'de>,
                 {
-                    _serde::Deserializer::deserialize_identifier(__deserializer, __FieldVisitor)
+                    _serde::Deserializer::deserialize_identifier(
+                        __deserializer,
+                        __FieldVisitor,
+                    )
                 }
             }
             struct __Visitor<'de, T>
@@ -128,7 +143,10 @@ const _: () = {
                     &self,
                     __formatter: &mut _serde::__private::Formatter,
                 ) -> _serde::__private::fmt::Result {
-                    _serde::__private::Formatter::write_str(__formatter, "struct GenericStruct")
+                    _serde::__private::Formatter::write_str(
+                        __formatter,
+                        "struct GenericStruct",
+                    )
                 }
                 #[inline]
                 fn visit_seq<__A>(
@@ -138,8 +156,9 @@ const _: () = {
                 where
                     __A: _serde::de::SeqAccess<'de>,
                 {
-                    let __field0 = match match _serde::de::SeqAccess::next_element::<T>(&mut __seq)
-                    {
+                    let __field0 = match match _serde::de::SeqAccess::next_element::<
+                        T,
+                    >(&mut __seq) {
                         _serde::__private::Ok(__val) => __val,
                         _serde::__private::Err(__err) => {
                             return _serde::__private::Err(__err);
@@ -147,10 +166,12 @@ const _: () = {
                     } {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
-                            return _serde::__private::Err(_serde::de::Error::invalid_length(
-                                0usize,
-                                &"struct GenericStruct with 1 element",
-                            ));
+                            return _serde::__private::Err(
+                                _serde::de::Error::invalid_length(
+                                    0usize,
+                                    &"struct GenericStruct with 1 element",
+                                ),
+                            );
                         }
                     };
                     _serde::__private::Ok(GenericStruct { x: __field0 })
@@ -164,14 +185,13 @@ const _: () = {
                     __A: _serde::de::MapAccess<'de>,
                 {
                     let mut __field0: _serde::__private::Option<T> = _serde::__private::None;
-                    while let _serde::__private::Some(__key) =
-                        match _serde::de::MapAccess::next_key::<__Field>(&mut __map) {
+                    while let _serde::__private::Some(__key)
+                        = match _serde::de::MapAccess::next_key::<__Field>(&mut __map) {
                             _serde::__private::Ok(__val) => __val,
                             _serde::__private::Err(__err) => {
                                 return _serde::__private::Err(__err);
                             }
-                        }
-                    {
+                        } {
                         match __key {
                             __Field::__field0 => {
                                 if _serde::__private::Option::is_some(&__field0) {
@@ -191,8 +211,7 @@ const _: () = {
                             _ => {
                                 let _ = match _serde::de::MapAccess::next_value::<
                                     _serde::de::IgnoredAny,
-                                >(&mut __map)
-                                {
+                                >(&mut __map) {
                                     _serde::__private::Ok(__val) => __val,
                                     _serde::__private::Err(__err) => {
                                         return _serde::__private::Err(__err);
@@ -245,9 +264,15 @@ const _: () = {
                     &self,
                     __formatter: &mut _serde::__private::Formatter,
                 ) -> _serde::__private::fmt::Result {
-                    _serde::__private::Formatter::write_str(__formatter, "field identifier")
+                    _serde::__private::Formatter::write_str(
+                        __formatter,
+                        "field identifier",
+                    )
                 }
-                fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
+                fn visit_u64<__E>(
+                    self,
+                    __value: u64,
+                ) -> _serde::__private::Result<Self::Value, __E>
                 where
                     __E: _serde::de::Error,
                 {
@@ -289,7 +314,10 @@ const _: () = {
                 where
                     __D: _serde::Deserializer<'de>,
                 {
-                    _serde::Deserializer::deserialize_identifier(__deserializer, __FieldVisitor)
+                    _serde::Deserializer::deserialize_identifier(
+                        __deserializer,
+                        __FieldVisitor,
+                    )
                 }
             }
             struct __Visitor<'de, 'place, T: 'place>
@@ -299,7 +327,8 @@ const _: () = {
                 place: &'place mut GenericStruct<T>,
                 lifetime: _serde::__private::PhantomData<&'de ()>,
             }
-            impl<'de, 'place, T: 'place> _serde::de::Visitor<'de> for __Visitor<'de, 'place, T>
+            impl<'de, 'place, T: 'place> _serde::de::Visitor<'de>
+            for __Visitor<'de, 'place, T>
             where
                 T: _serde::Deserialize<'de>,
             {
@@ -308,7 +337,10 @@ const _: () = {
                     &self,
                     __formatter: &mut _serde::__private::Formatter,
                 ) -> _serde::__private::fmt::Result {
-                    _serde::__private::Formatter::write_str(__formatter, "struct GenericStruct")
+                    _serde::__private::Formatter::write_str(
+                        __formatter,
+                        "struct GenericStruct",
+                    )
                 }
                 #[inline]
                 fn visit_seq<__A>(
@@ -318,19 +350,22 @@ const _: () = {
                 where
                     __A: _serde::de::SeqAccess<'de>,
                 {
-                    if let _serde::__private::None = match _serde::de::SeqAccess::next_element_seed(
-                        &mut __seq,
-                        _serde::__private::de::InPlaceSeed(&mut self.place.x),
-                    ) {
-                        _serde::__private::Ok(__val) => __val,
-                        _serde::__private::Err(__err) => {
-                            return _serde::__private::Err(__err);
-                        }
-                    } {
-                        return _serde::__private::Err(_serde::de::Error::invalid_length(
-                            0usize,
-                            &"struct GenericStruct with 1 element",
-                        ));
+                    if let _serde::__private::None
+                        = match _serde::de::SeqAccess::next_element_seed(
+                            &mut __seq,
+                            _serde::__private::de::InPlaceSeed(&mut self.place.x),
+                        ) {
+                            _serde::__private::Ok(__val) => __val,
+                            _serde::__private::Err(__err) => {
+                                return _serde::__private::Err(__err);
+                            }
+                        } {
+                        return _serde::__private::Err(
+                            _serde::de::Error::invalid_length(
+                                0usize,
+                                &"struct GenericStruct with 1 element",
+                            ),
+                        );
                     }
                     _serde::__private::Ok(())
                 }
@@ -343,14 +378,13 @@ const _: () = {
                     __A: _serde::de::MapAccess<'de>,
                 {
                     let mut __field0: bool = false;
-                    while let _serde::__private::Some(__key) =
-                        match _serde::de::MapAccess::next_key::<__Field>(&mut __map) {
+                    while let _serde::__private::Some(__key)
+                        = match _serde::de::MapAccess::next_key::<__Field>(&mut __map) {
                             _serde::__private::Ok(__val) => __val,
                             _serde::__private::Err(__err) => {
                                 return _serde::__private::Err(__err);
                             }
-                        }
-                    {
+                        } {
                         match __key {
                             __Field::__field0 => {
                                 if __field0 {
@@ -372,8 +406,7 @@ const _: () = {
                             _ => {
                                 let _ = match _serde::de::MapAccess::next_value::<
                                     _serde::de::IgnoredAny,
-                                >(&mut __map)
-                                {
+                                >(&mut __map) {
                                     _serde::__private::Ok(__val) => __val,
                                     _serde::__private::Err(__err) => {
                                         return _serde::__private::Err(__err);
@@ -383,13 +416,15 @@ const _: () = {
                         }
                     }
                     if !__field0 {
-                        self.place.x = match _serde::__private::de::missing_field("x") {
+                        self
+                            .place
+                            .x = match _serde::__private::de::missing_field("x") {
                             _serde::__private::Ok(__val) => __val,
                             _serde::__private::Err(__err) => {
                                 return _serde::__private::Err(__err);
                             }
                         };
-                    };
+                    }
                     _serde::__private::Ok(())
                 }
             }
@@ -442,7 +477,9 @@ const _: () = {
     where
         T: _serde::Deserialize<'de>,
     {
-        fn deserialize<__D>(__deserializer: __D) -> _serde::__private::Result<Self, __D::Error>
+        fn deserialize<__D>(
+            __deserializer: __D,
+        ) -> _serde::__private::Result<Self, __D::Error>
         where
             __D: _serde::Deserializer<'de>,
         {
@@ -475,7 +512,9 @@ const _: () = {
                 where
                     __E: _serde::Deserializer<'de>,
                 {
-                    let __field0: T = match <T as _serde::Deserialize>::deserialize(__e) {
+                    let __field0: T = match <T as _serde::Deserialize>::deserialize(
+                        __e,
+                    ) {
                         _serde::__private::Ok(__val) => __val,
                         _serde::__private::Err(__err) => {
                             return _serde::__private::Err(__err);
@@ -491,8 +530,9 @@ const _: () = {
                 where
                     __A: _serde::de::SeqAccess<'de>,
                 {
-                    let __field0 = match match _serde::de::SeqAccess::next_element::<T>(&mut __seq)
-                    {
+                    let __field0 = match match _serde::de::SeqAccess::next_element::<
+                        T,
+                    >(&mut __seq) {
                         _serde::__private::Ok(__val) => __val,
                         _serde::__private::Err(__err) => {
                             return _serde::__private::Err(__err);
@@ -500,10 +540,12 @@ const _: () = {
                     } {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
-                            return _serde::__private::Err(_serde::de::Error::invalid_length(
-                                0usize,
-                                &"tuple struct GenericNewTypeStruct with 1 element",
-                            ));
+                            return _serde::__private::Err(
+                                _serde::de::Error::invalid_length(
+                                    0usize,
+                                    &"tuple struct GenericNewTypeStruct with 1 element",
+                                ),
+                            );
                         }
                     };
                     _serde::__private::Ok(GenericNewTypeStruct(__field0))
@@ -532,7 +574,8 @@ const _: () = {
                 place: &'place mut GenericNewTypeStruct<T>,
                 lifetime: _serde::__private::PhantomData<&'de ()>,
             }
-            impl<'de, 'place, T: 'place> _serde::de::Visitor<'de> for __Visitor<'de, 'place, T>
+            impl<'de, 'place, T: 'place> _serde::de::Visitor<'de>
+            for __Visitor<'de, 'place, T>
             where
                 T: _serde::Deserialize<'de>,
             {
@@ -564,19 +607,22 @@ const _: () = {
                 where
                     __A: _serde::de::SeqAccess<'de>,
                 {
-                    if let _serde::__private::None = match _serde::de::SeqAccess::next_element_seed(
-                        &mut __seq,
-                        _serde::__private::de::InPlaceSeed(&mut self.place.0),
-                    ) {
-                        _serde::__private::Ok(__val) => __val,
-                        _serde::__private::Err(__err) => {
-                            return _serde::__private::Err(__err);
-                        }
-                    } {
-                        return _serde::__private::Err(_serde::de::Error::invalid_length(
-                            0usize,
-                            &"tuple struct GenericNewTypeStruct with 1 element",
-                        ));
+                    if let _serde::__private::None
+                        = match _serde::de::SeqAccess::next_element_seed(
+                            &mut __seq,
+                            _serde::__private::de::InPlaceSeed(&mut self.place.0),
+                        ) {
+                            _serde::__private::Ok(__val) => __val,
+                            _serde::__private::Err(__err) => {
+                                return _serde::__private::Err(__err);
+                            }
+                        } {
+                        return _serde::__private::Err(
+                            _serde::de::Error::invalid_length(
+                                0usize,
+                                &"tuple struct GenericNewTypeStruct with 1 element",
+                            ),
+                        );
                     }
                     _serde::__private::Ok(())
                 }

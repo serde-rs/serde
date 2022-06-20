@@ -11,7 +11,9 @@ const _: () = {
         T: _serde::Deserialize<'de>,
         U: _serde::Deserialize<'de>,
     {
-        fn deserialize<__D>(__deserializer: __D) -> _serde::__private::Result<Self, __D::Error>
+        fn deserialize<__D>(
+            __deserializer: __D,
+        ) -> _serde::__private::Result<Self, __D::Error>
         where
             __D: _serde::Deserializer<'de>,
         {
@@ -46,8 +48,9 @@ const _: () = {
                 where
                     __A: _serde::de::SeqAccess<'de>,
                 {
-                    let __field0 = match match _serde::de::SeqAccess::next_element::<T>(&mut __seq)
-                    {
+                    let __field0 = match match _serde::de::SeqAccess::next_element::<
+                        T,
+                    >(&mut __seq) {
                         _serde::__private::Ok(__val) => __val,
                         _serde::__private::Err(__err) => {
                             return _serde::__private::Err(__err);
@@ -55,14 +58,17 @@ const _: () = {
                     } {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
-                            return _serde::__private::Err(_serde::de::Error::invalid_length(
-                                0usize,
-                                &"tuple struct GenericTupleStruct with 2 elements",
-                            ));
+                            return _serde::__private::Err(
+                                _serde::de::Error::invalid_length(
+                                    0usize,
+                                    &"tuple struct GenericTupleStruct with 2 elements",
+                                ),
+                            );
                         }
                     };
-                    let __field1 = match match _serde::de::SeqAccess::next_element::<U>(&mut __seq)
-                    {
+                    let __field1 = match match _serde::de::SeqAccess::next_element::<
+                        U,
+                    >(&mut __seq) {
                         _serde::__private::Ok(__val) => __val,
                         _serde::__private::Err(__err) => {
                             return _serde::__private::Err(__err);
@@ -70,10 +76,12 @@ const _: () = {
                     } {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
-                            return _serde::__private::Err(_serde::de::Error::invalid_length(
-                                1usize,
-                                &"tuple struct GenericTupleStruct with 2 elements",
-                            ));
+                            return _serde::__private::Err(
+                                _serde::de::Error::invalid_length(
+                                    1usize,
+                                    &"tuple struct GenericTupleStruct with 2 elements",
+                                ),
+                            );
                         }
                     };
                     _serde::__private::Ok(GenericTupleStruct(__field0, __field1))
@@ -104,7 +112,8 @@ const _: () = {
                 place: &'place mut GenericTupleStruct<T, U>,
                 lifetime: _serde::__private::PhantomData<&'de ()>,
             }
-            impl<'de, 'place, T: 'place, U: 'place> _serde::de::Visitor<'de> for __Visitor<'de, 'place, T, U>
+            impl<'de, 'place, T: 'place, U: 'place> _serde::de::Visitor<'de>
+            for __Visitor<'de, 'place, T, U>
             where
                 T: _serde::Deserialize<'de>,
                 U: _serde::Deserialize<'de>,
@@ -127,33 +136,39 @@ const _: () = {
                 where
                     __A: _serde::de::SeqAccess<'de>,
                 {
-                    if let _serde::__private::None = match _serde::de::SeqAccess::next_element_seed(
-                        &mut __seq,
-                        _serde::__private::de::InPlaceSeed(&mut self.place.0),
-                    ) {
-                        _serde::__private::Ok(__val) => __val,
-                        _serde::__private::Err(__err) => {
-                            return _serde::__private::Err(__err);
-                        }
-                    } {
-                        return _serde::__private::Err(_serde::de::Error::invalid_length(
-                            0usize,
-                            &"tuple struct GenericTupleStruct with 2 elements",
-                        ));
+                    if let _serde::__private::None
+                        = match _serde::de::SeqAccess::next_element_seed(
+                            &mut __seq,
+                            _serde::__private::de::InPlaceSeed(&mut self.place.0),
+                        ) {
+                            _serde::__private::Ok(__val) => __val,
+                            _serde::__private::Err(__err) => {
+                                return _serde::__private::Err(__err);
+                            }
+                        } {
+                        return _serde::__private::Err(
+                            _serde::de::Error::invalid_length(
+                                0usize,
+                                &"tuple struct GenericTupleStruct with 2 elements",
+                            ),
+                        );
                     }
-                    if let _serde::__private::None = match _serde::de::SeqAccess::next_element_seed(
-                        &mut __seq,
-                        _serde::__private::de::InPlaceSeed(&mut self.place.1),
-                    ) {
-                        _serde::__private::Ok(__val) => __val,
-                        _serde::__private::Err(__err) => {
-                            return _serde::__private::Err(__err);
-                        }
-                    } {
-                        return _serde::__private::Err(_serde::de::Error::invalid_length(
-                            1usize,
-                            &"tuple struct GenericTupleStruct with 2 elements",
-                        ));
+                    if let _serde::__private::None
+                        = match _serde::de::SeqAccess::next_element_seed(
+                            &mut __seq,
+                            _serde::__private::de::InPlaceSeed(&mut self.place.1),
+                        ) {
+                            _serde::__private::Ok(__val) => __val,
+                            _serde::__private::Err(__err) => {
+                                return _serde::__private::Err(__err);
+                            }
+                        } {
+                        return _serde::__private::Err(
+                            _serde::de::Error::invalid_length(
+                                1usize,
+                                &"tuple struct GenericTupleStruct with 2 elements",
+                            ),
+                        );
                     }
                     _serde::__private::Ok(())
                 }

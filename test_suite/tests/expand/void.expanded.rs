@@ -25,7 +25,9 @@ const _: () = {
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'de> _serde::Deserialize<'de> for Void {
-        fn deserialize<__D>(__deserializer: __D) -> _serde::__private::Result<Self, __D::Error>
+        fn deserialize<__D>(
+            __deserializer: __D,
+        ) -> _serde::__private::Result<Self, __D::Error>
         where
             __D: _serde::Deserializer<'de>,
         {
@@ -38,17 +40,27 @@ const _: () = {
                     &self,
                     __formatter: &mut _serde::__private::Formatter,
                 ) -> _serde::__private::fmt::Result {
-                    _serde::__private::Formatter::write_str(__formatter, "variant identifier")
+                    _serde::__private::Formatter::write_str(
+                        __formatter,
+                        "variant identifier",
+                    )
                 }
-                fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
+                fn visit_u64<__E>(
+                    self,
+                    __value: u64,
+                ) -> _serde::__private::Result<Self::Value, __E>
                 where
                     __E: _serde::de::Error,
                 {
                     match __value {
-                        _ => _serde::__private::Err(_serde::de::Error::invalid_value(
-                            _serde::de::Unexpected::Unsigned(__value),
-                            &"variant index 0 <= i < 0",
-                        )),
+                        _ => {
+                            _serde::__private::Err(
+                                _serde::de::Error::invalid_value(
+                                    _serde::de::Unexpected::Unsigned(__value),
+                                    &"variant index 0 <= i < 0",
+                                ),
+                            )
+                        }
                     }
                 }
                 fn visit_str<__E>(
@@ -59,9 +71,11 @@ const _: () = {
                     __E: _serde::de::Error,
                 {
                     match __value {
-                        _ => _serde::__private::Err(_serde::de::Error::unknown_variant(
-                            __value, VARIANTS,
-                        )),
+                        _ => {
+                            _serde::__private::Err(
+                                _serde::de::Error::unknown_variant(__value, VARIANTS),
+                            )
+                        }
                     }
                 }
                 fn visit_bytes<__E>(
@@ -74,9 +88,9 @@ const _: () = {
                     match __value {
                         _ => {
                             let __value = &_serde::__private::from_utf8_lossy(__value);
-                            _serde::__private::Err(_serde::de::Error::unknown_variant(
-                                __value, VARIANTS,
-                            ))
+                            _serde::__private::Err(
+                                _serde::de::Error::unknown_variant(__value, VARIANTS),
+                            )
                         }
                     }
                 }
@@ -89,7 +103,10 @@ const _: () = {
                 where
                     __D: _serde::Deserializer<'de>,
                 {
-                    _serde::Deserializer::deserialize_identifier(__deserializer, __FieldVisitor)
+                    _serde::Deserializer::deserialize_identifier(
+                        __deserializer,
+                        __FieldVisitor,
+                    )
                 }
             }
             struct __Visitor<'de> {

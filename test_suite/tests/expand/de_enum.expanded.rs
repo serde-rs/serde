@@ -28,7 +28,12 @@ const _: () = {
         {
             match *self {
                 DeEnum::Unit => {
-                    _serde::Serializer::serialize_unit_variant(__serializer, "DeEnum", 0u32, "Unit")
+                    _serde::Serializer::serialize_unit_variant(
+                        __serializer,
+                        "DeEnum",
+                        0u32,
+                        "Unit",
+                    )
                 }
                 DeEnum::Seq(ref __field0, ref __field1, ref __field2, ref __field3) => {
                     let mut __serde_state = match _serde::Serializer::serialize_tuple_variant(
@@ -81,12 +86,7 @@ const _: () = {
                     };
                     _serde::ser::SerializeTupleVariant::end(__serde_state)
                 }
-                DeEnum::Map {
-                    ref a,
-                    ref b,
-                    ref c,
-                    ref d,
-                } => {
+                DeEnum::Map { ref a, ref b, ref c, ref d } => {
                     let mut __serde_state = match _serde::Serializer::serialize_struct_variant(
                         __serializer,
                         "DeEnum",
@@ -141,13 +141,20 @@ const _: () = {
                     };
                     _serde::ser::SerializeStructVariant::end(__serde_state)
                 }
-                DeEnum::_Unit2 => _serde::Serializer::serialize_unit_variant(
-                    __serializer,
-                    "DeEnum",
-                    3u32,
-                    "_Unit2",
-                ),
-                DeEnum::_Seq2(ref __field0, ref __field1, ref __field2, ref __field3) => {
+                DeEnum::_Unit2 => {
+                    _serde::Serializer::serialize_unit_variant(
+                        __serializer,
+                        "DeEnum",
+                        3u32,
+                        "_Unit2",
+                    )
+                }
+                DeEnum::_Seq2(
+                    ref __field0,
+                    ref __field1,
+                    ref __field2,
+                    ref __field3,
+                ) => {
                     let mut __serde_state = match _serde::Serializer::serialize_tuple_variant(
                         __serializer,
                         "DeEnum",
@@ -198,12 +205,7 @@ const _: () = {
                     };
                     _serde::ser::SerializeTupleVariant::end(__serde_state)
                 }
-                DeEnum::_Map2 {
-                    ref a,
-                    ref b,
-                    ref c,
-                    ref d,
-                } => {
+                DeEnum::_Map2 { ref a, ref b, ref c, ref d } => {
                     let mut __serde_state = match _serde::Serializer::serialize_struct_variant(
                         __serializer,
                         "DeEnum",
@@ -274,7 +276,9 @@ const _: () = {
         C: _serde::Deserialize<'de>,
         D: _serde::Deserialize<'de>,
     {
-        fn deserialize<__D>(__deserializer: __D) -> _serde::__private::Result<Self, __D::Error>
+        fn deserialize<__D>(
+            __deserializer: __D,
+        ) -> _serde::__private::Result<Self, __D::Error>
         where
             __D: _serde::Deserializer<'de>,
         {
@@ -294,9 +298,15 @@ const _: () = {
                     &self,
                     __formatter: &mut _serde::__private::Formatter,
                 ) -> _serde::__private::fmt::Result {
-                    _serde::__private::Formatter::write_str(__formatter, "variant identifier")
+                    _serde::__private::Formatter::write_str(
+                        __formatter,
+                        "variant identifier",
+                    )
                 }
-                fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
+                fn visit_u64<__E>(
+                    self,
+                    __value: u64,
+                ) -> _serde::__private::Result<Self::Value, __E>
                 where
                     __E: _serde::de::Error,
                 {
@@ -307,10 +317,14 @@ const _: () = {
                         3u64 => _serde::__private::Ok(__Field::__field3),
                         4u64 => _serde::__private::Ok(__Field::__field4),
                         5u64 => _serde::__private::Ok(__Field::__field5),
-                        _ => _serde::__private::Err(_serde::de::Error::invalid_value(
-                            _serde::de::Unexpected::Unsigned(__value),
-                            &"variant index 0 <= i < 6",
-                        )),
+                        _ => {
+                            _serde::__private::Err(
+                                _serde::de::Error::invalid_value(
+                                    _serde::de::Unexpected::Unsigned(__value),
+                                    &"variant index 0 <= i < 6",
+                                ),
+                            )
+                        }
                     }
                 }
                 fn visit_str<__E>(
@@ -327,9 +341,11 @@ const _: () = {
                         "_Unit2" => _serde::__private::Ok(__Field::__field3),
                         "_Seq2" => _serde::__private::Ok(__Field::__field4),
                         "_Map2" => _serde::__private::Ok(__Field::__field5),
-                        _ => _serde::__private::Err(_serde::de::Error::unknown_variant(
-                            __value, VARIANTS,
-                        )),
+                        _ => {
+                            _serde::__private::Err(
+                                _serde::de::Error::unknown_variant(__value, VARIANTS),
+                            )
+                        }
                     }
                 }
                 fn visit_bytes<__E>(
@@ -348,9 +364,9 @@ const _: () = {
                         b"_Map2" => _serde::__private::Ok(__Field::__field5),
                         _ => {
                             let __value = &_serde::__private::from_utf8_lossy(__value);
-                            _serde::__private::Err(_serde::de::Error::unknown_variant(
-                                __value, VARIANTS,
-                            ))
+                            _serde::__private::Err(
+                                _serde::de::Error::unknown_variant(__value, VARIANTS),
+                            )
                         }
                     }
                 }
@@ -363,7 +379,10 @@ const _: () = {
                 where
                     __D: _serde::Deserializer<'de>,
                 {
-                    _serde::Deserializer::deserialize_identifier(__deserializer, __FieldVisitor)
+                    _serde::Deserializer::deserialize_identifier(
+                        __deserializer,
+                        __FieldVisitor,
+                    )
                 }
             }
             struct __Visitor<'de, B, C, D>
@@ -420,7 +439,8 @@ const _: () = {
                                 marker: _serde::__private::PhantomData<DeEnum<B, C, D>>,
                                 lifetime: _serde::__private::PhantomData<&'de ()>,
                             }
-                            impl<'de, B, C, D> _serde::de::Visitor<'de> for __Visitor<'de, B, C, D>
+                            impl<'de, B, C, D> _serde::de::Visitor<'de>
+                            for __Visitor<'de, B, C, D>
                             where
                                 B: _serde::Deserialize<'de>,
                                 C: _serde::Deserialize<'de>,
@@ -430,8 +450,7 @@ const _: () = {
                                 fn expecting(
                                     &self,
                                     __formatter: &mut _serde::__private::Formatter,
-                                ) -> _serde::__private::fmt::Result
-                                {
+                                ) -> _serde::__private::fmt::Result {
                                     _serde::__private::Formatter::write_str(
                                         __formatter,
                                         "tuple variant DeEnum::Seq",
@@ -447,9 +466,7 @@ const _: () = {
                                 {
                                     let __field0 = match match _serde::de::SeqAccess::next_element::<
                                         i8,
-                                    >(
-                                        &mut __seq
-                                    ) {
+                                    >(&mut __seq) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
@@ -467,9 +484,7 @@ const _: () = {
                                     };
                                     let __field1 = match match _serde::de::SeqAccess::next_element::<
                                         B,
-                                    >(
-                                        &mut __seq
-                                    ) {
+                                    >(&mut __seq) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
@@ -487,9 +502,7 @@ const _: () = {
                                     };
                                     let __field2 = match match _serde::de::SeqAccess::next_element::<
                                         C,
-                                    >(
-                                        &mut __seq
-                                    ) {
+                                    >(&mut __seq) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
@@ -507,9 +520,7 @@ const _: () = {
                                     };
                                     let __field3 = match match _serde::de::SeqAccess::next_element::<
                                         D,
-                                    >(
-                                        &mut __seq
-                                    ) {
+                                    >(&mut __seq) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
@@ -525,9 +536,9 @@ const _: () = {
                                             );
                                         }
                                     };
-                                    _serde::__private::Ok(DeEnum::Seq(
-                                        __field0, __field1, __field2, __field3,
-                                    ))
+                                    _serde::__private::Ok(
+                                        DeEnum::Seq(__field0, __field1, __field2, __field3),
+                                    )
                                 }
                             }
                             _serde::de::VariantAccess::tuple_variant(
@@ -554,8 +565,7 @@ const _: () = {
                                 fn expecting(
                                     &self,
                                     __formatter: &mut _serde::__private::Formatter,
-                                ) -> _serde::__private::fmt::Result
-                                {
+                                ) -> _serde::__private::fmt::Result {
                                     _serde::__private::Formatter::write_str(
                                         __formatter,
                                         "field identifier",
@@ -630,7 +640,8 @@ const _: () = {
                                 marker: _serde::__private::PhantomData<DeEnum<B, C, D>>,
                                 lifetime: _serde::__private::PhantomData<&'de ()>,
                             }
-                            impl<'de, B, C, D> _serde::de::Visitor<'de> for __Visitor<'de, B, C, D>
+                            impl<'de, B, C, D> _serde::de::Visitor<'de>
+                            for __Visitor<'de, B, C, D>
                             where
                                 B: _serde::Deserialize<'de>,
                                 C: _serde::Deserialize<'de>,
@@ -640,8 +651,7 @@ const _: () = {
                                 fn expecting(
                                     &self,
                                     __formatter: &mut _serde::__private::Formatter,
-                                ) -> _serde::__private::fmt::Result
-                                {
+                                ) -> _serde::__private::fmt::Result {
                                     _serde::__private::Formatter::write_str(
                                         __formatter,
                                         "struct variant DeEnum::Map",
@@ -657,9 +667,7 @@ const _: () = {
                                 {
                                     let __field0 = match match _serde::de::SeqAccess::next_element::<
                                         i8,
-                                    >(
-                                        &mut __seq
-                                    ) {
+                                    >(&mut __seq) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
@@ -677,9 +685,7 @@ const _: () = {
                                     };
                                     let __field1 = match match _serde::de::SeqAccess::next_element::<
                                         B,
-                                    >(
-                                        &mut __seq
-                                    ) {
+                                    >(&mut __seq) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
@@ -697,9 +703,7 @@ const _: () = {
                                     };
                                     let __field2 = match match _serde::de::SeqAccess::next_element::<
                                         C,
-                                    >(
-                                        &mut __seq
-                                    ) {
+                                    >(&mut __seq) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
@@ -717,9 +721,7 @@ const _: () = {
                                     };
                                     let __field3 = match match _serde::de::SeqAccess::next_element::<
                                         D,
-                                    >(
-                                        &mut __seq
-                                    ) {
+                                    >(&mut __seq) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
@@ -750,32 +752,28 @@ const _: () = {
                                 where
                                     __A: _serde::de::MapAccess<'de>,
                                 {
-                                    let mut __field0: _serde::__private::Option<i8> =
-                                        _serde::__private::None;
-                                    let mut __field1: _serde::__private::Option<B> =
-                                        _serde::__private::None;
-                                    let mut __field2: _serde::__private::Option<C> =
-                                        _serde::__private::None;
-                                    let mut __field3: _serde::__private::Option<D> =
-                                        _serde::__private::None;
-                                    while let _serde::__private::Some(__key) =
-                                        match _serde::de::MapAccess::next_key::<__Field>(&mut __map)
-                                        {
+                                    let mut __field0: _serde::__private::Option<i8> = _serde::__private::None;
+                                    let mut __field1: _serde::__private::Option<B> = _serde::__private::None;
+                                    let mut __field2: _serde::__private::Option<C> = _serde::__private::None;
+                                    let mut __field3: _serde::__private::Option<D> = _serde::__private::None;
+                                    while let _serde::__private::Some(__key)
+                                        = match _serde::de::MapAccess::next_key::<
+                                            __Field,
+                                        >(&mut __map) {
                                             _serde::__private::Ok(__val) => __val,
                                             _serde::__private::Err(__err) => {
                                                 return _serde::__private::Err(__err);
                                             }
-                                        }
-                                    {
+                                        } {
                                         match __key {
                                             __Field::__field0 => {
                                                 if _serde::__private::Option::is_some(&__field0) {
-                                                    return _serde :: __private :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("a")) ;
+                                                    return _serde::__private::Err(
+                                                        <__A::Error as _serde::de::Error>::duplicate_field("a"),
+                                                    );
                                                 }
                                                 __field0 = _serde::__private::Some(
-                                                    match _serde::de::MapAccess::next_value::<i8>(
-                                                        &mut __map,
-                                                    ) {
+                                                    match _serde::de::MapAccess::next_value::<i8>(&mut __map) {
                                                         _serde::__private::Ok(__val) => __val,
                                                         _serde::__private::Err(__err) => {
                                                             return _serde::__private::Err(__err);
@@ -785,12 +783,12 @@ const _: () = {
                                             }
                                             __Field::__field1 => {
                                                 if _serde::__private::Option::is_some(&__field1) {
-                                                    return _serde :: __private :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("b")) ;
+                                                    return _serde::__private::Err(
+                                                        <__A::Error as _serde::de::Error>::duplicate_field("b"),
+                                                    );
                                                 }
                                                 __field1 = _serde::__private::Some(
-                                                    match _serde::de::MapAccess::next_value::<B>(
-                                                        &mut __map,
-                                                    ) {
+                                                    match _serde::de::MapAccess::next_value::<B>(&mut __map) {
                                                         _serde::__private::Ok(__val) => __val,
                                                         _serde::__private::Err(__err) => {
                                                             return _serde::__private::Err(__err);
@@ -800,12 +798,12 @@ const _: () = {
                                             }
                                             __Field::__field2 => {
                                                 if _serde::__private::Option::is_some(&__field2) {
-                                                    return _serde :: __private :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("c")) ;
+                                                    return _serde::__private::Err(
+                                                        <__A::Error as _serde::de::Error>::duplicate_field("c"),
+                                                    );
                                                 }
                                                 __field2 = _serde::__private::Some(
-                                                    match _serde::de::MapAccess::next_value::<C>(
-                                                        &mut __map,
-                                                    ) {
+                                                    match _serde::de::MapAccess::next_value::<C>(&mut __map) {
                                                         _serde::__private::Ok(__val) => __val,
                                                         _serde::__private::Err(__err) => {
                                                             return _serde::__private::Err(__err);
@@ -815,12 +813,12 @@ const _: () = {
                                             }
                                             __Field::__field3 => {
                                                 if _serde::__private::Option::is_some(&__field3) {
-                                                    return _serde :: __private :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("d")) ;
+                                                    return _serde::__private::Err(
+                                                        <__A::Error as _serde::de::Error>::duplicate_field("d"),
+                                                    );
                                                 }
                                                 __field3 = _serde::__private::Some(
-                                                    match _serde::de::MapAccess::next_value::<D>(
-                                                        &mut __map,
-                                                    ) {
+                                                    match _serde::de::MapAccess::next_value::<D>(&mut __map) {
                                                         _serde::__private::Ok(__val) => __val,
                                                         _serde::__private::Err(__err) => {
                                                             return _serde::__private::Err(__err);
@@ -831,9 +829,7 @@ const _: () = {
                                             _ => {
                                                 let _ = match _serde::de::MapAccess::next_value::<
                                                     _serde::de::IgnoredAny,
-                                                >(
-                                                    &mut __map
-                                                ) {
+                                                >(&mut __map) {
                                                     _serde::__private::Ok(__val) => __val,
                                                     _serde::__private::Err(__err) => {
                                                         return _serde::__private::Err(__err);
@@ -894,7 +890,12 @@ const _: () = {
                                     })
                                 }
                             }
-                            const FIELDS: &'static [&'static str] = &["a", "b", "c", "d"];
+                            const FIELDS: &'static [&'static str] = &[
+                                "a",
+                                "b",
+                                "c",
+                                "d",
+                            ];
                             _serde::de::VariantAccess::struct_variant(
                                 __variant,
                                 FIELDS,
@@ -923,7 +924,8 @@ const _: () = {
                                 marker: _serde::__private::PhantomData<DeEnum<B, C, D>>,
                                 lifetime: _serde::__private::PhantomData<&'de ()>,
                             }
-                            impl<'de, B, C, D> _serde::de::Visitor<'de> for __Visitor<'de, B, C, D>
+                            impl<'de, B, C, D> _serde::de::Visitor<'de>
+                            for __Visitor<'de, B, C, D>
                             where
                                 B: _serde::Deserialize<'de>,
                                 C: _serde::Deserialize<'de>,
@@ -933,8 +935,7 @@ const _: () = {
                                 fn expecting(
                                     &self,
                                     __formatter: &mut _serde::__private::Formatter,
-                                ) -> _serde::__private::fmt::Result
-                                {
+                                ) -> _serde::__private::fmt::Result {
                                     _serde::__private::Formatter::write_str(
                                         __formatter,
                                         "tuple variant DeEnum::_Seq2",
@@ -950,9 +951,7 @@ const _: () = {
                                 {
                                     let __field0 = match match _serde::de::SeqAccess::next_element::<
                                         i8,
-                                    >(
-                                        &mut __seq
-                                    ) {
+                                    >(&mut __seq) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
@@ -970,9 +969,7 @@ const _: () = {
                                     };
                                     let __field1 = match match _serde::de::SeqAccess::next_element::<
                                         B,
-                                    >(
-                                        &mut __seq
-                                    ) {
+                                    >(&mut __seq) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
@@ -990,9 +987,7 @@ const _: () = {
                                     };
                                     let __field2 = match match _serde::de::SeqAccess::next_element::<
                                         C,
-                                    >(
-                                        &mut __seq
-                                    ) {
+                                    >(&mut __seq) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
@@ -1010,9 +1005,7 @@ const _: () = {
                                     };
                                     let __field3 = match match _serde::de::SeqAccess::next_element::<
                                         D,
-                                    >(
-                                        &mut __seq
-                                    ) {
+                                    >(&mut __seq) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
@@ -1028,9 +1021,9 @@ const _: () = {
                                             );
                                         }
                                     };
-                                    _serde::__private::Ok(DeEnum::_Seq2(
-                                        __field0, __field1, __field2, __field3,
-                                    ))
+                                    _serde::__private::Ok(
+                                        DeEnum::_Seq2(__field0, __field1, __field2, __field3),
+                                    )
                                 }
                             }
                             _serde::de::VariantAccess::tuple_variant(
@@ -1057,8 +1050,7 @@ const _: () = {
                                 fn expecting(
                                     &self,
                                     __formatter: &mut _serde::__private::Formatter,
-                                ) -> _serde::__private::fmt::Result
-                                {
+                                ) -> _serde::__private::fmt::Result {
                                     _serde::__private::Formatter::write_str(
                                         __formatter,
                                         "field identifier",
@@ -1133,7 +1125,8 @@ const _: () = {
                                 marker: _serde::__private::PhantomData<DeEnum<B, C, D>>,
                                 lifetime: _serde::__private::PhantomData<&'de ()>,
                             }
-                            impl<'de, B, C, D> _serde::de::Visitor<'de> for __Visitor<'de, B, C, D>
+                            impl<'de, B, C, D> _serde::de::Visitor<'de>
+                            for __Visitor<'de, B, C, D>
                             where
                                 B: _serde::Deserialize<'de>,
                                 C: _serde::Deserialize<'de>,
@@ -1143,8 +1136,7 @@ const _: () = {
                                 fn expecting(
                                     &self,
                                     __formatter: &mut _serde::__private::Formatter,
-                                ) -> _serde::__private::fmt::Result
-                                {
+                                ) -> _serde::__private::fmt::Result {
                                     _serde::__private::Formatter::write_str(
                                         __formatter,
                                         "struct variant DeEnum::_Map2",
@@ -1160,9 +1152,7 @@ const _: () = {
                                 {
                                     let __field0 = match match _serde::de::SeqAccess::next_element::<
                                         i8,
-                                    >(
-                                        &mut __seq
-                                    ) {
+                                    >(&mut __seq) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
@@ -1180,9 +1170,7 @@ const _: () = {
                                     };
                                     let __field1 = match match _serde::de::SeqAccess::next_element::<
                                         B,
-                                    >(
-                                        &mut __seq
-                                    ) {
+                                    >(&mut __seq) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
@@ -1200,9 +1188,7 @@ const _: () = {
                                     };
                                     let __field2 = match match _serde::de::SeqAccess::next_element::<
                                         C,
-                                    >(
-                                        &mut __seq
-                                    ) {
+                                    >(&mut __seq) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
@@ -1220,9 +1206,7 @@ const _: () = {
                                     };
                                     let __field3 = match match _serde::de::SeqAccess::next_element::<
                                         D,
-                                    >(
-                                        &mut __seq
-                                    ) {
+                                    >(&mut __seq) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
@@ -1253,32 +1237,28 @@ const _: () = {
                                 where
                                     __A: _serde::de::MapAccess<'de>,
                                 {
-                                    let mut __field0: _serde::__private::Option<i8> =
-                                        _serde::__private::None;
-                                    let mut __field1: _serde::__private::Option<B> =
-                                        _serde::__private::None;
-                                    let mut __field2: _serde::__private::Option<C> =
-                                        _serde::__private::None;
-                                    let mut __field3: _serde::__private::Option<D> =
-                                        _serde::__private::None;
-                                    while let _serde::__private::Some(__key) =
-                                        match _serde::de::MapAccess::next_key::<__Field>(&mut __map)
-                                        {
+                                    let mut __field0: _serde::__private::Option<i8> = _serde::__private::None;
+                                    let mut __field1: _serde::__private::Option<B> = _serde::__private::None;
+                                    let mut __field2: _serde::__private::Option<C> = _serde::__private::None;
+                                    let mut __field3: _serde::__private::Option<D> = _serde::__private::None;
+                                    while let _serde::__private::Some(__key)
+                                        = match _serde::de::MapAccess::next_key::<
+                                            __Field,
+                                        >(&mut __map) {
                                             _serde::__private::Ok(__val) => __val,
                                             _serde::__private::Err(__err) => {
                                                 return _serde::__private::Err(__err);
                                             }
-                                        }
-                                    {
+                                        } {
                                         match __key {
                                             __Field::__field0 => {
                                                 if _serde::__private::Option::is_some(&__field0) {
-                                                    return _serde :: __private :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("a")) ;
+                                                    return _serde::__private::Err(
+                                                        <__A::Error as _serde::de::Error>::duplicate_field("a"),
+                                                    );
                                                 }
                                                 __field0 = _serde::__private::Some(
-                                                    match _serde::de::MapAccess::next_value::<i8>(
-                                                        &mut __map,
-                                                    ) {
+                                                    match _serde::de::MapAccess::next_value::<i8>(&mut __map) {
                                                         _serde::__private::Ok(__val) => __val,
                                                         _serde::__private::Err(__err) => {
                                                             return _serde::__private::Err(__err);
@@ -1288,12 +1268,12 @@ const _: () = {
                                             }
                                             __Field::__field1 => {
                                                 if _serde::__private::Option::is_some(&__field1) {
-                                                    return _serde :: __private :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("b")) ;
+                                                    return _serde::__private::Err(
+                                                        <__A::Error as _serde::de::Error>::duplicate_field("b"),
+                                                    );
                                                 }
                                                 __field1 = _serde::__private::Some(
-                                                    match _serde::de::MapAccess::next_value::<B>(
-                                                        &mut __map,
-                                                    ) {
+                                                    match _serde::de::MapAccess::next_value::<B>(&mut __map) {
                                                         _serde::__private::Ok(__val) => __val,
                                                         _serde::__private::Err(__err) => {
                                                             return _serde::__private::Err(__err);
@@ -1303,12 +1283,12 @@ const _: () = {
                                             }
                                             __Field::__field2 => {
                                                 if _serde::__private::Option::is_some(&__field2) {
-                                                    return _serde :: __private :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("c")) ;
+                                                    return _serde::__private::Err(
+                                                        <__A::Error as _serde::de::Error>::duplicate_field("c"),
+                                                    );
                                                 }
                                                 __field2 = _serde::__private::Some(
-                                                    match _serde::de::MapAccess::next_value::<C>(
-                                                        &mut __map,
-                                                    ) {
+                                                    match _serde::de::MapAccess::next_value::<C>(&mut __map) {
                                                         _serde::__private::Ok(__val) => __val,
                                                         _serde::__private::Err(__err) => {
                                                             return _serde::__private::Err(__err);
@@ -1318,12 +1298,12 @@ const _: () = {
                                             }
                                             __Field::__field3 => {
                                                 if _serde::__private::Option::is_some(&__field3) {
-                                                    return _serde :: __private :: Err (< __A :: Error as _serde :: de :: Error > :: duplicate_field ("d")) ;
+                                                    return _serde::__private::Err(
+                                                        <__A::Error as _serde::de::Error>::duplicate_field("d"),
+                                                    );
                                                 }
                                                 __field3 = _serde::__private::Some(
-                                                    match _serde::de::MapAccess::next_value::<D>(
-                                                        &mut __map,
-                                                    ) {
+                                                    match _serde::de::MapAccess::next_value::<D>(&mut __map) {
                                                         _serde::__private::Ok(__val) => __val,
                                                         _serde::__private::Err(__err) => {
                                                             return _serde::__private::Err(__err);
@@ -1334,9 +1314,7 @@ const _: () = {
                                             _ => {
                                                 let _ = match _serde::de::MapAccess::next_value::<
                                                     _serde::de::IgnoredAny,
-                                                >(
-                                                    &mut __map
-                                                ) {
+                                                >(&mut __map) {
                                                     _serde::__private::Ok(__val) => __val,
                                                     _serde::__private::Err(__err) => {
                                                         return _serde::__private::Err(__err);
@@ -1397,7 +1375,12 @@ const _: () = {
                                     })
                                 }
                             }
-                            const FIELDS: &'static [&'static str] = &["a", "b", "c", "d"];
+                            const FIELDS: &'static [&'static str] = &[
+                                "a",
+                                "b",
+                                "c",
+                                "d",
+                            ];
                             _serde::de::VariantAccess::struct_variant(
                                 __variant,
                                 FIELDS,
@@ -1410,8 +1393,14 @@ const _: () = {
                     }
                 }
             }
-            const VARIANTS: &'static [&'static str] =
-                &["Unit", "Seq", "Map", "_Unit2", "_Seq2", "_Map2"];
+            const VARIANTS: &'static [&'static str] = &[
+                "Unit",
+                "Seq",
+                "Map",
+                "_Unit2",
+                "_Seq2",
+                "_Map2",
+            ];
             _serde::Deserializer::deserialize_enum(
                 __deserializer,
                 "DeEnum",

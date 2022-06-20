@@ -25,7 +25,9 @@ const _: () = {
     extern crate serde as _serde;
     #[automatically_derived]
     impl<'de> _serde::Deserialize<'de> for NamedUnit {
-        fn deserialize<__D>(__deserializer: __D) -> _serde::__private::Result<Self, __D::Error>
+        fn deserialize<__D>(
+            __deserializer: __D,
+        ) -> _serde::__private::Result<Self, __D::Error>
         where
             __D: _serde::Deserializer<'de>,
         {
@@ -36,7 +38,10 @@ const _: () = {
                     &self,
                     __formatter: &mut _serde::__private::Formatter,
                 ) -> _serde::__private::fmt::Result {
-                    _serde::__private::Formatter::write_str(__formatter, "unit struct NamedUnit")
+                    _serde::__private::Formatter::write_str(
+                        __formatter,
+                        "unit struct NamedUnit",
+                    )
                 }
                 #[inline]
                 fn visit_unit<__E>(self) -> _serde::__private::Result<Self::Value, __E>
@@ -46,7 +51,11 @@ const _: () = {
                     _serde::__private::Ok(NamedUnit)
                 }
             }
-            _serde::Deserializer::deserialize_unit_struct(__deserializer, "NamedUnit", __Visitor)
+            _serde::Deserializer::deserialize_unit_struct(
+                __deserializer,
+                "NamedUnit",
+                __Visitor,
+            )
         }
     }
 };

@@ -33,19 +33,31 @@ const _: () = {
                     return _serde::__private::Err(__err);
                 }
             };
-            match _serde::ser::SerializeStruct::serialize_field(&mut __serde_state, "a", &self.a) {
+            match _serde::ser::SerializeStruct::serialize_field(
+                &mut __serde_state,
+                "a",
+                &self.a,
+            ) {
                 _serde::__private::Ok(__val) => __val,
                 _serde::__private::Err(__err) => {
                     return _serde::__private::Err(__err);
                 }
             };
-            match _serde::ser::SerializeStruct::serialize_field(&mut __serde_state, "b", &self.b) {
+            match _serde::ser::SerializeStruct::serialize_field(
+                &mut __serde_state,
+                "b",
+                &self.b,
+            ) {
                 _serde::__private::Ok(__val) => __val,
                 _serde::__private::Err(__err) => {
                     return _serde::__private::Err(__err);
                 }
             };
-            match _serde::ser::SerializeStruct::serialize_field(&mut __serde_state, "c", &self.c) {
+            match _serde::ser::SerializeStruct::serialize_field(
+                &mut __serde_state,
+                "c",
+                &self.c,
+            ) {
                 _serde::__private::Ok(__val) => __val,
                 _serde::__private::Err(__err) => {
                     return _serde::__private::Err(__err);
@@ -72,7 +84,9 @@ const _: () = {
         B: _serde::Deserialize<'de>,
         C: _serde::Deserialize<'de>,
     {
-        fn deserialize<__D>(__deserializer: __D) -> _serde::__private::Result<Self, __D::Error>
+        fn deserialize<__D>(
+            __deserializer: __D,
+        ) -> _serde::__private::Result<Self, __D::Error>
         where
             __D: _serde::Deserializer<'de>,
         {
@@ -90,9 +104,15 @@ const _: () = {
                     &self,
                     __formatter: &mut _serde::__private::Formatter,
                 ) -> _serde::__private::fmt::Result {
-                    _serde::__private::Formatter::write_str(__formatter, "field identifier")
+                    _serde::__private::Formatter::write_str(
+                        __formatter,
+                        "field identifier",
+                    )
                 }
-                fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
+                fn visit_u64<__E>(
+                    self,
+                    __value: u64,
+                ) -> _serde::__private::Result<Self::Value, __E>
                 where
                     __E: _serde::de::Error,
                 {
@@ -140,7 +160,10 @@ const _: () = {
                 where
                     __D: _serde::Deserializer<'de>,
                 {
-                    _serde::Deserializer::deserialize_identifier(__deserializer, __FieldVisitor)
+                    _serde::Deserializer::deserialize_identifier(
+                        __deserializer,
+                        __FieldVisitor,
+                    )
                 }
             }
             struct __Visitor<'de, A, B, C>
@@ -163,7 +186,10 @@ const _: () = {
                     &self,
                     __formatter: &mut _serde::__private::Formatter,
                 ) -> _serde::__private::fmt::Result {
-                    _serde::__private::Formatter::write_str(__formatter, "struct DeNamedMap")
+                    _serde::__private::Formatter::write_str(
+                        __formatter,
+                        "struct DeNamedMap",
+                    )
                 }
                 #[inline]
                 fn visit_seq<__A>(
@@ -173,8 +199,9 @@ const _: () = {
                 where
                     __A: _serde::de::SeqAccess<'de>,
                 {
-                    let __field0 = match match _serde::de::SeqAccess::next_element::<A>(&mut __seq)
-                    {
+                    let __field0 = match match _serde::de::SeqAccess::next_element::<
+                        A,
+                    >(&mut __seq) {
                         _serde::__private::Ok(__val) => __val,
                         _serde::__private::Err(__err) => {
                             return _serde::__private::Err(__err);
@@ -182,14 +209,17 @@ const _: () = {
                     } {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
-                            return _serde::__private::Err(_serde::de::Error::invalid_length(
-                                0usize,
-                                &"struct DeNamedMap with 3 elements",
-                            ));
+                            return _serde::__private::Err(
+                                _serde::de::Error::invalid_length(
+                                    0usize,
+                                    &"struct DeNamedMap with 3 elements",
+                                ),
+                            );
                         }
                     };
-                    let __field1 = match match _serde::de::SeqAccess::next_element::<B>(&mut __seq)
-                    {
+                    let __field1 = match match _serde::de::SeqAccess::next_element::<
+                        B,
+                    >(&mut __seq) {
                         _serde::__private::Ok(__val) => __val,
                         _serde::__private::Err(__err) => {
                             return _serde::__private::Err(__err);
@@ -197,14 +227,17 @@ const _: () = {
                     } {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
-                            return _serde::__private::Err(_serde::de::Error::invalid_length(
-                                1usize,
-                                &"struct DeNamedMap with 3 elements",
-                            ));
+                            return _serde::__private::Err(
+                                _serde::de::Error::invalid_length(
+                                    1usize,
+                                    &"struct DeNamedMap with 3 elements",
+                                ),
+                            );
                         }
                     };
-                    let __field2 = match match _serde::de::SeqAccess::next_element::<C>(&mut __seq)
-                    {
+                    let __field2 = match match _serde::de::SeqAccess::next_element::<
+                        C,
+                    >(&mut __seq) {
                         _serde::__private::Ok(__val) => __val,
                         _serde::__private::Err(__err) => {
                             return _serde::__private::Err(__err);
@@ -212,10 +245,12 @@ const _: () = {
                     } {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
-                            return _serde::__private::Err(_serde::de::Error::invalid_length(
-                                2usize,
-                                &"struct DeNamedMap with 3 elements",
-                            ));
+                            return _serde::__private::Err(
+                                _serde::de::Error::invalid_length(
+                                    2usize,
+                                    &"struct DeNamedMap with 3 elements",
+                                ),
+                            );
                         }
                     };
                     _serde::__private::Ok(DeNamedMap {
@@ -235,14 +270,13 @@ const _: () = {
                     let mut __field0: _serde::__private::Option<A> = _serde::__private::None;
                     let mut __field1: _serde::__private::Option<B> = _serde::__private::None;
                     let mut __field2: _serde::__private::Option<C> = _serde::__private::None;
-                    while let _serde::__private::Some(__key) =
-                        match _serde::de::MapAccess::next_key::<__Field>(&mut __map) {
+                    while let _serde::__private::Some(__key)
+                        = match _serde::de::MapAccess::next_key::<__Field>(&mut __map) {
                             _serde::__private::Ok(__val) => __val,
                             _serde::__private::Err(__err) => {
                                 return _serde::__private::Err(__err);
                             }
-                        }
-                    {
+                        } {
                         match __key {
                             __Field::__field0 => {
                                 if _serde::__private::Option::is_some(&__field0) {
@@ -292,8 +326,7 @@ const _: () = {
                             _ => {
                                 let _ = match _serde::de::MapAccess::next_value::<
                                     _serde::de::IgnoredAny,
-                                >(&mut __map)
-                                {
+                                >(&mut __map) {
                                     _serde::__private::Ok(__val) => __val,
                                     _serde::__private::Err(__err) => {
                                         return _serde::__private::Err(__err);
@@ -374,9 +407,15 @@ const _: () = {
                     &self,
                     __formatter: &mut _serde::__private::Formatter,
                 ) -> _serde::__private::fmt::Result {
-                    _serde::__private::Formatter::write_str(__formatter, "field identifier")
+                    _serde::__private::Formatter::write_str(
+                        __formatter,
+                        "field identifier",
+                    )
                 }
-                fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
+                fn visit_u64<__E>(
+                    self,
+                    __value: u64,
+                ) -> _serde::__private::Result<Self::Value, __E>
                 where
                     __E: _serde::de::Error,
                 {
@@ -424,7 +463,10 @@ const _: () = {
                 where
                     __D: _serde::Deserializer<'de>,
                 {
-                    _serde::Deserializer::deserialize_identifier(__deserializer, __FieldVisitor)
+                    _serde::Deserializer::deserialize_identifier(
+                        __deserializer,
+                        __FieldVisitor,
+                    )
                 }
             }
             struct __Visitor<'de, 'place, A: 'place, B: 'place, C: 'place>
@@ -437,7 +479,7 @@ const _: () = {
                 lifetime: _serde::__private::PhantomData<&'de ()>,
             }
             impl<'de, 'place, A: 'place, B: 'place, C: 'place> _serde::de::Visitor<'de>
-                for __Visitor<'de, 'place, A, B, C>
+            for __Visitor<'de, 'place, A, B, C>
             where
                 A: _serde::Deserialize<'de>,
                 B: _serde::Deserialize<'de>,
@@ -448,7 +490,10 @@ const _: () = {
                     &self,
                     __formatter: &mut _serde::__private::Formatter,
                 ) -> _serde::__private::fmt::Result {
-                    _serde::__private::Formatter::write_str(__formatter, "struct DeNamedMap")
+                    _serde::__private::Formatter::write_str(
+                        __formatter,
+                        "struct DeNamedMap",
+                    )
                 }
                 #[inline]
                 fn visit_seq<__A>(
@@ -458,47 +503,56 @@ const _: () = {
                 where
                     __A: _serde::de::SeqAccess<'de>,
                 {
-                    if let _serde::__private::None = match _serde::de::SeqAccess::next_element_seed(
-                        &mut __seq,
-                        _serde::__private::de::InPlaceSeed(&mut self.place.a),
-                    ) {
-                        _serde::__private::Ok(__val) => __val,
-                        _serde::__private::Err(__err) => {
-                            return _serde::__private::Err(__err);
-                        }
-                    } {
-                        return _serde::__private::Err(_serde::de::Error::invalid_length(
-                            0usize,
-                            &"struct DeNamedMap with 3 elements",
-                        ));
+                    if let _serde::__private::None
+                        = match _serde::de::SeqAccess::next_element_seed(
+                            &mut __seq,
+                            _serde::__private::de::InPlaceSeed(&mut self.place.a),
+                        ) {
+                            _serde::__private::Ok(__val) => __val,
+                            _serde::__private::Err(__err) => {
+                                return _serde::__private::Err(__err);
+                            }
+                        } {
+                        return _serde::__private::Err(
+                            _serde::de::Error::invalid_length(
+                                0usize,
+                                &"struct DeNamedMap with 3 elements",
+                            ),
+                        );
                     }
-                    if let _serde::__private::None = match _serde::de::SeqAccess::next_element_seed(
-                        &mut __seq,
-                        _serde::__private::de::InPlaceSeed(&mut self.place.b),
-                    ) {
-                        _serde::__private::Ok(__val) => __val,
-                        _serde::__private::Err(__err) => {
-                            return _serde::__private::Err(__err);
-                        }
-                    } {
-                        return _serde::__private::Err(_serde::de::Error::invalid_length(
-                            1usize,
-                            &"struct DeNamedMap with 3 elements",
-                        ));
+                    if let _serde::__private::None
+                        = match _serde::de::SeqAccess::next_element_seed(
+                            &mut __seq,
+                            _serde::__private::de::InPlaceSeed(&mut self.place.b),
+                        ) {
+                            _serde::__private::Ok(__val) => __val,
+                            _serde::__private::Err(__err) => {
+                                return _serde::__private::Err(__err);
+                            }
+                        } {
+                        return _serde::__private::Err(
+                            _serde::de::Error::invalid_length(
+                                1usize,
+                                &"struct DeNamedMap with 3 elements",
+                            ),
+                        );
                     }
-                    if let _serde::__private::None = match _serde::de::SeqAccess::next_element_seed(
-                        &mut __seq,
-                        _serde::__private::de::InPlaceSeed(&mut self.place.c),
-                    ) {
-                        _serde::__private::Ok(__val) => __val,
-                        _serde::__private::Err(__err) => {
-                            return _serde::__private::Err(__err);
-                        }
-                    } {
-                        return _serde::__private::Err(_serde::de::Error::invalid_length(
-                            2usize,
-                            &"struct DeNamedMap with 3 elements",
-                        ));
+                    if let _serde::__private::None
+                        = match _serde::de::SeqAccess::next_element_seed(
+                            &mut __seq,
+                            _serde::__private::de::InPlaceSeed(&mut self.place.c),
+                        ) {
+                            _serde::__private::Ok(__val) => __val,
+                            _serde::__private::Err(__err) => {
+                                return _serde::__private::Err(__err);
+                            }
+                        } {
+                        return _serde::__private::Err(
+                            _serde::de::Error::invalid_length(
+                                2usize,
+                                &"struct DeNamedMap with 3 elements",
+                            ),
+                        );
                     }
                     _serde::__private::Ok(())
                 }
@@ -513,14 +567,13 @@ const _: () = {
                     let mut __field0: bool = false;
                     let mut __field1: bool = false;
                     let mut __field2: bool = false;
-                    while let _serde::__private::Some(__key) =
-                        match _serde::de::MapAccess::next_key::<__Field>(&mut __map) {
+                    while let _serde::__private::Some(__key)
+                        = match _serde::de::MapAccess::next_key::<__Field>(&mut __map) {
                             _serde::__private::Ok(__val) => __val,
                             _serde::__private::Err(__err) => {
                                 return _serde::__private::Err(__err);
                             }
-                        }
-                    {
+                        } {
                         match __key {
                             __Field::__field0 => {
                                 if __field0 {
@@ -576,8 +629,7 @@ const _: () = {
                             _ => {
                                 let _ = match _serde::de::MapAccess::next_value::<
                                     _serde::de::IgnoredAny,
-                                >(&mut __map)
-                                {
+                                >(&mut __map) {
                                     _serde::__private::Ok(__val) => __val,
                                     _serde::__private::Err(__err) => {
                                         return _serde::__private::Err(__err);
@@ -587,29 +639,35 @@ const _: () = {
                         }
                     }
                     if !__field0 {
-                        self.place.a = match _serde::__private::de::missing_field("a") {
+                        self
+                            .place
+                            .a = match _serde::__private::de::missing_field("a") {
                             _serde::__private::Ok(__val) => __val,
                             _serde::__private::Err(__err) => {
                                 return _serde::__private::Err(__err);
                             }
                         };
-                    };
+                    }
                     if !__field1 {
-                        self.place.b = match _serde::__private::de::missing_field("b") {
+                        self
+                            .place
+                            .b = match _serde::__private::de::missing_field("b") {
                             _serde::__private::Ok(__val) => __val,
                             _serde::__private::Err(__err) => {
                                 return _serde::__private::Err(__err);
                             }
                         };
-                    };
+                    }
                     if !__field2 {
-                        self.place.c = match _serde::__private::de::missing_field("c") {
+                        self
+                            .place
+                            .c = match _serde::__private::de::missing_field("c") {
                             _serde::__private::Ok(__val) => __val,
                             _serde::__private::Err(__err) => {
                                 return _serde::__private::Err(__err);
                             }
                         };
-                    };
+                    }
                     _serde::__private::Ok(())
                 }
             }
