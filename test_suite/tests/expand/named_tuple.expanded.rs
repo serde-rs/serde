@@ -29,19 +29,28 @@ const _: () = {
                     return _serde::__private::Err(__err);
                 }
             };
-            match _serde::ser::SerializeTupleStruct::serialize_field(&mut __serde_state, &self.0) {
+            match _serde::ser::SerializeTupleStruct::serialize_field(
+                &mut __serde_state,
+                &self.0,
+            ) {
                 _serde::__private::Ok(__val) => __val,
                 _serde::__private::Err(__err) => {
                     return _serde::__private::Err(__err);
                 }
             };
-            match _serde::ser::SerializeTupleStruct::serialize_field(&mut __serde_state, &self.1) {
+            match _serde::ser::SerializeTupleStruct::serialize_field(
+                &mut __serde_state,
+                &self.1,
+            ) {
                 _serde::__private::Ok(__val) => __val,
                 _serde::__private::Err(__err) => {
                     return _serde::__private::Err(__err);
                 }
             };
-            match _serde::ser::SerializeTupleStruct::serialize_field(&mut __serde_state, &self.2) {
+            match _serde::ser::SerializeTupleStruct::serialize_field(
+                &mut __serde_state,
+                &self.2,
+            ) {
                 _serde::__private::Ok(__val) => __val,
                 _serde::__private::Err(__err) => {
                     return _serde::__private::Err(__err);
@@ -64,7 +73,9 @@ const _: () = {
         B: _serde::Deserialize<'de>,
         C: _serde::Deserialize<'de>,
     {
-        fn deserialize<__D>(__deserializer: __D) -> _serde::__private::Result<Self, __D::Error>
+        fn deserialize<__D>(
+            __deserializer: __D,
+        ) -> _serde::__private::Result<Self, __D::Error>
         where
             __D: _serde::Deserializer<'de>,
         {
@@ -101,8 +112,9 @@ const _: () = {
                 where
                     __A: _serde::de::SeqAccess<'de>,
                 {
-                    let __field0 = match match _serde::de::SeqAccess::next_element::<A>(&mut __seq)
-                    {
+                    let __field0 = match match _serde::de::SeqAccess::next_element::<
+                        A,
+                    >(&mut __seq) {
                         _serde::__private::Ok(__val) => __val,
                         _serde::__private::Err(__err) => {
                             return _serde::__private::Err(__err);
@@ -110,14 +122,17 @@ const _: () = {
                     } {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
-                            return _serde::__private::Err(_serde::de::Error::invalid_length(
-                                0usize,
-                                &"tuple struct DeNamedTuple with 3 elements",
-                            ));
+                            return _serde::__private::Err(
+                                _serde::de::Error::invalid_length(
+                                    0usize,
+                                    &"tuple struct DeNamedTuple with 3 elements",
+                                ),
+                            );
                         }
                     };
-                    let __field1 = match match _serde::de::SeqAccess::next_element::<B>(&mut __seq)
-                    {
+                    let __field1 = match match _serde::de::SeqAccess::next_element::<
+                        B,
+                    >(&mut __seq) {
                         _serde::__private::Ok(__val) => __val,
                         _serde::__private::Err(__err) => {
                             return _serde::__private::Err(__err);
@@ -125,14 +140,17 @@ const _: () = {
                     } {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
-                            return _serde::__private::Err(_serde::de::Error::invalid_length(
-                                1usize,
-                                &"tuple struct DeNamedTuple with 3 elements",
-                            ));
+                            return _serde::__private::Err(
+                                _serde::de::Error::invalid_length(
+                                    1usize,
+                                    &"tuple struct DeNamedTuple with 3 elements",
+                                ),
+                            );
                         }
                     };
-                    let __field2 = match match _serde::de::SeqAccess::next_element::<C>(&mut __seq)
-                    {
+                    let __field2 = match match _serde::de::SeqAccess::next_element::<
+                        C,
+                    >(&mut __seq) {
                         _serde::__private::Ok(__val) => __val,
                         _serde::__private::Err(__err) => {
                             return _serde::__private::Err(__err);
@@ -140,10 +158,12 @@ const _: () = {
                     } {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
-                            return _serde::__private::Err(_serde::de::Error::invalid_length(
-                                2usize,
-                                &"tuple struct DeNamedTuple with 3 elements",
-                            ));
+                            return _serde::__private::Err(
+                                _serde::de::Error::invalid_length(
+                                    2usize,
+                                    &"tuple struct DeNamedTuple with 3 elements",
+                                ),
+                            );
                         }
                     };
                     _serde::__private::Ok(DeNamedTuple(__field0, __field1, __field2))
@@ -176,7 +196,7 @@ const _: () = {
                 lifetime: _serde::__private::PhantomData<&'de ()>,
             }
             impl<'de, 'place, A: 'place, B: 'place, C: 'place> _serde::de::Visitor<'de>
-                for __Visitor<'de, 'place, A, B, C>
+            for __Visitor<'de, 'place, A, B, C>
             where
                 A: _serde::Deserialize<'de>,
                 B: _serde::Deserialize<'de>,
@@ -200,47 +220,56 @@ const _: () = {
                 where
                     __A: _serde::de::SeqAccess<'de>,
                 {
-                    if let _serde::__private::None = match _serde::de::SeqAccess::next_element_seed(
-                        &mut __seq,
-                        _serde::__private::de::InPlaceSeed(&mut self.place.0),
-                    ) {
-                        _serde::__private::Ok(__val) => __val,
-                        _serde::__private::Err(__err) => {
-                            return _serde::__private::Err(__err);
-                        }
-                    } {
-                        return _serde::__private::Err(_serde::de::Error::invalid_length(
-                            0usize,
-                            &"tuple struct DeNamedTuple with 3 elements",
-                        ));
+                    if let _serde::__private::None
+                        = match _serde::de::SeqAccess::next_element_seed(
+                            &mut __seq,
+                            _serde::__private::de::InPlaceSeed(&mut self.place.0),
+                        ) {
+                            _serde::__private::Ok(__val) => __val,
+                            _serde::__private::Err(__err) => {
+                                return _serde::__private::Err(__err);
+                            }
+                        } {
+                        return _serde::__private::Err(
+                            _serde::de::Error::invalid_length(
+                                0usize,
+                                &"tuple struct DeNamedTuple with 3 elements",
+                            ),
+                        );
                     }
-                    if let _serde::__private::None = match _serde::de::SeqAccess::next_element_seed(
-                        &mut __seq,
-                        _serde::__private::de::InPlaceSeed(&mut self.place.1),
-                    ) {
-                        _serde::__private::Ok(__val) => __val,
-                        _serde::__private::Err(__err) => {
-                            return _serde::__private::Err(__err);
-                        }
-                    } {
-                        return _serde::__private::Err(_serde::de::Error::invalid_length(
-                            1usize,
-                            &"tuple struct DeNamedTuple with 3 elements",
-                        ));
+                    if let _serde::__private::None
+                        = match _serde::de::SeqAccess::next_element_seed(
+                            &mut __seq,
+                            _serde::__private::de::InPlaceSeed(&mut self.place.1),
+                        ) {
+                            _serde::__private::Ok(__val) => __val,
+                            _serde::__private::Err(__err) => {
+                                return _serde::__private::Err(__err);
+                            }
+                        } {
+                        return _serde::__private::Err(
+                            _serde::de::Error::invalid_length(
+                                1usize,
+                                &"tuple struct DeNamedTuple with 3 elements",
+                            ),
+                        );
                     }
-                    if let _serde::__private::None = match _serde::de::SeqAccess::next_element_seed(
-                        &mut __seq,
-                        _serde::__private::de::InPlaceSeed(&mut self.place.2),
-                    ) {
-                        _serde::__private::Ok(__val) => __val,
-                        _serde::__private::Err(__err) => {
-                            return _serde::__private::Err(__err);
-                        }
-                    } {
-                        return _serde::__private::Err(_serde::de::Error::invalid_length(
-                            2usize,
-                            &"tuple struct DeNamedTuple with 3 elements",
-                        ));
+                    if let _serde::__private::None
+                        = match _serde::de::SeqAccess::next_element_seed(
+                            &mut __seq,
+                            _serde::__private::de::InPlaceSeed(&mut self.place.2),
+                        ) {
+                            _serde::__private::Ok(__val) => __val,
+                            _serde::__private::Err(__err) => {
+                                return _serde::__private::Err(__err);
+                            }
+                        } {
+                        return _serde::__private::Err(
+                            _serde::de::Error::invalid_length(
+                                2usize,
+                                &"tuple struct DeNamedTuple with 3 elements",
+                            ),
+                        );
                     }
                     _serde::__private::Ok(())
                 }

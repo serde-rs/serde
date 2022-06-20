@@ -31,12 +31,14 @@ const _: () = {
             __S: _serde::Serializer,
         {
             match *self {
-                SerEnum::Unit => _serde::Serializer::serialize_unit_variant(
-                    __serializer,
-                    "SerEnum",
-                    0u32,
-                    "Unit",
-                ),
+                SerEnum::Unit => {
+                    _serde::Serializer::serialize_unit_variant(
+                        __serializer,
+                        "SerEnum",
+                        0u32,
+                        "Unit",
+                    )
+                }
                 SerEnum::Seq(ref __field0, ref __field1, ref __field2, ref __field3) => {
                     let mut __serde_state = match _serde::Serializer::serialize_tuple_variant(
                         __serializer,
@@ -88,12 +90,7 @@ const _: () = {
                     };
                     _serde::ser::SerializeTupleVariant::end(__serde_state)
                 }
-                SerEnum::Map {
-                    ref a,
-                    ref b,
-                    ref c,
-                    ref d,
-                } => {
+                SerEnum::Map { ref a, ref b, ref c, ref d } => {
                     let mut __serde_state = match _serde::Serializer::serialize_struct_variant(
                         __serializer,
                         "SerEnum",
@@ -148,13 +145,20 @@ const _: () = {
                     };
                     _serde::ser::SerializeStructVariant::end(__serde_state)
                 }
-                SerEnum::_Unit2 => _serde::Serializer::serialize_unit_variant(
-                    __serializer,
-                    "SerEnum",
-                    3u32,
-                    "_Unit2",
-                ),
-                SerEnum::_Seq2(ref __field0, ref __field1, ref __field2, ref __field3) => {
+                SerEnum::_Unit2 => {
+                    _serde::Serializer::serialize_unit_variant(
+                        __serializer,
+                        "SerEnum",
+                        3u32,
+                        "_Unit2",
+                    )
+                }
+                SerEnum::_Seq2(
+                    ref __field0,
+                    ref __field1,
+                    ref __field2,
+                    ref __field3,
+                ) => {
                     let mut __serde_state = match _serde::Serializer::serialize_tuple_variant(
                         __serializer,
                         "SerEnum",
@@ -205,12 +209,7 @@ const _: () = {
                     };
                     _serde::ser::SerializeTupleVariant::end(__serde_state)
                 }
-                SerEnum::_Map2 {
-                    ref a,
-                    ref b,
-                    ref c,
-                    ref d,
-                } => {
+                SerEnum::_Map2 { ref a, ref b, ref c, ref d } => {
                     let mut __serde_state = match _serde::Serializer::serialize_struct_variant(
                         __serializer,
                         "SerEnum",
