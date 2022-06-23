@@ -191,4 +191,4 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/install@cargo-outdated
-      - run: cargo outdated --workspace --exclude macrotest --exit-code 1
+      - run: cargo outdated --workspace --exclude macrotest,prettyplease --exit-code 1
