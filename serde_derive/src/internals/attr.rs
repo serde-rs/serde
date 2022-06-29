@@ -205,6 +205,18 @@ pub struct RenameAllRules {
     deserialize: RenameRule,
 }
 
+impl RenameAllRules {
+    #[allow(dead_code)]
+    pub fn serialize(&self) -> &RenameRule {
+        &self.serialize
+    }
+
+    #[allow(dead_code)]
+    pub fn deserialize(&self) -> &RenameRule {
+        &self.deserialize
+    }
+}
+
 /// Represents struct or enum attribute information.
 pub struct Container {
     name: Name,
