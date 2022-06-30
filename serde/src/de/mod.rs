@@ -708,6 +708,11 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 ///             where
 ///                 A: SeqAccess<'de>,
 ///             {
+///                 // Decrease the number of reallocations if there are many elements
+///                 if let Some(size_hint) = seq.size_hint() {
+///                    self.0.reserve(size_hint);
+///                 }
+///
 ///                 // Visit each element in the inner array and push it onto
 ///                 // the existing vector.
 ///                 while let Some(elem) = seq.next_element()? {
