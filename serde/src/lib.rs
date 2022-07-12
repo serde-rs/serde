@@ -123,6 +123,7 @@
         explicit_auto_deref,
         let_underscore_drop,
         map_err_ignore,
+        new_without_default,
         result_unit_err,
         wildcard_imports,
         // not practical
