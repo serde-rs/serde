@@ -84,7 +84,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Serde types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/serde/1.0.138")]
+#![doc(html_root_url = "https://docs.rs/serde/1.0.139")]
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
 // Unstable functionality only if the user asks for it. For tracking and
@@ -123,6 +123,7 @@
         explicit_auto_deref,
         let_underscore_drop,
         map_err_ignore,
+        new_without_default,
         result_unit_err,
         wildcard_imports,
         // not practical
