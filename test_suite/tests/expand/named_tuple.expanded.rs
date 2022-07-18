@@ -112,6 +112,7 @@ const _: () = {
                 where
                     __A: _serde::de::SeqAccess<'de>,
                 {
+                    let expecting = "tuple struct DeNamedTuple with 3 elements";
                     let __field0 = match match _serde::de::SeqAccess::next_element::<
                         A,
                     >(&mut __seq) {
@@ -123,10 +124,7 @@ const _: () = {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
                             return _serde::__private::Err(
-                                _serde::de::Error::invalid_length(
-                                    0usize,
-                                    &"tuple struct DeNamedTuple with 3 elements",
-                                ),
+                                _serde::de::Error::invalid_length(0usize, &expecting),
                             );
                         }
                     };
@@ -141,10 +139,7 @@ const _: () = {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
                             return _serde::__private::Err(
-                                _serde::de::Error::invalid_length(
-                                    1usize,
-                                    &"tuple struct DeNamedTuple with 3 elements",
-                                ),
+                                _serde::de::Error::invalid_length(1usize, &expecting),
                             );
                         }
                     };
@@ -159,10 +154,7 @@ const _: () = {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
                             return _serde::__private::Err(
-                                _serde::de::Error::invalid_length(
-                                    2usize,
-                                    &"tuple struct DeNamedTuple with 3 elements",
-                                ),
+                                _serde::de::Error::invalid_length(2usize, &expecting),
                             );
                         }
                     };
@@ -220,6 +212,7 @@ const _: () = {
                 where
                     __A: _serde::de::SeqAccess<'de>,
                 {
+                    let expecting = "tuple struct DeNamedTuple with 3 elements";
                     if let _serde::__private::None
                         = match _serde::de::SeqAccess::next_element_seed(
                             &mut __seq,
@@ -231,10 +224,7 @@ const _: () = {
                             }
                         } {
                         return _serde::__private::Err(
-                            _serde::de::Error::invalid_length(
-                                0usize,
-                                &"tuple struct DeNamedTuple with 3 elements",
-                            ),
+                            _serde::de::Error::invalid_length(0usize, &expecting),
                         );
                     }
                     if let _serde::__private::None
@@ -248,10 +238,7 @@ const _: () = {
                             }
                         } {
                         return _serde::__private::Err(
-                            _serde::de::Error::invalid_length(
-                                1usize,
-                                &"tuple struct DeNamedTuple with 3 elements",
-                            ),
+                            _serde::de::Error::invalid_length(1usize, &expecting),
                         );
                     }
                     if let _serde::__private::None
@@ -265,10 +252,7 @@ const _: () = {
                             }
                         } {
                         return _serde::__private::Err(
-                            _serde::de::Error::invalid_length(
-                                2usize,
-                                &"tuple struct DeNamedTuple with 3 elements",
-                            ),
+                            _serde::de::Error::invalid_length(2usize, &expecting),
                         );
                     }
                     _serde::__private::Ok(())

@@ -309,6 +309,7 @@ const _: () = {
                                 where
                                     __A: _serde::de::SeqAccess<'de>,
                                 {
+                                    let expecting = "tuple variant GenericEnum::Seq with 2 elements";
                                     let __field0 = match match _serde::de::SeqAccess::next_element::<
                                         T,
                                     >(&mut __seq) {
@@ -320,10 +321,7 @@ const _: () = {
                                         _serde::__private::Some(__value) => __value,
                                         _serde::__private::None => {
                                             return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(
-                                                    0usize,
-                                                    &"tuple variant GenericEnum::Seq with 2 elements",
-                                                ),
+                                                _serde::de::Error::invalid_length(0usize, &expecting),
                                             );
                                         }
                                     };
@@ -338,10 +336,7 @@ const _: () = {
                                         _serde::__private::Some(__value) => __value,
                                         _serde::__private::None => {
                                             return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(
-                                                    1usize,
-                                                    &"tuple variant GenericEnum::Seq with 2 elements",
-                                                ),
+                                                _serde::de::Error::invalid_length(1usize, &expecting),
                                             );
                                         }
                                     };
@@ -462,6 +457,7 @@ const _: () = {
                                 where
                                     __A: _serde::de::SeqAccess<'de>,
                                 {
+                                    let expecting = "struct variant GenericEnum::Map with 2 elements";
                                     let __field0 = match match _serde::de::SeqAccess::next_element::<
                                         T,
                                     >(&mut __seq) {
@@ -473,10 +469,7 @@ const _: () = {
                                         _serde::__private::Some(__value) => __value,
                                         _serde::__private::None => {
                                             return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(
-                                                    0usize,
-                                                    &"struct variant GenericEnum::Map with 2 elements",
-                                                ),
+                                                _serde::de::Error::invalid_length(0usize, &expecting),
                                             );
                                         }
                                     };
@@ -491,10 +484,7 @@ const _: () = {
                                         _serde::__private::Some(__value) => __value,
                                         _serde::__private::None => {
                                             return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(
-                                                    1usize,
-                                                    &"struct variant GenericEnum::Map with 2 elements",
-                                                ),
+                                                _serde::de::Error::invalid_length(1usize, &expecting),
                                             );
                                         }
                                     };

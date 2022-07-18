@@ -677,7 +677,7 @@ fn deserialize_seq(
                 attr::Default::Default => quote!(_serde::__private::Default::default()),
                 attr::Default::Path(path) => quote!(#path()),
                 attr::Default::None => quote!(
-                    return _serde::__private::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
+                    return _serde::__private::Err(_serde::de::Error::invalid_length(#index_in_seq, &expecting));
                 ),
             };
             let assign = quote! {
@@ -727,6 +727,7 @@ fn deserialize_seq(
 
     quote_block! {
         #let_default
+        let expecting = #expecting;
         #(#let_values)*
         _serde::__private::Ok(#result)
     }
@@ -768,7 +769,7 @@ fn deserialize_seq_in_place(
                     self.place.#member = #path();
                 ),
                 attr::Default::None => quote!(
-                    return _serde::__private::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
+                    return _serde::__private::Err(_serde::de::Error::invalid_length(#index_in_seq, &expecting));
                 ),
             };
             let write = match field.attrs.deserialize_with() {
@@ -819,6 +820,7 @@ fn deserialize_seq_in_place(
 
     quote_block! {
         #let_default
+        let expecting = #expecting;
         #(#write_values)*
         _serde::__private::Ok(())
     }

@@ -156,6 +156,7 @@ const _: () = {
                 where
                     __A: _serde::de::SeqAccess<'de>,
                 {
+                    let expecting = "struct GenericStruct with 1 element";
                     let __field0 = match match _serde::de::SeqAccess::next_element::<
                         T,
                     >(&mut __seq) {
@@ -167,10 +168,7 @@ const _: () = {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
                             return _serde::__private::Err(
-                                _serde::de::Error::invalid_length(
-                                    0usize,
-                                    &"struct GenericStruct with 1 element",
-                                ),
+                                _serde::de::Error::invalid_length(0usize, &expecting),
                             );
                         }
                     };
@@ -350,6 +348,7 @@ const _: () = {
                 where
                     __A: _serde::de::SeqAccess<'de>,
                 {
+                    let expecting = "struct GenericStruct with 1 element";
                     if let _serde::__private::None
                         = match _serde::de::SeqAccess::next_element_seed(
                             &mut __seq,
@@ -361,10 +360,7 @@ const _: () = {
                             }
                         } {
                         return _serde::__private::Err(
-                            _serde::de::Error::invalid_length(
-                                0usize,
-                                &"struct GenericStruct with 1 element",
-                            ),
+                            _serde::de::Error::invalid_length(0usize, &expecting),
                         );
                     }
                     _serde::__private::Ok(())
@@ -530,6 +526,7 @@ const _: () = {
                 where
                     __A: _serde::de::SeqAccess<'de>,
                 {
+                    let expecting = "tuple struct GenericNewTypeStruct with 1 element";
                     let __field0 = match match _serde::de::SeqAccess::next_element::<
                         T,
                     >(&mut __seq) {
@@ -541,10 +538,7 @@ const _: () = {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
                             return _serde::__private::Err(
-                                _serde::de::Error::invalid_length(
-                                    0usize,
-                                    &"tuple struct GenericNewTypeStruct with 1 element",
-                                ),
+                                _serde::de::Error::invalid_length(0usize, &expecting),
                             );
                         }
                     };
@@ -607,6 +601,7 @@ const _: () = {
                 where
                     __A: _serde::de::SeqAccess<'de>,
                 {
+                    let expecting = "tuple struct GenericNewTypeStruct with 1 element";
                     if let _serde::__private::None
                         = match _serde::de::SeqAccess::next_element_seed(
                             &mut __seq,
@@ -618,10 +613,7 @@ const _: () = {
                             }
                         } {
                         return _serde::__private::Err(
-                            _serde::de::Error::invalid_length(
-                                0usize,
-                                &"tuple struct GenericNewTypeStruct with 1 element",
-                            ),
+                            _serde::de::Error::invalid_length(0usize, &expecting),
                         );
                     }
                     _serde::__private::Ok(())
