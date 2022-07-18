@@ -153,19 +153,12 @@ const _: () = {
                     __A: _serde::de::SeqAccess<'de>,
                 {
                     let expecting = "struct DefaultTyParam with 1 element";
-                    let __field0 = match match _serde::de::SeqAccess::next_element::<
+                    let __field0 = match _serde::de::SeqAccess::next_element_checked::<
                         PhantomData<T>,
-                    >(&mut __seq) {
+                    >(&mut __seq, 0usize, &expecting) {
                         _serde::__private::Ok(__val) => __val,
                         _serde::__private::Err(__err) => {
                             return _serde::__private::Err(__err);
-                        }
-                    } {
-                        _serde::__private::Some(__value) => __value,
-                        _serde::__private::None => {
-                            return _serde::__private::Err(
-                                _serde::de::Error::invalid_length(0usize, &expecting),
-                            );
                         }
                     };
                     _serde::__private::Ok(DefaultTyParam {

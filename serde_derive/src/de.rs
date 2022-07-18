@@ -654,6 +654,18 @@ fn deserialize_seq(
             quote! {
                 let #var = #default;
             }
+        } else if field.attrs.deserialize_with().is_none() && field.attrs.default().is_none() {
+            // Specialize the common case, to make the expanded code shorter.
+            let field_ty = field.ty;
+            let span = field.original.span();
+            let func = quote_spanned! {
+                span=> _serde::de::SeqAccess::next_element_checked::<#field_ty>
+            };
+            let assign = quote! {
+                let #var = try!(#func(&mut __seq, #index_in_seq, &expecting));
+            };
+            index_in_seq += 1;
+            assign
         } else {
             let visit = match field.attrs.deserialize_with() {
                 None => {

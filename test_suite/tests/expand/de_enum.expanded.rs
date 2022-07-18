@@ -465,64 +465,36 @@ const _: () = {
                                     __A: _serde::de::SeqAccess<'de>,
                                 {
                                     let expecting = "tuple variant DeEnum::Seq with 4 elements";
-                                    let __field0 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field0 = match _serde::de::SeqAccess::next_element_checked::<
                                         i8,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 0usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
                                         }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(0usize, &expecting),
-                                            );
-                                        }
                                     };
-                                    let __field1 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field1 = match _serde::de::SeqAccess::next_element_checked::<
                                         B,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 1usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
                                         }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(1usize, &expecting),
-                                            );
-                                        }
                                     };
-                                    let __field2 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field2 = match _serde::de::SeqAccess::next_element_checked::<
                                         C,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 2usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
-                                        }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(2usize, &expecting),
-                                            );
                                         }
                                     };
-                                    let __field3 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field3 = match _serde::de::SeqAccess::next_element_checked::<
                                         D,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 3usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
-                                        }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(3usize, &expecting),
-                                            );
                                         }
                                     };
                                     _serde::__private::Ok(
@@ -655,64 +627,36 @@ const _: () = {
                                     __A: _serde::de::SeqAccess<'de>,
                                 {
                                     let expecting = "struct variant DeEnum::Map with 4 elements";
-                                    let __field0 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field0 = match _serde::de::SeqAccess::next_element_checked::<
                                         i8,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 0usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
                                         }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(0usize, &expecting),
-                                            );
-                                        }
                                     };
-                                    let __field1 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field1 = match _serde::de::SeqAccess::next_element_checked::<
                                         B,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 1usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
                                         }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(1usize, &expecting),
-                                            );
-                                        }
                                     };
-                                    let __field2 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field2 = match _serde::de::SeqAccess::next_element_checked::<
                                         C,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 2usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
-                                        }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(2usize, &expecting),
-                                            );
                                         }
                                     };
-                                    let __field3 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field3 = match _serde::de::SeqAccess::next_element_checked::<
                                         D,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 3usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
-                                        }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(3usize, &expecting),
-                                            );
                                         }
                                     };
                                     _serde::__private::Ok(DeEnum::Map {
@@ -928,64 +872,36 @@ const _: () = {
                                     __A: _serde::de::SeqAccess<'de>,
                                 {
                                     let expecting = "tuple variant DeEnum::_Seq2 with 4 elements";
-                                    let __field0 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field0 = match _serde::de::SeqAccess::next_element_checked::<
                                         i8,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 0usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
                                         }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(0usize, &expecting),
-                                            );
-                                        }
                                     };
-                                    let __field1 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field1 = match _serde::de::SeqAccess::next_element_checked::<
                                         B,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 1usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
                                         }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(1usize, &expecting),
-                                            );
-                                        }
                                     };
-                                    let __field2 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field2 = match _serde::de::SeqAccess::next_element_checked::<
                                         C,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 2usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
-                                        }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(2usize, &expecting),
-                                            );
                                         }
                                     };
-                                    let __field3 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field3 = match _serde::de::SeqAccess::next_element_checked::<
                                         D,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 3usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
-                                        }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(3usize, &expecting),
-                                            );
                                         }
                                     };
                                     _serde::__private::Ok(
@@ -1118,64 +1034,36 @@ const _: () = {
                                     __A: _serde::de::SeqAccess<'de>,
                                 {
                                     let expecting = "struct variant DeEnum::_Map2 with 4 elements";
-                                    let __field0 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field0 = match _serde::de::SeqAccess::next_element_checked::<
                                         i8,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 0usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
                                         }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(0usize, &expecting),
-                                            );
-                                        }
                                     };
-                                    let __field1 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field1 = match _serde::de::SeqAccess::next_element_checked::<
                                         B,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 1usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
                                         }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(1usize, &expecting),
-                                            );
-                                        }
                                     };
-                                    let __field2 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field2 = match _serde::de::SeqAccess::next_element_checked::<
                                         C,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 2usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
-                                        }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(2usize, &expecting),
-                                            );
                                         }
                                     };
-                                    let __field3 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field3 = match _serde::de::SeqAccess::next_element_checked::<
                                         D,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 3usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
-                                        }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(3usize, &expecting),
-                                            );
                                         }
                                     };
                                     _serde::__private::Ok(DeEnum::_Map2 {

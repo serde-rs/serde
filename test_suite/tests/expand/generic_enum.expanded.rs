@@ -310,34 +310,20 @@ const _: () = {
                                     __A: _serde::de::SeqAccess<'de>,
                                 {
                                     let expecting = "tuple variant GenericEnum::Seq with 2 elements";
-                                    let __field0 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field0 = match _serde::de::SeqAccess::next_element_checked::<
                                         T,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 0usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
-                                        }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(0usize, &expecting),
-                                            );
                                         }
                                     };
-                                    let __field1 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field1 = match _serde::de::SeqAccess::next_element_checked::<
                                         U,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 1usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
-                                        }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(1usize, &expecting),
-                                            );
                                         }
                                     };
                                     _serde::__private::Ok(GenericEnum::Seq(__field0, __field1))
@@ -458,34 +444,20 @@ const _: () = {
                                     __A: _serde::de::SeqAccess<'de>,
                                 {
                                     let expecting = "struct variant GenericEnum::Map with 2 elements";
-                                    let __field0 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field0 = match _serde::de::SeqAccess::next_element_checked::<
                                         T,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 0usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
-                                        }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(0usize, &expecting),
-                                            );
                                         }
                                     };
-                                    let __field1 = match match _serde::de::SeqAccess::next_element::<
+                                    let __field1 = match _serde::de::SeqAccess::next_element_checked::<
                                         U,
-                                    >(&mut __seq) {
+                                    >(&mut __seq, 1usize, &expecting) {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
-                                        }
-                                    } {
-                                        _serde::__private::Some(__value) => __value,
-                                        _serde::__private::None => {
-                                            return _serde::__private::Err(
-                                                _serde::de::Error::invalid_length(1usize, &expecting),
-                                            );
                                         }
                                     };
                                     _serde::__private::Ok(GenericEnum::Map {

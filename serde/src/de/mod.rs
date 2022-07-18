@@ -1732,6 +1732,25 @@ pub trait SeqAccess<'de> {
         self.next_element_seed(PhantomData)
     }
 
+    /// Equivalent to calling `next_element`, and then if there are no more remaining items,
+    /// calling `Error::invalid_length`.
+    ///
+    /// This method exists purely to reduce the size of the generated code,
+    /// reducing compile times. `SeqAccess` implementations should not override
+    /// the default behavior.
+    #[doc(hidden)]
+    #[inline]
+    fn next_element_checked<T>(&mut self, len: usize, exp: &Expected) -> Result<T, Self::Error>
+    where
+        T: Deserialize<'de>,
+    {
+        match self.next_element() {
+            Ok(Some(val)) => Ok(val),
+            Ok(None) => Err(Error::invalid_length(len, exp)),
+            Err(err) => Err(err),
+        }
+    }
+
     /// Returns the number of elements remaining in the sequence, if known.
     #[inline]
     fn size_hint(&self) -> Option<usize> {
