@@ -22,7 +22,7 @@ const _: () = {
             let mut __serde_state = match _serde::Serializer::serialize_struct(
                 __serializer,
                 "GenericStruct",
-                false as usize + 1,
+                1usize,
             ) {
                 _serde::__private::Ok(__val) => __val,
                 _serde::__private::Err(__err) => {

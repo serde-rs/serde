@@ -26,7 +26,7 @@ const _: () = {
             let mut __serde_state = match _serde::Serializer::serialize_struct(
                 __serializer,
                 "SerNamedMap",
-                false as usize + 1 + 1 + 1,
+                3usize,
             ) {
                 _serde::__private::Ok(__val) => __val,
                 _serde::__private::Err(__err) => {

@@ -336,18 +336,20 @@ fn serialize_struct_as_struct(
 
     let let_mut = mut_if(serialized_fields.peek().is_some() || tag_field_exists);
 
-    let len = serialized_fields
-        .map(|field| match field.attrs.skip_serializing_if() {
-            None => quote!(1),
+    let mut num_normals: usize = if tag_field_exists { 1 } else { 0 };
+    let adds_for_skippables = serialized_fields
+        .filter_map(|field| match field.attrs.skip_serializing_if() {
+            None => {
+                num_normals += 1;
+                None
+            }
             Some(path) => {
                 let field_expr = get_member(params, field, &field.member);
-                quote!(if #path(#field_expr) { 0 } else { 1 })
+                Some(quote!(if #path(#field_expr) { 0 } else { 1 }))
             }
         })
-        .fold(
-            quote!(#tag_field_exists as usize),
-            |sum, expr| quote!(#sum + #expr),
-        );
+        .fold(TokenStream::new(), |sum, expr| quote!(#sum + #expr));
+    let len = quote!(#num_normals #adds_for_skippables);
 
     quote_block! {
         let #let_mut __serde_state = try!(_serde::Serializer::serialize_struct(__serializer, #type_name, #len));
