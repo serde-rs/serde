@@ -15,7 +15,7 @@ pub use self::content::{
 
 pub use seed::InPlaceSeed;
 
-/// If the missing field is of type `Option<T>` then treat is as `None`,
+/// If the missing field is of type `Option<T>` then treat it as `None`,
 /// otherwise it is an error.
 pub fn missing_field<'de, V, E>(field: &'static str) -> Result<V, E>
 where
@@ -53,6 +53,23 @@ where
 
     let deserializer = MissingFieldDeserializer(field, PhantomData);
     Deserialize::deserialize(deserializer)
+}
+
+/// Equivalent to calling `missing_field` if the field has been missed, and
+/// returning its value otherwise.
+///
+/// This method exists purely to reduce the size of the generated code,
+/// reducing compile times.
+#[inline]
+pub fn missing_field_checked<'de, V, E>(value: Option<V>, name: &'static str) -> Result<V, E>
+where
+    V: Deserialize<'de>,
+    E: Error,
+{
+    match value {
+        Some(value) => Ok(value),
+        None => missing_field(name),
+    }
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]

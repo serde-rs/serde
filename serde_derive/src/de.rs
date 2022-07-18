@@ -2566,13 +2566,25 @@ fn deserialize_map(
         .iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
         .map(|(field, name)| {
-            let missing_expr = Match(expr_is_missing(field, cattrs));
-
-            quote! {
-                let #name = match #name {
-                    _serde::__private::Some(#name) => #name,
-                    _serde::__private::None => #missing_expr
-                };
+            if field.attrs.default().is_none()
+                && cattrs.default().is_none()
+                && field.attrs.deserialize_with().is_none()
+            {
+                // Specialize the common case, to make the expanded code shorter.
+                let span = field.original.span();
+                let func = quote_spanned!(span=> _serde::__private::de::missing_field_checked);
+                let name_str = field.attrs.name().deserialize_name();
+                quote! {
+                    let #name = try!(#func(#name, #name_str));
+                }
+            } else {
+                let missing_expr = Match(expr_is_missing(field, cattrs));
+                quote! {
+                    let #name = match #name {
+                        _serde::__private::Some(#name) => #name,
+                        _serde::__private::None => #missing_expr
+                    };
+                }
             }
         });
 

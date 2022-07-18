@@ -521,26 +521,22 @@ const _: () = {
                                             }
                                         }
                                     }
-                                    let __field0 = match __field0 {
-                                        _serde::__private::Some(__field0) => __field0,
-                                        _serde::__private::None => {
-                                            match _serde::__private::de::missing_field("x") {
-                                                _serde::__private::Ok(__val) => __val,
-                                                _serde::__private::Err(__err) => {
-                                                    return _serde::__private::Err(__err);
-                                                }
-                                            }
+                                    let __field0 = match _serde::__private::de::missing_field_checked(
+                                        __field0,
+                                        "x",
+                                    ) {
+                                        _serde::__private::Ok(__val) => __val,
+                                        _serde::__private::Err(__err) => {
+                                            return _serde::__private::Err(__err);
                                         }
                                     };
-                                    let __field1 = match __field1 {
-                                        _serde::__private::Some(__field1) => __field1,
-                                        _serde::__private::None => {
-                                            match _serde::__private::de::missing_field("y") {
-                                                _serde::__private::Ok(__val) => __val,
-                                                _serde::__private::Err(__err) => {
-                                                    return _serde::__private::Err(__err);
-                                                }
-                                            }
+                                    let __field1 = match _serde::__private::de::missing_field_checked(
+                                        __field1,
+                                        "y",
+                                    ) {
+                                        _serde::__private::Ok(__val) => __val,
+                                        _serde::__private::Err(__err) => {
+                                            return _serde::__private::Err(__err);
                                         }
                                     };
                                     _serde::__private::Ok(GenericEnum::Map {
