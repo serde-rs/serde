@@ -183,17 +183,10 @@ const _: () = {
                         } {
                         match __key {
                             __Field::__field0 => {
-                                if _serde::__private::Option::is_some(&__field0) {
-                                    return _serde::__private::Err(
-                                        <__A::Error as _serde::de::Error>::duplicate_field(
-                                            "phantom",
-                                        ),
-                                    );
-                                }
                                 __field0 = _serde::__private::Some(
-                                    match _serde::de::MapAccess::next_value::<
+                                    match _serde::de::MapAccess::next_value_checked::<
                                         PhantomData<T>,
-                                    >(&mut __map) {
+                                    >(&mut __map, &__field0, "phantom") {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);

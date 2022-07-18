@@ -250,13 +250,10 @@ const _: () = {
                         } {
                         match __key {
                             __Field::__field0 => {
-                                if _serde::__private::Option::is_some(&__field0) {
-                                    return _serde::__private::Err(
-                                        <__A::Error as _serde::de::Error>::duplicate_field("a"),
-                                    );
-                                }
                                 __field0 = _serde::__private::Some(
-                                    match _serde::de::MapAccess::next_value::<A>(&mut __map) {
+                                    match _serde::de::MapAccess::next_value_checked::<
+                                        A,
+                                    >(&mut __map, &__field0, "a") {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
@@ -265,13 +262,10 @@ const _: () = {
                                 );
                             }
                             __Field::__field1 => {
-                                if _serde::__private::Option::is_some(&__field1) {
-                                    return _serde::__private::Err(
-                                        <__A::Error as _serde::de::Error>::duplicate_field("b"),
-                                    );
-                                }
                                 __field1 = _serde::__private::Some(
-                                    match _serde::de::MapAccess::next_value::<B>(&mut __map) {
+                                    match _serde::de::MapAccess::next_value_checked::<
+                                        B,
+                                    >(&mut __map, &__field1, "b") {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);
@@ -280,13 +274,10 @@ const _: () = {
                                 );
                             }
                             __Field::__field2 => {
-                                if _serde::__private::Option::is_some(&__field2) {
-                                    return _serde::__private::Err(
-                                        <__A::Error as _serde::de::Error>::duplicate_field("c"),
-                                    );
-                                }
                                 __field2 = _serde::__private::Some(
-                                    match _serde::de::MapAccess::next_value::<C>(&mut __map) {
+                                    match _serde::de::MapAccess::next_value_checked::<
+                                        C,
+                                    >(&mut __map, &__field2, "c") {
                                         _serde::__private::Ok(__val) => __val,
                                         _serde::__private::Err(__err) => {
                                             return _serde::__private::Err(__err);

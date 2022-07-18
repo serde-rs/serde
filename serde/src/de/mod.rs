@@ -1890,6 +1890,28 @@ pub trait MapAccess<'de> {
         self.next_value_seed(PhantomData)
     }
 
+    /// Equivalent to calling `Error::duplicate_field` if the field has already
+    /// been deserialized, and to calling `next_value` otherwise.
+    ///
+    /// This method exists purely to reduce the size of the generated code,
+    /// reducing compile times. `MapAccess` implementations should not override
+    /// the default behavior.
+    #[doc(hidden)]
+    #[inline]
+    fn next_value_checked<V>(
+        &mut self,
+        field: &Option<V>,
+        field_name: &'static str,
+    ) -> Result<V, Self::Error>
+    where
+        V: Deserialize<'de>,
+    {
+        if field.is_some() {
+            return Err(Error::duplicate_field(field_name));
+        }
+        self.next_value()
+    }
+
     /// This returns `Ok(Some((key, value)))` for the next (key-value) pair in
     /// the map, or `Ok(None)` if there are no more remaining items.
     ///
