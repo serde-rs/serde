@@ -800,17 +800,14 @@ fn test_never_result() {
 #[test]
 #[cfg(unix)]
 fn test_cannot_serialize_paths() {
-    let path = unsafe { str::from_utf8_unchecked(b"Hello \xF0\x90\x80World") };
+    use std::ffi::OsStr;
+    use std::os::unix::ffi::OsStrExt;
+
     assert_ser_tokens_error(
-        &Path::new(path),
+        &Path::new(OsStr::from_bytes(b"Hello \xF0\x90\x80World")),
         &[],
         "path contains invalid UTF-8 characters",
     );
-
-    let mut path_buf = PathBuf::new();
-    path_buf.push(path);
-
-    assert_ser_tokens_error(&path_buf, &[], "path contains invalid UTF-8 characters");
 }
 
 #[test]
