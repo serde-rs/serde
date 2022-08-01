@@ -2,14 +2,14 @@
 name = "serde_derive_internals"
 version = "0.26.0" # remember to update html_root_url
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
-rust-version = "1.31"
-license = "MIT OR Apache-2.0"
 description = "AST representation used by Serde derive macros. Unstable."
-homepage = "https://serde.rs"
-repository = "https://github.com/serde-rs/serde"
 documentation = "https://docs.rs/serde_derive_internals"
-keywords = ["serde", "serialization"]
+homepage = "https://serde.rs"
 include = ["lib.rs", "src/**/*.rs", "LICENSE-APACHE", "LICENSE-MIT"]
+keywords = ["serde", "serialization"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/serde-rs/serde"
+rust-version = "1.31"
 
 [lib]
 path = "lib.rs"

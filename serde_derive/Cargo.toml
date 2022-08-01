@@ -2,15 +2,15 @@
 name = "serde_derive"
 version = "1.0.140" # remember to update html_root_url
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
-rust-version = "1.31"
-license = "MIT OR Apache-2.0"
 description = "Macros 1.1 implementation of #[derive(Serialize, Deserialize)]"
-homepage = "https://serde.rs"
-repository = "https://github.com/serde-rs/serde"
 documentation = "https://serde.rs/derive.html"
-keywords = ["serde", "serialization", "no_std"]
-readme = "crates-io.md"
+homepage = "https://serde.rs"
 include = ["build.rs", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+keywords = ["serde", "serialization", "no_std"]
+license = "MIT OR Apache-2.0"
+readme = "crates-io.md"
+repository = "https://github.com/serde-rs/serde"
+rust-version = "1.31"
 
 [features]
 default = []

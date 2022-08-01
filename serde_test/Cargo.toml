@@ -2,16 +2,16 @@
 name = "serde_test"
 version = "1.0.140" # remember to update html_root_url
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
-rust-version = "1.13"
-license = "MIT OR Apache-2.0"
-description = "Token De/Serializer for testing De/Serialize implementations"
-homepage = "https://serde.rs"
-repository = "https://github.com/serde-rs/serde"
-documentation = "https://docs.serde.rs/serde_test/"
-keywords = ["serde", "serialization"]
-readme = "crates-io.md"
-include = ["build.rs", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 build = "build.rs"
+description = "Token De/Serializer for testing De/Serialize implementations"
+documentation = "https://docs.serde.rs/serde_test/"
+homepage = "https://serde.rs"
+include = ["build.rs", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+keywords = ["serde", "serialization"]
+license = "MIT OR Apache-2.0"
+readme = "crates-io.md"
+repository = "https://github.com/serde-rs/serde"
+rust-version = "1.13"
 
 [dependencies]
 serde = { version = "1.0.60", path = "../serde" }
