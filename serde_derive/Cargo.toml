@@ -2,6 +2,7 @@
 name = "serde_derive"
 version = "1.0.140" # remember to update html_root_url
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
+categories = ["no-std"]
 description = "Macros 1.1 implementation of #[derive(Serialize, Deserialize)]"
 documentation = "https://serde.rs/derive.html"
 homepage = "https://serde.rs"
