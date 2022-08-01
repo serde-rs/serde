@@ -1,6 +1,7 @@
 [package]
 name = "serde_derive_tests_no_std"
 version = "0.0.0"
+authors = ["David Tolnay <dtolnay@gmail.com>"]
 edition = "2018"
 publish = false
 
