@@ -13,8 +13,8 @@ fn main() {
 
     // #[track_caller] stabilized in Rust 1.46:
     // https://blog.rust-lang.org/2020/08/27/Rust-1.46.0.html#track_caller
-    if minor >= 46 {
-        println!("cargo:rustc-cfg=track_caller");
+    if minor < 46 {
+        println!("cargo:rustc-cfg=no_track_caller");
     }
 }
 
