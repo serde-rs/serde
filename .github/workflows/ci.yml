@@ -68,7 +68,8 @@ jobs:
           RUSTFLAGS: --cfg exhaustive ${{env.RUSTFLAGS}}
         if: matrix.os != 'windows'
 
-  msrv:
+  backward_compat:
+    # Note that this test does NOT imply a specific MSRV policy.
     name: Rust 1.13.0
     runs-on: ubuntu-latest
     steps:

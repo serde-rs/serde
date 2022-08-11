@@ -12,7 +12,6 @@ keywords = ["serde", "serialization", "testing"]
 license = "MIT OR Apache-2.0"
 readme = "crates-io.md"
 repository = "https://github.com/serde-rs/serde"
-rust-version = "1.13"
 
 [dependencies]
 serde = { version = "1.0.60", path = "../serde" }
