@@ -10,6 +10,7 @@ keywords = ["serde", "serialization"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/serde-rs/serde"
 rust-version = "1.31"
+edition = "2015"
 
 [lib]
 path = "lib.rs"
