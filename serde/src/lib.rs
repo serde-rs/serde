@@ -65,7 +65,7 @@
 //! [Pickle]: https://github.com/birkenfeld/serde-pickle
 //! [RON]: https://github.com/ron-rs/ron
 //! [BSON]: https://github.com/mongodb/bson-rust
-//! [Avro]: https://github.com/flavray/avro-rs
+//! [Avro]: https://github.com/apache/avro/blob/master/lang/rust/avro/README.md
 //! [JSON5]: https://github.com/callum-oakley/json5-rs
 //! [URL]: https://docs.rs/serde_qs
 //! [Envy]: https://github.com/softprops/envy
