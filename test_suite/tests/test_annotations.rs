@@ -2266,6 +2266,37 @@ fn test_externally_tagged_enum_containing_flatten() {
 }
 
 #[test]
+fn test_internally_tagged_enum_with_skipped_conflict() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(tag = "t")]
+    enum Data {
+        A,
+	#[serde(skip)]
+	B {
+	    t: String
+	},
+	C {
+	    #[serde(default, skip)]
+	    t: String
+	},
+    }
+
+    let _data = Data::B { t: "".to_string() };
+
+    let data = Data::C { t: "".to_string() };
+
+    assert_tokens(
+        &data,
+        &[
+            Token::Struct { name: "Data", len: 1 },
+            Token::Str("t"),
+            Token::Str("C"),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_internally_tagged_enum_containing_flatten() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     #[serde(tag = "t")]
