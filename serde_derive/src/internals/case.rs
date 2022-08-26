@@ -147,9 +147,21 @@ impl<'a> Display for ParseError<'a> {
 
 #[test]
 fn rename_variants() {
-    for &(original, lower, upper, camel, snake, screaming, kebab, screaming_kebab, dot, screaming_dot) in &[
+    for &(
+        original,
+        lower,
+        upper,
+        camel,
+        snake,
+        screaming,
+        kebab,
+        screaming_kebab,
+        dot,
+        screaming_dot,
+    ) in &[
         (
-            "Outcome", "outcome", "OUTCOME", "outcome", "outcome", "OUTCOME", "outcome", "OUTCOME", "outcome", "OUTCOME",
+            "Outcome", "outcome", "OUTCOME", "outcome", "outcome", "OUTCOME", "outcome", "OUTCOME",
+            "outcome", "OUTCOME",
         ),
         (
             "VeryTasty",
@@ -164,7 +176,9 @@ fn rename_variants() {
             "VERY.TASTY",
         ),
         ("A", "a", "A", "a", "a", "A", "a", "A", "a", "A"),
-        ("Z42", "z42", "Z42", "z42", "z42", "Z42", "z42", "Z42", "z42", "Z42"),
+        (
+            "Z42", "z42", "Z42", "z42", "z42", "Z42", "z42", "Z42", "z42", "Z42",
+        ),
     ] {
         assert_eq!(None.apply_to_variant(original), original);
         assert_eq!(LowerCase.apply_to_variant(original), lower);
@@ -179,33 +193,35 @@ fn rename_variants() {
             screaming_kebab
         );
         assert_eq!(DotCase.apply_to_variant(original), dot);
-        assert_eq!(
-            ScreamingDotCase.apply_to_variant(original),
-            screaming_dot
-        );
+        assert_eq!(ScreamingDotCase.apply_to_variant(original), screaming_dot);
     }
 }
 
 #[test]
 fn rename_fields() {
-    for &(original, upper, pascal, camel, screaming, kebab, screaming_kebab, dot, screaming_dot) in &[
-        (
-            "outcome", "OUTCOME", "Outcome", "outcome", "OUTCOME", "outcome", "OUTCOME", "outcome", "OUTCOME",
-        ),
-        (
-            "very_tasty",
-            "VERY_TASTY",
-            "VeryTasty",
-            "veryTasty",
-            "VERY_TASTY",
-            "very-tasty",
-            "VERY-TASTY",
-            "very.tasty",
-            "VERY.TASTY",
-        ),
-        ("a", "A", "A", "a", "A", "a", "A", "a", "A"),
-        ("z42", "Z42", "Z42", "z42", "Z42", "z42", "Z42", "z42", "Z42"),
-    ] {
+    for &(original, upper, pascal, camel, screaming, kebab, screaming_kebab, dot, screaming_dot) in
+        &[
+            (
+                "outcome", "OUTCOME", "Outcome", "outcome", "OUTCOME", "outcome", "OUTCOME",
+                "outcome", "OUTCOME",
+            ),
+            (
+                "very_tasty",
+                "VERY_TASTY",
+                "VeryTasty",
+                "veryTasty",
+                "VERY_TASTY",
+                "very-tasty",
+                "VERY-TASTY",
+                "very.tasty",
+                "VERY.TASTY",
+            ),
+            ("a", "A", "A", "a", "A", "a", "A", "a", "A"),
+            (
+                "z42", "Z42", "Z42", "z42", "Z42", "z42", "Z42", "z42", "Z42",
+            ),
+        ]
+    {
         assert_eq!(None.apply_to_field(original), original);
         assert_eq!(UpperCase.apply_to_field(original), upper);
         assert_eq!(PascalCase.apply_to_field(original), pascal);
