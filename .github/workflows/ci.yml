@@ -167,11 +167,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@clippy
-      - run: cd serde && cargo clippy --features rc,unstable -- -Dclippy::all -Dclippy::pedantic
+      - run: cd serde && cargo clippy --features rc,unstable -- -Dclippy::all -Dclippy::pedantic -Aclippy::let_underscore_drop
       - run: cd serde_derive && cargo clippy -- -Dclippy::all -Dclippy::pedantic
       - run: cd serde_derive_internals && cargo clippy -- -Dclippy::all -Dclippy::pedantic
-      - run: cd serde_test && cargo clippy -- -Dclippy::all -Dclippy::pedantic
-      - run: cd test_suite && cargo clippy --tests --features unstable -- -Dclippy::all -Dclippy::pedantic
+      - run: cd serde_test && cargo clippy -- -Dclippy::all -Dclippy::pedantic -Aclippy::let_underscore_drop
+      - run: cd test_suite && cargo clippy --tests --features unstable -- -Dclippy::all -Dclippy::pedantic -Aclippy::let_underscore_drop
       - run: cd test_suite/no_std && cargo clippy -- -Dclippy::all -Dclippy::pedantic
 
   miri:
