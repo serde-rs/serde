@@ -452,7 +452,7 @@ fn serialize_variant(
         let case = match variant.style {
             Style::Unit => {
                 quote! {
-                    #this::#variant_ident
+                    Self::#variant_ident
                 }
             }
             Style::Newtype => {
