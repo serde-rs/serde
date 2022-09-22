@@ -1501,7 +1501,7 @@ where
     where
         T: de::DeserializeSeed<'de>,
     {
-        match self.map.next_key_seed(seed)? {
+        match try!(self.map.next_key_seed(seed)) {
             Some(key) => Ok((key, private::map_as_enum(self.map))),
             None => Err(de::Error::invalid_type(de::Unexpected::Map, &"enum")),
         }

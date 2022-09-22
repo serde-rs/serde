@@ -2268,14 +2268,14 @@ where
     where
         D: Deserializer<'de>,
     {
-        let (start, end) = deserializer.deserialize_struct(
+        let (start, end) = try!(deserializer.deserialize_struct(
             "Range",
             range::FIELDS,
             range::RangeVisitor {
                 expecting: "struct Range",
                 phantom: PhantomData,
             },
-        )?;
+        ));
         Ok(start..end)
     }
 }
@@ -2289,14 +2289,14 @@ where
     where
         D: Deserializer<'de>,
     {
-        let (start, end) = deserializer.deserialize_struct(
+        let (start, end) = try!(deserializer.deserialize_struct(
             "RangeInclusive",
             range::FIELDS,
             range::RangeVisitor {
                 expecting: "struct RangeInclusive",
                 phantom: PhantomData,
             },
-        )?;
+        ));
         Ok(RangeInclusive::new(start, end))
     }
 }
