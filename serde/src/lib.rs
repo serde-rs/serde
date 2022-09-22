@@ -249,6 +249,19 @@ mod lib {
     pub use self::core::time::Duration;
 }
 
+// None of this crate's error handling needs the `From::from` error conversion
+// performed implicitly by the `?` operator or the standard library's `try!`
+// macro. This simplified macro gives a 5.5% improvement in compile time
+// compared to standard `try!`, and 9% improvement compared to `?`.
+macro_rules! try {
+    ($expr:expr) => {
+        match $expr {
+            Ok(val) => val,
+            Err(err) => return Err(err),
+        }
+    };
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 #[macro_use]
