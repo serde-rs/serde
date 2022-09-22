@@ -522,7 +522,7 @@ where
     }
 }
 
-impl<T> Serialize for RefCell<T>
+impl<T: ?Sized> Serialize for RefCell<T>
 where
     T: Serialize,
 {
@@ -538,7 +538,7 @@ where
 }
 
 #[cfg(feature = "std")]
-impl<T> Serialize for Mutex<T>
+impl<T: ?Sized> Serialize for Mutex<T>
 where
     T: Serialize,
 {
@@ -554,7 +554,7 @@ where
 }
 
 #[cfg(feature = "std")]
-impl<T> Serialize for RwLock<T>
+impl<T: ?Sized> Serialize for RwLock<T>
 where
     T: Serialize,
 {
