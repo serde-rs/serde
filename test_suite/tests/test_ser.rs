@@ -13,7 +13,7 @@ use std::sync::atomic::{
     AtomicBool, AtomicI16, AtomicI32, AtomicI8, AtomicIsize, AtomicU16, AtomicU32, AtomicU8,
     AtomicUsize,
 };
-use std::sync::{Arc, Weak as ArcWeak};
+use std::sync::{Arc, Mutex, RwLock, Weak as ArcWeak};
 use std::time::{Duration, UNIX_EPOCH};
 
 #[cfg(unix)]
@@ -846,4 +846,40 @@ fn test_integer128() {
     assert_ser_tokens_error(&1i128, &[], "i128 is not supported");
 
     assert_ser_tokens_error(&1u128, &[], "u128 is not supported");
+}
+
+#[test]
+fn test_refcell_dst() {
+    assert_ser_tokens(
+        &RefCell::new([true]) as &RefCell<[bool]>,
+        &[
+            Token::Seq { len: Some(1) },
+            Token::Bool(true),
+            Token::SeqEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_mutex_dst() {
+    assert_ser_tokens(
+        &Mutex::new([true]) as &Mutex<[bool]>,
+        &[
+            Token::Seq { len: Some(1) },
+            Token::Bool(true),
+            Token::SeqEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_rwlock_dst() {
+    assert_ser_tokens(
+        &RwLock::new([true]) as &RwLock<[bool]>,
+        &[
+            Token::Seq { len: Some(1) },
+            Token::Bool(true),
+            Token::SeqEnd,
+        ],
+    );
 }
