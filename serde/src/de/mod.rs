@@ -862,10 +862,10 @@ where
 /// The `Deserializer` trait supports two entry point styles which enables
 /// different kinds of deserialization.
 ///
-/// 1. The `deserialize` method. Self-describing data formats like JSON are able
-///    to look at the serialized data and tell what it represents. For example
-///    the JSON deserializer may see an opening curly brace (`{`) and know that
-///    it is seeing a map. If the data format supports
+/// 1. The `deserialize_any` method. Self-describing data formats like JSON are
+///    able to look at the serialized data and tell what it represents. For
+///    example the JSON deserializer may see an opening curly brace (`{`) and
+///    know that it is seeing a map. If the data format supports
 ///    `Deserializer::deserialize_any`, it will drive the Visitor using whatever
 ///    type it sees in the input. JSON uses this approach when deserializing
 ///    `serde_json::Value` which is an enum that can represent any JSON
