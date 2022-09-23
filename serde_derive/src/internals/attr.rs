@@ -1128,13 +1128,15 @@ pub enum Default {
     Default,
     /// The default is given by this function.
     Path(syn::ExprPath),
+    /// The default is given by this string into.
+    Value(String),
 }
 
 impl Default {
     pub fn is_none(&self) -> bool {
         match self {
             Default::None => true,
-            Default::Default | Default::Path(_) => false,
+            Default::Default | Default::Path(_) | Default::Path(_) | Default::Value(_) => false,
         }
     }
 }
@@ -1216,6 +1218,13 @@ impl Field {
                 Meta(NameValue(m)) if m.path == DEFAULT => {
                     if let Ok(path) = parse_lit_into_expr_path(cx, DEFAULT, &m.lit) {
                         default.set(&m.path, Default::Path(path));
+                    }
+                }
+
+                // Parse `#[serde(default_value = "...")]`
+                Meta(NameValue(m)) if m.path == DEFAULT_VALUE => {
+                    if let Ok(s) = get_lit_str(cx, DEFAULT_VALUE, &m.lit) {
+                        default.set(&m.path, Default::Value(s.value()));
                     }
                 }
 

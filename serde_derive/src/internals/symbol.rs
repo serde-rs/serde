@@ -10,6 +10,7 @@ pub const BOUND: Symbol = Symbol("bound");
 pub const CONTENT: Symbol = Symbol("content");
 pub const CRATE: Symbol = Symbol("crate");
 pub const DEFAULT: Symbol = Symbol("default");
+pub const DEFAULT_VALUE: Symbol = Symbol("default_value");
 pub const DENY_UNKNOWN_FIELDS: Symbol = Symbol("deny_unknown_fields");
 pub const DESERIALIZE: Symbol = Symbol("deserialize");
 pub const DESERIALIZE_WITH: Symbol = Symbol("deserialize_with");
