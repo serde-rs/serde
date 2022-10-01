@@ -956,7 +956,7 @@ fn serialize_struct_variant(
             quote_block! {
                 let #let_mut __serde_state = try!(_serde::Serializer::serialize_struct(
                     __serializer,
-                    #type_name,
+                    #variant_name,
                     #len,
                 ));
                 #(#serialize_fields)*
