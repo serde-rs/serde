@@ -681,7 +681,7 @@ fn serialize_adjacently_tagged_variant(
                 };
             }
             Style::Tuple => serialize_tuple_variant(
-                TupleVariant::Untagged,
+                TupleVariant::AdjacentlyTagged,
                 params,
                 &variant.fields,
                 &variant_name,
@@ -810,6 +810,7 @@ enum TupleVariant {
         type_name: String,
         variant_index: u32,
     },
+    AdjacentlyTagged,
     Untagged,
 }
 
@@ -821,7 +822,8 @@ fn serialize_tuple_variant(
 ) -> Fragment {
     let tuple_trait = match context {
         TupleVariant::ExternallyTagged { .. } => TupleTrait::SerializeTupleVariant,
-        TupleVariant::Untagged => TupleTrait::SerializeTuple,
+        TupleVariant::AdjacentlyTagged => TupleTrait::SerializeTuple,
+        TupleVariant::Untagged => TupleTrait::SerializeTupleStruct,
     };
 
     let serialize_stmts = serialize_tuple_struct_visitor(fields, params, true, &tuple_trait);
@@ -860,13 +862,23 @@ fn serialize_tuple_variant(
                 _serde::ser::SerializeTupleVariant::end(__serde_state)
             }
         }
-        TupleVariant::Untagged => {
+        TupleVariant::AdjacentlyTagged => {
             quote_block! {
                 let #let_mut __serde_state = try!(_serde::Serializer::serialize_tuple(
                     __serializer,
                     #len));
                 #(#serialize_stmts)*
                 _serde::ser::SerializeTuple::end(__serde_state)
+            }
+        }
+        TupleVariant::Untagged => {
+            quote_block! {
+                let #let_mut __serde_state = try!(_serde::Serializer::serialize_tuple_struct(
+                    __serializer,
+                    #variant_name,
+                    #len));
+                #(#serialize_stmts)*
+                _serde::ser::SerializeTupleStruct::end(__serde_state)
             }
         }
     }
