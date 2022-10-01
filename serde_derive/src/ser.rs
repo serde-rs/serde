@@ -770,7 +770,7 @@ fn serialize_untagged_variant(
     match effective_style(variant) {
         Style::Unit => {
             quote_expr! {
-                _serde::Serializer::serialize_unit(__serializer)
+                _serde::Serializer::serialize_unit_struct(__serializer, #variant_name)
             }
         }
         Style::Newtype => {
