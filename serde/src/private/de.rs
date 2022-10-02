@@ -821,22 +821,6 @@ mod content {
         }
     }
 
-    impl<'de, T> DeserializeSeed<'de> for TaggedContentVisitor<'de, T>
-    where
-        T: Deserialize<'de>,
-    {
-        type Value = TaggedContent<'de, T>;
-
-        fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            // Internally tagged enums are only supported in self-describing
-            // formats.
-            deserializer.deserialize_any(self)
-        }
-    }
-
     impl<'de, T> Visitor<'de> for TaggedContentVisitor<'de, T>
     where
         T: Deserialize<'de>,
