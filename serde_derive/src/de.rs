@@ -1148,7 +1148,12 @@ fn deserialize_struct_in_place(
         quote!(mut __seq)
     };
     let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
-    let visit_map = Stmts(deserialize_map_in_place(field_struct_name(prefix), params, fields, cattrs));
+    let visit_map = Stmts(deserialize_map_in_place(
+        field_struct_name(prefix),
+        params,
+        fields,
+        cattrs,
+    ));
     let field_names = field_names_idents.iter().flat_map(|&(_, aliases)| aliases);
     let type_name = cattrs.name().deserialize_name();
 
@@ -1223,7 +1228,9 @@ fn deserialize_homogeneous_enum(
     cattrs: &attr::Container,
 ) -> Fragment {
     match cattrs.tag() {
-        attr::TagType::External => deserialize_externally_tagged_enum(prefix, params, variants, cattrs),
+        attr::TagType::External => {
+            deserialize_externally_tagged_enum(prefix, params, variants, cattrs)
+        }
         attr::TagType::Internal { tag } => {
             deserialize_internally_tagged_enum(prefix, params, variants, cattrs, tag)
         }
