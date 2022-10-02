@@ -1414,7 +1414,7 @@ fn deserialize_internally_tagged_enum(
         }
 
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
-            type Value = (__Field, _serde::__private::de::Content<#delife>);
+            type Value = #this_type #ty_generics;
 
             fn expecting(&self, __formatter: &mut _serde::__private::Formatter) -> _serde::__private::fmt::Result {
                 _serde::__private::Formatter::write_str(__formatter, #expecting)
@@ -1427,10 +1427,10 @@ fn deserialize_internally_tagged_enum(
                 match _serde::de::SeqAccess::next_element(&mut __seq)? {
                     _serde::__private::Some(__tag) => {
                         let __rest = _serde::de::value::SeqAccessDeserializer::new(__seq);
-                        _serde::__private::Ok((
-                            __tag,
-                            <_serde::__private::de::Content as _serde::Deserialize>::deserialize(__rest)?,
-                        ))
+                        let __content = <_serde::__private::de::Content as _serde::Deserialize>::deserialize(__rest)?;
+                        let __deserializer = _serde::__private::de::ContentDeserializer::<__S::Error>::new(__content);
+
+                        Self::visit(__tag, __deserializer)
                     },
                     _serde::__private::None => _serde::__private::Err(_serde::de::Error::missing_field(#tag)),
                 }
@@ -1449,24 +1449,32 @@ fn deserialize_internally_tagged_enum(
                 )? {
                     _serde::__private::Some(_serde::__private::de::TagOrContent::Tag) => {
                         let __tag = _serde::de::MapAccess::next_value(&mut __map)?;
-                        _serde::__private::de::drain_map(__map, #tag, _serde::__private::Some(__tag), __vec)
+                        let (__tag, __content) = _serde::__private::de::drain_map(
+                            __map, #tag, _serde::__private::Some(__tag), __vec
+                        )?;
+                        let __deserializer = _serde::__private::de::ContentDeserializer::<__M::Error>::new(__content);
+
+                        Self::visit(__tag, __deserializer)
                     },
                     _serde::__private::Some(_serde::__private::de::TagOrContent::Content(__key)) => {
                         let __val = _serde::de::MapAccess::next_value(&mut __map)?;
                         __vec.push((__key, __val));
-                        _serde::__private::de::drain_map(__map, #tag, _serde::__private::None, __vec)
+                        let (__tag, __content) = _serde::__private::de::drain_map(
+                            __map, #tag, _serde::__private::None, __vec
+                        )?;
+                        let __deserializer = _serde::__private::de::ContentDeserializer::<__M::Error>::new(__content);
+
+                        Self::visit(__tag, __deserializer)
                     },
                     _serde::__private::None => _serde::__private::Err(_serde::de::Error::missing_field(#tag)),
                 }
             }
         }
 
-        let (__tag, __content) = _serde::Deserializer::deserialize_map(__deserializer, __Visitor {
+        _serde::Deserializer::deserialize_map(__deserializer, __Visitor {
             marker: _serde::__private::PhantomData::<#this_type #ty_generics>,
             lifetime: _serde::__private::PhantomData,
-        })?;
-        let __deserializer = _serde::__private::de::ContentDeserializer::<__D::Error>::new(__content);
-        __Visitor::visit(__tag, __deserializer)
+        })
     }
 }
 

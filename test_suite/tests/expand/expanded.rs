@@ -1726,7 +1726,7 @@ mod expand {
                         T: _serde::Deserialize<'de>,
                         U: _serde::Deserialize<'de>,
                     {
-                        type Value = (__Field, _serde::__private::de::Content<'de>);
+                        type Value = InternallyTaggedEnum<T, U>;
                         fn expecting(
                             &self,
                             __formatter: &mut _serde::__private::Formatter,
@@ -1748,12 +1748,13 @@ mod expand {
                                     let __rest = _serde::de::value::SeqAccessDeserializer::new(
                                         __seq,
                                     );
-                                    _serde::__private::Ok((
-                                        __tag,
-                                        <_serde::__private::de::Content as _serde::Deserialize>::deserialize(
-                                            __rest,
-                                        )?,
-                                    ))
+                                    let __content = <_serde::__private::de::Content as _serde::Deserialize>::deserialize(
+                                        __rest,
+                                    )?;
+                                    let __deserializer = _serde::__private::de::ContentDeserializer::<
+                                        __S::Error,
+                                    >::new(__content);
+                                    Self::visit(__tag, __deserializer)
                                 }
                                 _serde::__private::None => {
                                     _serde::__private::Err(
@@ -1780,24 +1781,32 @@ mod expand {
                                     _serde::__private::de::TagOrContent::Tag,
                                 ) => {
                                     let __tag = _serde::de::MapAccess::next_value(&mut __map)?;
-                                    _serde::__private::de::drain_map(
+                                    let (__tag, __content) = _serde::__private::de::drain_map(
                                         __map,
                                         "tag",
                                         _serde::__private::Some(__tag),
                                         __vec,
-                                    )
+                                    )?;
+                                    let __deserializer = _serde::__private::de::ContentDeserializer::<
+                                        __M::Error,
+                                    >::new(__content);
+                                    Self::visit(__tag, __deserializer)
                                 }
                                 _serde::__private::Some(
                                     _serde::__private::de::TagOrContent::Content(__key),
                                 ) => {
                                     let __val = _serde::de::MapAccess::next_value(&mut __map)?;
                                     __vec.push((__key, __val));
-                                    _serde::__private::de::drain_map(
+                                    let (__tag, __content) = _serde::__private::de::drain_map(
                                         __map,
                                         "tag",
                                         _serde::__private::None,
                                         __vec,
-                                    )
+                                    )?;
+                                    let __deserializer = _serde::__private::de::ContentDeserializer::<
+                                        __M::Error,
+                                    >::new(__content);
+                                    Self::visit(__tag, __deserializer)
                                 }
                                 _serde::__private::None => {
                                     _serde::__private::Err(
@@ -1807,7 +1816,7 @@ mod expand {
                             }
                         }
                     }
-                    let (__tag, __content) = _serde::Deserializer::deserialize_any(
+                    _serde::Deserializer::deserialize_any(
                         __deserializer,
                         __Visitor {
                             marker: _serde::__private::PhantomData::<
@@ -1815,11 +1824,7 @@ mod expand {
                             >,
                             lifetime: _serde::__private::PhantomData,
                         },
-                    )?;
-                    let __deserializer = _serde::__private::de::ContentDeserializer::<
-                        __D::Error,
-                    >::new(__content);
-                    __Visitor::visit(__tag, __deserializer)
+                    )
                 }
             }
         };
