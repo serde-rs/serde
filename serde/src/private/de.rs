@@ -852,10 +852,7 @@ mod content {
                     return Err(de::Error::missing_field(self.tag_name));
                 }
             };
-            let rest = de::value::SeqAccessDeserializer::new(seq);
-            let content = tri!(ContentVisitor::new().deserialize(rest));
-
-            tag.deserialize(ContentDeserializer::<S::Error>::new(content))
+            tag.deserialize(de::value::SeqAccessDeserializer::new(seq))
         }
 
         fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
