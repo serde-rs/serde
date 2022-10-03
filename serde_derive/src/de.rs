@@ -1402,6 +1402,17 @@ fn deserialize_internally_tagged_enum(
             lifetime: _serde::__private::PhantomData<&#delife ()>,
         }
 
+        impl #de_impl_generics __Visitor #de_ty_generics #where_clause {
+            fn visit<__D>(__tag: __Field, __deserializer: __D) -> _serde::__private::Result<#this_type #ty_generics, __D::Error>
+            where
+                __D: _serde::de::Deserializer<#delife>,
+            {
+                match __tag {
+                    #(#variant_arms)*
+                }
+            }
+        }
+
         impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
             type Value = (__Field, _serde::__private::de::Content<#delife>);
 
@@ -1455,17 +1466,6 @@ fn deserialize_internally_tagged_enum(
             lifetime: _serde::__private::PhantomData,
         })?;
         let __deserializer = _serde::__private::de::ContentDeserializer::<__D::Error>::new(__content);
-
-        impl #de_impl_generics __Visitor #de_ty_generics #where_clause {
-            fn visit<__D>(__tag: __Field, __deserializer: __D) -> _serde::__private::Result<#this_type #ty_generics, __D::Error>
-            where
-                __D: _serde::de::Deserializer<#delife>,
-            {
-                match __tag {
-                    #(#variant_arms)*
-                }
-            }
-        }
         __Visitor::visit(__tag, __deserializer)
     }
 }
