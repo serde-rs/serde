@@ -1426,11 +1426,7 @@ fn deserialize_internally_tagged_enum(
             {
                 match _serde::de::SeqAccess::next_element(&mut __seq)? {
                     _serde::__private::Some(__tag) => {
-                        let __rest = _serde::de::value::SeqAccessDeserializer::new(__seq);
-                        let __content = <_serde::__private::de::Content as _serde::Deserialize>::deserialize(__rest)?;
-                        let __deserializer = _serde::__private::de::ContentDeserializer::<__S::Error>::new(__content);
-
-                        Self::visit(__tag, __deserializer)
+                        Self::visit(__tag, _serde::de::value::SeqAccessDeserializer::new(__seq))
                     },
                     _serde::__private::None => _serde::__private::Err(_serde::de::Error::missing_field(#tag)),
                 }
