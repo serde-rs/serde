@@ -1387,15 +1387,23 @@ fn deserialize_internally_tagged_enum(
     let expecting = format!("internally tagged enum {}", params.type_name());
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
+    let this_type = &params.this_type;
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
+        split_with_de_lifetime(params);
+    let delife = params.borrowed.de_lifetime();
+
     quote_block! {
         #variant_visitor
 
         #variants_stmt
 
-        struct __Visitor;
+        struct __Visitor #de_impl_generics #where_clause {
+            marker: _serde::__private::PhantomData<#this_type #ty_generics>,
+            lifetime: _serde::__private::PhantomData<&#delife ()>,
+        }
 
-        impl<'de> _serde::de::Visitor<'de> for __Visitor {
-            type Value = (__Field, _serde::__private::de::Content<'de>);
+        impl #de_impl_generics _serde::de::Visitor<#delife> for __Visitor #de_ty_generics #where_clause {
+            type Value = (__Field, _serde::__private::de::Content<#delife>);
 
             fn expecting(&self, __formatter: &mut _serde::__private::Formatter) -> _serde::__private::fmt::Result {
                 _serde::__private::Formatter::write_str(__formatter, #expecting)
@@ -1403,7 +1411,7 @@ fn deserialize_internally_tagged_enum(
 
             fn visit_seq<__S>(self, mut __seq: __S) -> _serde::__private::Result<Self::Value, __S::Error>
             where
-                __S: _serde::de::SeqAccess<'de>,
+                __S: _serde::de::SeqAccess<#delife>,
             {
                 match _serde::de::SeqAccess::next_element(&mut __seq)? {
                     _serde::__private::Some(__tag) => {
@@ -1419,7 +1427,7 @@ fn deserialize_internally_tagged_enum(
 
             fn visit_map<__M>(self, mut __map: __M) -> _serde::__private::Result<Self::Value, __M::Error>
             where
-                __M: _serde::de::MapAccess<'de>,
+                __M: _serde::de::MapAccess<#delife>,
             {
                 let mut __vec = _serde::__private::Vec::with_capacity(
                     _serde::de::MapAccess::size_hint(&__map).unwrap_or(0)
@@ -1442,12 +1450,23 @@ fn deserialize_internally_tagged_enum(
             }
         }
 
-        let (__tag, __content) = _serde::Deserializer::deserialize_map(__deserializer, __Visitor)?;
+        let (__tag, __content) = _serde::Deserializer::deserialize_map(__deserializer, __Visitor {
+            marker: _serde::__private::PhantomData::<#this_type #ty_generics>,
+            lifetime: _serde::__private::PhantomData,
+        })?;
         let __deserializer = _serde::__private::de::ContentDeserializer::<__D::Error>::new(__content);
 
-        match __tag {
-            #(#variant_arms)*
+        impl #de_impl_generics __Visitor #de_ty_generics #where_clause {
+            fn visit<__D>(__tag: __Field, __deserializer: __D) -> _serde::__private::Result<#this_type #ty_generics, __D::Error>
+            where
+                __D: _serde::de::Deserializer<#delife>,
+            {
+                match __tag {
+                    #(#variant_arms)*
+                }
+            }
         }
+        __Visitor::visit(__tag, __deserializer)
     }
 }
 
