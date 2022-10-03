@@ -1439,22 +1439,21 @@ fn deserialize_internally_tagged_enum(
             _ => None,
         }
     });
-    let variant_arms = variants
-        .map(|(i, variant)| {
-            let variant_name = field_i(i);
+    let variant_arms = variants.map(|(i, variant)| {
+        let variant_name = field_i(i);
 
-            let block = Match(deserialize_internally_tagged_variant(
-                &format!("Variant{}", i),
-                params,
-                variant,
-                cattrs,
-                quote!(__deserializer),
-            ));
+        let block = Match(deserialize_internally_tagged_variant(
+            &format!("Variant{}", i),
+            params,
+            variant,
+            cattrs,
+            quote!(__deserializer),
+        ));
 
-            quote! {
-                #field_struct_name::#variant_name => #block
-            }
-        });
+        quote! {
+            #field_struct_name::#variant_name => #block
+        }
+    });
 
     let expecting = format!("internally tagged enum {}", params.type_name());
     let expecting = cattrs.expecting().unwrap_or(&expecting);
