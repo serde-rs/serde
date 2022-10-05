@@ -448,8 +448,6 @@ fn deserialize_tuple(
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
 
-    assert!(!cattrs.has_flatten());
-
     // If there are getters (implying private fields), construct the local type
     // and use an `Into` conversion to get the remote type. If there are no
     // getters then construct the target type directly.

@@ -2409,6 +2409,56 @@ fn test_flatten_untagged_enum() {
     );
 }
 
+/// Regression test for https://github.com/serde-rs/serde/issues/1904
+#[test]
+fn test_enum_tuple_and_struct_with_flatten() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    enum Outer {
+        Tuple(f64, i32),
+        Flatten {
+            #[serde(flatten)]
+            nested: Nested,
+        },
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct Nested {
+        a: i32,
+        b: i32,
+    }
+
+    assert_tokens(
+        &Outer::Tuple(1.2, 3),
+        &[
+            Token::TupleVariant {
+                name: "Outer",
+                variant: "Tuple",
+                len: 2,
+            },
+            Token::F64(1.2),
+            Token::I32(3),
+            Token::TupleVariantEnd,
+        ],
+    );
+    assert_tokens(
+        &Outer::Flatten {
+            nested: Nested { a: 1, b: 2 },
+        },
+        &[
+            Token::NewtypeVariant {
+                name: "Outer",
+                variant: "Flatten",
+            },
+            Token::Map { len: None },
+            Token::Str("a"),
+            Token::I32(1),
+            Token::Str("b"),
+            Token::I32(2),
+            Token::MapEnd,
+        ],
+    );
+}
+
 #[test]
 fn test_flatten_option() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]

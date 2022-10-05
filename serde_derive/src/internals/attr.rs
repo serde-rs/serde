@@ -220,6 +220,22 @@ pub struct Container {
     type_into: Option<syn::Type>,
     remote: Option<syn::Path>,
     identifier: Identifier,
+    /// `true` if container is a `struct` and it has a field with `#[serde(flatten)]`
+    /// attribute or it is an `enum` with a struct variant which has a field with
+    /// `#[serde(flatten)]` attribute. Examples:
+    ///
+    /// ```ignore
+    /// struct Container {
+    ///     #[serde(flatten)]
+    ///     some_field: (),
+    /// }
+    /// enum Container {
+    ///     Variant {
+    ///         #[serde(flatten)]
+    ///         some_field: (),
+    ///     },
+    /// }
+    /// ```
     has_flatten: bool,
     serde_path: Option<syn::Path>,
     is_packed: bool,
