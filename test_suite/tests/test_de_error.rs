@@ -1243,8 +1243,8 @@ fn test_duplicate_field_enum() {
 #[test]
 fn test_enum_out_of_range() {
     assert_de_tokens_error::<Enum>(
-        &[Token::Enum { name: "Enum" }, Token::U32(5), Token::Unit],
-        "invalid value: integer `5`, expected variant index 0 <= i < 5",
+        &[Token::Enum { name: "Enum" }, Token::U32(6), Token::Unit],
+        "invalid value: integer `6`, expected variant index 1 <= i < 6",
     );
 }
 

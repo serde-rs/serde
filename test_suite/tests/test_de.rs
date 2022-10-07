@@ -1637,7 +1637,7 @@ fn test_enum_map() {
 fn test_enum_unit_usize() {
     test(
         Enum::Unit,
-        &[Token::Enum { name: "Enum" }, Token::U32(0), Token::Unit],
+        &[Token::Enum { name: "Enum" }, Token::U32(1), Token::Unit],
     );
 }
 
