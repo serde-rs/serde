@@ -5,6 +5,7 @@
     clippy::empty_enum,
     clippy::manual_assert,
     clippy::needless_pass_by_value,
+    clippy::uninlined_format_args,
     clippy::unreadable_literal
 )]
 #![cfg_attr(feature = "unstable", feature(never_type))]
