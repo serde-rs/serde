@@ -79,7 +79,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.13.0
       - name: Get timestamp for cache
         id: date
-        run: echo ::set-output name=yearmo::$(date +%Y%m)
+        run: echo yearmo=$(date +%Y%m) >> $GITHUB_OUTPUT
       - uses: actions/cache@v1
         with:
           path: ~/.cargo/registry/index
