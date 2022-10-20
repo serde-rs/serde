@@ -2303,6 +2303,34 @@ fn test_internally_tagged_enum_containing_flatten() {
 }
 
 #[test]
+fn test_internally_tagged_enum_new_type_with_unit() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(tag = "t")]
+    enum Data {
+        A(()),
+    }
+
+    assert_tokens(
+        &Data::A(()),
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("t"),
+            Token::Str("A"),
+            Token::MapEnd,
+        ],
+    );
+    assert_ser_tokens(
+        &Data::A(()),
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("t"),
+            Token::Str("A"),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_adjacently_tagged_enum_containing_flatten() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     #[serde(tag = "t", content = "c")]
