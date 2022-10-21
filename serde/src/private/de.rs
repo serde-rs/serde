@@ -1272,7 +1272,6 @@ mod content {
                 //
                 // We want {"result": "Success"} to deserialize into `Response<T>`.
                 Content::Map(ref v) if v.is_empty() => visitor.visit_unit(),
-                Content::Seq(ref v) if v.is_empty() => visitor.visit_unit(),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
