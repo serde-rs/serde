@@ -2319,15 +2319,6 @@ fn test_internally_tagged_enum_new_type_with_unit() {
             Token::MapEnd,
         ],
     );
-    assert_ser_tokens(
-        &Data::A(()),
-        &[
-            Token::Map { len: Some(1) },
-            Token::Str("t"),
-            Token::Str("A"),
-            Token::MapEnd,
-        ],
-    );
 }
 
 #[test]
