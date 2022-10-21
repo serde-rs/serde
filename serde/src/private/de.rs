@@ -1262,6 +1262,16 @@ mod content {
         {
             match self.content {
                 Content::Unit => visitor.visit_unit(),
+
+                // As a special case, allow deserializing newtype variant containing unit. E.G:
+                // #[derive(Deserialize)]
+                // #[serde(tag = "result")]
+                // enum Response<T> {
+                //     Success(T),
+                // }
+                //
+                // We want {"result": "Success"} to deserialize into `Response<T>`.
+                Content::Map(ref v) if v.is_empty() => visitor.visit_unit(),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
