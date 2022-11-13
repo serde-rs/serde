@@ -755,8 +755,6 @@ fn test_internally_tagged_enum() {
             Token::Seq { len: Some(2) },
             Token::Str("C"),
             Token::Map { len: Some(0) },
-            Token::MapEnd,
-            Token::SeqEnd,
         ],
         "invalid type: sequence, expected a map",
     );
@@ -783,6 +781,33 @@ fn test_internally_tagged_enum() {
             Token::Str("f"),
             Token::U8(6),
             Token::StructEnd,
+        ],
+    );
+
+    // General case: tag field ("type") is not first
+    assert_de_tokens(
+        &InternallyTagged::E(Struct { f: 6 }),
+        &[
+            Token::Struct {
+                name: "Struct",
+                len: 2,
+            },
+            Token::Str("f"),
+            Token::U8(6),
+            Token::Str("type"),
+            Token::Str("E"),
+            Token::StructEnd,
+        ],
+    );
+    assert_de_tokens(
+        &InternallyTagged::E(Struct { f: 6 }),
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("f"),
+            Token::U8(6),
+            Token::Str("type"),
+            Token::Str("E"),
+            Token::MapEnd,
         ],
     );
 
@@ -985,6 +1010,7 @@ fn test_internally_tagged_struct_variant_containing_unit_variant() {
         Log { level: Level },
     }
 
+    // Special case: tag field ("action") is the first field
     assert_de_tokens(
         &Message::Log { level: Level::Info },
         &[
@@ -999,7 +1025,23 @@ fn test_internally_tagged_struct_variant_containing_unit_variant() {
             Token::StructEnd,
         ],
     );
+    // General case: tag field ("action") is not the first field
+    assert_de_tokens(
+        &Message::Log { level: Level::Info },
+        &[
+            Token::Struct {
+                name: "Message",
+                len: 2,
+            },
+            Token::Str("level"),
+            Token::BorrowedStr("Info"),
+            Token::Str("action"),
+            Token::Str("Log"),
+            Token::StructEnd,
+        ],
+    );
 
+    // Special case: tag field ("action") is the first field
     assert_de_tokens(
         &Message::Log { level: Level::Info },
         &[
@@ -1008,6 +1050,18 @@ fn test_internally_tagged_struct_variant_containing_unit_variant() {
             Token::Str("Log"),
             Token::Str("level"),
             Token::BorrowedStr("Info"),
+            Token::MapEnd,
+        ],
+    );
+    // General case: tag field ("action") is not the first field
+    assert_de_tokens(
+        &Message::Log { level: Level::Info },
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("level"),
+            Token::BorrowedStr("Info"),
+            Token::Str("action"),
+            Token::Str("Log"),
             Token::MapEnd,
         ],
     );

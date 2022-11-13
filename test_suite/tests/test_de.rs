@@ -881,6 +881,20 @@ fn test_unit() {
 fn test_unit_struct() {
     test(UnitStruct, &[Token::Unit]);
     test(UnitStruct, &[Token::UnitStruct { name: "UnitStruct" }]);
+    test(UnitStruct, &[Token::Seq { len: Some(0) }, Token::SeqEnd]);
+    test(UnitStruct, &[Token::Seq { len: None }, Token::SeqEnd]);
+    test(UnitStruct, &[Token::Map { len: Some(0) }, Token::MapEnd]);
+    test(UnitStruct, &[Token::Map { len: None }, Token::MapEnd]);
+    test(
+        UnitStruct,
+        &[
+            Token::Struct {
+                name: "ZeroStruct",
+                len: 0,
+            },
+            Token::StructEnd,
+        ],
+    );
 }
 
 #[test]
@@ -1568,6 +1582,19 @@ fn test_enum_unit() {
             variant: "Unit",
         }],
     );
+
+    test(Enum::Unit, &[Token::Str("Unit")]);
+    test(Enum::Unit, &[Token::BorrowedStr("Unit")]);
+    test(Enum::Unit, &[Token::String("Unit")]);
+
+    test(Enum::Unit, &[Token::Bytes(b"Unit")]);
+    test(Enum::Unit, &[Token::BorrowedBytes(b"Unit")]);
+    test(Enum::Unit, &[Token::ByteBuf(b"Unit")]);
+
+    test(Enum::Unit, &[Token::U8(0)]);
+    test(Enum::Unit, &[Token::U16(0)]);
+    test(Enum::Unit, &[Token::U32(0)]);
+    test(Enum::Unit, &[Token::U64(0)]);
 }
 
 #[test]

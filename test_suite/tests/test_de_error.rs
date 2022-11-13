@@ -1439,14 +1439,6 @@ fn test_integer_from_float() {
 }
 
 #[test]
-fn test_unit_struct_from_seq() {
-    assert_de_tokens_error::<UnitStruct>(
-        &[Token::Seq { len: Some(0) }, Token::SeqEnd],
-        "invalid type: sequence, expected unit struct UnitStruct",
-    );
-}
-
-#[test]
 fn test_wrapping_overflow() {
     assert_de_tokens_error::<Wrapping<u16>>(
         &[Token::U32(65_536)],

@@ -8,9 +8,9 @@ use de::{DeserializeSeed, MapAccess, Unexpected};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{
-    Content, ContentDeserializer, ContentRefDeserializer, EnumDeserializer,
-    InternallyTaggedUnitVisitor, TagContentOtherField, TagContentOtherFieldVisitor,
-    TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
+    drain_map, Content, ContentDeserializer, ContentRefDeserializer, EnumDeserializer,
+    InternallyTaggedUnitVisitor, TagContentOtherField, TagContentOtherFieldVisitor, TagOrContent,
+    TagOrContentField, TagOrContentFieldVisitor, TagOrContentVisitor, UntaggedUnitVisitor,
 };
 
 pub use seed::InPlaceSeed;
@@ -211,6 +211,55 @@ mod content {
         self, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected, IgnoredAny,
         MapAccess, SeqAccess, Unexpected, Visitor,
     };
+
+    /// Creates `ContentDeserializer` by consuming map.
+    ///
+    /// Used by derived code for deserialisation of the internally tagged enums.
+    /// Returns tag and constructed deserializer for fetching other enum fields.
+    ///
+    /// # Parameters
+    /// - `map`: map that will be drained
+    /// - `tag_name`: name of tag in the `#[serde(tag = "tag_name")]` attribute
+    /// - `first_key`: the first key already fetched from the map
+    ///
+    /// # Returns
+    /// A tuple with two values:
+    /// - value of the tag
+    /// - a deserializer with the rest content
+    ///
+    /// # Errors
+    /// - If deserialization of some value failed
+    /// - If map doesn't contain tag with `tag_name`
+    pub fn drain_map<'de, T, A>(
+        mut map: A,
+        tag_name: &'static str,
+        first_key: Content<'de>,
+    ) -> Result<(T, ContentDeserializer<'de, A::Error>), A::Error>
+    where
+        T: Deserialize<'de>,
+        A: MapAccess<'de>,
+    {
+        let mut tag = None;
+        let mut vec = Vec::with_capacity(size_hint::cautious(map.size_hint()));
+
+        vec.push((first_key, try!(map.next_value())));
+        while let Some(key) = try!(map.next_key_seed(TagOrContentVisitor::new(tag_name))) {
+            match key {
+                TagOrContent::Tag => {
+                    if tag.is_some() {
+                        return Err(de::Error::duplicate_field(tag_name));
+                    }
+                    tag = Some(try!(map.next_value()));
+                }
+                TagOrContent::Content(key) => vec.push((key, try!(map.next_value()))),
+            }
+        }
+
+        match tag {
+            None => Err(de::Error::missing_field(tag_name)),
+            Some(tag) => Ok((tag, ContentDeserializer::new(Content::Map(vec)))),
+        }
+    }
 
     /// Used from generated code to buffer the contents of the Deserializer when
     /// deserializing untagged enums and internally tagged enums.
@@ -510,13 +559,13 @@ mod content {
         Content(Content<'de>),
     }
 
-    struct TagOrContentVisitor<'de> {
+    pub struct TagOrContentVisitor<'de> {
         name: &'static str,
         value: PhantomData<TagOrContent<'de>>,
     }
 
     impl<'de> TagOrContentVisitor<'de> {
-        fn new(name: &'static str) -> Self {
+        pub fn new(name: &'static str) -> Self {
             TagOrContentVisitor {
                 name: name,
                 value: PhantomData,
@@ -791,106 +840,6 @@ mod content {
             ContentVisitor::new()
                 .visit_enum(visitor)
                 .map(TagOrContent::Content)
-        }
-    }
-
-    /// Used by generated code to deserialize an internally tagged enum.
-    ///
-    /// Not public API.
-    pub struct TaggedContent<'de, T> {
-        pub tag: T,
-        pub content: Content<'de>,
-    }
-
-    /// Not public API.
-    pub struct TaggedContentVisitor<'de, T> {
-        tag_name: &'static str,
-        expecting: &'static str,
-        value: PhantomData<TaggedContent<'de, T>>,
-    }
-
-    impl<'de, T> TaggedContentVisitor<'de, T> {
-        /// Visitor for the content of an internally tagged enum with the given
-        /// tag name.
-        pub fn new(name: &'static str, expecting: &'static str) -> Self {
-            TaggedContentVisitor {
-                tag_name: name,
-                expecting: expecting,
-                value: PhantomData,
-            }
-        }
-    }
-
-    impl<'de, T> DeserializeSeed<'de> for TaggedContentVisitor<'de, T>
-    where
-        T: Deserialize<'de>,
-    {
-        type Value = TaggedContent<'de, T>;
-
-        fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            // Internally tagged enums are only supported in self-describing
-            // formats.
-            deserializer.deserialize_any(self)
-        }
-    }
-
-    impl<'de, T> Visitor<'de> for TaggedContentVisitor<'de, T>
-    where
-        T: Deserialize<'de>,
-    {
-        type Value = TaggedContent<'de, T>;
-
-        fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-            fmt.write_str(self.expecting)
-        }
-
-        fn visit_seq<S>(self, mut seq: S) -> Result<Self::Value, S::Error>
-        where
-            S: SeqAccess<'de>,
-        {
-            let tag = match try!(seq.next_element()) {
-                Some(tag) => tag,
-                None => {
-                    return Err(de::Error::missing_field(self.tag_name));
-                }
-            };
-            let rest = de::value::SeqAccessDeserializer::new(seq);
-            Ok(TaggedContent {
-                tag: tag,
-                content: try!(Content::deserialize(rest)),
-            })
-        }
-
-        fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
-        where
-            M: MapAccess<'de>,
-        {
-            let mut tag = None;
-            let mut vec = Vec::with_capacity(size_hint::cautious(map.size_hint()));
-            while let Some(k) = try!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
-                match k {
-                    TagOrContent::Tag => {
-                        if tag.is_some() {
-                            return Err(de::Error::duplicate_field(self.tag_name));
-                        }
-                        tag = Some(try!(map.next_value()));
-                    }
-                    TagOrContent::Content(k) => {
-                        let v = try!(map.next_value());
-                        vec.push((k, v));
-                    }
-                }
-            }
-            match tag {
-                None => Err(de::Error::missing_field(self.tag_name)),
-                Some(tag) => Ok(TaggedContent {
-                    tag: tag,
-                    content: Content::Map(vec),
-                }),
-            }
         }
     }
 

@@ -6,15 +6,22 @@ use serde::{Deserialize, Deserializer};
 use serde_test::{assert_de_tokens, Token};
 use std::fmt;
 
+#[derive(Deserialize, Debug, PartialEq)]
+enum E {
+    A,
+    B,
+}
+
 #[test]
 fn test_u32_to_enum() {
-    #[derive(Deserialize, Debug, PartialEq)]
-    enum E {
-        A,
-        B,
-    }
-
     let deserializer = IntoDeserializer::<value::Error>::into_deserializer(1u32);
+    let e: E = E::deserialize(deserializer).unwrap();
+    assert_eq!(E::B, e);
+}
+
+#[test]
+fn test_str_to_enum() {
+    let deserializer = IntoDeserializer::<value::Error>::into_deserializer("B");
     let e: E = E::deserialize(deserializer).unwrap();
     assert_eq!(E::B, e);
 }
