@@ -866,8 +866,8 @@ enum StructVariant<'a> {
     Untagged,
 }
 
-fn serialize_struct_variant<'a>(
-    context: StructVariant<'a>,
+fn serialize_struct_variant(
+    context: StructVariant,
     params: &Parameters,
     fields: &[Field],
     name: &str,
@@ -950,8 +950,8 @@ fn serialize_struct_variant<'a>(
     }
 }
 
-fn serialize_struct_variant_with_flatten<'a>(
-    context: StructVariant<'a>,
+fn serialize_struct_variant_with_flatten(
+    context: StructVariant,
     params: &Parameters,
     fields: &[Field],
     name: &str,
