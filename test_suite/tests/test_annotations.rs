@@ -1244,22 +1244,17 @@ where
 {
     let s = String::deserialize(deserializer)?;
     let mut pieces = s.split(';');
-    let f1 = match pieces.next() {
-        Some(x) => x,
-        None => return Err(de::Error::invalid_length(0, &"2")),
+    let Some(f1) = pieces.next() else {
+        return Err(de::Error::invalid_length(0, &"2"));
     };
-    let f2 = match pieces.next() {
-        Some(x) => x,
-        None => return Err(de::Error::invalid_length(1, &"2")),
+    let Some(f2) = pieces.next() else {
+        return Err(de::Error::invalid_length(1, &"2"));
     };
-    let f2 = match f2.parse() {
-        Ok(n) => n,
-        Err(_) => {
-            return Err(de::Error::invalid_value(
-                Unexpected::Str(f2),
-                &"an 8-bit signed integer",
-            ));
-        }
+    let Ok(f2) = f2.parse() else {
+        return Err(de::Error::invalid_value(
+            Unexpected::Str(f2),
+            &"an 8-bit signed integer",
+        ));
     };
     Ok((f1.into(), f2))
 }
