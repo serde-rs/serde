@@ -525,7 +525,7 @@ mod content {
                 Content::Map(ref entries) => {
                     use ser::SerializeMap;
                     let mut map = try!(serializer.serialize_map(Some(entries.len())));
-                    for &(ref k, ref v) in entries {
+                    for (k, v) in entries {
                         try!(map.serialize_entry(k, v));
                     }
                     map.end()
