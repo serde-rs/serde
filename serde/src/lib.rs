@@ -118,7 +118,6 @@
         derive_partial_eq_without_eq,
         enum_glob_use,
         explicit_auto_deref,
-        let_underscore_drop,
         map_err_ignore,
         new_without_default,
         result_unit_err,

@@ -22,7 +22,6 @@
     clippy::doc_markdown,
     clippy::enum_glob_use,
     clippy::items_after_statements,
-    clippy::let_underscore_drop,
     clippy::manual_assert,
     clippy::match_same_arms,
     // clippy bug: https://github.com/rust-lang/rust-clippy/issues/6984

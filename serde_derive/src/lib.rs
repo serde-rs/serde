@@ -43,7 +43,6 @@
     clippy::enum_glob_use,
     clippy::indexing_slicing,
     clippy::items_after_statements,
-    clippy::let_underscore_drop,
     clippy::manual_assert,
     clippy::map_err_ignore,
     clippy::match_same_arms,
