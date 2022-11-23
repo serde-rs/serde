@@ -1,3 +1,4 @@
+use serde::de::DeserializeSeed;
 use serde::{Deserialize, Serialize};
 
 use de::Deserializer;
@@ -213,6 +214,45 @@ where
         Ok(_) => panic!("tokens deserialized successfully"),
         Err(e) => assert_eq!(e, *error),
     }
+
+    // There may be one token left if a peek caused the error
+    de.next_token_opt();
+
+    if de.remaining() > 0 {
+        panic!("{} remaining tokens", de.remaining());
+    }
+}
+
+/// Same as [`assert_de_tokens`], but for [`DeserializeSeed`].
+#[cfg_attr(not(no_track_caller), track_caller)]
+pub fn assert_de_seed_tokens<'de, T, D>(value: &T, tokens: &'de [Token], seed: D)
+where
+    T: PartialEq + Debug,
+    D: DeserializeSeed<'de, Value = T>,
+{
+    let mut de = Deserializer::new(tokens);
+    match seed.deserialize(&mut de) {
+        Ok(v) => assert_eq!(v, *value),
+        Err(e) => panic!("tokens failed to deserialize: {}", e),
+    };
+
+    if de.remaining() > 0 {
+        panic!("{} remaining tokens", de.remaining());
+    }
+}
+
+/// Same as [`assert_de_tokens_error`], but for [`DeserializeSeed`].
+#[cfg_attr(not(no_track_caller), track_caller)]
+pub fn assert_de_seed_tokens_error<'de, T, D>(tokens: &'de [Token], seed: D, error: &str)
+where
+    T: PartialEq + Debug,
+    D: DeserializeSeed<'de, Value = T>,
+{
+    let mut de = Deserializer::new(tokens);
+    match seed.deserialize(&mut de) {
+        Ok(_) => panic!("tokens deserialized successfully"),
+        Err(e) => assert_eq!(e, *error),
+    };
 
     // There may be one token left if a peek caused the error
     de.next_token_opt();
