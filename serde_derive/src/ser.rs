@@ -296,7 +296,7 @@ fn serialize_tuple_struct(
 fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Container) -> Fragment {
     assert!(fields.len() as u64 <= u64::from(u32::max_value()));
 
-    if cattrs.has_flatten() {
+    if cattrs.struct_as_map() {
         serialize_struct_as_map(params, fields, cattrs)
     } else {
         serialize_struct_as_struct(params, fields, cattrs)
@@ -500,8 +500,14 @@ fn serialize_externally_tagged_variant(
     variant_index: u32,
     cattrs: &attr::Container,
 ) -> Fragment {
-    let type_name = cattrs.name().serialize_name();
-    let variant_name = variant.attrs.name().serialize_name();
+    let type_name = cattrs.name().serialize_name().as_str().unwrap().to_string();
+    let variant_name = variant
+        .attrs
+        .name()
+        .serialize_name()
+        .as_str()
+        .unwrap()
+        .to_string();
 
     if let Some(path) = variant.attrs.serialize_with() {
         let ser = wrap_serialize_variant_with(params, path, variant);
@@ -573,8 +579,14 @@ fn serialize_internally_tagged_variant(
     cattrs: &attr::Container,
     tag: &str,
 ) -> Fragment {
-    let type_name = cattrs.name().serialize_name();
-    let variant_name = variant.attrs.name().serialize_name();
+    let type_name = cattrs.name().serialize_name().as_str().unwrap().to_string();
+    let variant_name = variant
+        .attrs
+        .name()
+        .serialize_name()
+        .as_str()
+        .unwrap()
+        .to_string();
 
     let enum_ident_str = params.type_name();
     let variant_ident_str = variant.ident.to_string();
@@ -641,8 +653,14 @@ fn serialize_adjacently_tagged_variant(
     content: &str,
 ) -> Fragment {
     let this = &params.this;
-    let type_name = cattrs.name().serialize_name();
-    let variant_name = variant.attrs.name().serialize_name();
+    let type_name = cattrs.name().serialize_name().as_str().unwrap().to_string();
+    let variant_name = variant
+        .attrs
+        .name()
+        .serialize_name()
+        .as_str()
+        .unwrap()
+        .to_string();
 
     let inner = Stmts(if let Some(path) = variant.attrs.serialize_with() {
         let ser = wrap_serialize_variant_with(params, path, variant);
@@ -780,7 +798,7 @@ fn serialize_untagged_variant(
         }
         Style::Tuple => serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields),
         Style::Struct => {
-            let type_name = cattrs.name().serialize_name();
+            let type_name = cattrs.name().serialize_name().as_str().unwrap().to_string();
             serialize_struct_variant(StructVariant::Untagged, params, &variant.fields, &type_name)
         }
     }
@@ -1122,7 +1140,7 @@ fn serialize_struct_visitor(
             } else {
                 let func = struct_trait.serialize_field(span);
                 quote! {
-                    try!(#func(&mut __serde_state, #key_expr, #field_expr));
+                    try!(#func(&mut __serde_state, &#key_expr, #field_expr));
                 }
             };
 

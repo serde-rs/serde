@@ -1,5 +1,17 @@
-error: expected serde rename attribute to be a string: `rename = "..."`
+error: failed to parse integer serde rename attribute: `rename = 100i128`
  --> tests/ui/expected-string/integer.rs:5:22
   |
-5 |     #[serde(rename = 100)]
-  |                      ^^^
+5 |     #[serde(rename = 100i128)]
+  |                      ^^^^^^^
+
+error: failed to parse integer serde rename attribute: `rename = 101u128`
+ --> tests/ui/expected-string/integer.rs:7:22
+  |
+7 |     #[serde(rename = 101u128)]
+  |                      ^^^^^^^
+
+error: failed to parse integer serde rename attribute: `rename = 500u8`
+ --> tests/ui/expected-string/integer.rs:9:22
+  |
+9 |     #[serde(rename = 500u8)]
+  |                      ^^^^^

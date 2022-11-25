@@ -1,5 +1,5 @@
 use internals::ast::{Container, Data, Field, Style};
-use internals::attr::{Identifier, TagType};
+use internals::attr::{Identifier, NameType, TagType};
 use internals::{ungroup, Ctxt, Derive};
 use syn::{Member, Type};
 
@@ -270,17 +270,24 @@ fn check_internal_tag_field_name_conflict(cx: &Ctxt, cont: &Container) {
                     let check_ser = !field.attrs.skip_serializing();
                     let check_de = !field.attrs.skip_deserializing();
                     let name = field.attrs.name();
-                    let ser_name = name.serialize_name();
 
-                    if check_ser && ser_name == tag {
-                        diagnose_conflict();
-                        return;
+                    if check_ser {
+                        if let NameType::Str(ser_name) = name.serialize_name() {
+                            if ser_name == tag {
+                                diagnose_conflict();
+                                return;
+                            }
+                        }
                     }
 
-                    for de_name in field.attrs.aliases() {
-                        if check_de && de_name == tag {
-                            diagnose_conflict();
-                            return;
+                    if check_de {
+                        for de_name in field.attrs.aliases() {
+                            if let NameType::Str(de_name) = de_name {
+                                if de_name == tag {
+                                    diagnose_conflict();
+                                    return;
+                                }
+                            }
                         }
                     }
                 }

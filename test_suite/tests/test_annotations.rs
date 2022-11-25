@@ -646,6 +646,352 @@ fn test_unknown_field_rename_struct() {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename = "IgnoredRename")]
+struct IntRenameStruct {
+    a1: i32,
+    #[serde(rename = 12i8)]
+    a2: i32,
+    #[serde(rename = -598i16)]
+    a3: i32,
+    #[serde(rename = 18435)]
+    a4: i32,
+    #[serde(rename = 592734i32)]
+    a5: i32,
+    #[serde(rename = 123123123123123123i64)]
+    a6: i32,
+    #[serde(rename = 73u8)]
+    a7: i32,
+    #[serde(rename = 598u16)]
+    a8: i32,
+    #[serde(rename = 26547u32)]
+    a9: i32,
+    #[serde(rename = 12312312312312312312u64)]
+    a10: i32,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename(serialize = "IgnoredSerRename", deserialize = "IgnoredDeRename"))]
+struct IntRenameStructSerializeDeserialize {
+    a1: i32,
+    #[serde(rename(serialize = -301, deserialize = 660u16))]
+    a2: i32,
+    #[serde(rename(serialize = 618, deserialize = "a12"))]
+    a3: i32,
+    #[serde(rename(serialize = "a13", deserialize = 320u16))]
+    a4: i32,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct IntAliasStruct {
+    a1: i32,
+    #[serde(alias = -50i64)]
+    a2: i32,
+    #[serde(alias = 77, rename = "a6")]
+    a4: i32,
+    #[serde(alias = "a7", rename = -8)]
+    a5: i32,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+struct IntRenameDuplication {
+    #[serde(rename = 487i16)]
+    a1: i32,
+    #[serde(rename = 487u64)]
+    a2: i32,
+}
+
+#[test]
+fn test_int_rename_struct() {
+    assert_tokens(
+        &IntRenameStruct {
+            a1: 1,
+            a2: 2,
+            a3: 3,
+            a4: 4,
+            a5: 5,
+            a6: 6,
+            a7: 7,
+            a8: 8,
+            a9: 9,
+            a10: 10,
+        },
+        &[
+            Token::Map { len: Some(10) },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::I8(12),
+            Token::I32(2),
+            Token::I16(-598),
+            Token::I32(3),
+            Token::I32(18435),
+            Token::I32(4),
+            Token::I32(592734),
+            Token::I32(5),
+            Token::I64(123123123123123123),
+            Token::I32(6),
+            Token::U8(73),
+            Token::I32(7),
+            Token::U16(598),
+            Token::I32(8),
+            Token::U32(26547),
+            Token::I32(9),
+            Token::U64(12312312312312312312),
+            Token::I32(10),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &IntRenameStruct {
+            a1: 1,
+            a2: 2,
+            a3: 3,
+            a4: 4,
+            a5: 5,
+            a6: 6,
+            a7: 7,
+            a8: 8,
+            a9: 9,
+            a10: 10,
+        },
+        &[
+            Token::Map { len: Some(10) },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::U64(12),
+            Token::I32(2),
+            Token::I32(-598),
+            Token::I32(3),
+            Token::U32(18435),
+            Token::I32(4),
+            Token::I64(592734),
+            Token::I32(5),
+            Token::U64(123123123123123123),
+            Token::I32(6),
+            Token::I8(73),
+            Token::I32(7),
+            Token::I16(598),
+            Token::I32(8),
+            Token::U64(26547),
+            Token::I32(9),
+            Token::U64(12312312312312312312),
+            Token::I32(10),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_ser_tokens(
+        &IntRenameStructSerializeDeserialize {
+            a1: 1,
+            a2: 2,
+            a3: 3,
+            a4: 4,
+        },
+        &[
+            Token::Map { len: Some(4) },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::I32(-301),
+            Token::I32(2),
+            Token::I32(618),
+            Token::I32(3),
+            Token::Str("a13"),
+            Token::I32(4),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &IntRenameStructSerializeDeserialize {
+            a1: 1,
+            a2: 2,
+            a3: 3,
+            a4: 4,
+        },
+        &[
+            Token::Map { len: Some(4) },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::U16(660),
+            Token::I32(2),
+            Token::Str("a12"),
+            Token::I32(3),
+            Token::U16(320),
+            Token::I32(4),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &IntAliasStruct {
+            a1: 1,
+            a2: 2,
+            a4: 3,
+            a5: 4,
+        },
+        &[
+            Token::Map { len: Some(3) },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::I64(-50),
+            Token::I32(2),
+            Token::Str("a6"),
+            Token::I32(3),
+            Token::I32(-8),
+            Token::I32(4),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &IntAliasStruct {
+            a1: 1,
+            a2: 2,
+            a4: 3,
+            a5: 4,
+        },
+        &[
+            Token::Map { len: Some(3) },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::Str("a2"),
+            Token::I32(2),
+            Token::I32(77),
+            Token::I32(3),
+            Token::Str("a7"),
+            Token::I32(4),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_unknown_field_int_rename_struct() {
+    assert_de_tokens_error::<IntAliasStruct>(
+        &[
+            Token::Map { len: Some(4) },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::I64(-50),
+            Token::I32(2),
+            Token::Str("a4"),
+            Token::I32(3),
+        ],
+        "unknown field `a4`, expected one of `a1`, `a2`, `a6`, `-8`",
+    );
+
+    assert_de_tokens_error::<IntAliasStruct>(
+        &[
+            Token::Map { len: Some(4) },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::I64(-50),
+            Token::I32(2),
+            Token::Str("a6"),
+            Token::I32(3),
+            Token::I32(120),
+            Token::I32(4),
+        ],
+        "unknown field `120`, expected one of `a1`, `a2`, `a6`, `-8`",
+    );
+}
+
+#[test]
+fn test_duplicate_field_int_rename_struct() {
+    assert_de_tokens_error::<IntRenameDuplication>(
+        &[
+            Token::Map { len: Some(2) },
+            Token::I16(487),
+            Token::I32(1),
+            Token::I64(487),
+            Token::I32(2),
+        ],
+        "duplicate field `487`",
+    );
+}
+
+#[test]
+fn test_missing_field_int_rename_struct() {
+    assert_de_tokens_error::<IntAliasStruct>(
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::I64(-50),
+            Token::I32(2),
+            Token::Str("a6"),
+            Token::I32(3),
+            Token::MapEnd,
+        ],
+        "missing field `-8`",
+    );
+}
+
+#[test]
+fn test_flatten_with_int_rename_struct() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    struct StructStringKeyMap {
+        #[serde(rename = 4)]
+        a1: i32,
+        #[serde(flatten)]
+        a2: BTreeMap<String, String>,
+    }
+
+    assert_de_tokens(
+        &StructStringKeyMap {
+            a1: 1,
+            a2: {
+                let mut a2 = BTreeMap::new();
+                a2.insert("x".to_owned(), "X".to_owned());
+                a2.insert("y".to_owned(), "Y".to_owned());
+                a2
+            },
+        },
+        &[
+            Token::Map { len: Some(4) },
+            Token::I32(4),
+            Token::I32(1),
+            Token::Str("x"),
+            Token::Str("X"),
+            Token::Str("y"),
+            Token::Str("Y"),
+            Token::MapEnd,
+        ],
+    );
+
+    #[derive(Debug, PartialEq, Deserialize)]
+    struct StructIntKeyMap {
+        #[serde(rename = 0)]
+        a1: String,
+        #[serde(flatten)]
+        a2: BTreeMap<i32, String>,
+    }
+
+    assert_de_tokens(
+        &StructIntKeyMap {
+            a1: "V".to_owned(),
+            a2: {
+                let mut a2 = BTreeMap::new();
+                a2.insert(14, "X".to_owned());
+                a2.insert(-12, "Y".to_owned());
+                a2
+            },
+        },
+        &[
+            Token::Map { len: Some(4) },
+            Token::I32(0),
+            Token::Str("V"),
+            Token::I32(14),
+            Token::Str("X"),
+            Token::I32(-12),
+            Token::Str("Y"),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename = "Superhero")]
 enum RenameEnum {
     #[serde(rename = "bruce_wayne")]
