@@ -1184,6 +1184,7 @@ fn prepare_enum_variant_enum(
                 variant.attrs.name().deserialize_name(),
                 field_i(i),
                 variant.attrs.aliases(),
+                i as u64,
             )
         })
         .collect();
@@ -1191,7 +1192,7 @@ fn prepare_enum_variant_enum(
     let other_idx = deserialized_variants.position(|(_, variant)| variant.attrs.other());
 
     let variants_stmt = {
-        let variant_names = variant_names_idents.iter().map(|(name, _, _)| name);
+        let variant_names = variant_names_idents.iter().map(|(name, _, _, _)| name);
         quote! {
             const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
         }
@@ -1902,13 +1903,13 @@ fn deserialize_untagged_newtype_variant(
 }
 
 fn deserialize_generated_identifier(
-    fields: &[(String, Ident, Vec<String>)],
+    fields: &[(String, Ident, Vec<String>, u64)],
     cattrs: &attr::Container,
     is_variant: bool,
     other_idx: Option<usize>,
 ) -> Fragment {
     let this = quote!(__Field);
-    let field_idents: &Vec<_> = &fields.iter().map(|(_, ident, _)| ident).collect();
+    let field_idents: &Vec<_> = &fields.iter().map(|(_, ident, _, _)| ident).collect();
 
     let (ignore_variant, fallthrough) = if !is_variant && cattrs.has_flatten() {
         let ignore_variant = quote!(__other(_serde::__private::de::Content<'de>),);
@@ -2021,16 +2022,18 @@ fn deserialize_custom_identifier(
 
     let names_idents: Vec<_> = ordinary
         .iter()
-        .map(|variant| {
+        .enumerate()
+        .map(|(i, variant)| {
             (
                 variant.attrs.name().deserialize_name(),
                 variant.ident.clone(),
                 variant.attrs.aliases(),
+                i as u64,
             )
         })
         .collect();
 
-    let names = names_idents.iter().map(|(name, _, _)| name);
+    let names = names_idents.iter().map(|(name, _, _, _)| name);
 
     let names_const = if fallthrough.is_some() {
         None
@@ -2083,7 +2086,7 @@ fn deserialize_custom_identifier(
 
 fn deserialize_identifier(
     this: &TokenStream,
-    fields: &[(String, Ident, Vec<String>)],
+    fields: &[(String, Ident, Vec<String>, u64)],
     is_variant: bool,
     fallthrough: Option<TokenStream>,
     fallthrough_borrowed: Option<TokenStream>,
@@ -2091,7 +2094,7 @@ fn deserialize_identifier(
     expecting: Option<&str>,
 ) -> Fragment {
     let mut flat_fields = Vec::new();
-    for (_, ident, aliases) in fields {
+    for (_, ident, aliases, _) in fields {
         flat_fields.extend(aliases.iter().map(|alias| (alias, ident)));
     }
 
@@ -2107,7 +2110,7 @@ fn deserialize_identifier(
         .collect();
     let main_constructors: &Vec<_> = &fields
         .iter()
-        .map(|(_, ident, _)| quote!(#this::#ident))
+        .map(|(_, ident, _, _)| quote!(#this::#ident))
         .collect();
 
     let expecting = expecting.unwrap_or(if is_variant {
@@ -2169,7 +2172,12 @@ fn deserialize_identifier(
     let u64_fallthrough_arm = if let Some(fallthrough) = &fallthrough {
         fallthrough
     } else {
-        let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
+        let fallthrough_msg = format!(
+            "{} index {} <= i < {}",
+            index_expecting,
+            fields.first().map(|f| f.3).unwrap_or(0),
+            fields.last().map(|f| f.3).unwrap_or(0) + 1,
+        );
         u64_fallthrough_arm_tokens = quote! {
             _serde::__private::Err(_serde::de::Error::invalid_value(
                 _serde::de::Unexpected::Unsigned(__value),
@@ -2179,7 +2187,10 @@ fn deserialize_identifier(
         &u64_fallthrough_arm_tokens
     };
 
-    let variant_indices = 0_u64..;
+    let variant_indices: Vec<_> = fields
+        .iter()
+        .map(|(_, _, _, index)| quote!(#index))
+        .collect();
     let visit_other = if collect_other_fields {
         quote! {
             fn visit_bool<__E>(self, __value: bool) -> _serde::__private::Result<Self::Value, __E>
@@ -2386,12 +2397,13 @@ fn deserialize_struct_as_struct_visitor(
                 field.attrs.name().deserialize_name(),
                 field_i(i),
                 field.attrs.aliases(),
+                i as u64,
             )
         })
         .collect();
 
     let fields_stmt = {
-        let field_names = field_names_idents.iter().map(|(name, _, _)| name);
+        let field_names = field_names_idents.iter().map(|(name, _, _, _)| name);
         quote_block! {
             const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
         }
@@ -2419,6 +2431,7 @@ fn deserialize_struct_as_map_visitor(
                 field.attrs.name().deserialize_name(),
                 field_i(i),
                 field.attrs.aliases(),
+                i as u64,
             )
         })
         .collect();
@@ -2663,12 +2676,13 @@ fn deserialize_struct_as_struct_in_place_visitor(
                 field.attrs.name().deserialize_name(),
                 field_i(i),
                 field.attrs.aliases(),
+                i as u64,
             )
         })
         .collect();
 
     let fields_stmt = {
-        let field_names = field_names_idents.iter().map(|(name, _, _)| name);
+        let field_names = field_names_idents.iter().map(|(name, _, _, _)| name);
         quote_block! {
             const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
         }
