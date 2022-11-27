@@ -74,6 +74,14 @@ mod remote {
             &self.b
         }
     }
+
+    pub struct StructGeneric<T> {
+        pub value: T,
+    }
+
+    pub enum EnumGeneric<T> {
+        Variant(T),
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -104,6 +112,12 @@ struct Test {
 
     #[serde(with = "StructPubDef")]
     struct_pub: remote::StructPub,
+
+    #[serde(with = "StructConcrete")]
+    struct_concrete: remote::StructGeneric<u8>,
+
+    #[serde(with = "EnumConcrete")]
+    enum_concrete: remote::EnumGeneric<u8>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -155,6 +169,18 @@ struct StructPubDef {
 
     #[serde(with = "UnitDef")]
     b: remote::Unit,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "remote::StructGeneric::<u8>")]
+struct StructConcrete {
+    value: u8,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "remote::EnumGeneric::<u8>")]
+enum EnumConcrete {
+    Variant(u8),
 }
 
 impl From<PrimitivePrivDef> for remote::PrimitivePriv {
