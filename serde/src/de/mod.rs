@@ -1376,11 +1376,7 @@ pub trait Visitor<'de>: Sized {
             let mut buf = [0u8; 58];
             let mut writer = format::Buf::new(&mut buf);
             fmt::Write::write_fmt(&mut writer, format_args!("integer `{}` as i128", v)).unwrap();
-
-            // Safety: This is safe because we only wrote UTF-8 into the buffer.
-            let s = unsafe { writer.as_str() };
-
-            Err(Error::invalid_type(Unexpected::Other(s), &self))
+            Err(Error::invalid_type(Unexpected::Other(writer.as_str()), &self))
         }
     }
 
@@ -1442,11 +1438,7 @@ pub trait Visitor<'de>: Sized {
             let mut buf = [0u8; 57];
             let mut writer = format::Buf::new(&mut buf);
             fmt::Write::write_fmt(&mut writer, format_args!("integer `{}` as u128", v)).unwrap();
-
-            // Safety: This is safe because we only wrote UTF-8 into the buffer.
-            let s = unsafe { writer.as_str() };
-
-            Err(Error::invalid_type(Unexpected::Other(s), &self))
+            Err(Error::invalid_type(Unexpected::Other(writer.as_str()), &self))
         }
     }
 

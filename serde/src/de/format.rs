@@ -7,13 +7,13 @@ pub(super) struct Buf<'a> {
 }
 
 impl<'a> Buf<'a> {
-    pub(super) fn new(bytes: &'a mut [u8]) -> Self {
+    pub fn new(bytes: &'a mut [u8]) -> Self {
         Buf { bytes, offset: 0 }
     }
 
-    pub(super) unsafe fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         let slice = &self.bytes[..self.offset];
-        str::from_utf8_unchecked(slice)
+        unsafe { str::from_utf8_unchecked(slice) }
     }
 }
 
