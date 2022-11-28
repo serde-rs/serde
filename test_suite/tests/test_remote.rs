@@ -80,6 +80,7 @@ mod remote {
     }
 
     impl<T> StructGeneric<T> {
+        #[allow(dead_code)]
         pub fn get_value(&self) -> &T {
             &self.value
         }
