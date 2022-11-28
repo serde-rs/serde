@@ -6,6 +6,7 @@ use syn::{Member, Type};
 /// Cross-cutting checks that require looking at more than a single attrs
 /// object. Simpler checks should happen when parsing and building the attrs.
 pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
+    check_remote_generic(cx, cont);
     check_getter(cx, cont);
     check_flatten(cx, cont);
     check_identifier(cx, cont);
@@ -14,6 +15,28 @@ pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     check_adjacent_tag_conflict(cx, cont);
     check_transparent(cx, cont, derive);
     check_from_and_try_from(cx, cont);
+}
+
+/// Remote derive definition type must have either all of the generics of the
+/// remote type:
+///
+///     #[serde(remote = "Generic")]
+///     struct Generic<T> {…}
+///
+/// or none of them, i.e. defining impls for one concrete instantiation of the
+/// remote type only:
+///
+///     #[serde(remote = "Generic<T>")]
+///     struct ConcreteDef {…}
+///
+fn check_remote_generic(cx: &Ctxt, cont: &Container) {
+    if let Some(remote) = cont.attrs.remote() {
+        let local_has_generic = !cont.generics.params.is_empty();
+        let remote_has_generic = !remote.segments.last().unwrap().arguments.is_none();
+        if local_has_generic && remote_has_generic {
+            cx.error_spanned_by(remote, "remove generic parameters from this path");
+        }
+    }
 }
 
 /// Getters are only allowed inside structs (not enums) with the `remote`
