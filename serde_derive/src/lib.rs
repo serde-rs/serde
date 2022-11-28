@@ -84,6 +84,7 @@ mod de;
 mod dummy;
 mod pretend;
 mod ser;
+mod this;
 mod try;
 
 #[proc_macro_derive(Serialize, attributes(serde))]
