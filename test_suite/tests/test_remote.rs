@@ -172,13 +172,13 @@ struct StructPubDef {
 }
 
 #[derive(Serialize, Deserialize)]
-#[serde(remote = "remote::StructGeneric::<u8>")]
+#[serde(remote = "remote::StructGeneric<u8>")]
 struct StructConcrete {
     value: u8,
 }
 
 #[derive(Serialize, Deserialize)]
-#[serde(remote = "remote::EnumGeneric::<u8>")]
+#[serde(remote = "remote::EnumGeneric<u8>")]
 enum EnumConcrete {
     Variant(u8),
 }
