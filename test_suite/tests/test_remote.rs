@@ -79,6 +79,13 @@ mod remote {
         pub value: T,
     }
 
+    impl<T> StructGeneric<T> {
+        #[allow(dead_code)]
+        pub fn get_value(&self) -> &T {
+            &self.value
+        }
+    }
+
     pub enum EnumGeneric<T> {
         Variant(T),
     }
@@ -172,6 +179,13 @@ struct StructPubDef {
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(remote = "remote::StructGeneric")]
+struct StructGenericWithGetterDef<T> {
+    #[serde(getter = "remote::StructGeneric::get_value")]
+    value: T,
+}
+
+#[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::StructGeneric<u8>")]
 struct StructConcrete {
     value: u8,
@@ -204,5 +218,11 @@ impl From<TuplePrivDef> for remote::TuplePriv {
 impl From<StructPrivDef> for remote::StructPriv {
     fn from(def: StructPrivDef) -> Self {
         remote::StructPriv::new(def.a, def.b)
+    }
+}
+
+impl<T> From<StructGenericWithGetterDef<T>> for remote::StructGeneric<T> {
+    fn from(def: StructGenericWithGetterDef<T>) -> Self {
+        remote::StructGeneric { value: def.value }
     }
 }

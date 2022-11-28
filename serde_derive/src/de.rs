@@ -712,8 +712,9 @@ fn deserialize_seq(
 
     if params.has_getter {
         let this_type = &params.this_type;
+        let (_, ty_generics, _) = params.generics.split_for_impl();
         result = quote! {
-            _serde::__private::Into::<#this_type>::into(#result)
+            _serde::__private::Into::<#this_type #ty_generics>::into(#result)
         };
     }
 
@@ -856,8 +857,9 @@ fn deserialize_newtype_struct(
     let mut result = quote!(#type_path(__field0));
     if params.has_getter {
         let this_type = &params.this_type;
+        let (_, ty_generics, _) = params.generics.split_for_impl();
         result = quote! {
-            _serde::__private::Into::<#this_type>::into(#result)
+            _serde::__private::Into::<#this_type #ty_generics>::into(#result)
         };
     }
 
@@ -2629,8 +2631,9 @@ fn deserialize_map(
     let mut result = quote!(#struct_path { #(#result),* });
     if params.has_getter {
         let this_type = &params.this_type;
+        let (_, ty_generics, _) = params.generics.split_for_impl();
         result = quote! {
-            _serde::__private::Into::<#this_type>::into(#result)
+            _serde::__private::Into::<#this_type #ty_generics>::into(#result)
         };
     }
 
