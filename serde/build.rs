@@ -89,6 +89,7 @@ fn main() {
         println!("cargo:rustc-cfg=no_core_try_from");
         println!("cargo:rustc-cfg=no_num_nonzero_signed");
         println!("cargo:rustc-cfg=no_systemtime_checked_add");
+        println!("cargo:rustc-cfg=no_relaxed_trait_bounds");
     }
 
     // Whitelist of archs that support std::sync::atomic module. Ideally we
