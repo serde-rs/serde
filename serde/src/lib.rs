@@ -255,7 +255,7 @@ mod lib {
     #[cfg(all(feature = "std", use_target_has_atomic, target_has_atomic = "64"))]
     pub use std::sync::atomic::{AtomicI64, AtomicU64};
     #[cfg(all(feature = "std", use_target_has_atomic, target_has_atomic = "ptr"))]
-    pub use std::sync::atomic::{AtomicUsize, AtomicIsize};
+    pub use std::sync::atomic::{AtomicIsize, AtomicUsize};
 
     #[cfg(any(feature = "std", not(no_core_duration)))]
     pub use self::core::time::Duration;
