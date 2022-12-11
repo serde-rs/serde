@@ -259,10 +259,10 @@ where
 ///
 /// let example = Example { b: 0, a: 0 };
 /// let seed = ExampleDeserializer(0);
-/// assert_de_seed_tokens(&example, &[Token::U8(0)], seed);
+/// assert_de_seed_tokens(&example, seed, &[Token::U8(0)]);
 /// ```
 #[cfg_attr(not(no_track_caller), track_caller)]
-pub fn assert_de_seed_tokens<'de, T, D>(value: &T, tokens: &'de [Token], seed: D)
+pub fn assert_de_seed_tokens<'de, T, D>(value: &T, seed: D, tokens: &'de [Token])
 where
     T: PartialEq + Debug,
     D: DeserializeSeed<'de, Value = T>,
@@ -314,13 +314,13 @@ where
 ///
 /// let seed = ExampleDeserializer(0);
 /// assert_de_seed_tokens_error(
-///     &[Token::I8(0)],
 ///     seed,
+///     &[Token::I8(0)],
 ///     "invalid type: integer `0`, expected Example"
 /// );
 /// ```
 #[cfg_attr(not(no_track_caller), track_caller)]
-pub fn assert_de_seed_tokens_error<'de, T, D>(tokens: &'de [Token], seed: D, error: &str)
+pub fn assert_de_seed_tokens_error<'de, T, D>(seed: D, tokens: &'de [Token], error: &str)
 where
     T: PartialEq + Debug,
     D: DeserializeSeed<'de, Value = T>,
