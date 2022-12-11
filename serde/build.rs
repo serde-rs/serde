@@ -92,11 +92,10 @@ fn main() {
         println!("cargo:rustc-cfg=no_relaxed_trait_bounds");
     }
 
-    // Whitelist of archs that support std::sync::atomic module. Ideally we
-    // would use #[cfg(target_has_atomic = "...")] but it is not stable yet.
-    // Instead this is based on rustc's compiler/rustc_target/src/spec/*.rs.
     if minor < 60 {
         println!("cargo:rustc-cfg=no_target_has_atomic");
+        // Allowlist of archs that support std::sync::atomic module. This is
+        // based on rustc's compiler/rustc_target/src/spec/*.rs.
         let has_atomic64 = target.starts_with("x86_64")
             || target.starts_with("i686")
             || target.starts_with("aarch64")
