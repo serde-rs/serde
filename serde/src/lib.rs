@@ -236,25 +236,25 @@ mod lib {
     #[cfg(not(no_range_inclusive))]
     pub use self::core::ops::RangeInclusive;
 
-    #[cfg(all(feature = "std", not(use_target_has_atomic), not(no_std_atomic)))]
+    #[cfg(all(feature = "std", no_target_has_atomic, not(no_std_atomic)))]
     pub use std::sync::atomic::{
         AtomicBool, AtomicI16, AtomicI32, AtomicI8, AtomicIsize, AtomicU16, AtomicU32, AtomicU8,
         AtomicUsize, Ordering,
     };
-    #[cfg(all(feature = "std", not(use_target_has_atomic), not(no_std_atomic64)))]
+    #[cfg(all(feature = "std", no_target_has_atomic, not(no_std_atomic64)))]
     pub use std::sync::atomic::{AtomicI64, AtomicU64};
 
-    #[cfg(all(feature = "std", use_target_has_atomic))]
+    #[cfg(all(feature = "std", not(no_target_has_atomic)))]
     pub use std::sync::atomic::Ordering;
-    #[cfg(all(feature = "std", use_target_has_atomic, target_has_atomic = "8"))]
+    #[cfg(all(feature = "std", not(no_target_has_atomic), target_has_atomic = "8"))]
     pub use std::sync::atomic::{AtomicBool, AtomicI8, AtomicU8};
-    #[cfg(all(feature = "std", use_target_has_atomic, target_has_atomic = "16"))]
+    #[cfg(all(feature = "std", not(no_target_has_atomic), target_has_atomic = "16"))]
     pub use std::sync::atomic::{AtomicI16, AtomicU16};
-    #[cfg(all(feature = "std", use_target_has_atomic, target_has_atomic = "32"))]
+    #[cfg(all(feature = "std", not(no_target_has_atomic), target_has_atomic = "32"))]
     pub use std::sync::atomic::{AtomicI32, AtomicU32};
-    #[cfg(all(feature = "std", use_target_has_atomic, target_has_atomic = "64"))]
+    #[cfg(all(feature = "std", not(no_target_has_atomic), target_has_atomic = "64"))]
     pub use std::sync::atomic::{AtomicI64, AtomicU64};
-    #[cfg(all(feature = "std", use_target_has_atomic, target_has_atomic = "ptr"))]
+    #[cfg(all(feature = "std", not(no_target_has_atomic), target_has_atomic = "ptr"))]
     pub use std::sync::atomic::{AtomicIsize, AtomicUsize};
 
     #[cfg(any(feature = "std", not(no_core_duration)))]
