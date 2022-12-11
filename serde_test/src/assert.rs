@@ -228,30 +228,30 @@ where
 /// ```edition2018
 /// # use serde::{de::{DeserializeSeed, Visitor}, Deserializer};
 /// # use serde_test::{assert_de_seed_tokens, Token};
-/// 
+///
 /// #[derive(Debug, PartialEq)]
 /// struct Example {
 ///     a: u8,
 ///     b: u8,
 /// }
-/// 
+///
 /// struct ExampleDeserializer(u8);
-/// 
+///
 /// impl<'de> DeserializeSeed<'de> for ExampleDeserializer {
 ///     type Value = Example;
-/// 
+///
 ///     fn deserialize<D: Deserializer<'de>>(self, deserializer: D) -> Result<Self::Value, D::Error> {
 ///         deserializer.deserialize_u8(self)
 ///     }
 /// }
-/// 
+///
 /// impl<'de> Visitor<'de> for ExampleDeserializer {
 ///     type Value = Example;
-/// 
+///
 ///     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
 ///         formatter.write_str("Example")
 ///     }
-/// 
+///
 ///     fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E> {
 ///         Ok(Self::Value { a: v, b: self.0 })
 ///     }
@@ -283,30 +283,30 @@ where
 /// ```edition2018
 /// # use serde::{de::{DeserializeSeed, Visitor}, Deserializer};
 /// # use serde_test::{assert_de_seed_tokens_error, Token};
-/// 
+///
 /// #[derive(Debug, PartialEq)]
 /// struct Example {
 ///     a: u8,
 ///     b: u8,
 /// }
-/// 
+///
 /// struct ExampleDeserializer(u8);
-/// 
+///
 /// impl<'de> DeserializeSeed<'de> for ExampleDeserializer {
 ///     type Value = Example;
-/// 
+///
 ///     fn deserialize<D: Deserializer<'de>>(self, deserializer: D) -> Result<Self::Value, D::Error> {
 ///         deserializer.deserialize_u8(self)
 ///     }
 /// }
-/// 
+///
 /// impl<'de> Visitor<'de> for ExampleDeserializer {
 ///     type Value = Example;
-/// 
+///
 ///     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
 ///         formatter.write_str("Example")
 ///     }
-/// 
+///
 ///     fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E> {
 ///         Ok(Self::Value { a: v, b: self.0 })
 ///     }
