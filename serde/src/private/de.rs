@@ -2708,7 +2708,7 @@ where
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 macro_rules! forward_to_deserialize_other {
-    ($($func:ident ( $($arg:ty),* ))*) => {
+    ($($func:ident ($($arg:ty),*))*) => {
         $(
             fn $func<V>(self, $(_: $arg,)* _visitor: V) -> Result<V::Value, Self::Error>
             where
