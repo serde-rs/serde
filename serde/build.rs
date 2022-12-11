@@ -92,6 +92,7 @@ fn main() {
         println!("cargo:rustc-cfg=no_relaxed_trait_bounds");
     }
 
+    // Support for #[cfg(target_has_atomic = "...")] stabilized in Rust 1.60.
     if minor < 60 {
         println!("cargo:rustc-cfg=no_target_has_atomic");
         // Allowlist of archs that support std::sync::atomic module. This is
