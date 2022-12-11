@@ -224,6 +224,43 @@ where
 }
 
 /// Same as [`assert_de_tokens`], but for [`DeserializeSeed`].
+///
+/// ```edition2018
+/// # use serde::{de::{DeserializeSeed, Visitor}, Deserializer};
+/// # use serde_test::{assert_de_seed_tokens, Token};
+/// 
+/// #[derive(Debug, PartialEq)]
+/// struct Example {
+///     a: u8,
+///     b: u8,
+/// }
+/// 
+/// struct ExampleDeserializer(u8);
+/// 
+/// impl<'de> DeserializeSeed<'de> for ExampleDeserializer {
+///     type Value = Example;
+/// 
+///     fn deserialize<D: Deserializer<'de>>(self, deserializer: D) -> Result<Self::Value, D::Error> {
+///         deserializer.deserialize_u8(self)
+///     }
+/// }
+/// 
+/// impl<'de> Visitor<'de> for ExampleDeserializer {
+///     type Value = Example;
+/// 
+///     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+///         formatter.write_str("Example")
+///     }
+/// 
+///     fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E> {
+///         Ok(Self::Value { a: v, b: self.0 })
+///     }
+/// }
+///
+/// let example = Example { b: 0, a: 0 };
+/// let seed = ExampleDeserializer(0);
+/// assert_de_seed_tokens(&example, &[Token::U8(0)], seed);
+/// ```
 #[cfg_attr(not(no_track_caller), track_caller)]
 pub fn assert_de_seed_tokens<'de, T, D>(value: &T, tokens: &'de [Token], seed: D)
 where
@@ -242,6 +279,46 @@ where
 }
 
 /// Same as [`assert_de_tokens_error`], but for [`DeserializeSeed`].
+///
+/// ```edition2018
+/// # use serde::{de::{DeserializeSeed, Visitor}, Deserializer};
+/// # use serde_test::{assert_de_seed_tokens_error, Token};
+/// 
+/// #[derive(Debug, PartialEq)]
+/// struct Example {
+///     a: u8,
+///     b: u8,
+/// }
+/// 
+/// struct ExampleDeserializer(u8);
+/// 
+/// impl<'de> DeserializeSeed<'de> for ExampleDeserializer {
+///     type Value = Example;
+/// 
+///     fn deserialize<D: Deserializer<'de>>(self, deserializer: D) -> Result<Self::Value, D::Error> {
+///         deserializer.deserialize_u8(self)
+///     }
+/// }
+/// 
+/// impl<'de> Visitor<'de> for ExampleDeserializer {
+///     type Value = Example;
+/// 
+///     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+///         formatter.write_str("Example")
+///     }
+/// 
+///     fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E> {
+///         Ok(Self::Value { a: v, b: self.0 })
+///     }
+/// }
+///
+/// let seed = ExampleDeserializer(0);
+/// assert_de_seed_tokens_error(
+///     &[Token::I8(0)],
+///     seed,
+///     "invalid type: integer `0`, expected Example"
+/// );
+/// ```
 #[cfg_attr(not(no_track_caller), track_caller)]
 pub fn assert_de_seed_tokens_error<'de, T, D>(tokens: &'de [Token], seed: D, error: &str)
 where
