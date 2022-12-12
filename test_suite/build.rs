@@ -19,6 +19,8 @@ fn has_cargo_expand() -> bool {
 }
 
 fn main() {
+    println!("cargo:rerun-if-changed=build.rs");
+
     if cfg!(feature = "expandtest") && has_cargo_expand() {
         println!("cargo:rustc-cfg=expandtest");
     }
