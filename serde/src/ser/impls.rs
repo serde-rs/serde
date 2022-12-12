@@ -945,10 +945,11 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(all(feature = "std", no_target_has_atomic, not(no_std_atomic)))]
+#[cfg(all(feature = "std", not(no_std_atomic)))]
 macro_rules! atomic_impl {
-    ($($ty:ident)*) => {
+    ($($ty:ident $size:expr)*) => {
         $(
+            #[cfg(any(no_target_has_atomic, target_has_atomic = $size))]
             impl Serialize for $ty {
                 fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
                 where
@@ -962,47 +963,21 @@ macro_rules! atomic_impl {
     }
 }
 
-#[cfg(all(feature = "std", not(no_target_has_atomic)))]
-macro_rules! atomic_impl {
-    ($($ty:ident $size:expr),*) => {
-        $(
-            #[cfg(target_has_atomic = $size)]
-            impl Serialize for $ty {
-                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-                where
-                    S: Serializer,
-                {
-                    // Matches the atomic ordering used in libcore for the Debug impl
-                    self.load(Ordering::Relaxed).serialize(serializer)
-                }
-            }
-        )*
-    }
-}
-
-#[cfg(all(feature = "std", no_target_has_atomic, not(no_std_atomic)))]
+#[cfg(all(feature = "std", not(no_std_atomic)))]
 atomic_impl! {
-    AtomicBool
-    AtomicI8 AtomicI16 AtomicI32 AtomicIsize
-    AtomicU8 AtomicU16 AtomicU32 AtomicUsize
-}
-
-#[cfg(all(feature = "std", no_target_has_atomic, not(no_std_atomic64)))]
-atomic_impl! {
-    AtomicI64 AtomicU64
-}
-
-#[cfg(all(feature = "std", not(no_target_has_atomic)))]
-atomic_impl! {
-    AtomicBool "8",
-    AtomicI8 "8",
-    AtomicI16 "16",
-    AtomicI32 "32",
-    AtomicI64 "64",
-    AtomicIsize "ptr",
-    AtomicU8 "8",
-    AtomicU16 "16",
-    AtomicU32 "32",
-    AtomicU64 "64",
+    AtomicBool "8"
+    AtomicI8 "8"
+    AtomicI16 "16"
+    AtomicI32 "32"
+    AtomicIsize "ptr"
+    AtomicU8 "8"
+    AtomicU16 "16"
+    AtomicU32 "32"
     AtomicUsize "ptr"
+}
+
+#[cfg(all(feature = "std", not(no_std_atomic64)))]
+atomic_impl! {
+    AtomicI64 "64"
+    AtomicU64 "64"
 }
