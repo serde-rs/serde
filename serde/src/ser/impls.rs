@@ -945,28 +945,11 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(all(feature = "std", no_target_has_atomic, not(no_std_atomic)))]
+#[cfg(all(feature = "std", not(no_std_atomic)))]
 macro_rules! atomic_impl {
     ($($ty:ident $size:expr)*) => {
         $(
-            impl Serialize for $ty {
-                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-                where
-                    S: Serializer,
-                {
-                    // Matches the atomic ordering used in libcore for the Debug impl
-                    self.load(Ordering::Relaxed).serialize(serializer)
-                }
-            }
-        )*
-    }
-}
-
-#[cfg(all(feature = "std", not(no_target_has_atomic)))]
-macro_rules! atomic_impl {
-    ($($ty:ident $size:expr)*) => {
-        $(
-            #[cfg(target_has_atomic = $size)]
+            #[cfg(any(no_target_has_atomic, target_has_atomic = $size))]
             impl Serialize for $ty {
                 fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
                 where

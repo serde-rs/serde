@@ -2660,27 +2660,11 @@ where
     }
 }
 
-#[cfg(all(feature = "std", no_target_has_atomic, not(no_std_atomic)))]
+#[cfg(all(feature = "std", not(no_std_atomic)))]
 macro_rules! atomic_impl {
     ($($ty:ident $size:expr)*) => {
         $(
-            impl<'de> Deserialize<'de> for $ty {
-                fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-                where
-                    D: Deserializer<'de>,
-                {
-                    Deserialize::deserialize(deserializer).map(Self::new)
-                }
-            }
-        )*
-    };
-}
-
-#[cfg(all(feature = "std", not(no_target_has_atomic)))]
-macro_rules! atomic_impl {
-    ($($ty:ident $size:expr)*) => {
-        $(
-            #[cfg(target_has_atomic = $size)]
+            #[cfg(any(no_target_has_atomic, target_has_atomic = $size))]
             impl<'de> Deserialize<'de> for $ty {
                 fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
                 where
