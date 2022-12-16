@@ -116,15 +116,19 @@ use lib::*;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-pub mod value;
-
 #[cfg(not(no_integer128))]
 mod format;
 mod ignored_any;
 mod impls;
 mod utf8;
+pub mod value;
 
 pub use self::ignored_any::IgnoredAny;
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+mod content;
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub use self::content::Content;
 
 #[cfg(feature = "std")]
 #[doc(no_inline)]
