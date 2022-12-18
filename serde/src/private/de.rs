@@ -13,6 +13,9 @@ pub use self::content::{
     TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
 };
 
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub(crate) use self::content::ContentVisitor;
+
 pub use seed::InPlaceSeed;
 
 /// If the missing field is of type `Option<T>` then treat is as `None`,
@@ -299,12 +302,12 @@ mod content {
         }
     }
 
-    struct ContentVisitor<'de> {
+    pub(crate) struct ContentVisitor<'de> {
         value: PhantomData<Content<'de>>,
     }
 
     impl<'de> ContentVisitor<'de> {
-        fn new() -> Self {
+        pub(crate) fn new() -> Self {
             ContentVisitor { value: PhantomData }
         }
     }
