@@ -1,11 +1,11 @@
 [package]
 name = "serde"
-version = "1.0.150" # remember to update html_root_url and serde_derive dependency
+version = "1.0.151" # remember to update html_root_url and serde_derive dependency
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 build = "build.rs"
 categories = ["encoding", "no-std"]
 description = "A generic serialization/deserialization framework"
-documentation = "https://docs.serde.rs/serde/"
+documentation = "https://docs.rs/serde"
 homepage = "https://serde.rs"
 include = ["build.rs", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 keywords = ["serde", "serialization", "no_std"]
@@ -15,10 +15,13 @@ repository = "https://github.com/serde-rs/serde"
 rust-version = "1.13"
 
 [dependencies]
-serde_derive = { version = "=1.0.150", optional = true, path = "../serde_derive" }
+serde_derive = { version = "=1.0.151", optional = true, path = "../serde_derive" }
 
 [dev-dependencies]
 serde_derive = { version = "1.0", path = "../serde_derive" }
+
+[lib]
+doc-scrape-examples = false
 
 [package.metadata.playground]
 features = ["derive", "rc"]

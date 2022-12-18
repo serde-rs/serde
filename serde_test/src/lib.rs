@@ -1,8 +1,8 @@
 //! This crate provides a convenient concise way to write unit tests for
 //! implementations of [`Serialize`] and [`Deserialize`].
 //!
-//! [`Serialize`]: https://docs.serde.rs/serde/ser/trait.Serialize.html
-//! [`Deserialize`]: https://docs.serde.rs/serde/de/trait.Deserialize.html
+//! [`Serialize`]: serde::ser::Serialize
+//! [`Deserialize`]: serde::de::Deserialize
 //!
 //! The `Serialize` impl for a value can be characterized by the sequence of
 //! [`Serializer`] calls that are made in the course of serializing the value,
@@ -14,11 +14,7 @@
 //! test both directions. There are also functions to test expected failure
 //! conditions.
 //!
-//! [`Serializer`]: https://docs.serde.rs/serde/ser/trait.Serializer.html
-//! [`Token`]: https://docs.serde.rs/serde_test/enum.Token.html
-//! [`assert_ser_tokens`]: https://docs.serde.rs/serde_test/fn.assert_ser_tokens.html
-//! [`assert_de_tokens`]: https://docs.serde.rs/serde_test/fn.assert_de_tokens.html
-//! [`assert_tokens`]: https://docs.serde.rs/serde_test/fn.assert_tokens.html
+//! [`Serializer`]: serde::ser::Serializer
 //!
 //! Here is an example from the [`linked-hash-map`] crate.
 //!
@@ -144,7 +140,7 @@
 //! # }
 //! ```
 
-#![doc(html_root_url = "https://docs.rs/serde_test/1.0.150")]
+#![doc(html_root_url = "https://docs.rs/serde_test/1.0.151")]
 #![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
 // Ignored clippy lints
 #![cfg_attr(feature = "cargo-clippy", allow(float_cmp, needless_doctest_main))]
