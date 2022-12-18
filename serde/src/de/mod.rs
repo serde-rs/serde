@@ -501,8 +501,8 @@ impl<'a> Display for Expected + 'a {
 /// by Serde.
 ///
 /// Serde provides `Deserialize` implementations for many Rust primitive and
-/// standard library types. The complete list is [here][de]. All of these can
-/// be deserialized using Serde out of the box.
+/// standard library types. The complete list is [here][crate::de]. All of these
+/// can be deserialized using Serde out of the box.
 ///
 /// Additionally, Serde provides a procedural macro called `serde_derive` to
 /// automatically generate `Deserialize` implementations for structs and enums
@@ -518,7 +518,6 @@ impl<'a> Display for Expected + 'a {
 /// `LinkedHashMap<K, V>` type that is deserializable by Serde because the crate
 /// provides an implementation of `Deserialize` for it.
 ///
-/// [de]: https://docs.serde.rs/serde/de/index.html
 /// [derive]: https://serde.rs/derive.html
 /// [impl-deserialize]: https://serde.rs/impl-deserialize.html
 ///

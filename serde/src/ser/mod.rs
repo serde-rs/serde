@@ -194,8 +194,8 @@ declare_error_trait!(Error: Sized + Debug + Display);
 /// by Serde.
 ///
 /// Serde provides `Serialize` implementations for many Rust primitive and
-/// standard library types. The complete list is [here][ser]. All of these can
-/// be serialized using Serde out of the box.
+/// standard library types. The complete list is [here][crate::ser]. All of
+/// these can be serialized using Serde out of the box.
 ///
 /// Additionally, Serde provides a procedural macro called [`serde_derive`] to
 /// automatically generate `Serialize` implementations for structs and enums in
@@ -215,7 +215,6 @@ declare_error_trait!(Error: Sized + Debug + Display);
 /// [`linked-hash-map`]: https://crates.io/crates/linked-hash-map
 /// [`serde_derive`]: https://crates.io/crates/serde_derive
 /// [derive section of the manual]: https://serde.rs/derive.html
-/// [ser]: https://docs.serde.rs/serde/ser/index.html
 pub trait Serialize {
     /// Serialize this value into the given Serde serializer.
     ///
