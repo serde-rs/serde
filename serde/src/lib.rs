@@ -54,6 +54,8 @@
 //! - [D-Bus]'s binary wire format.
 //! - [FlexBuffers], the schemaless cousin of Google's FlatBuffers zero-copy
 //!   serialization format.
+//! - [Token streams], for processing Rust procedural macro input.
+//!   *(deserialization only)*
 //! - [DynamoDB Items], the format used by [rusoto_dynamodb] to transfer data to
 //!   and from DynamoDB.
 //!
@@ -76,6 +78,7 @@
 //! [S-expressions]: https://github.com/rotty/lexpr-rs
 //! [D-Bus]: https://docs.rs/zvariant
 //! [FlexBuffers]: https://github.com/google/flatbuffers/tree/master/rust/flexbuffers
+//! [Token streams]: https://github.com/oxidecomputer/serde_tokenstream
 //! [DynamoDB Items]: https://docs.rs/serde_dynamo
 //! [rusoto_dynamodb]: https://docs.rs/rusoto_dynamodb
 
