@@ -52,7 +52,8 @@
 //! - [S-expressions], the textual representation of code and data used by the
 //!   Lisp language family.
 //! - [D-Bus]'s binary wire format.
-//! - [FlexBuffers], the schemaless cousin of Google's FlatBuffers zero-copy serialization format.
+//! - [FlexBuffers], the schemaless cousin of Google's FlatBuffers zero-copy
+//!   serialization format.
 //! - [DynamoDB Items], the format used by [rusoto_dynamodb] to transfer data to
 //!   and from DynamoDB.
 //!
