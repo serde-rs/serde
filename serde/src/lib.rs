@@ -59,6 +59,8 @@
 //!   *(deserialization only)*
 //! - [DynamoDB Items], the format used by [rusoto_dynamodb] to transfer data to
 //!   and from DynamoDB.
+//! - [Hjson], a syntax extension to JSON designed around human reading and
+//!   editing. *(deserialization only)*
 //!
 //! [JSON]: https://github.com/serde-rs/json
 //! [Postcard]: https://github.com/jamesmunns/postcard
@@ -83,6 +85,7 @@
 //! [Token streams]: https://github.com/oxidecomputer/serde_tokenstream
 //! [DynamoDB Items]: https://docs.rs/serde_dynamo
 //! [rusoto_dynamodb]: https://docs.rs/rusoto_dynamodb
+//! [Hjson]: https://github.com/Canop/deser-hjson
 
 ////////////////////////////////////////////////////////////////////////////////
 
