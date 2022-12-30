@@ -2824,3 +2824,145 @@ fn test_expecting_message_identifier_enum() {
         r#"invalid type: map, expected something strange..."#,
     );
 }
+
+#[test]
+fn test_ser_externally_tagged_enum_with_repr() {
+    #[derive(Debug, PartialEq, Serialize)]
+    #[serde(use_repr)]
+    #[repr(u8)]
+    enum ReprExternalEnum {
+        A { a: u32 } = 0x42,
+        B(u32),
+        C = 0x52,
+    }
+
+    assert_ser_tokens(
+        &ReprExternalEnum::A { a: 42 },
+        &[
+            Token::StructVariant {
+                name: "ReprExternalEnum",
+                variant: "66",
+                len: 1,
+            },
+            Token::Str("a"),
+            Token::U32(42),
+            Token::StructVariantEnd,
+        ],
+    );
+    assert_ser_tokens(
+        &ReprExternalEnum::B(0),
+        &[
+            Token::NewtypeVariant {
+                name: "ReprExternalEnum",
+                variant: "67",
+            },
+            Token::U32(0),
+        ],
+    );
+    assert_ser_tokens(
+        &ReprExternalEnum::C,
+        &[
+            Token::UnitVariant {
+                name: "ReprExternalEnum",
+                variant: "82",
+            },
+        ],
+    );
+}
+
+#[test]
+fn test_ser_internally_tagged_enum_with_repr() {
+    #[derive(Debug, PartialEq, Serialize)]
+    #[serde(use_repr, tag = "tag")]
+    #[repr(u8)]
+    enum ReprExternalEnum {
+        A { a: u32 } = 0x42,
+        C = 0x52,
+    }
+
+    assert_ser_tokens(
+        &ReprExternalEnum::A { a: 0 },
+        &[
+            Token::Struct {
+                name: "ReprExternalEnum",
+                len: 2,
+            },
+            Token::Str("tag"),
+            Token::U8(0x42),
+            Token::Str("a"),
+            Token::U32(0),
+            Token::StructEnd,
+        ],
+    );
+    assert_ser_tokens(
+        &ReprExternalEnum::C,
+        &[
+            Token::Struct {
+                name: "ReprExternalEnum",
+                len: 1,
+            },
+            Token::Str("tag"),
+            Token::U8(0x52),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_ser_adjacently_tagged_enum_with_repr() {
+    #[derive(Debug, PartialEq, Serialize)]
+    #[serde(use_repr, tag = "tag", content = "content")]
+    #[repr(u8)]
+    enum ReprExternalEnum {
+        A { a: u32 } = 0x42,
+        B(u32),
+        C = 0x52,
+    }
+
+    assert_ser_tokens(
+        &ReprExternalEnum::A { a: 0 },
+        &[
+            Token::Struct {
+                name: "ReprExternalEnum",
+                len: 2,
+            },
+            Token::Str("tag"),
+            Token::U8(0x42),
+            Token::Str("content"),
+            Token::Struct {
+                name: "A",
+                len: 1,
+            },
+            Token::Str("a"),
+            Token::U32(0),
+            Token::StructEnd,
+            Token::StructEnd,
+        ],
+    );
+    assert_ser_tokens(
+        &ReprExternalEnum::B(0),
+        &[
+            Token::Struct {
+                name: "ReprExternalEnum",
+                len: 2,
+            },
+            Token::Str("tag"),
+            Token::U8(0x43),
+            Token::Str("content"),
+            Token::U32(0),
+            Token::StructEnd,
+        ],
+    );
+    assert_ser_tokens(
+        &ReprExternalEnum::C,
+        &[
+            Token::Struct {
+                name: "ReprExternalEnum",
+                len: 1,
+            },
+            Token::Str("tag"),
+            Token::U8(0x52),
+            Token::StructEnd,
+        ],
+    );
+}

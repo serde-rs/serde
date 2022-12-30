@@ -223,6 +223,8 @@ pub struct Container {
     has_flatten: bool,
     serde_path: Option<syn::Path>,
     is_packed: bool,
+    repr_type: Option<syn::Type>,
+    use_repr: bool,
     /// Error message generated when type can't be deserialized
     expecting: Option<String>,
 }
@@ -308,6 +310,7 @@ impl Container {
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
         let mut serde_path = Attr::none(cx, CRATE);
         let mut expecting = Attr::none(cx, EXPECTING);
+        let mut use_repr = BoolAttr::none(cx, USE_REPR);
 
         for meta_item in item
             .attrs
@@ -553,6 +556,11 @@ impl Container {
                     variant_identifier.set_true(word);
                 }
 
+                // Parse `#[serde(variant_identifier)]`
+                Meta(Path(word)) if word == USE_REPR => {
+                    use_repr.set_true(word);
+                }
+
                 // Parse `#[serde(crate = "foo")]`
                 Meta(NameValue(m)) if m.path == CRATE => {
                     if let Ok(path) = parse_lit_into_path(cx, CRATE, &m.lit) {
@@ -599,6 +607,13 @@ impl Container {
             }
         }
 
+        let repr_type = item.attrs
+            .iter()
+            .flat_map(|attr| get_repr_type(cx, attr))
+            .filter(Option::is_some)
+            .map(Option::unwrap)
+            .next();
+
         Container {
             name: Name::from_attrs(unraw(&item.ident), ser_name, de_name, None),
             transparent: transparent.get(),
@@ -619,6 +634,8 @@ impl Container {
             has_flatten: false,
             serde_path: serde_path.get(),
             is_packed,
+            repr_type,
+            use_repr: use_repr.get(),
             expecting: expecting.get(),
         }
     }
@@ -694,6 +711,14 @@ impl Container {
     pub fn serde_path(&self) -> Cow<syn::Path> {
         self.custom_serde_path()
             .map_or_else(|| Cow::Owned(parse_quote!(_serde)), Cow::Borrowed)
+    }
+
+    pub fn repr_type(&self) -> Option<&syn::Type> {
+        self.repr_type.as_ref()
+    }
+
+    pub fn use_repr(&self) -> bool {
+        self.use_repr
     }
 
     /// Error message generated when type can't be deserialized.
@@ -1573,6 +1598,45 @@ pub fn get_serde_meta_items(cx: &Ctxt, attr: &syn::Attribute) -> Result<Vec<syn:
         Ok(List(meta)) => Ok(meta.nested.into_iter().collect()),
         Ok(other) => {
             cx.error_spanned_by(other, "expected #[serde(...)]");
+            Err(())
+        }
+        Err(err) => {
+            cx.syn_error(err);
+            Err(())
+        }
+    }
+}
+
+pub fn get_repr_type(cx: &Ctxt, attr: &syn::Attribute) -> Result<Option<syn::Type>, ()> {
+    if attr.path != REPR {
+        return Ok(None);
+    }
+
+    match attr.parse_meta() {
+        Ok(List(nested)) => {
+            for nested in nested.nested {
+                match nested {
+                    Meta(Path(path)) => {
+                        if path.is_ident("C") {
+                            return Ok(Some(syn::parse_quote! { u8 }));
+                        }
+                        if path != TRANSPARENT {
+                            return syn::parse_macro_input::parse::<syn::Type>(path.to_token_stream().into())
+                                .map_err(|e| {
+                                    cx.syn_error(e);
+                                    ()
+                                })
+                                .map(Some)
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            Ok(None)
+        },
+        Ok(other) => {
+            cx.error_spanned_by(other, "expected #[repr(...)]");
             Err(())
         }
         Err(err) => {

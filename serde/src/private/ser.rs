@@ -14,32 +14,33 @@ pub fn constrain<T: ?Sized>(t: &T) -> &T {
 }
 
 /// Not public API.
-pub fn serialize_tagged_newtype<S, T>(
+pub fn serialize_tagged_newtype<S, T, I>(
     serializer: S,
     type_ident: &'static str,
     variant_ident: &'static str,
     tag: &'static str,
-    variant_name: &'static str,
+    variant_identifier: I,
     value: &T,
 ) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
     T: Serialize,
+    I: Serialize,
 {
     value.serialize(TaggedSerializer {
         type_ident: type_ident,
         variant_ident: variant_ident,
         tag: tag,
-        variant_name: variant_name,
+        variant_identifier: variant_identifier,
         delegate: serializer,
     })
 }
 
-struct TaggedSerializer<S> {
+struct TaggedSerializer<S, I> {
     type_ident: &'static str,
     variant_ident: &'static str,
     tag: &'static str,
-    variant_name: &'static str,
+    variant_identifier: I,
     delegate: S,
 }
 
@@ -79,9 +80,10 @@ impl Display for Unsupported {
     }
 }
 
-impl<S> TaggedSerializer<S>
+impl<S, I> TaggedSerializer<S, I>
 where
     S: Serializer,
+    I: Serialize,
 {
     fn bad_type(self, what: Unsupported) -> S::Error {
         ser::Error::custom(format_args!(
@@ -91,9 +93,10 @@ where
     }
 }
 
-impl<S> Serializer for TaggedSerializer<S>
+impl<S, I> Serializer for TaggedSerializer<S, I>
 where
     S: Serializer,
+    I: Serialize,
 {
     type Ok = S::Ok;
     type Error = S::Error;
@@ -183,13 +186,13 @@ where
 
     fn serialize_unit(self) -> Result<Self::Ok, Self::Error> {
         let mut map = try!(self.delegate.serialize_map(Some(1)));
-        try!(map.serialize_entry(self.tag, self.variant_name));
+        try!(map.serialize_entry(self.tag, &self.variant_identifier));
         map.end()
     }
 
     fn serialize_unit_struct(self, _: &'static str) -> Result<Self::Ok, Self::Error> {
         let mut map = try!(self.delegate.serialize_map(Some(1)));
-        try!(map.serialize_entry(self.tag, self.variant_name));
+        try!(map.serialize_entry(self.tag, &self.variant_identifier));
         map.end()
     }
 
@@ -200,7 +203,7 @@ where
         inner_variant: &'static str,
     ) -> Result<Self::Ok, Self::Error> {
         let mut map = try!(self.delegate.serialize_map(Some(2)));
-        try!(map.serialize_entry(self.tag, self.variant_name));
+        try!(map.serialize_entry(self.tag, &self.variant_identifier));
         try!(map.serialize_entry(inner_variant, &()));
         map.end()
     }
@@ -227,7 +230,7 @@ where
         T: Serialize,
     {
         let mut map = try!(self.delegate.serialize_map(Some(2)));
-        try!(map.serialize_entry(self.tag, self.variant_name));
+        try!(map.serialize_entry(self.tag, &self.variant_identifier));
         try!(map.serialize_entry(inner_variant, inner_value));
         map.end()
     }
@@ -270,7 +273,7 @@ where
         len: usize,
     ) -> Result<Self::SerializeTupleVariant, Self::Error> {
         let mut map = try!(self.delegate.serialize_map(Some(2)));
-        try!(map.serialize_entry(self.tag, self.variant_name));
+        try!(map.serialize_entry(self.tag, &self.variant_identifier));
         try!(map.serialize_key(inner_variant));
         Ok(SerializeTupleVariantAsMapValue::new(
             map,
@@ -281,7 +284,7 @@ where
 
     fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
         let mut map = try!(self.delegate.serialize_map(len.map(|len| len + 1)));
-        try!(map.serialize_entry(self.tag, self.variant_name));
+        try!(map.serialize_entry(self.tag, &self.variant_identifier));
         Ok(map)
     }
 
@@ -291,7 +294,7 @@ where
         len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error> {
         let mut state = try!(self.delegate.serialize_struct(name, len + 1));
-        try!(state.serialize_field(self.tag, self.variant_name));
+        try!(state.serialize_field(self.tag, &self.variant_identifier));
         Ok(state)
     }
 
@@ -317,7 +320,7 @@ where
         len: usize,
     ) -> Result<Self::SerializeStructVariant, Self::Error> {
         let mut map = try!(self.delegate.serialize_map(Some(2)));
-        try!(map.serialize_entry(self.tag, self.variant_name));
+        try!(map.serialize_entry(self.tag, &self.variant_identifier));
         try!(map.serialize_key(inner_variant));
         Ok(SerializeStructVariantAsMapValue::new(
             map,
