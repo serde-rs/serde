@@ -2826,8 +2826,8 @@ fn test_expecting_message_identifier_enum() {
 }
 
 #[test]
-fn test_ser_externally_tagged_enum_with_repr() {
-    #[derive(Debug, PartialEq, Serialize)]
+fn test_externally_tagged_enum_with_repr() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(use_repr)]
     #[repr(u8)]
     enum ReprExternalEnum {
@@ -2836,7 +2836,7 @@ fn test_ser_externally_tagged_enum_with_repr() {
         C = 0x52,
     }
 
-    assert_ser_tokens(
+    assert_tokens(
         &ReprExternalEnum::A { a: 42 },
         &[
             Token::StructVariant {
@@ -2849,7 +2849,7 @@ fn test_ser_externally_tagged_enum_with_repr() {
             Token::StructVariantEnd,
         ],
     );
-    assert_ser_tokens(
+    assert_tokens(
         &ReprExternalEnum::B(0),
         &[
             Token::NewtypeVariant {
@@ -2859,7 +2859,7 @@ fn test_ser_externally_tagged_enum_with_repr() {
             Token::U32(0),
         ],
     );
-    assert_ser_tokens(
+    assert_tokens(
         &ReprExternalEnum::C,
         &[
             Token::UnitVariant {
@@ -2871,8 +2871,8 @@ fn test_ser_externally_tagged_enum_with_repr() {
 }
 
 #[test]
-fn test_ser_internally_tagged_enum_with_repr() {
-    #[derive(Debug, PartialEq, Serialize)]
+fn test_internally_tagged_enum_with_repr() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(use_repr, tag = "tag")]
     #[repr(u8)]
     enum ReprExternalEnum {
@@ -2880,7 +2880,7 @@ fn test_ser_internally_tagged_enum_with_repr() {
         C = 0x52,
     }
 
-    assert_ser_tokens(
+    assert_tokens(
         &ReprExternalEnum::A { a: 0 },
         &[
             Token::Struct {
@@ -2894,7 +2894,7 @@ fn test_ser_internally_tagged_enum_with_repr() {
             Token::StructEnd,
         ],
     );
-    assert_ser_tokens(
+    assert_tokens(
         &ReprExternalEnum::C,
         &[
             Token::Struct {
@@ -2909,8 +2909,8 @@ fn test_ser_internally_tagged_enum_with_repr() {
 }
 
 #[test]
-fn test_ser_adjacently_tagged_enum_with_repr() {
-    #[derive(Debug, PartialEq, Serialize)]
+fn test_adjacently_tagged_enum_with_repr() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(use_repr, tag = "tag", content = "content")]
     #[repr(u8)]
     enum ReprExternalEnum {
@@ -2919,7 +2919,7 @@ fn test_ser_adjacently_tagged_enum_with_repr() {
         C = 0x52,
     }
 
-    assert_ser_tokens(
+    assert_tokens(
         &ReprExternalEnum::A { a: 0 },
         &[
             Token::Struct {
@@ -2939,7 +2939,7 @@ fn test_ser_adjacently_tagged_enum_with_repr() {
             Token::StructEnd,
         ],
     );
-    assert_ser_tokens(
+    assert_tokens(
         &ReprExternalEnum::B(0),
         &[
             Token::Struct {
@@ -2953,7 +2953,7 @@ fn test_ser_adjacently_tagged_enum_with_repr() {
             Token::StructEnd,
         ],
     );
-    assert_ser_tokens(
+    assert_tokens(
         &ReprExternalEnum::C,
         &[
             Token::Struct {
