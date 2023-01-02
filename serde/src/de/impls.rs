@@ -1111,6 +1111,102 @@ impl<A> ArrayVisitor<A> {
     }
 }
 
+#[cfg(not(no_const_generics_defaults))]
+macro_rules! impl_deserialize_array_with_const_generics {
+    () => {
+        impl<'de, T, const N: usize> Visitor<'de> for ArrayVisitor<[T; N]>
+        where
+            T: Deserialize<'de>,
+        {
+            type Value = [T; N];
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                if N == 0 {
+                    formatter.write_str("an empty array")
+                } else {
+                    formatter.write_fmt(format_args!("an array of length {}", N))
+                }
+            }
+
+            #[inline]
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                let mut uninit_result: [core::mem::MaybeUninit<T>; N] =
+                    unsafe { core::mem::MaybeUninit::uninit().assume_init() };
+
+                for (idx, dest) in uninit_result.iter_mut().enumerate() {
+                    dest.write(match try!(seq.next_element()) {
+                        Some(val) => val,
+                        None => return Err(Error::invalid_length(idx, &self)),
+                    });
+                }
+
+                let result = uninit_result.as_ptr() as *const [T; N];
+                mem::forget(uninit_result);
+                Ok(unsafe { ptr::read(result) })
+            }
+        }
+
+        impl<'a, 'de, T, const N: usize> Visitor<'de> for ArrayInPlaceVisitor<'a, [T; N]>
+        where
+            T: Deserialize<'de>,
+        {
+            type Value = ();
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                if N == 0 {
+                    formatter.write_str("an empty array")
+                } else {
+                    formatter.write_fmt(format_args!("an array of length {}", N))
+                }
+            }
+
+            #[inline]
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                let mut fail_idx = None;
+                for (idx, dest) in self.0[..].iter_mut().enumerate() {
+                    if try!(seq.next_element_seed(InPlaceSeed(dest))).is_none() {
+                        fail_idx = Some(idx);
+                        break;
+                    }
+                }
+                if let Some(idx) = fail_idx {
+                    return Err(Error::invalid_length(idx, &self));
+                }
+                Ok(())
+            }
+        }
+
+        impl<'de, T, const N: usize> Deserialize<'de> for [T; N]
+        where
+            T: Deserialize<'de>,
+        {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                deserializer.deserialize_tuple(N, ArrayVisitor::<[T; N]>::new())
+            }
+
+            fn deserialize_in_place<D>(deserializer: D, place: &mut Self) -> Result<(), D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                deserializer.deserialize_tuple(N, ArrayInPlaceVisitor(place))
+            }
+        }
+    };
+}
+
+#[cfg(not(no_const_generics_defaults))]
+impl_deserialize_array_with_const_generics!();
+
+#[cfg(no_const_generics_defaults)]
 impl<'de, T> Visitor<'de> for ArrayVisitor<[T; 0]> {
     type Value = [T; 0];
 
@@ -1128,6 +1224,7 @@ impl<'de, T> Visitor<'de> for ArrayVisitor<[T; 0]> {
 }
 
 // Does not require T: Deserialize<'de>.
+#[cfg(no_const_generics_defaults)]
 impl<'de, T> Deserialize<'de> for [T; 0] {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -1137,6 +1234,7 @@ impl<'de, T> Deserialize<'de> for [T; 0] {
     }
 }
 
+#[cfg(no_const_generics_defaults)]
 macro_rules! array_impls {
     ($($len:expr => ($($n:tt)+))+) => {
         $(
@@ -1215,6 +1313,7 @@ macro_rules! array_impls {
     }
 }
 
+#[cfg(no_const_generics_defaults)]
 array_impls! {
     1 => (0)
     2 => (0 1)

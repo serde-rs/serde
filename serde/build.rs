@@ -94,6 +94,12 @@ fn main() {
         println!("cargo:rustc-cfg=no_relaxed_trait_bounds");
     }
 
+    // Constant generics stabilized in Rust 1.59:
+    // https://blog.rust-lang.org/2022/02/24/Rust-1.59.0.html#const-generics-defaults-and-interleaving
+    if minor < 59 {
+        println!("cargo:rustc-cfg=no_const_generics_defaults");
+    }
+
     // Support for #[cfg(target_has_atomic = "...")] stabilized in Rust 1.60.
     if minor < 60 {
         println!("cargo:rustc-cfg=no_target_has_atomic");
