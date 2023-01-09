@@ -408,13 +408,18 @@ fn serialize_enum(params: &Parameters, variants: &[Variant], cattrs: &attr::Cont
 
     let self_var = &params.self_var;
 
-    let arms: Vec<_> = variants
+    let mut arms: Vec<_> = variants
         .iter()
         .enumerate()
         .map(|(variant_index, variant)| {
             serialize_variant(params, variant, variant_index as u32, cattrs)
         })
         .collect();
+
+    // unreachable because all the variants are matched exhaustively above
+    // this is here to stop the compiler complaining about trying to serialize
+    // a non-exhaustive enum
+    arms.push("_ => unreachable!()".parse().unwrap());
 
     quote_expr! {
         match *#self_var {
