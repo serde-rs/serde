@@ -357,7 +357,7 @@ fn test_gen() {
 
     #[derive(Serialize, Deserialize)]
     struct EmptyArray {
-        empty: [X; 0],
+        empty: [(); 0],
     }
 
     enum Or<A, B> {

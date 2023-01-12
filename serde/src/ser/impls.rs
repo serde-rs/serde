@@ -126,45 +126,21 @@ impl<T: ?Sized> Serialize for PhantomData<T> {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// Does not require T: Serialize.
-impl<T> Serialize for [T; 0] {
+impl<T, const N: usize> Serialize for [T; N]
+where
+    T: Serialize,
+{
     #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        try!(serializer.serialize_tuple(0)).end()
+        let mut seq = try!(serializer.serialize_tuple(N));
+        for e in self {
+            try!(seq.serialize_element(e));
+        }
+        seq.end()
     }
-}
-
-macro_rules! array_impls {
-    ($($len:tt)+) => {
-        $(
-            impl<T> Serialize for [T; $len]
-            where
-                T: Serialize,
-            {
-                #[inline]
-                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-                where
-                    S: Serializer,
-                {
-                    let mut seq = try!(serializer.serialize_tuple($len));
-                    for e in self {
-                        try!(seq.serialize_element(e));
-                    }
-                    seq.end()
-                }
-            }
-        )+
-    }
-}
-
-array_impls! {
-    01 02 03 04 05 06 07 08 09 10
-    11 12 13 14 15 16 17 18 19 20
-    21 22 23 24 25 26 27 28 29 30
-    31 32
 }
 
 ////////////////////////////////////////////////////////////////////////////////
