@@ -12,7 +12,7 @@ keywords = ["serde", "serialization", "no_std"]
 license = "MIT OR Apache-2.0"
 readme = "crates-io.md"
 repository = "https://github.com/serde-rs/serde"
-rust-version = "1.13"
+rust-version = "1.19"
 
 [dependencies]
 serde_derive = { version = "=1.0.152", optional = true, path = "../serde_derive" }
