@@ -7,7 +7,6 @@ edition = "2018"
 publish = false
 
 [features]
-expandtest = []
 unstable = ["serde/unstable"]
 
 [dependencies]
