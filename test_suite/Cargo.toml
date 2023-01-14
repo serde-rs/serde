@@ -2,7 +2,6 @@
 name = "serde_test_suite"
 version = "0.0.0"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
-build = "build.rs"
 edition = "2018"
 publish = false
 
