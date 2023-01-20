@@ -554,17 +554,14 @@ pub trait Deserialize<'de>: Sized {
     /// If you manually implement this, your recursive deserializations should
     /// use `deserialize_in_place`.
     ///
-    /// This method is stable and an official public API, but hidden from the
-    /// documentation because it is almost never what newbies are looking for.
-    /// Showing it in rustdoc would cause it to be featured more prominently
-    /// than it deserves.
-    #[doc(hidden)]
+    /// It is almost always preferable to use [`deserialize`] instead of
+    /// [`deserialize_in_place`]. Make sure to benchmark before using it.
     fn deserialize_in_place<D>(deserializer: D, place: &mut Self) -> Result<(), D::Error>
     where
         D: Deserializer<'de>,
     {
         // Default implementation just delegates to `deserialize` impl.
-        *place = try!(Deserialize::deserialize(deserializer));
+        *place = Deserialize::deserialize(deserializer)?;
         Ok(())
     }
 }
