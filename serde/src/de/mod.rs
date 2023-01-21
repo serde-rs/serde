@@ -561,7 +561,7 @@ pub trait Deserialize<'de>: Sized {
         D: Deserializer<'de>,
     {
         // Default implementation just delegates to `deserialize` impl.
-        *place = Deserialize::deserialize(deserializer)?;
+        *place = try!(Deserialize::deserialize(deserializer));
         Ok(())
     }
 }
