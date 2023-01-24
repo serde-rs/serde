@@ -1144,9 +1144,12 @@ where
     V: Visitor<'de>,
     E: de::Error,
 {
-    let map = buffer
-        .iter()
-        .map(|(k, v)| (BufferRefDeserializer::new(k), BufferRefDeserializer::new(v)));
+    let map = buffer.iter().map(|entry| {
+        (
+            BufferRefDeserializer::new(&entry.0),
+            BufferRefDeserializer::new(&entry.1),
+        )
+    });
     let mut map_visitor = de::value::MapDeserializer::new(map);
     let value = try!(visitor.visit_map(&mut map_visitor));
     try!(map_visitor.end());
@@ -1438,7 +1441,7 @@ where
         let (variant, value) = match *self.buffer {
             BufferInner::Map(ref value) => {
                 let mut iter = value.iter();
-                let (variant, value) = match iter.next() {
+                let &(ref variant, ref value) = match iter.next() {
                     Some(v) => v,
                     None => {
                         return Err(de::Error::invalid_value(
@@ -1590,7 +1593,7 @@ where
         V: de::Visitor<'de>,
     {
         match self.value {
-            Some(BufferInner::Seq(v)) => {
+            Some(&BufferInner::Seq(ref v)) => {
                 de::Deserializer::deserialize_any(SeqRefDeserializer::new(v), visitor)
             }
             Some(other) => Err(de::Error::invalid_type(
@@ -1613,11 +1616,11 @@ where
         V: de::Visitor<'de>,
     {
         match self.value {
-            Some(BufferInner::Map(v)) => {
-                de::Deserializer::deserialize_any(MapRefDeserializer::new(v), visitor)
+            Some(&BufferInner::Map(ref v)) => {
+                de::Deserializer::deserialize_any(MapRefDeserializer::new(&v), visitor)
             }
-            Some(BufferInner::Seq(v)) => {
-                de::Deserializer::deserialize_any(SeqRefDeserializer::new(v), visitor)
+            Some(&BufferInner::Seq(ref v)) => {
+                de::Deserializer::deserialize_any(SeqRefDeserializer::new(&v), visitor)
             }
             Some(other) => Err(de::Error::invalid_type(
                 other.unexpected(),
@@ -1739,7 +1742,7 @@ where
         T: de::DeserializeSeed<'de>,
     {
         match self.iter.next() {
-            Some((key, value)) => {
+            Some(&(ref key, ref value)) => {
                 self.value = Some(value);
                 seed.deserialize(BufferRefDeserializer::new(key)).map(Some)
             }
