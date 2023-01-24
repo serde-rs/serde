@@ -1228,9 +1228,9 @@ pub trait Deserializer<'de>: Sized {
         self,
         _: ::actually_private::T,
         visitor: V,
-    ) -> Result<::private::de::Buffer<'de>, Self::Error>
+    ) -> Result<::de::buffer::Buffer<'de>, Self::Error>
     where
-        V: Visitor<'de, Value = ::private::de::Buffer<'de>>,
+        V: Visitor<'de, Value = ::de::buffer::Buffer<'de>>,
     {
         self.deserialize_any(visitor)
     }

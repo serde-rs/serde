@@ -4,16 +4,16 @@ use de::value::{BorrowedBytesDeserializer, BytesDeserializer};
 use de::{Deserialize, Deserializer, Error, IntoDeserializer, Visitor};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use de::{buffer::EnumDeserializer, DeserializeSeed, MapAccess, Unexpected};
-
-#[cfg(any(feature = "std", feature = "alloc"))]
-pub use self::content::{
-    Content, InternallyTaggedUnitVisitor, TagContentOtherField, TagContentOtherFieldVisitor,
-    TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
+use de::{
+    buffer::{Buffer, BufferDeserializer, BufferRefDeserializer, EnumDeserializer},
+    DeserializeSeed, MapAccess, Unexpected,
 };
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub use de::buffer::{Buffer, ContentDeserializer, ContentRefDeserializer};
+pub use self::tagged::{
+    InternallyTaggedUnitVisitor, TagContentOtherField, TagContentOtherFieldVisitor,
+    TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
+};
 
 pub use seed::InPlaceSeed;
 
@@ -193,18 +193,11 @@ where
         .map(From::from)
 }
 
+/// Private API, don't use.
+///
+/// Helper structures for tagged enums.
 #[cfg(any(feature = "std", feature = "alloc"))]
-mod content {
-    // This module is private and nothing here should be used outside of
-    // generated code.
-    //
-    // We will iterate on the implementation for a few releases and only have to
-    // worry about backward compatibility for the `untagged` and `tag` attributes
-    // rather than for this entire mechanism.
-    //
-    // This issue is tracking making some of this stuff public:
-    // https://github.com/serde-rs/serde/issues/741
-
+mod tagged {
     use lib::*;
 
     use __private::size_hint;
@@ -213,9 +206,7 @@ mod content {
         SeqAccess, Unexpected, Visitor,
     };
 
-    pub use de::buffer::{Buffer, BufferVisitor, ContentDeserializer, ContentRefDeserializer};
-
-    pub type Content<'de> = Buffer<'de>;
+    use de::buffer::{Buffer, BufferVisitor};
 
     /// This is the type of the map keys in an internally tagged enum.
     ///
@@ -1104,9 +1095,7 @@ where
             // Items in the vector are nulled out when used by a struct.
             if let Some((ref key, ref content)) = *item {
                 self.pending_content = Some(content);
-                return seed
-                    .deserialize(ContentRefDeserializer::new_inner(&key.0))
-                    .map(Some);
+                return seed.deserialize(BufferRefDeserializer::new(key)).map(Some);
             }
         }
         Ok(None)
@@ -1117,7 +1106,7 @@ where
         T: DeserializeSeed<'de>,
     {
         match self.pending_content.take() {
-            Some(value) => seed.deserialize(ContentRefDeserializer::new_inner(&value.0)),
+            Some(value) => seed.deserialize(BufferRefDeserializer::new(value)),
             None => Err(Error::custom("value is missing")),
         }
     }
@@ -1169,7 +1158,7 @@ where
             if use_item {
                 let (key, content) = item.take().unwrap();
                 self.pending_content = Some(content);
-                return seed.deserialize(ContentDeserializer::new(key)).map(Some);
+                return seed.deserialize(BufferDeserializer::new(key)).map(Some);
             }
         }
         Ok(None)
@@ -1180,7 +1169,7 @@ where
         T: DeserializeSeed<'de>,
     {
         match self.pending_content.take() {
-            Some(value) => seed.deserialize(ContentDeserializer::new(value)),
+            Some(value) => seed.deserialize(BufferDeserializer::new(value)),
             None => Err(Error::custom("value is missing")),
         }
     }
@@ -1211,9 +1200,7 @@ where
                 // is going to be consumed. Borrowing here leaves the entry
                 // available for later flattened fields.
                 self.pending = Some(content);
-                return seed
-                    .deserialize(ContentRefDeserializer::new_inner(&key.0))
-                    .map(Some);
+                return seed.deserialize(BufferRefDeserializer::new(key)).map(Some);
             }
         }
         Ok(None)
@@ -1224,7 +1211,7 @@ where
         T: DeserializeSeed<'de>,
     {
         match self.pending.take() {
-            Some(value) => seed.deserialize(ContentRefDeserializer::new_inner(&value.0)),
+            Some(value) => seed.deserialize(BufferRefDeserializer::new(value)),
             None => panic!("value is missing"),
         }
     }

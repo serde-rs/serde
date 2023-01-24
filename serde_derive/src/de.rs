@@ -1329,7 +1329,7 @@ fn deserialize_internally_tagged_enum(
                 variant,
                 cattrs,
                 quote! {
-                    _serde::__private::de::ContentDeserializer::<__D::Error>::new(__tagged.content)
+                    _serde::de::buffer::BufferDeserializer::<__D::Error>::new(__tagged.content)
                 },
             ));
 
@@ -1586,12 +1586,12 @@ fn deserialize_adjacently_tagged_enum(
                     // First key is the content.
                     _serde::__private::Some(_serde::__private::de::TagOrContentField::Content) => {
                         // Buffer up the content.
-                        let __content = try!(_serde::de::MapAccess::next_value::<_serde::__private::de::Content>(&mut __map));
+                        let __content = try!(_serde::de::MapAccess::next_value::<_serde::de::buffer::Buffer>(&mut __map));
                         // Visit the second key.
                         match #next_relevant_key {
                             // Second key is the tag.
                             _serde::__private::Some(_serde::__private::de::TagOrContentField::Tag) => {
-                                let __deserializer = _serde::__private::de::ContentDeserializer::<__A::Error>::new(__content);
+                                let __deserializer = _serde::de::buffer::BufferDeserializer::<__A::Error>::new(__content);
                                 #finish_content_then_tag
                             }
                             // Second key is a duplicate of the content.
@@ -1668,9 +1668,7 @@ fn deserialize_untagged_enum(
                 params,
                 variant,
                 cattrs,
-                quote!(
-                    _serde::__private::de::ContentRefDeserializer::<__D::Error>::new(&__content)
-                ),
+                quote!(_serde::de::buffer::BufferRefDeserializer::<__D::Error>::new(&__content)),
             ))
         });
 
@@ -1687,7 +1685,7 @@ fn deserialize_untagged_enum(
     let fallthrough_msg = cattrs.expecting().unwrap_or(&fallthrough_msg);
 
     quote_block! {
-        let __content = try!(<_serde::__private::de::Content as _serde::Deserialize>::deserialize(__deserializer));
+        let __content = try!(<_serde::de::buffer::Buffer as _serde::Deserialize>::deserialize(__deserializer));
 
         #(
             if let _serde::__private::Ok(__ok) = #attempts {
@@ -1920,7 +1918,7 @@ fn deserialize_generated_identifier(
     let field_idents: &Vec<_> = &fields.iter().map(|(_, ident, _)| ident).collect();
 
     let (ignore_variant, fallthrough) = if !is_variant && cattrs.has_flatten() {
-        let ignore_variant = quote!(__other(_serde::__private::de::Content<'de>),);
+        let ignore_variant = quote!(__other(_serde::de::buffer::Buffer<'de>),);
         let fallthrough = quote!(_serde::__private::Ok(__Field::__other(__value)));
         (Some(ignore_variant), Some(fallthrough))
     } else if let Some(other_idx) = other_idx {
@@ -2467,8 +2465,8 @@ fn deserialize_map(
     let let_collect = if cattrs.has_flatten() {
         Some(quote! {
             let mut __collect = _serde::__private::Vec::<_serde::__private::Option<(
-                _serde::__private::de::Content,
-                _serde::__private::de::Content
+                _serde::de::buffer::Buffer,
+                _serde::de::buffer::Buffer
             )>>::new();
         })
     } else {
