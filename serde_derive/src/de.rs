@@ -2143,16 +2143,16 @@ fn deserialize_identifier(
     ) = if collect_other_fields {
         (
             Some(quote! {
-                let __value = _serde::__private::de::Content::String(_serde::__private::ToString::to_string(__value));
+                let __value = _serde::de::buffer::BufferVisitor::new().visit_string::<_serde::de::value::Error>(_serde::__private::ToString::to_string(__value)).unwrap();
             }),
             Some(quote! {
-                let __value = _serde::__private::de::Content::Str(__value);
+                let __value = _serde::de::buffer::BufferVisitor::new().visit_borrowed_str::<_serde::de::value::Error>(__value).unwrap();
             }),
             Some(quote! {
-                let __value = _serde::__private::de::Content::ByteBuf(__value.to_vec());
+                let __value = _serde::de::buffer::BufferVisitor::new().visit_byte_buf::<_serde::de::value::Error>(__value.to_vec()).unwrap();
             }),
             Some(quote! {
-                let __value = _serde::__private::de::Content::Bytes(__value);
+                let __value = _serde::de::buffer::BufferVisitor::new().visit_borrowed_bytes::<_serde::de::value::Error>(__value).unwrap();
             }),
         )
     } else {
@@ -2195,91 +2195,91 @@ fn deserialize_identifier(
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Bool(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_bool(__value).map(__Field::__other)
             }
 
             fn visit_i8<__E>(self, __value: i8) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I8(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_i8(__value).map(__Field::__other)
             }
 
             fn visit_i16<__E>(self, __value: i16) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I16(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_i16(__value).map(__Field::__other)
             }
 
             fn visit_i32<__E>(self, __value: i32) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I32(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_i32(__value).map(__Field::__other)
             }
 
             fn visit_i64<__E>(self, __value: i64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I64(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_i64(__value).map(__Field::__other)
             }
 
             fn visit_u8<__E>(self, __value: u8) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U8(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_u8(__value).map(__Field::__other)
             }
 
             fn visit_u16<__E>(self, __value: u16) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U16(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_u16(__value).map(__Field::__other)
             }
 
             fn visit_u32<__E>(self, __value: u32) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U32(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_u32(__value).map(__Field::__other)
             }
 
             fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U64(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_u64(__value).map(__Field::__other)
             }
 
             fn visit_f32<__E>(self, __value: f32) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::F32(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_f32(__value).map(__Field::__other)
             }
 
             fn visit_f64<__E>(self, __value: f64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::F64(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_f64(__value).map(__Field::__other)
             }
 
             fn visit_char<__E>(self, __value: char) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Char(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_char(__value).map(__Field::__other)
             }
 
             fn visit_unit<__E>(self) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Unit))
+                _serde::de::buffer::BufferVisitor::new().visit_unit().map(__Field::__other)
             }
         }
     } else {
