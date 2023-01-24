@@ -2,12 +2,10 @@
 name = "serde_test_suite"
 version = "0.0.0"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
-build = "build.rs"
 edition = "2018"
 publish = false
 
 [features]
-expandtest = []
 unstable = ["serde/unstable"]
 
 [dependencies]
@@ -18,8 +16,6 @@ toolchain_find = "0.2"
 
 [dev-dependencies]
 fnv = "1.0"
-macrotest = "=1.0.9"
-prettyplease = "=0.1.14"
 rustversion = "1.0"
 serde = { path = "../serde", features = ["rc", "derive"] }
 serde_derive = { path = "../serde_derive", features = ["deserialize_in_place"] }
