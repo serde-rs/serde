@@ -1129,9 +1129,7 @@ where
     V: Visitor<'de>,
     E: de::Error,
 {
-    let seq = buffer
-        .iter()
-        .map(|buffer| BufferRefDeserializer::new_inner(&buffer.0));
+    let seq = buffer.iter().map(BufferRefDeserializer::new);
     let mut seq_visitor = de::value::SeqDeserializer::new(seq);
     let value = try!(visitor.visit_seq(&mut seq_visitor));
     try!(seq_visitor.end());
@@ -1146,12 +1144,9 @@ where
     V: Visitor<'de>,
     E: de::Error,
 {
-    let map = buffer.iter().map(|(k, v)| {
-        (
-            BufferRefDeserializer::new_inner(&k.0),
-            BufferRefDeserializer::new_inner(&v.0),
-        )
-    });
+    let map = buffer
+        .iter()
+        .map(|(k, v)| (BufferRefDeserializer::new(k), BufferRefDeserializer::new(v)));
     let mut map_visitor = de::value::MapDeserializer::new(map);
     let value = try!(visitor.visit_map(&mut map_visitor));
     try!(map_visitor.end());
@@ -1189,9 +1184,9 @@ where
             BufferInner::Bytes(v) => visitor.visit_borrowed_bytes(v),
             BufferInner::Unit => visitor.visit_unit(),
             BufferInner::None => visitor.visit_none(),
-            BufferInner::Some(ref v) => visitor.visit_some(BufferRefDeserializer::new_inner(&v.0)),
+            BufferInner::Some(ref v) => visitor.visit_some(BufferRefDeserializer::new(v)),
             BufferInner::Newtype(ref v) => {
-                visitor.visit_newtype_struct(BufferRefDeserializer::new_inner(&v.0))
+                visitor.visit_newtype_struct(BufferRefDeserializer::new(v))
             }
             BufferInner::Seq(ref v) => visit_buffer_seq_ref(v, visitor),
             BufferInner::Map(ref v) => visit_buffer_map_ref(v, visitor),
@@ -1337,7 +1332,7 @@ where
     {
         match *self.buffer {
             BufferInner::None => visitor.visit_none(),
-            BufferInner::Some(ref v) => visitor.visit_some(BufferRefDeserializer::new_inner(&v.0)),
+            BufferInner::Some(ref v) => visitor.visit_some(BufferRefDeserializer::new(v)),
             BufferInner::Unit => visitor.visit_unit(),
             _ => visitor.visit_some(self),
         }
@@ -1370,7 +1365,7 @@ where
     {
         match *self.buffer {
             BufferInner::Newtype(ref v) => {
-                visitor.visit_newtype_struct(BufferRefDeserializer::new_inner(&v.0))
+                visitor.visit_newtype_struct(BufferRefDeserializer::new(v))
             }
             _ => visitor.visit_newtype_struct(self),
         }
@@ -1700,7 +1695,7 @@ where
     {
         match self.iter.next() {
             Some(value) => seed
-                .deserialize(BufferRefDeserializer::new_inner(&value.0))
+                .deserialize(BufferRefDeserializer::new(value))
                 .map(Some),
             None => Ok(None),
         }
@@ -1746,8 +1741,7 @@ where
         match self.iter.next() {
             Some((key, value)) => {
                 self.value = Some(value);
-                seed.deserialize(BufferRefDeserializer::new_inner(&key.0))
-                    .map(Some)
+                seed.deserialize(BufferRefDeserializer::new(key)).map(Some)
             }
             None => Ok(None),
         }
@@ -1758,7 +1752,7 @@ where
         T: de::DeserializeSeed<'de>,
     {
         match self.value.take() {
-            Some(value) => seed.deserialize(BufferRefDeserializer::new_inner(&value.0)),
+            Some(value) => seed.deserialize(BufferRefDeserializer::new(value)),
             None => Err(de::Error::custom("value is missing")),
         }
     }
