@@ -18,7 +18,6 @@ use de::{self, Deserialize, Deserializer, EnumAccess, Expected, MapAccess, SeqAc
 
 /// An efficient buffer for self-describing formats.
 #[derive(Debug, Clone)]
-#[repr(transparent)]
 pub struct Buffer<'de>(pub(crate) BufferInner<'de>);
 
 impl<'de> Buffer<'de> {
