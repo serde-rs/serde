@@ -117,7 +117,7 @@ use lib::*;
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub mod content;
+pub mod buffer;
 #[cfg(not(no_integer128))]
 mod format;
 mod ignored_any;

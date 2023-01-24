@@ -1,10 +1,13 @@
 //! Data structures for buffering self-describing formats.
 //!
 //! ```
-//! # use serde::de::{Deserialize, value, IntoDeserializer, content::Content};
-//! let content = Content::from(32);
-//! let deserializer = IntoDeserializer::<value::Error>::into_deserializer(content);
-//! assert_eq!(u32::deserialize(deserializer).unwrap(), 32);
+//! # use serde::de::{Deserialize, value, IntoDeserializer, buffer::Buffer};
+//! # let source = value::U64Deserializer::<value::Error>::new(32);
+//! // Deserialize any self-describing format from `source` into `buffer`.
+//! let buffer = Buffer::deserialize(source).unwrap();
+//! // Turn the buffer back into a deserializer.
+//! let deserializer = IntoDeserializer::<value::Error>::into_deserializer(buffer);
+//! # assert_eq!(u32::deserialize(deserializer).unwrap(), 32);
 //! ```
 
 use std::fmt;
@@ -13,12 +16,12 @@ use crate::{de, private, Deserialize};
 
 use super::Visitor;
 
-/// An efficient buffer for arbitrary self-describing *content*.
+/// An efficient buffer for self-describing formats.
 #[derive(Clone)]
 #[repr(transparent)]
-pub struct Content<'de>(private::de::Content<'de>);
+pub struct Buffer<'de>(private::de::Content<'de>);
 
-impl<'de> Deserialize<'de> for Content<'de> {
+impl<'de> Deserialize<'de> for Buffer<'de> {
     #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -28,64 +31,18 @@ impl<'de> Deserialize<'de> for Content<'de> {
     }
 }
 
-impl<'de, E: de::Error> de::IntoDeserializer<'de, E> for Content<'de> {
-    type Deserializer = ContentDeserializer<'de, E>;
+impl<'de, E: de::Error> de::IntoDeserializer<'de, E> for Buffer<'de> {
+    type Deserializer = BufferDeserializer<'de, E>;
 
     fn into_deserializer(self) -> Self::Deserializer {
-        ContentDeserializer(private::de::ContentDeserializer::new(self.0))
+        BufferDeserializer(private::de::ContentDeserializer::new(self.0))
     }
 }
 
-macro_rules! impl_from_for_content {
-    ($($type:ty => $constructor:ident ,)*) => {
-        $(
-            impl<'de> From<$type> for Content<'de> {
-                fn from(value: $type) -> Self {
-                    Self(private::de::Content::$constructor(value))
-                }
-            }
-        )*
-    };
-}
+/// A [`Visitor`] for constructing [`Buffer`].
+pub struct BufferVisitor<'de>(private::de::ContentVisitor<'de>);
 
-impl_from_for_content! {
-    bool => Bool,
-
-    u8 => U8,
-    u16 => U16,
-    u32 => U32,
-    u64 => U64,
-
-    i8 => I8,
-    i16 => I16,
-    i32 => I32,
-    i64 => I64,
-
-    f32 => F32,
-    f64 => F64,
-
-    char => Char,
-
-    String => String,
-    Vec<u8> => ByteBuf,
-}
-
-impl<'de> From<&'de str> for Content<'de> {
-    fn from(value: &'de str) -> Self {
-        Self(private::de::Content::Str(value))
-    }
-}
-
-impl<'de> From<&'de [u8]> for Content<'de> {
-    fn from(value: &'de [u8]) -> Self {
-        Self(private::de::Content::Bytes(value))
-    }
-}
-
-/// A [`Visitor`] for constructing [`Content`].
-pub struct ContentVisitor<'de>(private::de::ContentVisitor<'de>);
-
-impl<'de> ContentVisitor<'de> {
+impl<'de> BufferVisitor<'de> {
     /// Constructs a new [`ContentVisitor`].
     pub fn new() -> Self {
         Self(private::de::ContentVisitor::new())
@@ -100,14 +57,14 @@ macro_rules! impl_fn_delegate_visit {
             where
                 E: de::Error
             {
-                Ok(Content(self.0.$func(value)?))
+                Ok(Buffer(self.0.$func(value)?))
             }
         )*
     };
 }
 
-impl<'de> Visitor<'de> for ContentVisitor<'de> {
-    type Value = Content<'de>;
+impl<'de> Visitor<'de> for BufferVisitor<'de> {
+    type Value = Buffer<'de>;
 
     #[inline]
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -153,7 +110,7 @@ impl<'de> Visitor<'de> for ContentVisitor<'de> {
     where
         E: de::Error,
     {
-        Ok(Content(self.0.visit_none()?))
+        Ok(Buffer(self.0.visit_none()?))
     }
 
     #[inline]
@@ -161,7 +118,7 @@ impl<'de> Visitor<'de> for ContentVisitor<'de> {
     where
         D: crate::Deserializer<'de>,
     {
-        Ok(Content(self.0.visit_some(deserializer)?))
+        Ok(Buffer(self.0.visit_some(deserializer)?))
     }
 
     #[inline]
@@ -169,7 +126,7 @@ impl<'de> Visitor<'de> for ContentVisitor<'de> {
     where
         E: de::Error,
     {
-        Ok(Content(self.0.visit_unit()?))
+        Ok(Buffer(self.0.visit_unit()?))
     }
 
     #[inline]
@@ -177,7 +134,7 @@ impl<'de> Visitor<'de> for ContentVisitor<'de> {
     where
         D: crate::Deserializer<'de>,
     {
-        Ok(Content(self.0.visit_newtype_struct(deserializer)?))
+        Ok(Buffer(self.0.visit_newtype_struct(deserializer)?))
     }
 
     #[inline]
@@ -185,35 +142,35 @@ impl<'de> Visitor<'de> for ContentVisitor<'de> {
     where
         A: de::SeqAccess<'de>,
     {
-        Ok(Content(self.0.visit_seq(seq)?))
+        Ok(Buffer(self.0.visit_seq(seq)?))
     }
 
     fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
     where
         A: de::MapAccess<'de>,
     {
-        Ok(Content(self.0.visit_map(map)?))
+        Ok(Buffer(self.0.visit_map(map)?))
     }
 
     fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
     where
         A: de::EnumAccess<'de>,
     {
-        Ok(Content(self.0.visit_enum(data)?))
+        Ok(Buffer(self.0.visit_enum(data)?))
     }
 
     fn __private_visit_untagged_option<D>(self, deserializer: D) -> Result<Self::Value, ()>
     where
         D: crate::Deserializer<'de>,
     {
-        Ok(Content(
+        Ok(Buffer(
             self.0.__private_visit_untagged_option(deserializer)?,
         ))
     }
 }
 
-/// A deserializer for buffered [`Content`].
-pub struct ContentDeserializer<'de, E: de::Error>(private::de::ContentDeserializer<'de, E>);
+/// A deserializer for [`Buffer`].
+pub struct BufferDeserializer<'de, E: de::Error>(private::de::ContentDeserializer<'de, E>);
 
 macro_rules! impl_fn_delegate_deserialize {
     ($($func:ident,)*) => {
@@ -229,7 +186,7 @@ macro_rules! impl_fn_delegate_deserialize {
     };
 }
 
-impl<'de, E: de::Error> de::Deserializer<'de> for ContentDeserializer<'de, E> {
+impl<'de, E: de::Error> de::Deserializer<'de> for BufferDeserializer<'de, E> {
     type Error = E;
 
     impl_fn_delegate_deserialize!(
