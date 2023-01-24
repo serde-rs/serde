@@ -52,7 +52,7 @@ impl<'de, E: de::Error> de::IntoDeserializer<'de, E> for Buffer<'de> {
 
     fn into_deserializer(self) -> Self::Deserializer {
         BufferDeserializer {
-            content: self,
+            buffer: self,
             err: PhantomData,
         }
     }
@@ -332,7 +332,7 @@ impl<'de> Visitor<'de> for BufferVisitor<'de> {
 
 /// A deserializer holding a [`Buffer`].
 pub struct BufferDeserializer<'de, E> {
-    content: Buffer<'de>,
+    buffer: Buffer<'de>,
     err: PhantomData<E>,
 }
 
@@ -342,14 +342,14 @@ where
 {
     #[cold]
     fn invalid_type(self, exp: &Expected) -> E {
-        de::Error::invalid_type(self.content.0.unexpected(), exp)
+        de::Error::invalid_type(self.buffer.0.unexpected(), exp)
     }
 
     fn deserialize_integer<V>(self, visitor: V) -> Result<V::Value, E>
     where
         V: Visitor<'de>,
     {
-        match self.content.0 {
+        match self.buffer.0 {
             BufferInner::U8(v) => visitor.visit_u8(v),
             BufferInner::U16(v) => visitor.visit_u16(v),
             BufferInner::U32(v) => visitor.visit_u32(v),
@@ -366,7 +366,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match self.content.0 {
+        match self.buffer.0 {
             BufferInner::F32(v) => visitor.visit_f32(v),
             BufferInner::F64(v) => visitor.visit_f64(v),
             BufferInner::U8(v) => visitor.visit_u8(v),
@@ -382,27 +382,27 @@ where
     }
 }
 
-fn visit_content_seq<'de, V, E>(content: Vec<Buffer<'de>>, visitor: V) -> Result<V::Value, E>
+fn visit_buffer_seq<'de, V, E>(buffer: Vec<Buffer<'de>>, visitor: V) -> Result<V::Value, E>
 where
     V: Visitor<'de>,
     E: de::Error,
 {
-    let seq = content.into_iter().map(BufferDeserializer::new);
+    let seq = buffer.into_iter().map(BufferDeserializer::new);
     let mut seq_visitor = de::value::SeqDeserializer::new(seq);
     let value = try!(visitor.visit_seq(&mut seq_visitor));
     try!(seq_visitor.end());
     Ok(value)
 }
 
-fn visit_content_map<'de, V, E>(
-    content: Vec<(Buffer<'de>, Buffer<'de>)>,
+fn visit_buffer_map<'de, V, E>(
+    buffer: Vec<(Buffer<'de>, Buffer<'de>)>,
     visitor: V,
 ) -> Result<V::Value, E>
 where
     V: Visitor<'de>,
     E: de::Error,
 {
-    let map = content
+    let map = buffer
         .into_iter()
         .map(|(k, v)| (BufferDeserializer::new(k), BufferDeserializer::new(v)));
     let mut map_visitor = de::value::MapDeserializer::new(map);
@@ -411,7 +411,7 @@ where
     Ok(value)
 }
 
-/// Used when deserializing an internally tagged enum because the content
+/// Used when deserializing an internally tagged enum because the buffer
 /// will be used exactly once.
 impl<'de, E> Deserializer<'de> for BufferDeserializer<'de, E>
 where
@@ -423,7 +423,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match self.content.0 {
+        match self.buffer.0 {
             BufferInner::Bool(v) => visitor.visit_bool(v),
             BufferInner::U8(v) => visitor.visit_u8(v),
             BufferInner::U16(v) => visitor.visit_u16(v),
@@ -444,8 +444,8 @@ where
             BufferInner::None => visitor.visit_none(),
             BufferInner::Some(v) => visitor.visit_some(BufferDeserializer::new(*v)),
             BufferInner::Newtype(v) => visitor.visit_newtype_struct(BufferDeserializer::new(*v)),
-            BufferInner::Seq(v) => visit_content_seq(v, visitor),
-            BufferInner::Map(v) => visit_content_map(v, visitor),
+            BufferInner::Seq(v) => visit_buffer_seq(v, visitor),
+            BufferInner::Map(v) => visit_buffer_map(v, visitor),
         }
     }
 
@@ -453,7 +453,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match self.content.0 {
+        match self.buffer.0 {
             BufferInner::Bool(v) => visitor.visit_bool(v),
             _ => Err(self.invalid_type(&visitor)),
         }
@@ -533,7 +533,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match self.content.0 {
+        match self.buffer.0 {
             BufferInner::Char(v) => visitor.visit_char(v),
             BufferInner::String(v) => visitor.visit_string(v),
             BufferInner::Str(v) => visitor.visit_borrowed_str(v),
@@ -552,7 +552,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match self.content.0 {
+        match self.buffer.0 {
             BufferInner::String(v) => visitor.visit_string(v),
             BufferInner::Str(v) => visitor.visit_borrowed_str(v),
             BufferInner::ByteBuf(v) => visitor.visit_byte_buf(v),
@@ -572,12 +572,12 @@ where
     where
         V: Visitor<'de>,
     {
-        match self.content.0 {
+        match self.buffer.0 {
             BufferInner::String(v) => visitor.visit_string(v),
             BufferInner::Str(v) => visitor.visit_borrowed_str(v),
             BufferInner::ByteBuf(v) => visitor.visit_byte_buf(v),
             BufferInner::Bytes(v) => visitor.visit_borrowed_bytes(v),
-            BufferInner::Seq(v) => visit_content_seq(v, visitor),
+            BufferInner::Seq(v) => visit_buffer_seq(v, visitor),
             _ => Err(self.invalid_type(&visitor)),
         }
     }
@@ -586,7 +586,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match self.content.0 {
+        match self.buffer.0 {
             BufferInner::None => visitor.visit_none(),
             BufferInner::Some(v) => visitor.visit_some(BufferDeserializer::new(*v)),
             BufferInner::Unit => visitor.visit_unit(),
@@ -598,7 +598,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match self.content.0 {
+        match self.buffer.0 {
             BufferInner::Unit => visitor.visit_unit(),
 
             // Allow deserializing newtype variant containing unit.
@@ -623,7 +623,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match self.content.0 {
+        match self.buffer.0 {
             // As a special case, allow deserializing untagged newtype
             // variant containing unit struct.
             //
@@ -648,7 +648,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match self.content.0 {
+        match self.buffer.0 {
             BufferInner::Newtype(v) => visitor.visit_newtype_struct(BufferDeserializer::new(*v)),
             _ => visitor.visit_newtype_struct(self),
         }
@@ -658,8 +658,8 @@ where
     where
         V: Visitor<'de>,
     {
-        match self.content.0 {
-            BufferInner::Seq(v) => visit_content_seq(v, visitor),
+        match self.buffer.0 {
+            BufferInner::Seq(v) => visit_buffer_seq(v, visitor),
             _ => Err(self.invalid_type(&visitor)),
         }
     }
@@ -687,8 +687,8 @@ where
     where
         V: Visitor<'de>,
     {
-        match self.content.0 {
-            BufferInner::Map(v) => visit_content_map(v, visitor),
+        match self.buffer.0 {
+            BufferInner::Map(v) => visit_buffer_map(v, visitor),
             _ => Err(self.invalid_type(&visitor)),
         }
     }
@@ -702,9 +702,9 @@ where
     where
         V: Visitor<'de>,
     {
-        match self.content.0 {
-            BufferInner::Seq(v) => visit_content_seq(v, visitor),
-            BufferInner::Map(v) => visit_content_map(v, visitor),
+        match self.buffer.0 {
+            BufferInner::Seq(v) => visit_buffer_seq(v, visitor),
+            BufferInner::Map(v) => visit_buffer_map(v, visitor),
             _ => Err(self.invalid_type(&visitor)),
         }
     }
@@ -718,7 +718,7 @@ where
     where
         V: Visitor<'de>,
     {
-        let (variant, value) = match self.content.0 {
+        let (variant, value) = match self.buffer.0 {
             BufferInner::Map(value) => {
                 let mut iter = value.into_iter();
                 let (variant, value) = match iter.next() {
@@ -755,7 +755,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match self.content.0 {
+        match self.buffer.0 {
             BufferInner::String(v) => visitor.visit_string(v),
             BufferInner::Str(v) => visitor.visit_borrowed_str(v),
             BufferInner::ByteBuf(v) => visitor.visit_byte_buf(v),
@@ -783,15 +783,15 @@ where
         V: Visitor<'de, Value = Buffer<'de>>,
     {
         let _ = visitor;
-        Ok(self.content)
+        Ok(self.buffer)
     }
 }
 
 impl<'de, E> BufferDeserializer<'de, E> {
     /// private API, don't use
-    pub fn new(content: Buffer<'de>) -> Self {
+    pub fn new(buffer: Buffer<'de>) -> Self {
         BufferDeserializer {
-            content: content,
+            buffer: buffer,
             err: PhantomData,
         }
     }
@@ -1074,7 +1074,7 @@ where
 
 /// A deserializer holding a [`Buffer`] reference.
 pub struct BufferRefDeserializer<'a, 'de: 'a, E> {
-    content: &'a BufferInner<'de>,
+    buffer: &'a BufferInner<'de>,
     err: PhantomData<E>,
 }
 
@@ -1084,14 +1084,14 @@ where
 {
     #[cold]
     fn invalid_type(self, exp: &Expected) -> E {
-        de::Error::invalid_type(self.content.unexpected(), exp)
+        de::Error::invalid_type(self.buffer.unexpected(), exp)
     }
 
     fn deserialize_integer<V>(self, visitor: V) -> Result<V::Value, E>
     where
         V: Visitor<'de>,
     {
-        match *self.content {
+        match *self.buffer {
             BufferInner::U8(v) => visitor.visit_u8(v),
             BufferInner::U16(v) => visitor.visit_u16(v),
             BufferInner::U32(v) => visitor.visit_u32(v),
@@ -1108,7 +1108,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match *self.content {
+        match *self.buffer {
             BufferInner::F32(v) => visitor.visit_f32(v),
             BufferInner::F64(v) => visitor.visit_f64(v),
             BufferInner::U8(v) => visitor.visit_u8(v),
@@ -1124,15 +1124,12 @@ where
     }
 }
 
-fn visit_content_seq_ref<'a, 'de, V, E>(
-    content: &'a [Buffer<'de>],
-    visitor: V,
-) -> Result<V::Value, E>
+fn visit_buffer_seq_ref<'a, 'de, V, E>(buffer: &'a [Buffer<'de>], visitor: V) -> Result<V::Value, E>
 where
     V: Visitor<'de>,
     E: de::Error,
 {
-    let seq = content
+    let seq = buffer
         .iter()
         .map(|buffer| BufferRefDeserializer::new_inner(&buffer.0));
     let mut seq_visitor = de::value::SeqDeserializer::new(seq);
@@ -1141,15 +1138,15 @@ where
     Ok(value)
 }
 
-fn visit_content_map_ref<'a, 'de, V, E>(
-    content: &'a [(Buffer<'de>, Buffer<'de>)],
+fn visit_buffer_map_ref<'a, 'de, V, E>(
+    buffer: &'a [(Buffer<'de>, Buffer<'de>)],
     visitor: V,
 ) -> Result<V::Value, E>
 where
     V: Visitor<'de>,
     E: de::Error,
 {
-    let map = content.iter().map(|(k, v)| {
+    let map = buffer.iter().map(|(k, v)| {
         (
             BufferRefDeserializer::new_inner(&k.0),
             BufferRefDeserializer::new_inner(&v.0),
@@ -1161,7 +1158,7 @@ where
     Ok(value)
 }
 
-/// Used when deserializing an untagged enum because the content may need
+/// Used when deserializing an untagged enum because the buffer may need
 /// to be used more than once.
 impl<'de, 'a, E> Deserializer<'de> for BufferRefDeserializer<'a, 'de, E>
 where
@@ -1173,7 +1170,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match *self.content {
+        match *self.buffer {
             BufferInner::Bool(v) => visitor.visit_bool(v),
             BufferInner::U8(v) => visitor.visit_u8(v),
             BufferInner::U16(v) => visitor.visit_u16(v),
@@ -1196,8 +1193,8 @@ where
             BufferInner::Newtype(ref v) => {
                 visitor.visit_newtype_struct(BufferRefDeserializer::new_inner(&v.0))
             }
-            BufferInner::Seq(ref v) => visit_content_seq_ref(v, visitor),
-            BufferInner::Map(ref v) => visit_content_map_ref(v, visitor),
+            BufferInner::Seq(ref v) => visit_buffer_seq_ref(v, visitor),
+            BufferInner::Map(ref v) => visit_buffer_map_ref(v, visitor),
         }
     }
 
@@ -1205,7 +1202,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match *self.content {
+        match *self.buffer {
             BufferInner::Bool(v) => visitor.visit_bool(v),
             _ => Err(self.invalid_type(&visitor)),
         }
@@ -1285,7 +1282,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match *self.content {
+        match *self.buffer {
             BufferInner::Char(v) => visitor.visit_char(v),
             BufferInner::String(ref v) => visitor.visit_str(v),
             BufferInner::Str(v) => visitor.visit_borrowed_str(v),
@@ -1297,7 +1294,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match *self.content {
+        match *self.buffer {
             BufferInner::String(ref v) => visitor.visit_str(v),
             BufferInner::Str(v) => visitor.visit_borrowed_str(v),
             BufferInner::ByteBuf(ref v) => visitor.visit_bytes(v),
@@ -1317,12 +1314,12 @@ where
     where
         V: Visitor<'de>,
     {
-        match *self.content {
+        match *self.buffer {
             BufferInner::String(ref v) => visitor.visit_str(v),
             BufferInner::Str(v) => visitor.visit_borrowed_str(v),
             BufferInner::ByteBuf(ref v) => visitor.visit_bytes(v),
             BufferInner::Bytes(v) => visitor.visit_borrowed_bytes(v),
-            BufferInner::Seq(ref v) => visit_content_seq_ref(v, visitor),
+            BufferInner::Seq(ref v) => visit_buffer_seq_ref(v, visitor),
             _ => Err(self.invalid_type(&visitor)),
         }
     }
@@ -1338,7 +1335,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match *self.content {
+        match *self.buffer {
             BufferInner::None => visitor.visit_none(),
             BufferInner::Some(ref v) => visitor.visit_some(BufferRefDeserializer::new_inner(&v.0)),
             BufferInner::Unit => visitor.visit_unit(),
@@ -1350,7 +1347,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match *self.content {
+        match *self.buffer {
             BufferInner::Unit => visitor.visit_unit(),
             _ => Err(self.invalid_type(&visitor)),
         }
@@ -1371,7 +1368,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match *self.content {
+        match *self.buffer {
             BufferInner::Newtype(ref v) => {
                 visitor.visit_newtype_struct(BufferRefDeserializer::new_inner(&v.0))
             }
@@ -1383,8 +1380,8 @@ where
     where
         V: Visitor<'de>,
     {
-        match *self.content {
-            BufferInner::Seq(ref v) => visit_content_seq_ref(v, visitor),
+        match *self.buffer {
+            BufferInner::Seq(ref v) => visit_buffer_seq_ref(v, visitor),
             _ => Err(self.invalid_type(&visitor)),
         }
     }
@@ -1412,8 +1409,8 @@ where
     where
         V: Visitor<'de>,
     {
-        match *self.content {
-            BufferInner::Map(ref v) => visit_content_map_ref(v, visitor),
+        match *self.buffer {
+            BufferInner::Map(ref v) => visit_buffer_map_ref(v, visitor),
             _ => Err(self.invalid_type(&visitor)),
         }
     }
@@ -1427,9 +1424,9 @@ where
     where
         V: Visitor<'de>,
     {
-        match *self.content {
-            BufferInner::Seq(ref v) => visit_content_seq_ref(v, visitor),
-            BufferInner::Map(ref v) => visit_content_map_ref(v, visitor),
+        match *self.buffer {
+            BufferInner::Seq(ref v) => visit_buffer_seq_ref(v, visitor),
+            BufferInner::Map(ref v) => visit_buffer_map_ref(v, visitor),
             _ => Err(self.invalid_type(&visitor)),
         }
     }
@@ -1443,7 +1440,7 @@ where
     where
         V: Visitor<'de>,
     {
-        let (variant, value) = match *self.content {
+        let (variant, value) = match *self.buffer {
             BufferInner::Map(ref value) => {
                 let mut iter = value.iter();
                 let (variant, value) = match iter.next() {
@@ -1484,7 +1481,7 @@ where
     where
         V: Visitor<'de>,
     {
-        match *self.content {
+        match *self.buffer {
             BufferInner::String(ref v) => visitor.visit_str(v),
             BufferInner::Str(v) => visitor.visit_borrowed_str(v),
             BufferInner::ByteBuf(ref v) => visitor.visit_bytes(v),
@@ -1511,7 +1508,7 @@ where
         V: Visitor<'de, Value = Buffer<'de>>,
     {
         let _ = visitor;
-        Ok(Buffer(self.content.clone()))
+        Ok(Buffer(self.buffer.clone()))
     }
 }
 
@@ -1522,9 +1519,9 @@ impl<'a, 'de, E> BufferRefDeserializer<'a, 'de, E> {
     }
 
     /// Construct a new [`BufferRefDeserializer`] from a reference to [`BufferInner`].
-    fn new_inner(content: &'a BufferInner<'de>) -> Self {
+    fn new_inner(buffer: &'a BufferInner<'de>) -> Self {
         BufferRefDeserializer {
-            content: content,
+            buffer: buffer,
             err: PhantomData,
         }
     }
