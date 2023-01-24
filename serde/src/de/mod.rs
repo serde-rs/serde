@@ -1224,7 +1224,7 @@ pub trait Deserializer<'de>: Sized {
     // Not public API.
     #[cfg(any(feature = "std", feature = "alloc"))]
     #[doc(hidden)]
-    fn __deserialize_content<V>(
+    fn __deserialize_buffer<V>(
         self,
         _: ::actually_private::T,
         visitor: V,

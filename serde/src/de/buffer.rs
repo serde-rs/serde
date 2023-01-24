@@ -43,7 +43,7 @@ impl<'de> Deserialize<'de> for Buffer<'de> {
         D: Deserializer<'de>,
     {
         let visitor = BufferVisitor::new();
-        deserializer.__deserialize_content(::actually_private::T, visitor)
+        deserializer.__deserialize_buffer(::actually_private::T, visitor)
     }
 }
 
@@ -774,7 +774,7 @@ where
         visitor.visit_unit()
     }
 
-    fn __deserialize_content<V>(
+    fn __deserialize_buffer<V>(
         self,
         _: ::actually_private::T,
         visitor: V,
@@ -1502,7 +1502,7 @@ where
         visitor.visit_unit()
     }
 
-    fn __deserialize_content<V>(
+    fn __deserialize_buffer<V>(
         self,
         _: ::actually_private::T,
         visitor: V,
