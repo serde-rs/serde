@@ -1070,6 +1070,8 @@ fn serialize_tuple_struct_visitor(
 
             if let Some(path) = field.attrs.serialize_with() {
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
+            } else if field.attrs.stringify() {
+                field_expr = wrap_stringify(params, field.ty);
             }
 
             let span = field.original.span();
@@ -1186,6 +1188,35 @@ fn wrap_serialize_variant_with(
         field_tys.as_slice(),
         field_exprs.as_slice(),
     )
+}
+
+fn wrap_stringify(
+    params: &Parameters,
+    field_ty: &syn::Type,
+) -> TokenStream {
+    let this_type = &params.this_type;
+    let (_, ty_generics, where_clause) = params.generics.split_for_impl();
+
+    quote!({
+        struct __Stringify #ty_generics #where_clause {
+            value: #field_ty,
+            phantom: _serde::__private::PhantomData<#this_type #ty_generics>,
+        }
+
+        impl #ty_generics _serde::Serialize for __Stringify #ty_generics #where_clause, Self: std::fmt::Display {
+            fn serialize<__S>(&self, __s: __S) -> _serde::__private::Result<__S::Ok, __S::Error>
+            where
+                __S: _serde::Serializer,
+            {
+                __s.collect_str(self)
+            }
+        }
+
+        &__Stringify {
+            value: #field_ty,
+            phantom: _serde::__private::PhantomData::<#this_type #ty_generics>,
+        }
+    })
 }
 
 fn wrap_serialize_with(

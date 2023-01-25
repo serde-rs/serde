@@ -660,6 +660,13 @@ fn deserialize_seq(
             quote! {
                 let #var = #default;
             }
+        } else if field.attrs.stringify() {
+            let field_ty = field.ty;
+            let (wrapper, wrapper_ty) = wrap_stringify(params, &quote!(#field_ty));
+            quote!({
+                #wrapper
+                #wrapper_ty
+            })
         } else {
             let visit = match field.attrs.deserialize_with() {
                 None => {
@@ -2845,6 +2852,30 @@ fn deserialize_map_in_place(
 
 fn field_i(i: usize) -> Ident {
     Ident::new(&format!("__field{}", i), Span::call_site())
+}
+
+fn wrap_stringify(
+    _params: &Parameters,
+    value_ty: &TokenStream,
+) -> (TokenStream, TokenStream) {
+    // TODO FIXME
+    let wrapper = quote! {
+        impl _serde::Deserialize for #value_ty {
+            fn deserialize<'de, __D>(__deserializer: __D) -> _serde::__private::Result<Self, __D::Error>
+            where
+                __D: _serde::Deserializer<'de>,
+                #value_ty: std::str::FromStr,
+                __D::Error: Sized + de::StdError,
+            {
+                let s = String::deserialize(__deserializer)?;
+                s.parse().map_err(serde::de::Error::custom)
+            }
+        }
+    };
+
+    let wrapper_ty = quote!(#value_ty);
+
+    (wrapper, wrapper_ty)
 }
 
 /// This function wraps the expression in `#[serde(deserialize_with = "...")]`

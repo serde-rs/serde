@@ -2824,3 +2824,35 @@ fn test_expecting_message_identifier_enum() {
         r#"invalid type: map, expected something strange..."#,
     );
 }
+
+mod stringify {
+    use super::*;
+
+    #[derive(Serialize, Deserialize, Debug)]
+    struct X;
+    
+    impl std::fmt::Display for X {
+        fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("X")
+        }
+    }
+    
+    impl std::str::FromStr for X {
+        type Err = &'static str;
+    
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s {
+                "X" => Ok(X),
+                _ => Err("was not X"),
+            }
+        }
+    }
+    
+    #[derive(Serialize, Deserialize, Debug)]
+    struct S {
+        #[serde(stringify)]
+        x: X
+    }
+    
+    
+}

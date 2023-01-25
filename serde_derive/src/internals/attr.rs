@@ -1109,6 +1109,7 @@ pub struct Field {
     skip_serializing: bool,
     skip_deserializing: bool,
     skip_serializing_if: Option<syn::ExprPath>,
+    stringify: bool,
     default: Default,
     serialize_with: Option<syn::ExprPath>,
     deserialize_with: Option<syn::ExprPath>,
@@ -1154,6 +1155,7 @@ impl Field {
         let mut skip_serializing = BoolAttr::none(cx, SKIP_SERIALIZING);
         let mut skip_deserializing = BoolAttr::none(cx, SKIP_DESERIALIZING);
         let mut skip_serializing_if = Attr::none(cx, SKIP_SERIALIZING_IF);
+        let mut stringify = BoolAttr::none(cx, STRINGIFY);
         let mut default = Attr::none(cx, DEFAULT);
         let mut serialize_with = Attr::none(cx, SERIALIZE_WITH);
         let mut deserialize_with = Attr::none(cx, DESERIALIZE_WITH);
@@ -1233,6 +1235,11 @@ impl Field {
                 Meta(Path(word)) if word == SKIP => {
                     skip_serializing.set_true(word);
                     skip_deserializing.set_true(word);
+                }
+
+                // Parse `#[serde(stringify)]`
+                Meta(Path(word)) if word == STRINGIFY => {
+                    stringify.set_true(word);
                 }
 
                 // Parse `#[serde(skip_serializing_if = "...")]`
@@ -1413,6 +1420,7 @@ impl Field {
             skip_serializing: skip_serializing.get(),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing_if: skip_serializing_if.get(),
+            stringify: stringify.get(),
             default: default.get().unwrap_or(Default::None),
             serialize_with: serialize_with.get(),
             deserialize_with: deserialize_with.get(),
@@ -1448,6 +1456,10 @@ impl Field {
 
     pub fn skip_deserializing(&self) -> bool {
         self.skip_deserializing
+    }
+
+    pub fn stringify(&self) -> bool {
+        self.stringify
     }
 
     pub fn skip_serializing_if(&self) -> Option<&syn::ExprPath> {
