@@ -127,22 +127,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.36.0
       - run: cd serde && cargo build --no-default-features --features alloc
 
-  emscripten:
-    name: Emscripten
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@nightly
-      - uses: actions/setup-node@v1
-        with:
-          node-version: 9
-      - uses: dtolnay/install@cargo-web
-      - run: cd test_suite && cargo web test --target=asmjs-unknown-emscripten --nodejs
-        continue-on-error: true
-      - run: cd test_suite && cargo web test --target=wasm32-unknown-emscripten --nodejs
-        continue-on-error: true
-
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
