@@ -1235,7 +1235,7 @@ fn serialize_variant_as_string<S>(f1: &str, f2: &u8, serializer: S) -> Result<S:
 where
     S: Serializer,
 {
-    serializer.serialize_str(format!("{f1};{f2:?}").as_str())
+    serializer.collect_str(&format_args!("{f1};{f2:?}"))
 }
 
 fn deserialize_string_as_variant<'de, D>(deserializer: D) -> Result<(String, u8), D::Error>
