@@ -176,6 +176,7 @@ mod lib {
     pub use self::core::clone::{self, Clone};
     pub use self::core::convert::{self, From, Into};
     pub use self::core::default::{self, Default};
+    pub use self::core::ffi::CStr;
     pub use self::core::fmt::{self, Debug, Display};
     pub use self::core::marker::{self, PhantomData};
     pub use self::core::num::Wrapping;
@@ -218,13 +219,18 @@ mod lib {
     #[cfg(feature = "std")]
     pub use std::collections::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
 
+    #[cfg(all(feature = "alloc", not(feature = "std")))]
+    pub use alloc::ffi::{CString};
+    #[cfg(feature = "std")]
+    pub use std::ffi::{CString};
+
     #[cfg(feature = "std")]
     pub use std::{error, net};
 
     #[cfg(feature = "std")]
     pub use std::collections::{HashMap, HashSet};
     #[cfg(feature = "std")]
-    pub use std::ffi::{CStr, CString, OsStr, OsString};
+    pub use std::ffi::{OsStr, OsString};
     #[cfg(feature = "std")]
     pub use std::hash::{BuildHasher, Hash};
     #[cfg(feature = "std")]
