@@ -1,4 +1,7 @@
-#![allow(clippy::type_repetition_in_bounds)]
+#![allow(
+    clippy::extra_unused_type_parameters,
+    clippy::type_repetition_in_bounds
+)]
 
 #[test]
 fn test_gen_custom_serde() {
