@@ -2776,7 +2776,8 @@ fn test_expecting_message_untagged_tagged_enum() {
         Untagged,
     }
 
-    assert_de_tokens_error::<Enum>(&[Token::Str("Untagged")], r#"something strange..."#);
+    assert_de_tokens_error::<Enum>(&[Token::Str("Untagged")], r#"something strange...
+Untagged: invalid type: string "Untagged", expected unit variant Enum::Untagged"#);
 }
 
 #[test]

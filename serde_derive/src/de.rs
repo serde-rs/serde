@@ -1674,28 +1674,44 @@ fn deserialize_untagged_enum(
             ))
         });
 
-    // TODO this message could be better by saving the errors from the failed
-    // attempts. The heuristic used by TOML was to count the number of fields
-    // processed before an error, and use the error that happened after the
-    // largest number of fields. I'm not sure I like that. Maybe it would be
-    // better to save all the errors and combine them into one message that
-    // explains why none of the variants matched.
     let fallthrough_msg = format!(
         "data did not match any variant of untagged enum {}",
         params.type_name()
     );
     let fallthrough_msg = cattrs.expecting().unwrap_or(&fallthrough_msg);
 
-    quote_block! {
+    // If all variants cannot be deserialized, we will try to write an error
+    // message explaining why it failed for each one
+    // The format string we are building will have the following structure:
+    // "data did not match any variant of untagged enum{}\nvar1: {}\nvar2: {}\nvar3: {}"
+    let mut err_format_string = fallthrough_msg.to_owned();
+    let mut num_variants = 0usize;
+    for var in variants.iter().filter(|variant| !variant.attrs.skip_deserializing()) {
+        err_format_string.push_str("\n");
+        err_format_string.push_str(&var.ident.to_string());
+        err_format_string.push_str(": {}");
+        num_variants += 1;
+     }
+
+     // We need two copies of this iterator, and it's not cloneable
+     let err_identifiers1 = (0..num_variants).map(|idx| format_ident!("_err{}", idx));
+     let err_identifiers2 = (0..num_variants).map(|idx| format_ident!("_err{}", idx));
+
+     quote_block! {
         let __content = try!(<_serde::__private::de::Content as _serde::Deserialize>::deserialize(__deserializer));
 
         #(
-            if let _serde::__private::Ok(__ok) = #attempts {
-                return _serde::__private::Ok(__ok);
-            }
+            let #err_identifiers1 = match #attempts {
+                _serde::__private::Ok(__ok) => {
+                    return _serde::__private::Ok(__ok);
+                },
+                _serde::__private::Err(__err) => {
+                    __err
+                },
+            };
         )*
 
-        _serde::__private::Err(_serde::de::Error::custom(#fallthrough_msg))
+        _serde::__private::Err(_serde::de::Error::custom(format_args!(#err_format_string, #(#err_identifiers2),*)))
     }
 }
 

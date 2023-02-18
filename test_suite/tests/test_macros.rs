@@ -662,7 +662,13 @@ fn test_untagged_enum() {
 
     assert_de_tokens_error::<Untagged>(
         &[Token::Tuple { len: 1 }, Token::U8(1), Token::TupleEnd],
-        "data did not match any variant of untagged enum Untagged",
+        r#"data did not match any variant of untagged enum Untagged
+A: invalid type: sequence, expected struct variant Untagged::A
+B: invalid type: sequence, expected struct variant Untagged::B
+C: invalid type: sequence, expected unit variant Untagged::C
+D: invalid type: sequence, expected u8
+E: invalid type: sequence, expected a string
+F: invalid length 1, expected tuple variant Untagged::F with 2 elements"#,
     );
 
     assert_de_tokens_error::<Untagged>(
@@ -673,8 +679,65 @@ fn test_untagged_enum() {
             Token::U8(3),
             Token::TupleEnd,
         ],
-        "data did not match any variant of untagged enum Untagged",
+        r#"data did not match any variant of untagged enum Untagged
+A: invalid type: sequence, expected struct variant Untagged::A
+B: invalid type: sequence, expected struct variant Untagged::B
+C: invalid type: sequence, expected unit variant Untagged::C
+D: invalid type: sequence, expected u8
+E: invalid type: sequence, expected a string
+F: invalid length 3, expected 2 elements in sequence"#,
     );
+}
+
+#[test]
+fn test_untagged_enum_with_disallow_unknown_fields() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(untagged)]
+    #[serde(deny_unknown_fields)]
+    enum Untagged {
+        A { a: String },
+        B { b: String, #[serde(default)] c: Vec<String> },
+    }
+
+    assert_de_tokens_error::<Untagged>(
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("d"),
+            Token::Str("foo"),
+            Token::MapEnd
+        ],
+        r#"data did not match any variant of untagged enum Untagged
+A: unknown field `d`, expected `a`
+B: unknown field `d`, expected `b` or `c`"#);
+
+    assert_de_tokens_error::<Untagged>(
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("a"),
+            Token::Str("foo"),
+            Token::Str("c"),
+            Token::Seq { len: Some(1) },
+            Token::Str("bar"),
+            Token::SeqEnd,
+            Token::MapEnd
+        ],
+        r#"data did not match any variant of untagged enum Untagged
+A: unknown field `c`, expected `a`
+B: unknown field `a`, expected `b` or `c`"#);
+
+    assert_de_tokens_error::<Untagged>(
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("c"),
+            Token::Seq { len: Some(1) },
+            Token::Str("bar"),
+            Token::SeqEnd,
+            Token::MapEnd
+        ],
+        r#"data did not match any variant of untagged enum Untagged
+A: unknown field `c`, expected `a`
+B: missing field `b`"#);
+
 }
 
 #[test]
