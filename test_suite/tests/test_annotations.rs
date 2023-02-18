@@ -2318,6 +2318,59 @@ fn test_internally_tagged_enum_new_type_with_unit() {
 }
 
 #[test]
+fn test_adjacently_tagged_enum_bytes() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(tag = "t", content = "c")]
+    enum Data {
+        A { a: i32 },
+    }
+
+    let data = Data::A { a: 0 };
+
+    assert_tokens(
+        &data,
+        &[
+            Token::Struct {
+                name: "Data",
+                len: 2,
+            },
+            Token::Str("t"),
+            Token::Str("A"),
+            Token::Str("c"),
+            Token::Struct {
+                name: "A",
+                len: 1,
+            },
+            Token::Str("a"),
+            Token::I32(0),
+            Token::StructEnd,
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &data,
+        &[
+            Token::Struct {
+                name: "Data",
+                len: 2,
+            },
+            Token::Bytes(b"t"),
+            Token::Str("A"),
+            Token::Bytes(b"c"),
+            Token::Struct {
+                name: "A",
+                len: 1,
+            },
+            Token::Str("a"),
+            Token::I32(0),
+            Token::StructEnd,
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_adjacently_tagged_enum_containing_flatten() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     #[serde(tag = "t", content = "c")]
