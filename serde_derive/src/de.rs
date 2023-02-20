@@ -1693,9 +1693,9 @@ fn deserialize_untagged_enum(
         num_variants += 1;
      }
 
-     // We need two copies of this iterator, and it's not cloneable
+     // We need two copies of this iterator
      let err_identifiers1 = (0..num_variants).map(|idx| format_ident!("_err{}", idx));
-     let err_identifiers2 = (0..num_variants).map(|idx| format_ident!("_err{}", idx));
+     let err_identifiers2 = err_identifiers1.clone();
 
      quote_block! {
         let __content = try!(<_serde::__private::de::Content as _serde::Deserialize>::deserialize(__deserializer));
