@@ -1257,7 +1257,7 @@ fn deserialize_externally_tagged_enum(
         // all variants have `#[serde(skip_deserializing)]`.
         quote! {
             let _serde::__private::Err(__err) = _serde::de::EnumAccess::variant::<__Field>(__data);
-            _serde::__private::Err(__err)
+            _serde::__private::Err(__err);
         }
     } else {
         quote! {
@@ -2760,7 +2760,7 @@ fn deserialize_map_in_place(
 
     let match_keys = if cattrs.deny_unknown_fields() && all_skipped {
         quote! {
-            let _serde::__private::None::<__Field> = try!(_serde::de::MapAccess::next_key(&mut __map));;
+            let _serde::__private::None::<__Field> = try!(_serde::de::MapAccess::next_key(&mut __map));
         }
     } else {
         quote! {
