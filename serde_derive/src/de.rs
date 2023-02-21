@@ -1256,12 +1256,8 @@ fn deserialize_externally_tagged_enum(
         // This is an empty enum like `enum Impossible {}` or an enum in which
         // all variants have `#[serde(skip_deserializing)]`.
         quote! {
-            // FIXME: Once we drop support for Rust 1.15:
-            // let _serde::__private::Err(__err) = _serde::de::EnumAccess::variant::<__Field>(__data);
-            // _serde::__private::Err(__err)
-            _serde::__private::Result::map(
-                _serde::de::EnumAccess::variant::<__Field>(__data),
-                |(__impossible, _)| match __impossible {})
+            let _serde::__private::Err(__err) = _serde::de::EnumAccess::variant::<__Field>(__data);
+            _serde::__private::Err(__err)
         }
     } else {
         quote! {
@@ -2535,11 +2531,7 @@ fn deserialize_map(
     let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
     let match_keys = if cattrs.deny_unknown_fields() && all_skipped {
         quote! {
-            // FIXME: Once we drop support for Rust 1.15:
-            // let _serde::__private::None::<__Field> = try!(_serde::de::MapAccess::next_key(&mut __map));
-            _serde::__private::Option::map(
-                try!(_serde::de::MapAccess::next_key::<__Field>(&mut __map)),
-                |__impossible| match __impossible {});
+            let _serde::__private::None::<__Field> = try!(_serde::de::MapAccess::next_key(&mut __map));
         }
     } else {
         quote! {
@@ -2768,11 +2760,7 @@ fn deserialize_map_in_place(
 
     let match_keys = if cattrs.deny_unknown_fields() && all_skipped {
         quote! {
-            // FIXME: Once we drop support for Rust 1.15:
-            // let _serde::__private::None::<__Field> = try!(_serde::de::MapAccess::next_key(&mut __map));
-            _serde::__private::Option::map(
-                try!(_serde::de::MapAccess::next_key::<__Field>(&mut __map)),
-                |__impossible| match __impossible {});
+            let _serde::__private::None::<__Field> = try!(_serde::de::MapAccess::next_key(&mut __map));;
         }
     } else {
         quote! {
