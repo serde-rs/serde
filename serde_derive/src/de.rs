@@ -1006,7 +1006,7 @@ fn deserialize_struct(
 
                 fn deserialize<__D>(self, __deserializer: __D) -> _serde::__private::Result<Self::Value, __D::Error>
                 where
-                    __D: _serde::Deserializer<'de>,
+                    __D: _serde::Deserializer<#delife>,
                 {
                     _serde::Deserializer::deserialize_map(__deserializer, self)
                 }
