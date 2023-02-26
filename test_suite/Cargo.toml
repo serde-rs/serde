@@ -11,9 +11,6 @@ unstable = ["serde/unstable"]
 [dependencies]
 serde = { path = "../serde" }
 
-[build-dependencies]
-toolchain_find = "0.2"
-
 [dev-dependencies]
 fnv = "1.0"
 rustversion = "1.0"

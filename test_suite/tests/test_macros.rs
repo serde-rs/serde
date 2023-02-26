@@ -1928,7 +1928,6 @@ fn test_internally_tagged_newtype_variant_containing_unit_struct() {
     );
 }
 
-#[deny(unaligned_references)]
 #[test]
 fn test_packed_struct_can_derive_serialize() {
     #[derive(Copy, Clone, Serialize)]

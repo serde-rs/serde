@@ -6,7 +6,8 @@
     clippy::nonstandard_macro_braces,
     clippy::too_many_lines,
     clippy::trivially_copy_pass_by_ref,
-    clippy::type_repetition_in_bounds
+    clippy::type_repetition_in_bounds,
+    clippy::uninlined_format_args,
 )]
 
 use serde::de::{self, MapAccess, Unexpected, Visitor};
@@ -1235,7 +1236,7 @@ fn serialize_variant_as_string<S>(f1: &str, f2: &u8, serializer: S) -> Result<S:
 where
     S: Serializer,
 {
-    serializer.serialize_str(format!("{f1};{f2:?}").as_str())
+    serializer.collect_str(&format_args!("{};{:?}", f1, f2))
 }
 
 fn deserialize_string_as_variant<'de, D>(deserializer: D) -> Result<(String, u8), D::Error>
