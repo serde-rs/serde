@@ -128,9 +128,7 @@ impl<'de> BufferInner<'de> {
             BufferInner::Seq(_) => de::Unexpected::Seq,
             BufferInner::Map(_) => de::Unexpected::Map,
             #[cfg(not(no_integer128))]
-            BufferInner::I128(_) | BufferInner::U128(_) => {
-                de::Unexpected::Other("Unexpected 128-bit integer.")
-            }
+            BufferInner::I128(_) | BufferInner::U128(_) => de::Unexpected::Other("128-bit integer"),
         }
     }
 }
