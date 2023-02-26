@@ -74,11 +74,15 @@ pub(crate) enum BufferInner<'de> {
     U16(u16),
     U32(u32),
     U64(u64),
+    #[cfg(not(no_integer128))]
+    U128(u128),
 
     I8(i8),
     I16(i16),
     I32(i32),
     I64(i64),
+    #[cfg(not(no_integer128))]
+    I128(i128),
 
     F32(f32),
     F64(f64),
@@ -123,6 +127,10 @@ impl<'de> BufferInner<'de> {
             BufferInner::Newtype(_) => de::Unexpected::NewtypeStruct,
             BufferInner::Seq(_) => de::Unexpected::Seq,
             BufferInner::Map(_) => de::Unexpected::Map,
+            #[cfg(not(no_integer128))]
+            BufferInner::I128(_) | BufferInner::U128(_) => {
+                de::Unexpected::Other("Unexpected 128-bit integer.")
+            }
         }
     }
 }
@@ -205,6 +213,22 @@ impl<'de> Visitor<'de> for BufferVisitor<'de> {
         F: de::Error,
     {
         Ok(Buffer(BufferInner::U64(value)))
+    }
+
+    serde_if_integer128! {
+        fn visit_i128<F>(self, value: i128) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Buffer(BufferInner::I128(value)))
+        }
+
+        fn visit_u128<F>(self, value: u128) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Buffer(BufferInner::U128(value)))
+        }
     }
 
     fn visit_f32<F>(self, value: f32) -> Result<Self::Value, F>
@@ -358,6 +382,10 @@ where
             BufferInner::I16(v) => visitor.visit_i16(v),
             BufferInner::I32(v) => visitor.visit_i32(v),
             BufferInner::I64(v) => visitor.visit_i64(v),
+            #[cfg(not(no_integer128))]
+            BufferInner::U128(v) => visitor.visit_u128(v),
+            #[cfg(not(no_integer128))]
+            BufferInner::I128(v) => visitor.visit_i128(v),
             _ => Err(self.invalid_type(&visitor)),
         }
     }
@@ -377,6 +405,10 @@ where
             BufferInner::I16(v) => visitor.visit_i16(v),
             BufferInner::I32(v) => visitor.visit_i32(v),
             BufferInner::I64(v) => visitor.visit_i64(v),
+            #[cfg(not(no_integer128))]
+            BufferInner::U128(v) => visitor.visit_u128(v),
+            #[cfg(not(no_integer128))]
+            BufferInner::I128(v) => visitor.visit_i128(v),
             _ => Err(self.invalid_type(&visitor)),
         }
     }
@@ -446,6 +478,10 @@ where
             BufferInner::Newtype(v) => visitor.visit_newtype_struct(BufferDeserializer::new(*v)),
             BufferInner::Seq(v) => visit_buffer_seq(v, visitor),
             BufferInner::Map(v) => visit_buffer_map(v, visitor),
+            #[cfg(not(no_integer128))]
+            BufferInner::U128(v) => visitor.visit_u128(v),
+            #[cfg(not(no_integer128))]
+            BufferInner::I128(v) => visitor.visit_i128(v),
         }
     }
 
@@ -513,6 +549,20 @@ where
         V: Visitor<'de>,
     {
         self.deserialize_integer(visitor)
+    }
+
+    serde_if_integer128! {
+        fn deserialize_i128<V>(self, visitor:V) -> Result<V::Value, Self::Error>
+            where V:Visitor<'de>
+        {
+            self.deserialize_integer(visitor)
+        }
+
+        fn deserialize_u128<V>(self, visitor:V) -> Result<V::Value, Self::Error>
+            where V:Visitor<'de>
+        {
+            self.deserialize_integer(visitor)
+        }
     }
 
     fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -1100,6 +1150,10 @@ where
             BufferInner::I16(v) => visitor.visit_i16(v),
             BufferInner::I32(v) => visitor.visit_i32(v),
             BufferInner::I64(v) => visitor.visit_i64(v),
+            #[cfg(not(no_integer128))]
+            BufferInner::U128(v) => visitor.visit_u128(v),
+            #[cfg(not(no_integer128))]
+            BufferInner::I128(v) => visitor.visit_i128(v),
             _ => Err(self.invalid_type(&visitor)),
         }
     }
@@ -1119,6 +1173,10 @@ where
             BufferInner::I16(v) => visitor.visit_i16(v),
             BufferInner::I32(v) => visitor.visit_i32(v),
             BufferInner::I64(v) => visitor.visit_i64(v),
+            #[cfg(not(no_integer128))]
+            BufferInner::U128(v) => visitor.visit_u128(v),
+            #[cfg(not(no_integer128))]
+            BufferInner::I128(v) => visitor.visit_i128(v),
             _ => Err(self.invalid_type(&visitor)),
         }
     }
@@ -1193,6 +1251,10 @@ where
             }
             BufferInner::Seq(ref v) => visit_buffer_seq_ref(v, visitor),
             BufferInner::Map(ref v) => visit_buffer_map_ref(v, visitor),
+            #[cfg(not(no_integer128))]
+            BufferInner::U128(v) => visitor.visit_u128(v),
+            #[cfg(not(no_integer128))]
+            BufferInner::I128(v) => visitor.visit_i128(v),
         }
     }
 
@@ -1260,6 +1322,20 @@ where
         V: Visitor<'de>,
     {
         self.deserialize_integer(visitor)
+    }
+
+    serde_if_integer128! {
+        fn deserialize_i128<V>(self, visitor:V) -> Result<V::Value, Self::Error>
+            where V:Visitor<'de>
+        {
+            self.deserialize_integer(visitor)
+        }
+
+        fn deserialize_u128<V>(self, visitor:V) -> Result<V::Value, Self::Error>
+            where V:Visitor<'de>
+        {
+            self.deserialize_integer(visitor)
+        }
     }
 
     fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
