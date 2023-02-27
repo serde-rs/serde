@@ -954,6 +954,7 @@ fn deserialize_struct(
             lifetime: _serde::__private::PhantomData,
         }
     };
+    let need_seed = deserializer.is_none();
     let dispatch = if let Some(deserializer) = deserializer {
         quote! {
             _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
@@ -999,7 +1000,7 @@ fn deserialize_struct(
         _ => None,
     };
 
-    let visitor_seed = if is_enum && cattrs.has_flatten() {
+    let visitor_seed = if need_seed && is_enum && cattrs.has_flatten() {
         Some(quote! {
             impl #de_impl_generics _serde::de::DeserializeSeed<#delife> for __Visitor #de_ty_generics #where_clause {
                 type Value = #this_type #ty_generics;
