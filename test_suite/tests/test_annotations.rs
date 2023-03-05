@@ -642,7 +642,7 @@ fn test_unknown_field_rename_struct() {
             Token::Str("a4"),
             Token::I32(3),
         ],
-        "unknown field `a4`, expected one of `a1`, `a2`, `a6`",
+        "unknown field `a4`, expected one of `a1`, `a3`, `a2`, `a5`, `a6`",
     );
 }
 
@@ -780,7 +780,7 @@ fn test_rename_enum() {
             Token::StructVariant {
                 name: "AliasEnum",
                 variant: "sailor_moon",
-                len: 3,
+                len: 5,
             },
             Token::Str("a"),
             Token::I8(0),
@@ -798,7 +798,7 @@ fn test_rename_enum() {
             Token::StructVariant {
                 name: "AliasEnum",
                 variant: "usagi_tsukino",
-                len: 3,
+                len: 5,
             },
             Token::Str("a"),
             Token::I8(0),
@@ -827,7 +827,7 @@ fn test_unknown_field_rename_enum() {
             Token::StructVariant {
                 name: "AliasEnum",
                 variant: "usagi_tsukino",
-                len: 3,
+                len: 5,
             },
             Token::Str("a"),
             Token::I8(0),
@@ -836,7 +836,7 @@ fn test_unknown_field_rename_enum() {
             Token::Str("d"),
             Token::I8(2),
         ],
-        "unknown field `d`, expected one of `a`, `b`, `f`",
+        "unknown field `d`, expected one of `a`, `c`, `b`, `e`, `f`",
     );
 }
 
