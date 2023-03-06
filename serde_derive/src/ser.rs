@@ -339,11 +339,29 @@ fn serialize_struct_as_struct(
     let let_mut = mut_if(serialized_fields.peek().is_some() || tag_field_exists);
 
     let len = serialized_fields
-        .map(|field| match field.attrs.skip_serializing_if() {
-            None => quote!(1),
-            Some(path) => {
-                let field_expr = get_member(params, field, &field.member);
-                quote!(if #path(#field_expr) { 0 } else { 1 })
+        .map(|field| {
+            let field_expr = get_member(params, field, &field.member);
+            let skip = if field.attrs.skip_serializing_if_default() {
+                let default_value = match field.attrs.default() {
+                    attr::Default::Default => quote!(_serde::__private::Default::default()),
+                    attr::Default::Path(path) => quote!(
+                        #path()
+                    ),
+                    attr::Default::None => panic!("Default function should exist"),
+                };
+                Some(quote!((*#field_expr == #default_value)))
+            } else {
+                field
+                    .attrs
+                    .skip_serializing_if()
+                    .map(|path| quote!(#path(#field_expr)))
+            };
+
+            match skip {
+                None => quote!(1),
+                Some(path) => {
+                    quote!(if #path { 0 } else { 1 })
+                }
             }
         })
         .fold(
@@ -1106,10 +1124,20 @@ fn serialize_struct_visitor(
 
             let key_expr = field.attrs.name().serialize_name();
 
-            let skip = field
-                .attrs
-                .skip_serializing_if()
-                .map(|path| quote!(#path(#field_expr)));
+            let skip = if field.attrs.skip_serializing_if_default() {
+                let default_value = match field.attrs.default() {
+                    attr::Default::Default => quote!(
+                        _serde::__private::Default::default()
+                    ),
+                    attr::Default::Path(path) => quote!(
+                        #path()
+                    ),
+                    attr::Default::None => panic!("Default function should exist"),
+                };
+                Some(quote!((*#field_expr == #default_value)))
+            } else {
+                field.attrs.skip_serializing_if().map(|path| quote!(#path(#field_expr)))
+            };
 
             if let Some(path) = field.attrs.serialize_with() {
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);

@@ -889,6 +889,48 @@ fn test_skip_serializing_struct() {
 }
 
 #[derive(Debug, PartialEq, Serialize)]
+struct SkipSerializingDefaultStruct<A, B>
+where 
+    B: MyDefault,
+    B: std::cmp::PartialEq,
+{
+    a: A,
+    #[serde(default = "MyDefault::my_default", skip_serializing_if_default)]
+    b: B,
+}
+
+#[test]
+fn test_skip_serializing_default_struct() {
+    assert_ser_tokens(
+        &SkipSerializingDefaultStruct { a: 1, b: 100 },
+        &[
+            Token::Struct {
+                name: "SkipSerializingDefaultStruct",
+                len: 2,
+            },
+            Token::Str("a"),
+            Token::I32(1),
+            Token::Str("b"),
+            Token::I32(100),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_ser_tokens(
+        &SkipSerializingDefaultStruct { a: 1, b: 123 },
+        &[
+            Token::Struct {
+                name: "SkipSerializingDefaultStruct",
+                len: 1,
+            },
+            Token::Str("a"),
+            Token::I32(1),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[derive(Debug, PartialEq, Serialize)]
 struct SkipSerializingTupleStruct<'a, B, C>(
     &'a i8,
     #[serde(skip_serializing)] B,

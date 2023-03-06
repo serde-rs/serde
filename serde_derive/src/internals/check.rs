@@ -9,6 +9,7 @@ pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     check_remote_generic(cx, cont);
     check_getter(cx, cont);
     check_flatten(cx, cont);
+    check_field_skip_if_default(cx, cont);
     check_identifier(cx, cont);
     check_variant_skip_attrs(cx, cont);
     check_internal_tag_field_name_conflict(cx, cont);
@@ -98,6 +99,31 @@ fn check_flatten_field(cx: &Ctxt, style: Style, field: &Field) {
             );
         }
         _ => {}
+    }
+}
+
+fn check_field_skip_if_default(cx: &Ctxt, cont: &Container) {
+    let fields = match &cont.data {
+        Data::Struct(_, fields) => fields,
+        Data::Enum(_) => return,
+    };
+
+    for field in fields {
+        if field.attrs.skip_serializing_if_default() {
+            if field.attrs.skip_serializing_if().is_some() {
+                cx.error_spanned_by(
+                    field.original,
+                    "#[serde(skip_serializing_if_default)] and #[serde(skip_serializing_if)] conflict with each other".to_string()
+                );
+            }
+
+            if field.attrs.default().is_none() {
+                cx.error_spanned_by(
+                    field.original,
+                    "#[serde(skip_serializing_if_default)] can only be used in fields that have #[serde(default)]".to_string()
+                );
+            }
+        }
     }
 }
 
