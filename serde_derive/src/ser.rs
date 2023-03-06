@@ -28,11 +28,13 @@ pub fn expand_derive_serialize(
     let (impl_generics, ty_generics, where_clause) = params.generics.split_for_impl();
     let body = Stmts(serialize_body(&cont, &params));
     let serde = cont.attrs.serde_path();
+    let attrs = &cont.attrs.ser_impl_attrs();
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
         let vis = &input.vis;
         let used = pretend::pretend_used(&cont, params.is_packed);
         quote! {
+            #(#[#attrs])*
             impl #impl_generics #ident #ty_generics #where_clause {
                 #vis fn serialize<__S>(__self: &#remote #ty_generics, __serializer: __S) -> #serde::__private::Result<__S::Ok, __S::Error>
                 where
@@ -45,6 +47,7 @@ pub fn expand_derive_serialize(
         }
     } else {
         quote! {
+            #(#[#attrs])*
             #[automatically_derived]
             impl #impl_generics #serde::Serialize for #ident #ty_generics #where_clause {
                 fn serialize<__S>(&self, __serializer: __S) -> #serde::__private::Result<__S::Ok, __S::Error>

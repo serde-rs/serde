@@ -34,11 +34,13 @@ pub fn expand_derive_deserialize(
     let body = Stmts(deserialize_body(&cont, &params));
     let delife = params.borrowed.de_lifetime();
     let serde = cont.attrs.serde_path();
+    let attrs = &cont.attrs.de_impl_attrs();
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
         let vis = &input.vis;
         let used = pretend::pretend_used(&cont, params.is_packed);
         quote! {
+            #(#[#attrs])*
             impl #de_impl_generics #ident #ty_generics #where_clause {
                 #vis fn deserialize<__D>(__deserializer: __D) -> #serde::__private::Result<#remote #ty_generics, __D::Error>
                 where
@@ -53,6 +55,7 @@ pub fn expand_derive_deserialize(
         let fn_deserialize_in_place = deserialize_in_place_body(&cont, &params);
 
         quote! {
+            #(#[#attrs])*
             #[automatically_derived]
             impl #de_impl_generics #serde::Deserialize<#delife> for #ident #ty_generics #where_clause {
                 fn deserialize<__D>(__deserializer: __D) -> #serde::__private::Result<Self, __D::Error>
