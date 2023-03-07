@@ -2659,6 +2659,68 @@ fn test_flatten_any_after_flatten_struct() {
 }
 
 #[test]
+fn test_alias_in_flatten_context() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    struct Outer {
+        #[serde(flatten)]
+        a: AliasStruct,
+        b: i32,
+    }
+
+    assert_de_tokens(
+        &Outer {
+            a: AliasStruct {
+                a1: 1,
+                a2: 2,
+                a4: 4,
+            },
+            b: 7,
+        },
+        &[
+            Token::Struct {
+                name: "Outer",
+                len: 4,
+            },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::Str("a2"),
+            Token::I32(2),
+            Token::Str("a5"),
+            Token::I32(4),
+            Token::Str("b"),
+            Token::I32(7),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &Outer {
+            a: AliasStruct {
+                a1: 1,
+                a2: 2,
+                a4: 4,
+            },
+            b: 7,
+        },
+        &[
+            Token::Struct {
+                name: "Outer",
+                len: 4,
+            },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::Str("a2"),
+            Token::I32(2),
+            Token::Str("a6"),
+            Token::I32(4),
+            Token::Str("b"),
+            Token::I32(7),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_expecting_message() {
     #[derive(Deserialize, PartialEq, Debug)]
     #[serde(expecting = "something strange...")]
