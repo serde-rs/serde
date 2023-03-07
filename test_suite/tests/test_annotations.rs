@@ -642,7 +642,7 @@ fn test_unknown_field_rename_struct() {
             Token::Str("a4"),
             Token::I32(3),
         ],
-        "unknown field `a4`, expected one of `a1`, `a2`, `a6`",
+        "unknown field `a4`, expected one of `a1`, `a3`, `a2`, `a5`, `a6`",
     );
 }
 
@@ -780,7 +780,7 @@ fn test_rename_enum() {
             Token::StructVariant {
                 name: "AliasEnum",
                 variant: "sailor_moon",
-                len: 3,
+                len: 5,
             },
             Token::Str("a"),
             Token::I8(0),
@@ -798,7 +798,7 @@ fn test_rename_enum() {
             Token::StructVariant {
                 name: "AliasEnum",
                 variant: "usagi_tsukino",
-                len: 3,
+                len: 5,
             },
             Token::Str("a"),
             Token::I8(0),
@@ -827,7 +827,7 @@ fn test_unknown_field_rename_enum() {
             Token::StructVariant {
                 name: "AliasEnum",
                 variant: "usagi_tsukino",
-                len: 3,
+                len: 5,
             },
             Token::Str("a"),
             Token::I8(0),
@@ -836,7 +836,7 @@ fn test_unknown_field_rename_enum() {
             Token::Str("d"),
             Token::I8(2),
         ],
-        "unknown field `d`, expected one of `a`, `b`, `f`",
+        "unknown field `d`, expected one of `a`, `c`, `b`, `e`, `f`",
     );
 }
 
@@ -2654,6 +2654,68 @@ fn test_flatten_any_after_flatten_struct() {
             Token::Str("inner"),
             Token::I32(0),
             Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_alias_in_flatten_context() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    struct Outer {
+        #[serde(flatten)]
+        a: AliasStruct,
+        b: i32,
+    }
+
+    assert_de_tokens(
+        &Outer {
+            a: AliasStruct {
+                a1: 1,
+                a2: 2,
+                a4: 4,
+            },
+            b: 7,
+        },
+        &[
+            Token::Struct {
+                name: "Outer",
+                len: 4,
+            },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::Str("a2"),
+            Token::I32(2),
+            Token::Str("a5"),
+            Token::I32(4),
+            Token::Str("b"),
+            Token::I32(7),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &Outer {
+            a: AliasStruct {
+                a1: 1,
+                a2: 2,
+                a4: 4,
+            },
+            b: 7,
+        },
+        &[
+            Token::Struct {
+                name: "Outer",
+                len: 4,
+            },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::Str("a2"),
+            Token::I32(2),
+            Token::Str("a6"),
+            Token::I32(4),
+            Token::Str("b"),
+            Token::I32(7),
+            Token::StructEnd,
         ],
     );
 }

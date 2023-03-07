@@ -2400,7 +2400,8 @@ fn deserialize_struct_as_struct_visitor(
         .collect();
 
     let fields_stmt = {
-        let field_names = field_names_idents.iter().map(|(name, _, _)| name);
+        let field_names = field_names_idents.iter().flat_map(|(_, _, aliases)| aliases);
+
         quote_block! {
             const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
         }
