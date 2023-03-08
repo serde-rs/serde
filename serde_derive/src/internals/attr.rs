@@ -583,7 +583,7 @@ impl Container {
 
         let mut is_packed = false;
         for attr in &item.attrs {
-            if attr.path.is_ident("repr") {
+            if attr.path == REPR {
                 let _ = attr.parse_args_with(|input: ParseStream| {
                     while let Some(token) = input.parse()? {
                         if let TokenTree::Ident(ident) = token {
