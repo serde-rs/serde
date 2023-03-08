@@ -892,3 +892,53 @@ pub struct RemotePackedNonCopyDef {
 impl Drop for RemotePackedNonCopyDef {
     fn drop(&mut self) {}
 }
+
+//////////////////////////////////////////////////////////////////////////
+
+/// Regression tests for <https://github.com/serde-rs/serde/issues/2371>
+#[allow(dead_code)]
+mod static_and_flatten {
+    use super::*;
+
+    #[derive(Deserialize)]
+    struct Nested;
+
+    #[derive(Deserialize)]
+    enum ExternallyTagged {
+        Flatten {
+            #[serde(flatten)]
+            nested: Nested,
+            string: &'static str,
+        },
+    }
+
+    #[derive(Deserialize)]
+    #[serde(tag = "tag")]
+    enum InternallyTagged {
+        Flatten {
+            #[serde(flatten)]
+            nested: Nested,
+            string: &'static str,
+        },
+    }
+
+    #[derive(Deserialize)]
+    #[serde(tag = "tag", content = "content")]
+    enum AdjacentlyTagged {
+        Flatten {
+            #[serde(flatten)]
+            nested: Nested,
+            string: &'static str,
+        },
+    }
+
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum UntaggedWorkaround {
+        Flatten {
+            #[serde(flatten)]
+            nested: Nested,
+            string: &'static str,
+        },
+    }
+}
