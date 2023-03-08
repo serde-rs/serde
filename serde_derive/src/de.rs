@@ -1942,6 +1942,7 @@ fn deserialize_generated_identifier(
         fallthrough,
         None,
         !is_variant && cattrs.has_flatten(),
+        cattrs.case_insensitive(),
         None,
     ));
 
@@ -2065,6 +2066,7 @@ fn deserialize_custom_identifier(
         fallthrough,
         fallthrough_borrowed,
         false,
+        cattrs.case_insensitive(),
         cattrs.expecting(),
     ));
 
@@ -2097,6 +2099,7 @@ fn deserialize_identifier(
     fallthrough: Option<TokenStream>,
     fallthrough_borrowed: Option<TokenStream>,
     collect_other_fields: bool,
+    case_insensitive: bool,
     expecting: Option<&str>,
 ) -> Fragment {
     let mut flat_fields = Vec::new();
@@ -2186,6 +2189,34 @@ fn deserialize_identifier(
             ))
         };
         &u64_fallthrough_arm_tokens
+    };
+
+    let (visit_arms_str, visit_arms_bytes) = if case_insensitive {
+        (
+            quote! {
+                #(
+                    __value if __value.eq_ignore_ascii_case(#field_strs) => _serde::__private::Ok(#constructors),
+                )*
+            },
+            quote! {
+                #(
+                    __value if __value.eq_ignore_ascii_case(#field_bytes) => _serde::__private::Ok(#constructors),
+                )*
+            },
+        )
+    } else {
+        (
+            quote! {
+                #(
+                    #field_strs => _serde::__private::Ok(#constructors),
+                )*
+            },
+            quote! {
+                #(
+                    #field_bytes => _serde::__private::Ok(#constructors),
+                )*
+            },
+        )
     };
 
     let variant_indices = 0_u64..;
@@ -2306,9 +2337,7 @@ fn deserialize_identifier(
                 __E: _serde::de::Error,
             {
                 match __value {
-                    #(
-                        #field_strs => _serde::__private::Ok(#constructors),
-                    )*
+                    #visit_arms_str
                     _ => {
                         #value_as_borrowed_str_content
                         #fallthrough_borrowed_arm
@@ -2321,9 +2350,7 @@ fn deserialize_identifier(
                 __E: _serde::de::Error,
             {
                 match __value {
-                    #(
-                        #field_bytes => _serde::__private::Ok(#constructors),
-                    )*
+                    #visit_arms_bytes
                     _ => {
                         #bytes_to_str
                         #value_as_borrowed_bytes_content
@@ -2348,9 +2375,7 @@ fn deserialize_identifier(
             __E: _serde::de::Error,
         {
             match __value {
-                #(
-                    #field_strs => _serde::__private::Ok(#constructors),
-                )*
+                #visit_arms_str
                 _ => {
                     #value_as_str_content
                     #fallthrough_arm
@@ -2363,9 +2388,7 @@ fn deserialize_identifier(
             __E: _serde::de::Error,
         {
             match __value {
-                #(
-                    #field_bytes => _serde::__private::Ok(#constructors),
-                )*
+                #visit_arms_bytes
                 _ => {
                     #bytes_to_str
                     #value_as_bytes_content
@@ -2567,6 +2590,16 @@ fn deserialize_map(
             }
         });
 
+    let flat_map_deserializer = if cattrs.case_insensitive() {
+        quote! {
+            _serde::__private::de::FlatMapDeserializer::<'_, '_, _, _serde::__private::de::CaseInsensitiveStrComparison>
+        }
+    } else {
+        quote! {
+            _serde::__private::de::FlatMapDeserializer::<'_, '_, _, _serde::__private::de::NormalStrComparison>
+        }
+    };
+
     let extract_collected = fields_names
         .iter()
         .filter(|&&(field, _)| field.attrs.flatten() && !field.attrs.skip_deserializing())
@@ -2581,7 +2614,7 @@ fn deserialize_map(
             };
             quote! {
                 let #name: #field_ty = try!(#func(
-                    _serde::__private::de::FlatMapDeserializer(
+                    #flat_map_deserializer(
                         &mut __collect,
                         _serde::__private::PhantomData)));
             }
