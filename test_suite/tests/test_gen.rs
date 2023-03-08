@@ -898,7 +898,7 @@ impl Drop for RemotePackedNonCopyDef {
 /// Regression tests for <https://github.com/serde-rs/serde/issues/2371>
 #[allow(dead_code)]
 mod static_and_flatten {
-    use super::*;
+    use serde::Deserialize;
 
     #[derive(Deserialize)]
     struct Nested;
