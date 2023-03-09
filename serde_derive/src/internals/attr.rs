@@ -1626,9 +1626,6 @@ fn parse_lit_into_where(
     lit: &syn::Lit,
 ) -> Result<Vec<syn::WherePredicate>, ()> {
     let string = get_lit_str2(cx, attr_name, meta_item_name, lit)?;
-    if string.value().is_empty() {
-        return Ok(Vec::new());
-    }
 
     let where_string = syn::LitStr::new(&format!("where {}", string.value()), string.span());
 
