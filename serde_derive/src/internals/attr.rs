@@ -6,7 +6,7 @@ use quote::ToTokens;
 use std::borrow::Cow;
 use std::collections::BTreeSet;
 use syn;
-use syn::parse::{self, Parse, ParseStream};
+use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::Ident;
 use syn::Meta::{List, NameValue, Path};
@@ -1665,7 +1665,7 @@ fn parse_lit_into_lifetimes(
     struct BorrowedLifetimes(Punctuated<syn::Lifetime, Token![+]>);
 
     impl Parse for BorrowedLifetimes {
-        fn parse(input: ParseStream) -> parse::Result<Self> {
+        fn parse(input: ParseStream) -> syn::Result<Self> {
             Punctuated::parse_separated_nonempty(input).map(BorrowedLifetimes)
         }
     }
@@ -1934,7 +1934,7 @@ fn collect_lifetimes_from_tokens(tokens: TokenStream, out: &mut BTreeSet<syn::Li
     }
 }
 
-fn parse_lit_str<T>(s: &syn::LitStr) -> parse::Result<T>
+fn parse_lit_str<T>(s: &syn::LitStr) -> syn::Result<T>
 where
     T: Parse,
 {
@@ -1942,7 +1942,7 @@ where
     syn::parse2(tokens)
 }
 
-fn spanned_tokens(s: &syn::LitStr) -> parse::Result<TokenStream> {
+fn spanned_tokens(s: &syn::LitStr) -> syn::Result<TokenStream> {
     let stream = syn::parse_str(&s.value())?;
     Ok(respan(stream, s.span()))
 }
