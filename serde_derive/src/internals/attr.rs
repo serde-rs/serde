@@ -7,9 +7,9 @@ use std::collections::BTreeSet;
 use syn;
 use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
-use syn::Ident;
 use syn::Meta::{List, NameValue, Path};
 use syn::NestedMeta::{Lit, Meta};
+use syn::{Ident, Lifetime};
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
 // are `attr::Container::from_ast`, `attr::Variant::from_ast`, and
@@ -1657,21 +1657,27 @@ fn parse_lit_into_lifetimes(
     lit: &syn::Lit,
 ) -> Result<BTreeSet<syn::Lifetime>, ()> {
     let string = get_lit_str(cx, attr_name, lit)?;
-    if string.value().is_empty() {
-        cx.error_spanned_by(lit, "at least one lifetime must be borrowed");
-        return Err(());
-    }
 
-    if let Ok(lifetimes) =
-        string.parse_with(Punctuated::<syn::Lifetime, Token![+]>::parse_separated_nonempty)
-    {
+    if let Ok(lifetimes) = string.parse_with(|input: ParseStream| {
         let mut set = BTreeSet::new();
-        for lifetime in lifetimes {
+        while !input.is_empty() {
+            let lifetime: Lifetime = input.parse()?;
             if !set.insert(lifetime.clone()) {
                 cx.error_spanned_by(lit, format!("duplicate borrowed lifetime `{}`", lifetime));
             }
+            if input.is_empty() {
+                break;
+            }
+            input.parse::<Token![+]>()?;
         }
-        return Ok(set);
+        Ok(set)
+    }) {
+        return if lifetimes.is_empty() {
+            cx.error_spanned_by(lit, "at least one lifetime must be borrowed");
+            Err(())
+        } else {
+            Ok(lifetimes)
+        };
     }
 
     cx.error_spanned_by(
