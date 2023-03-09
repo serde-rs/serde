@@ -1627,11 +1627,9 @@ fn parse_lit_into_where(
 ) -> Result<Vec<syn::WherePredicate>, ()> {
     let string = get_lit_str2(cx, attr_name, meta_item_name, lit)?;
 
-    let where_string = syn::LitStr::new(&format!("where {}", string.value()), string.span());
-
-    where_string
-        .parse::<syn::WhereClause>()
-        .map(|wh| wh.predicates.into_iter().collect())
+    string
+        .parse_with(Punctuated::<syn::WherePredicate, Token![,]>::parse_terminated)
+        .map(|predicates| predicates.into_iter().collect())
         .map_err(|err| cx.error_spanned_by(lit, err))
 }
 
