@@ -257,6 +257,16 @@ fn test_gen() {
     }
     assert::<VariantWithTraits2<X, X>>();
 
+    type PhantomDataAlias<T> = PhantomData<T>;
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(bound = "")]
+    struct PhantomDataWrapper<T> {
+        #[serde(default)]
+        field: PhantomDataAlias<T>,
+    }
+    assert::<PhantomDataWrapper<X>>();
+
     #[derive(Serialize, Deserialize)]
     struct CowStr<'a>(Cow<'a, str>);
     assert::<CowStr>();
