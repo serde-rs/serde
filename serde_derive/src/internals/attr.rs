@@ -4,6 +4,7 @@ use proc_macro2::{Spacing, Span, TokenStream, TokenTree};
 use quote::ToTokens;
 use std::borrow::Cow;
 use std::collections::BTreeSet;
+use std::iter::FromIterator;
 use syn;
 use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
@@ -1629,7 +1630,7 @@ fn parse_lit_into_where(
 
     string
         .parse_with(Punctuated::<syn::WherePredicate, Token![,]>::parse_terminated)
-        .map(|predicates| predicates.into_iter().collect())
+        .map(Vec::from_iter)
         .map_err(|err| cx.error_spanned_by(lit, err))
 }
 
