@@ -5,7 +5,7 @@ use quote::ToTokens;
 use std::borrow::Cow;
 use std::collections::BTreeSet;
 use syn;
-use syn::parse::{Parse, ParseStream};
+use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
 use syn::Ident;
 use syn::Meta::{List, NameValue, Path};
@@ -1662,15 +1662,9 @@ fn parse_lit_into_lifetimes(
         return Err(());
     }
 
-    struct BorrowedLifetimes(Punctuated<syn::Lifetime, Token![+]>);
-
-    impl Parse for BorrowedLifetimes {
-        fn parse(input: ParseStream) -> syn::Result<Self> {
-            Punctuated::parse_separated_nonempty(input).map(BorrowedLifetimes)
-        }
-    }
-
-    if let Ok(BorrowedLifetimes(lifetimes)) = string.parse() {
+    if let Ok(lifetimes) =
+        string.parse_with(Punctuated::<syn::Lifetime, Token![+]>::parse_separated_nonempty)
+    {
         let mut set = BTreeSet::new();
         for lifetime in lifetimes {
             if !set.insert(lifetime.clone()) {
