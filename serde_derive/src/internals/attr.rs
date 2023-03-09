@@ -1,4 +1,3 @@
-use internals::respan::respan;
 use internals::symbol::*;
 use internals::{ungroup, Ctxt};
 use proc_macro2::{Spacing, Span, TokenStream, TokenTree};
@@ -1604,7 +1603,7 @@ fn get_lit_str2<'a>(
 
 fn parse_lit_into_path(cx: &Ctxt, attr_name: Symbol, lit: &syn::Lit) -> Result<syn::Path, ()> {
     let string = get_lit_str(cx, attr_name, lit)?;
-    parse_lit_str(string).map_err(|_| {
+    string.parse().map_err(|_| {
         cx.error_spanned_by(lit, format!("failed to parse path: {:?}", string.value()));
     })
 }
@@ -1615,7 +1614,7 @@ fn parse_lit_into_expr_path(
     lit: &syn::Lit,
 ) -> Result<syn::ExprPath, ()> {
     let string = get_lit_str(cx, attr_name, lit)?;
-    parse_lit_str(string).map_err(|_| {
+    string.parse().map_err(|_| {
         cx.error_spanned_by(lit, format!("failed to parse path: {:?}", string.value()));
     })
 }
@@ -1633,7 +1632,8 @@ fn parse_lit_into_where(
 
     let where_string = syn::LitStr::new(&format!("where {}", string.value()), string.span());
 
-    parse_lit_str::<syn::WhereClause>(&where_string)
+    where_string
+        .parse::<syn::WhereClause>()
         .map(|wh| wh.predicates.into_iter().collect())
         .map_err(|err| cx.error_spanned_by(lit, err))
 }
@@ -1641,7 +1641,7 @@ fn parse_lit_into_where(
 fn parse_lit_into_ty(cx: &Ctxt, attr_name: Symbol, lit: &syn::Lit) -> Result<syn::Type, ()> {
     let string = get_lit_str(cx, attr_name, lit)?;
 
-    parse_lit_str(string).map_err(|_| {
+    string.parse().map_err(|_| {
         cx.error_spanned_by(
             lit,
             format!("failed to parse type: {} = {:?}", attr_name, string.value()),
@@ -1670,7 +1670,7 @@ fn parse_lit_into_lifetimes(
         }
     }
 
-    if let Ok(BorrowedLifetimes(lifetimes)) = parse_lit_str(string) {
+    if let Ok(BorrowedLifetimes(lifetimes)) = string.parse() {
         let mut set = BTreeSet::new();
         for lifetime in lifetimes {
             if !set.insert(lifetime.clone()) {
@@ -1932,17 +1932,4 @@ fn collect_lifetimes_from_tokens(tokens: TokenStream, out: &mut BTreeSet<syn::Li
             _ => {}
         }
     }
-}
-
-fn parse_lit_str<T>(s: &syn::LitStr) -> syn::Result<T>
-where
-    T: Parse,
-{
-    let tokens = spanned_tokens(s)?;
-    syn::parse2(tokens)
-}
-
-fn spanned_tokens(s: &syn::LitStr) -> syn::Result<TokenStream> {
-    let stream = syn::parse_str(&s.value())?;
-    Ok(respan(stream, s.span()))
 }
