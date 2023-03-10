@@ -375,48 +375,43 @@ impl Container {
                         syn::Fields::Named(_) => {
                             default.set(word, Default::Default);
                         }
-                        syn::Fields::Unnamed(_) | syn::Fields::Unit => cx.error_spanned_by(
-                            fields,
-                            "#[serde(default)] can only be used on structs with named fields",
-                        ),
+                        syn::Fields::Unnamed(_) | syn::Fields::Unit => {
+                            let msg =
+                                "#[serde(default)] can only be used on structs with named fields";
+                            cx.error_spanned_by(fields, msg);
+                        }
                     },
-                    syn::Data::Enum(syn::DataEnum { enum_token, .. }) => cx.error_spanned_by(
-                        enum_token,
-                        "#[serde(default)] can only be used on structs with named fields",
-                    ),
-                    syn::Data::Union(syn::DataUnion { union_token, .. }) => cx.error_spanned_by(
-                        union_token,
-                        "#[serde(default)] can only be used on structs with named fields",
-                    ),
+                    syn::Data::Enum(syn::DataEnum { enum_token, .. }) => {
+                        let msg = "#[serde(default)] can only be used on structs with named fields";
+                        cx.error_spanned_by(enum_token, msg);
+                    }
+                    syn::Data::Union(syn::DataUnion { union_token, .. }) => {
+                        let msg = "#[serde(default)] can only be used on structs with named fields";
+                        cx.error_spanned_by(union_token, msg);
+                    }
                 },
 
                 // Parse `#[serde(default = "...")]`
                 Meta(NameValue(m)) if m.path == DEFAULT => {
                     if let Ok(path) = parse_lit_into_expr_path(cx, DEFAULT, &m.lit) {
                         match &item.data {
-                            syn::Data::Struct(syn::DataStruct { fields, .. }) => {
-                                match fields {
-                                    syn::Fields::Named(_) => {
-                                        default.set(&m.path, Default::Path(path));
-                                    }
-                                    syn::Fields::Unnamed(_) | syn::Fields::Unit => cx
-                                        .error_spanned_by(
-                                            fields,
-                                            "#[serde(default = \"...\")] can only be used on structs with named fields",
-                                        ),
+                            syn::Data::Struct(syn::DataStruct { fields, .. }) => match fields {
+                                syn::Fields::Named(_) => {
+                                    default.set(&m.path, Default::Path(path));
                                 }
+                                syn::Fields::Unnamed(_) | syn::Fields::Unit => {
+                                    let msg = "#[serde(default = \"...\")] can only be used on structs with named fields";
+                                    cx.error_spanned_by(fields, msg);
+                                }
+                            },
+                            syn::Data::Enum(syn::DataEnum { enum_token, .. }) => {
+                                let msg = "#[serde(default = \"...\")] can only be used on structs with named fields";
+                                cx.error_spanned_by(enum_token, msg);
                             }
-                            syn::Data::Enum(syn::DataEnum { enum_token, .. }) => cx
-                                .error_spanned_by(
-                                    enum_token,
-                                    "#[serde(default = \"...\")] can only be used on structs with named fields",
-                                ),
-                            syn::Data::Union(syn::DataUnion {
-                                union_token, ..
-                            }) => cx.error_spanned_by(
-                                union_token,
-                                "#[serde(default = \"...\")] can only be used on structs with named fields",
-                            ),
+                            syn::Data::Union(syn::DataUnion { union_token, .. }) => {
+                                let msg = "#[serde(default = \"...\")] can only be used on structs with named fields";
+                                cx.error_spanned_by(union_token, msg);
+                            }
                         }
                     }
                 }
@@ -443,16 +438,12 @@ impl Container {
                         untagged.set_true(word);
                     }
                     syn::Data::Struct(syn::DataStruct { struct_token, .. }) => {
-                        cx.error_spanned_by(
-                            struct_token,
-                            "#[serde(untagged)] can only be used on enums",
-                        );
+                        let msg = "#[serde(untagged)] can only be used on enums";
+                        cx.error_spanned_by(struct_token, msg);
                     }
                     syn::Data::Union(syn::DataUnion { union_token, .. }) => {
-                        cx.error_spanned_by(
-                            union_token,
-                            "#[serde(untagged)] can only be used on enums",
-                        );
+                        let msg = "#[serde(untagged)] can only be used on enums";
+                        cx.error_spanned_by(union_token, msg);
                     }
                 },
 
@@ -468,17 +459,13 @@ impl Container {
                                     internal_tag.set(&m.path, s.value());
                                 }
                                 syn::Fields::Unnamed(_) | syn::Fields::Unit => {
-                                    cx.error_spanned_by(
-                                            fields,
-                                            "#[serde(tag = \"...\")] can only be used on enums and structs with named fields",
-                                        );
+                                    let msg = "#[serde(tag = \"...\")] can only be used on enums and structs with named fields";
+                                    cx.error_spanned_by(fields, msg);
                                 }
                             },
                             syn::Data::Union(syn::DataUnion { union_token, .. }) => {
-                                cx.error_spanned_by(
-                                    union_token,
-                                    "#[serde(tag = \"...\")] can only be used on enums and structs with named fields",
-                                );
+                                let msg = "#[serde(tag = \"...\")] can only be used on enums and structs with named fields";
+                                cx.error_spanned_by(union_token, msg);
                             }
                         }
                     }
@@ -492,16 +479,12 @@ impl Container {
                                 content.set(&m.path, s.value());
                             }
                             syn::Data::Struct(syn::DataStruct { struct_token, .. }) => {
-                                cx.error_spanned_by(
-                                    struct_token,
-                                    "#[serde(content = \"...\")] can only be used on enums",
-                                );
+                                let msg = "#[serde(content = \"...\")] can only be used on enums";
+                                cx.error_spanned_by(struct_token, msg);
                             }
                             syn::Data::Union(syn::DataUnion { union_token, .. }) => {
-                                cx.error_spanned_by(
-                                    union_token,
-                                    "#[serde(content = \"...\")] can only be used on enums",
-                                );
+                                let msg = "#[serde(content = \"...\")] can only be used on enums";
+                                cx.error_spanned_by(union_token, msg);
                             }
                         }
                     }
@@ -569,14 +552,13 @@ impl Container {
                         .into_token_stream()
                         .to_string()
                         .replace(' ', "");
-                    cx.error_spanned_by(
-                        meta_item.path(),
-                        format!("unknown serde container attribute `{}`", path),
-                    );
+                    let msg = format!("unknown serde container attribute `{}`", path);
+                    cx.error_spanned_by(meta_item.path(), msg);
                 }
 
                 Lit(lit) => {
-                    cx.error_spanned_by(lit, "unexpected literal in serde container attribute");
+                    let msg = "unexpected literal in serde container attribute";
+                    cx.error_spanned_by(lit, msg);
                 }
             }
         }
@@ -721,10 +703,9 @@ fn decide_tag(
                         syn::Fields::Named(_) | syn::Fields::Unit => {}
                         syn::Fields::Unnamed(fields) => {
                             if fields.unnamed.len() != 1 {
-                                cx.error_spanned_by(
-                                    variant,
-                                    "#[serde(tag = \"...\")] cannot be used with tuple variants",
-                                );
+                                let msg =
+                                    "#[serde(tag = \"...\")] cannot be used with tuple variants";
+                                cx.error_spanned_by(variant, msg);
                                 break;
                             }
                         }
@@ -740,10 +721,8 @@ fn decide_tag(
             TagType::External // doesn't matter, will error
         }
         (None, None, Some((content_tokens, _))) => {
-            cx.error_spanned_by(
-                content_tokens,
-                "#[serde(tag = \"...\", content = \"...\")] must be used together",
-            );
+            let msg = "#[serde(tag = \"...\", content = \"...\")] must be used together";
+            cx.error_spanned_by(content_tokens, msg);
             TagType::External
         }
         (Some((untagged_tokens, _)), None, Some((content_tokens, _))) => {
@@ -785,31 +764,23 @@ fn decide_identifier(
         (syn::Data::Enum(_), Some(_), None) => Identifier::Field,
         (syn::Data::Enum(_), None, Some(_)) => Identifier::Variant,
         (syn::Data::Struct(syn::DataStruct { struct_token, .. }), Some(_), None) => {
-            cx.error_spanned_by(
-                struct_token,
-                "#[serde(field_identifier)] can only be used on an enum",
-            );
+            let msg = "#[serde(field_identifier)] can only be used on an enum";
+            cx.error_spanned_by(struct_token, msg);
             Identifier::No
         }
         (syn::Data::Union(syn::DataUnion { union_token, .. }), Some(_), None) => {
-            cx.error_spanned_by(
-                union_token,
-                "#[serde(field_identifier)] can only be used on an enum",
-            );
+            let msg = "#[serde(field_identifier)] can only be used on an enum";
+            cx.error_spanned_by(union_token, msg);
             Identifier::No
         }
         (syn::Data::Struct(syn::DataStruct { struct_token, .. }), None, Some(_)) => {
-            cx.error_spanned_by(
-                struct_token,
-                "#[serde(variant_identifier)] can only be used on an enum",
-            );
+            let msg = "#[serde(variant_identifier)] can only be used on an enum";
+            cx.error_spanned_by(struct_token, msg);
             Identifier::No
         }
         (syn::Data::Union(syn::DataUnion { union_token, .. }), None, Some(_)) => {
-            cx.error_spanned_by(
-                union_token,
-                "#[serde(variant_identifier)] can only be used on an enum",
-            );
+            let msg = "#[serde(variant_identifier)] can only be used on an enum";
+            cx.error_spanned_by(union_token, msg);
             Identifier::No
         }
     }
@@ -985,10 +956,8 @@ impl Variant {
                         borrow.set(m.path(), m.clone());
                     }
                     _ => {
-                        cx.error_spanned_by(
-                            variant,
-                            "#[serde(borrow)] may only be used on newtype variants",
-                        );
+                        let msg = "#[serde(borrow)] may only be used on newtype variants";
+                        cx.error_spanned_by(variant, msg);
                     }
                 },
 
@@ -998,14 +967,13 @@ impl Variant {
                         .into_token_stream()
                         .to_string()
                         .replace(' ', "");
-                    cx.error_spanned_by(
-                        meta_item.path(),
-                        format!("unknown serde variant attribute `{}`", path),
-                    );
+                    let msg = format!("unknown serde variant attribute `{}`", path);
+                    cx.error_spanned_by(meta_item.path(), msg);
                 }
 
                 Lit(lit) => {
-                    cx.error_spanned_by(lit, "unexpected literal in serde variant attribute");
+                    let msg = "unexpected literal in serde variant attribute";
+                    cx.error_spanned_by(lit, msg);
                 }
             }
         }
@@ -1277,13 +1245,11 @@ impl Field {
                         if let Ok(borrowable) = borrowable_lifetimes(cx, &ident, field) {
                             for lifetime in &lifetimes {
                                 if !borrowable.contains(lifetime) {
-                                    cx.error_spanned_by(
-                                        field,
-                                        format!(
-                                            "field `{}` does not have lifetime {}",
-                                            ident, lifetime
-                                        ),
+                                    let msg = format!(
+                                        "field `{}` does not have lifetime {}",
+                                        ident, lifetime,
                                     );
+                                    cx.error_spanned_by(field, msg);
                                 }
                             }
                             borrowed_lifetimes.set(&m.path, lifetimes);
@@ -1309,14 +1275,13 @@ impl Field {
                         .into_token_stream()
                         .to_string()
                         .replace(' ', "");
-                    cx.error_spanned_by(
-                        meta_item.path(),
-                        format!("unknown serde field attribute `{}`", path),
-                    );
+                    let msg = format!("unknown serde field attribute `{}`", path);
+                    cx.error_spanned_by(meta_item.path(), msg);
                 }
 
                 Lit(lit) => {
-                    cx.error_spanned_by(lit, "unexpected literal in serde field attribute");
+                    let msg = "unexpected literal in serde field attribute";
+                    cx.error_spanned_by(lit, msg);
                 }
             }
         }
@@ -1499,13 +1464,11 @@ where
             }
 
             _ => {
-                cx.error_spanned_by(
-                    meta,
-                    format!(
-                        "malformed {0} attribute, expected `{0}(serialize = ..., deserialize = ...)`",
-                        attr_name
-                    ),
+                let msg = format!(
+                    "malformed {0} attribute, expected `{0}(serialize = ..., deserialize = ...)`",
+                    attr_name,
                 );
+                cx.error_spanned_by(meta, msg);
                 return Err(());
             }
         }
@@ -1569,13 +1532,11 @@ fn get_lit_str2<'a>(
     if let syn::Lit::Str(lit) = lit {
         Ok(lit)
     } else {
-        cx.error_spanned_by(
-            lit,
-            format!(
-                "expected serde {} attribute to be a string: `{} = \"...\"`",
-                attr_name, meta_item_name
-            ),
+        let msg = format!(
+            "expected serde {} attribute to be a string: `{} = \"...\"`",
+            attr_name, meta_item_name,
         );
+        cx.error_spanned_by(lit, msg);
         Err(())
     }
 }
@@ -1583,7 +1544,8 @@ fn get_lit_str2<'a>(
 fn parse_lit_into_path(cx: &Ctxt, attr_name: Symbol, lit: &syn::Lit) -> Result<syn::Path, ()> {
     let string = get_lit_str(cx, attr_name, lit)?;
     string.parse().map_err(|_| {
-        cx.error_spanned_by(lit, format!("failed to parse path: {:?}", string.value()));
+        let msg = format!("failed to parse path: {:?}", string.value());
+        cx.error_spanned_by(lit, msg);
     })
 }
 
@@ -1594,7 +1556,8 @@ fn parse_lit_into_expr_path(
 ) -> Result<syn::ExprPath, ()> {
     let string = get_lit_str(cx, attr_name, lit)?;
     string.parse().map_err(|_| {
-        cx.error_spanned_by(lit, format!("failed to parse path: {:?}", string.value()));
+        let msg = format!("failed to parse path: {:?}", string.value());
+        cx.error_spanned_by(lit, msg);
     })
 }
 
@@ -1616,10 +1579,8 @@ fn parse_lit_into_ty(cx: &Ctxt, attr_name: Symbol, lit: &syn::Lit) -> Result<syn
     let string = get_lit_str(cx, attr_name, lit)?;
 
     string.parse().map_err(|_| {
-        cx.error_spanned_by(
-            lit,
-            format!("failed to parse type: {} = {:?}", attr_name, string.value()),
-        );
+        let msg = format!("failed to parse type: {} = {:?}", attr_name, string.value());
+        cx.error_spanned_by(lit, msg);
     })
 }
 
@@ -1637,7 +1598,8 @@ fn parse_lit_into_lifetimes(
         while !input.is_empty() {
             let lifetime: Lifetime = input.parse()?;
             if !set.insert(lifetime.clone()) {
-                cx.error_spanned_by(lit, format!("duplicate borrowed lifetime `{}`", lifetime));
+                let msg = format!("duplicate borrowed lifetime `{}`", lifetime);
+                cx.error_spanned_by(lit, msg);
             }
             if input.is_empty() {
                 break;
@@ -1647,17 +1609,16 @@ fn parse_lit_into_lifetimes(
         Ok(set)
     }) {
         return if lifetimes.is_empty() {
-            cx.error_spanned_by(lit, "at least one lifetime must be borrowed");
+            let msg = "at least one lifetime must be borrowed";
+            cx.error_spanned_by(lit, msg);
             Err(())
         } else {
             Ok(lifetimes)
         };
     }
 
-    cx.error_spanned_by(
-        lit,
-        format!("failed to parse borrowed lifetimes: {:?}", string.value()),
-    );
+    let msg = format!("failed to parse borrowed lifetimes: {:?}", string.value());
+    cx.error_spanned_by(lit, msg);
     Err(())
 }
 
@@ -1812,10 +1773,8 @@ fn borrowable_lifetimes(
     let mut lifetimes = BTreeSet::new();
     collect_lifetimes(&field.ty, &mut lifetimes);
     if lifetimes.is_empty() {
-        cx.error_spanned_by(
-            field,
-            format!("field `{}` has no lifetimes to borrow", name),
-        );
+        let msg = format!("field `{}` has no lifetimes to borrow", name);
+        cx.error_spanned_by(field, msg);
         Err(())
     } else {
         Ok(lifetimes)
