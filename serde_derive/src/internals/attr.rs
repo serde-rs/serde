@@ -490,21 +490,21 @@ impl Container {
                     }
                 }
 
-                // Parse `#[serde(from = "Type")]
+                // Parse `#[serde(from = "Type")]`
                 Meta(NameValue(m)) if m.path == FROM => {
                     if let Ok(from_ty) = parse_lit_into_ty(cx, FROM, &m.lit) {
                         type_from.set_opt(&m.path, Some(from_ty));
                     }
                 }
 
-                // Parse `#[serde(try_from = "Type")]
+                // Parse `#[serde(try_from = "Type")]`
                 Meta(NameValue(m)) if m.path == TRY_FROM => {
                     if let Ok(try_from_ty) = parse_lit_into_ty(cx, TRY_FROM, &m.lit) {
                         type_try_from.set_opt(&m.path, Some(try_from_ty));
                     }
                 }
 
-                // Parse `#[serde(into = "Type")]
+                // Parse `#[serde(into = "Type")]`
                 Meta(NameValue(m)) if m.path == INTO => {
                     if let Ok(into_ty) = parse_lit_into_ty(cx, INTO, &m.lit) {
                         type_into.set_opt(&m.path, Some(into_ty));
