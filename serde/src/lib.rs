@@ -219,13 +219,23 @@ mod lib {
     #[cfg(feature = "std")]
     pub use std::collections::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
 
+    #[cfg(all(not(no_core_cstr), not(feature = "std")))]
+    pub use core::ffi::CStr;
+    #[cfg(feature = "std")]
+    pub use std::ffi::CStr;
+
+    #[cfg(all(not(no_core_cstr), feature = "alloc", not(feature = "std")))]
+    pub use alloc::ffi::{CString};
+    #[cfg(feature = "std")]
+    pub use std::ffi::CString;
+
     #[cfg(feature = "std")]
     pub use std::{error, net};
 
     #[cfg(feature = "std")]
     pub use std::collections::{HashMap, HashSet};
     #[cfg(feature = "std")]
-    pub use std::ffi::{CStr, CString, OsStr, OsString};
+    pub use std::ffi::{OsStr, OsString};
     #[cfg(feature = "std")]
     pub use std::hash::{BuildHasher, Hash};
     #[cfg(feature = "std")]

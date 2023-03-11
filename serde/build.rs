@@ -114,6 +114,11 @@ fn main() {
             println!("cargo:rustc-cfg=no_std_atomic");
         }
     }
+
+    // Support for core::ffi::CStr and alloc::ffi::CString stabilized in Rust 1.64.
+    if minor < 64 {
+        println!("cargo:rustc-cfg=no_core_cstr");
+    }
 }
 
 fn rustc_minor_version() -> Option<u32> {

@@ -666,10 +666,10 @@ impl<'de: 'a, 'a> Deserialize<'de> for &'a [u8] {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", all(not(no_core_cstr), feature = "alloc")))]
 struct CStringVisitor;
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", all(not(no_core_cstr), feature = "alloc")))]
 impl<'de> Visitor<'de> for CStringVisitor {
     type Value = CString;
 
@@ -720,7 +720,7 @@ impl<'de> Visitor<'de> for CStringVisitor {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", all(not(no_core_cstr), feature = "alloc")))]
 impl<'de> Deserialize<'de> for CString {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -747,7 +747,7 @@ macro_rules! forwarded_impl {
     }
 }
 
-#[cfg(all(feature = "std", not(no_de_boxed_c_str)))]
+#[cfg(all(any(feature = "std", all(not(no_core_cstr), feature = "alloc")), not(no_de_boxed_c_str)))]
 forwarded_impl!((), Box<CStr>, CString::into_boxed_c_str);
 
 #[cfg(not(no_core_reverse))]
