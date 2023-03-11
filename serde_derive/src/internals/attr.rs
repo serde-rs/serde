@@ -1114,13 +1114,13 @@ impl Field {
             .and_then(|variant| variant.borrow.as_ref())
             .map(|borrow| Meta(borrow.clone()));
 
-        for meta_item in field
-            .attrs
-            .iter()
-            .flat_map(|attr| get_serde_meta_items(cx, attr))
-            .flatten()
-            .chain(variant_borrow)
-        {
+        for meta_item in variant_borrow.into_iter().chain(
+            field
+                .attrs
+                .iter()
+                .flat_map(|attr| get_serde_meta_items(cx, attr))
+                .flatten(),
+        ) {
             match &meta_item {
                 // Parse `#[serde(rename = "foo")]`
                 Meta(NameValue(m)) if m.path == RENAME => {
