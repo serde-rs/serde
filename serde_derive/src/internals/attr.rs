@@ -975,7 +975,7 @@ impl Variant {
                 // Parse `#[serde(borrow = "'a + 'b")]`
                 Meta(NameValue(m)) if m.path == BORROW => match &variant.fields {
                     syn::Fields::Unnamed(fields) if fields.unnamed.len() == 1 => {
-                        if let Ok(lifetimes) = parse_lit_into_lifetimes(cx, BORROW, &m.lit) {
+                        if let Ok(lifetimes) = parse_lit_into_lifetimes(cx, &m.lit) {
                             borrow.set(
                                 &m.path,
                                 BorrowAttribute {
@@ -1283,7 +1283,7 @@ impl Field {
 
                 // Parse `#[serde(borrow = "'a + 'b")]`
                 Meta(NameValue(m)) if m.path == BORROW => {
-                    if let Ok(lifetimes) = parse_lit_into_lifetimes(cx, BORROW, &m.lit) {
+                    if let Ok(lifetimes) = parse_lit_into_lifetimes(cx, &m.lit) {
                         if let Ok(borrowable) = borrowable_lifetimes(cx, &ident, field) {
                             for lifetime in &lifetimes {
                                 if !borrowable.contains(lifetime) {
@@ -1628,12 +1628,8 @@ fn parse_lit_into_ty(cx: &Ctxt, attr_name: Symbol, lit: &syn::Lit) -> Result<syn
 
 // Parses a string literal like "'a + 'b + 'c" containing a nonempty list of
 // lifetimes separated by `+`.
-fn parse_lit_into_lifetimes(
-    cx: &Ctxt,
-    attr_name: Symbol,
-    lit: &syn::Lit,
-) -> Result<BTreeSet<syn::Lifetime>, ()> {
-    let string = get_lit_str(cx, attr_name, lit)?;
+fn parse_lit_into_lifetimes(cx: &Ctxt, lit: &syn::Lit) -> Result<BTreeSet<syn::Lifetime>, ()> {
+    let string = get_lit_str(cx, BORROW, lit)?;
 
     if let Ok(lifetimes) = string.parse_with(|input: ParseStream| {
         let mut set = BTreeSet::new();
