@@ -797,7 +797,12 @@ pub struct Variant {
     other: bool,
     serialize_with: Option<syn::ExprPath>,
     deserialize_with: Option<syn::ExprPath>,
-    borrow: Option<syn::Meta>,
+    borrow: Option<BorrowAttribute>,
+}
+
+struct BorrowAttribute {
+    path: syn::Path,
+    lifetimes: Option<BTreeSet<syn::Lifetime>>,
 }
 
 impl Variant {
@@ -950,10 +955,35 @@ impl Variant {
                     }
                 }
 
-                // Defer `#[serde(borrow)]` and `#[serde(borrow = "'a + 'b")]`
-                Meta(m) if m.path() == BORROW => match &variant.fields {
+                // Parse `#[serde(borrow)]`
+                Meta(Path(word)) if word == BORROW => match &variant.fields {
                     syn::Fields::Unnamed(fields) if fields.unnamed.len() == 1 => {
-                        borrow.set(m.path(), m.clone());
+                        borrow.set(
+                            word,
+                            BorrowAttribute {
+                                path: word.clone(),
+                                lifetimes: None,
+                            },
+                        );
+                    }
+                    _ => {
+                        let msg = "#[serde(borrow)] may only be used on newtype variants";
+                        cx.error_spanned_by(variant, msg);
+                    }
+                },
+
+                // Parse `#[serde(borrow = "'a + 'b")]`
+                Meta(NameValue(m)) if m.path == BORROW => match &variant.fields {
+                    syn::Fields::Unnamed(fields) if fields.unnamed.len() == 1 => {
+                        if let Ok(lifetimes) = parse_lit_into_lifetimes(cx, BORROW, &m.lit) {
+                            borrow.set(
+                                &m.path,
+                                BorrowAttribute {
+                                    path: m.path.clone(),
+                                    lifetimes: Some(lifetimes),
+                                },
+                            );
+                        }
                     }
                     _ => {
                         let msg = "#[serde(borrow)] may only be used on newtype variants";
@@ -1110,17 +1140,29 @@ impl Field {
             None => index.to_string(),
         };
 
-        let variant_borrow = attrs
-            .and_then(|variant| variant.borrow.as_ref())
-            .map(|borrow| Meta(borrow.clone()));
+        if let Some(borrow_attribute) = attrs.and_then(|variant| variant.borrow.as_ref()) {
+            if let Ok(borrowable) = borrowable_lifetimes(cx, &ident, field) {
+                if let Some(lifetimes) = &borrow_attribute.lifetimes {
+                    for lifetime in lifetimes {
+                        if !borrowable.contains(lifetime) {
+                            let msg =
+                                format!("field `{}` does not have lifetime {}", ident, lifetime);
+                            cx.error_spanned_by(field, msg);
+                        }
+                    }
+                    borrowed_lifetimes.set(&borrow_attribute.path, lifetimes.clone());
+                } else {
+                    borrowed_lifetimes.set(&borrow_attribute.path, borrowable);
+                }
+            }
+        }
 
-        for meta_item in variant_borrow.into_iter().chain(
-            field
-                .attrs
-                .iter()
-                .flat_map(|attr| get_serde_meta_items(cx, attr))
-                .flatten(),
-        ) {
+        for meta_item in field
+            .attrs
+            .iter()
+            .flat_map(|attr| get_serde_meta_items(cx, attr))
+            .flatten()
+        {
             match &meta_item {
                 // Parse `#[serde(rename = "foo")]`
                 Meta(NameValue(m)) if m.path == RENAME => {
