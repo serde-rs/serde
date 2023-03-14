@@ -1182,7 +1182,7 @@ fn prepare_enum_variant_enum(
     variants: &[Variant],
     cattrs: &attr::Container,
 ) -> (TokenStream, Stmts) {
-    let mut deserialized_variants = variants
+    let deserialized_variants = variants
         .iter()
         .enumerate()
         .filter(|&(_, variant)| !variant.attrs.skip_deserializing());
@@ -1198,7 +1198,7 @@ fn prepare_enum_variant_enum(
         })
         .collect();
 
-    let other_idx = deserialized_variants.position(|(_, variant)| variant.attrs.other());
+    let other_idx = deserialized_variants.clone().position(|(_, variant)| variant.attrs.other());
 
     let variants_stmt = {
         let variant_names = variant_names_idents.iter().map(|(name, _, _)| name);
@@ -1207,11 +1207,64 @@ fn prepare_enum_variant_enum(
         }
     };
 
+    let repr = match (cattrs.use_repr(), cattrs.repr_type().map(|ty| ty.clone())) {
+        (true, Some(repr_type)) => {
+            let mut discriminants = Vec::new();
+            let mut last_discriminant = None;
+            let mut iterations_without_discriminant = 0;
+            for (_, variant) in deserialized_variants.clone() {
+                let discriminant = variant.original.discriminant.as_ref().map(|(_, d)| d);
+                let discriminant = if let Some(expr) = discriminant {
+                    last_discriminant = Some(expr);
+                    parse_quote!(#expr)
+                } else if let Some(expr) = last_discriminant {
+                    match expr {
+                        syn::Expr::Lit(syn::ExprLit {
+                                           lit: syn::Lit::Int(lit_int),
+                                           ..
+                                       }) => {
+                            let value = lit_int.base10_parse::<u64>().unwrap();
+                            let value = value + iterations_without_discriminant;
+                            let value = syn::Lit::Int(syn::LitInt::new(
+                                &value.to_string(),
+                                Span::call_site(),
+                            ));
+                            parse_quote!(#value)
+                        }
+                        _ => {
+                            let iterations_without_discriminant = syn::Lit::Int(syn::LitInt::new(
+                                &iterations_without_discriminant.to_string(),
+                                Span::call_site(),
+                            ));
+                            parse_quote!(#expr + #iterations_without_discriminant)
+                        },
+                    }
+                } else {
+                    let iterations_without_discriminant = syn::Lit::Int(syn::LitInt::new(
+                        &iterations_without_discriminant.to_string(),
+                        Span::call_site(),
+                    ));
+                    parse_quote!(#iterations_without_discriminant)
+                };
+
+                discriminants.push(discriminant);
+                iterations_without_discriminant += 1;
+            }
+
+            Some((
+                discriminants,
+                repr_type,
+            ))
+        }
+        _ => None,
+    };
+
     let variant_visitor = Stmts(deserialize_generated_identifier(
         &variant_names_idents,
         cattrs,
         true,
         other_idx,
+        repr,
     ));
 
     (variants_stmt, variant_visitor)
@@ -1916,6 +1969,7 @@ fn deserialize_generated_identifier(
     cattrs: &attr::Container,
     is_variant: bool,
     other_idx: Option<usize>,
+    repr: Option<(Vec<syn::Expr>, syn::Type)>,
 ) -> Fragment {
     let this_value = quote!(__Field);
     let field_idents: &Vec<_> = &fields.iter().map(|(_, ident, _)| ident).collect();
@@ -1944,6 +1998,7 @@ fn deserialize_generated_identifier(
         None,
         !is_variant && cattrs.has_flatten(),
         None,
+        repr,
     ));
 
     let lifetime = if !is_variant && cattrs.has_flatten() {
@@ -2056,6 +2111,54 @@ fn deserialize_custom_identifier(
         Some(fields)
     };
 
+    let repr = match (cattrs.use_repr(), cattrs.repr_type().map(|ty| ty.clone())) {
+        (true, Some(repr_type)) => {
+            let mut discriminants = Vec::new();
+            let mut last_discriminant = None;
+            let mut iterations_without_discriminant = 0;
+            for variant in ordinary {
+                let discriminant = variant.original.discriminant.as_ref().map(|(_, d)| d);
+                let discriminant = if let Some(expr) = discriminant {
+                    last_discriminant = Some(expr);
+                    parse_quote!(#expr)
+                } else if let Some(expr) = last_discriminant {
+                    match expr {
+                        syn::Expr::Lit(syn::ExprLit {
+                                           lit: syn::Lit::Int(lit_int),
+                                           ..
+                                       }) => {
+                            let value = lit_int.base10_parse::<u64>().unwrap();
+                            let value = value + iterations_without_discriminant;
+                            parse_quote!(#value)
+                        }
+                        _ => {
+                            let iterations_without_discriminant = syn::Lit::Int(syn::LitInt::new(
+                                &iterations_without_discriminant.to_string(),
+                                Span::call_site(),
+                            ));
+                            parse_quote!(#expr + #iterations_without_discriminant)
+                        },
+                    }
+                } else {
+                    let iterations_without_discriminant = syn::Lit::Int(syn::LitInt::new(
+                        &iterations_without_discriminant.to_string(),
+                        Span::call_site(),
+                    ));
+                    parse_quote!(#iterations_without_discriminant)
+                };
+
+                discriminants.push(discriminant);
+                iterations_without_discriminant += 1;
+            }
+
+            Some((
+                discriminants,
+                repr_type,
+            ))
+        }
+        _ => None,
+    };
+
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
@@ -2067,6 +2170,7 @@ fn deserialize_custom_identifier(
         fallthrough_borrowed,
         false,
         cattrs.expecting(),
+        repr,
     ));
 
     quote_block! {
@@ -2091,6 +2195,28 @@ fn deserialize_custom_identifier(
     }
 }
 
+fn filter_repr_by_type(repr: &Option<(Vec<syn::Expr>, syn::Type)>, ty_symbol: &str) -> Option<Vec<syn::Expr>> {
+    if let Some((discriminants, repr_type)) = repr {
+        match repr_type {
+            syn::Type::Path(syn::TypePath { path: syn::Path { segments, .. }, .. }) => {
+                if segments.len() == 1 {
+                    let segment = &segments[0];
+                    if segment.ident.to_string() == ty_symbol {
+                        Some(discriminants.clone())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    } else {
+        None
+    }
+}
+
 fn deserialize_identifier(
     this_value: &TokenStream,
     fields: &[(String, Ident, Vec<String>)],
@@ -2099,12 +2225,97 @@ fn deserialize_identifier(
     fallthrough_borrowed: Option<TokenStream>,
     collect_other_fields: bool,
     expecting: Option<&str>,
+    repr: Option<(Vec<syn::Expr>, syn::Type)>,
 ) -> Fragment {
+    //panic!("{:#?}", repr);
     let mut flat_fields = Vec::new();
     for (_, ident, aliases) in fields {
         flat_fields.extend(aliases.iter().map(|alias| (alias, ident)));
     }
 
+    let discriminant_identifiers: &Vec<Ident> = &flat_fields.iter()
+        .enumerate()
+        .map(|(i, _)| Ident::new(
+            &format!("__DISCRIMINANT_{}", i),
+            Span::call_site()
+        ))
+        .collect();
+    let field_i8: Option<Vec<syn::Expr>> = filter_repr_by_type(&repr, "i8");
+    let field_u8: Option<Vec<syn::Expr>> = filter_repr_by_type(&repr, "u8");
+    let field_i16: Option<Vec<syn::Expr>> = filter_repr_by_type(&repr, "i16");
+    let field_u16: Option<Vec<syn::Expr>> = filter_repr_by_type(&repr, "u16");
+    let field_i32: Option<Vec<syn::Expr>> = filter_repr_by_type(&repr, "i32");
+    let field_u32: Option<Vec<syn::Expr>> = filter_repr_by_type(&repr, "u32");
+    let field_i64: Option<Vec<syn::Expr>> = filter_repr_by_type(&repr, "i64");
+    let field_u64: Option<Vec<syn::Expr>> = filter_repr_by_type(&repr, "u64");
+    let field_str: Option<Vec<syn::Expr>> = if let Some((discriminants, _)) = &repr {
+        discriminants.iter()
+            .map(|expr| {
+                match expr {
+                    syn::Expr::Lit(syn::ExprLit {
+                                       lit: syn::Lit::Int(lit_int),
+                                       ..
+                                   }) => {
+                        let value = lit_int.base10_parse::<u64>().unwrap();
+                        let value = value.to_string();
+                        Some(syn::Expr::Lit(syn::ExprLit {
+                            attrs: vec![],
+                            lit: syn::Lit::Str(syn::LitStr::new(
+                                &value,
+                                Span::call_site(),
+                            )),
+                        }))
+                    }
+                    _ => None,
+                }
+            })
+            .collect()
+    } else {
+        Some(flat_fields.iter().map(|(name, _)| {
+            syn::Expr::Lit(syn::ExprLit {
+                attrs: vec![],
+                lit: syn::Lit::Str(syn::LitStr::new(
+                    *name,
+                    Span::call_site(),
+                )),
+            })
+        }).collect())
+    };
+    let field_byte: Option<Vec<syn::Expr>> = if let Some((discriminants, _)) = &repr {
+        discriminants.iter()
+            .map(|expr| {
+                match expr {
+                    syn::Expr::Lit(syn::ExprLit {
+                                       lit: syn::Lit::Int(lit_int),
+                                       ..
+                                   }) => {
+                        let value = lit_int.base10_parse::<u64>().unwrap();
+                        let value = value.to_string();
+                        Some(syn::Expr::Lit(syn::ExprLit {
+                            attrs: vec![],
+                            lit: syn::Lit::ByteStr(syn::LitByteStr::new(
+                                value.as_bytes(),
+                                Span::call_site(),
+                            )),
+                        }))
+                    }
+                    _ => None,
+                }
+            })
+            .collect()
+    } else {
+        Some(flat_fields.iter().map(|(name, _)| {
+            syn::Expr::Lit(syn::ExprLit {
+                attrs: vec![],
+                lit: syn::Lit::ByteStr(syn::LitByteStr::new(
+                    name.as_bytes(),
+                    Span::call_site(),
+                )),
+            })
+        }).collect())
+    };
+
+    let field_ints: &Vec<_> = &flat_fields.iter().enumerate().map(|(i, _)| i as u64).collect();
     let field_strs: &Vec<_> = &flat_fields.iter().map(|(name, _)| name).collect();
     let field_bytes: &Vec<_> = &flat_fields
         .iter()
@@ -2189,7 +2400,386 @@ fn deserialize_identifier(
         &u64_fallthrough_arm_tokens
     };
 
-    let variant_indices = 0_u64..;
+    let visit_i8 = if let Some(field_i8) = field_i8 {
+        let fallthrough_arm_tokens;
+        let fallthrough = if let Some(fallthrough) = &fallthrough {
+            fallthrough
+        } else  {
+            let fallthrough_msg = format!("{} discriminant", index_expecting);
+            fallthrough_arm_tokens = quote! {
+                _serde::__private::Err(_serde::de::Error::invalid_value(
+                    _serde::de::Unexpected::Signed(__value as i64),
+                    &#fallthrough_msg,
+                ))
+            };
+            &fallthrough_arm_tokens
+        };
+        quote! {
+            fn visit_i8<__E>(self, __value: i8) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                struct __Discriminants;
+                impl __Discriminants {
+                    #(const #discriminant_identifiers: i8 = #field_i8;)*
+                }
+
+                match __value {
+                    #(
+                        __Discriminants::#discriminant_identifiers => _serde::__private::Ok(#main_constructors),
+                    )*
+                    _ => #fallthrough,
+                }
+            }
+        }
+    } else {
+        if collect_other_fields {
+            quote! {
+                fn visit_i8<__E>(self, __value: i8) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I8(__value)))
+                }
+            }
+        } else {
+            quote! {}
+        }
+    };
+    let visit_u8 = if let Some(field_u8) = field_u8 {
+        let fallthrough_arm_tokens;
+        let fallthrough = if let Some(fallthrough) = &fallthrough {
+            fallthrough
+        } else  {
+            let fallthrough_msg = format!("{} discriminant", index_expecting);
+            fallthrough_arm_tokens = quote! {
+                _serde::__private::Err(_serde::de::Error::invalid_value(
+                    _serde::de::Unexpected::Unsigned(__value as u64),
+                    &#fallthrough_msg,
+                ))
+            };
+            &fallthrough_arm_tokens
+        };
+        quote! {
+            fn visit_u8<__E>(self, __value: u8) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                struct __Discriminants;
+                impl __Discriminants {
+                    #(const #discriminant_identifiers: u8 = #field_u8;)*
+                }
+
+                match __value {
+                    #(
+                        __Discriminants::#discriminant_identifiers => _serde::__private::Ok(#main_constructors),
+                    )*
+                    _ => #fallthrough,
+                }
+            }
+        }
+    } else {
+        if collect_other_fields {
+            quote! {
+                fn visit_u8<__E>(self, __value: u8) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U8(__value)))
+                }
+            }
+        } else {
+            quote! {}
+        }
+    };
+    let visit_u16 = if let Some(field_u16) = field_u16 {
+        let fallthrough_arm_tokens;
+        let fallthrough = if let Some(fallthrough) = &fallthrough {
+            fallthrough
+        } else  {
+            let fallthrough_msg = format!("{} discriminant", index_expecting);
+            fallthrough_arm_tokens = quote! {
+                _serde::__private::Err(_serde::de::Error::invalid_value(
+                    _serde::de::Unexpected::Unsigned(__value as u64),
+                    &#fallthrough_msg,
+                ))
+            };
+            &fallthrough_arm_tokens
+        };
+        quote! {
+            fn visit_u16<__E>(self, __value: u16) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                struct __Discriminants;
+                impl __Discriminants {
+                    #(const #discriminant_identifiers: u16 = #field_u16;)*
+                }
+
+                match __value {
+                    #(
+                        __Discriminants::#discriminant_identifiers => _serde::__private::Ok(#main_constructors),
+                    )*
+                    _ => #fallthrough,
+                }
+            }
+        }
+    } else {
+        if collect_other_fields {
+            quote! {
+                fn visit_u16<__E>(self, __value: u16) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U16(__value)))
+                }
+            }
+        } else {
+            quote! {}
+        }
+    };
+    let visit_i16 = if let Some(field_i16) = field_i16 {
+        let fallthrough_arm_tokens;
+        let fallthrough = if let Some(fallthrough) = &fallthrough {
+            fallthrough
+        } else  {
+            let fallthrough_msg = format!("{} discriminant", index_expecting);
+            fallthrough_arm_tokens = quote! {
+                _serde::__private::Err(_serde::de::Error::invalid_value(
+                    _serde::de::Unexpected::Signed(__value as i64),
+                    &#fallthrough_msg,
+                ))
+            };
+            &fallthrough_arm_tokens
+        };
+        quote! {
+            fn visit_i16<__E>(self, __value: i16) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                struct __Discriminants;
+                impl __Discriminants {
+                    #(const #discriminant_identifiers: i16 = #field_i16;)*
+                }
+
+                match __value {
+                    #(
+                        __Discriminants::#discriminant_identifiers => _serde::__private::Ok(#main_constructors),
+                    )*
+                    _ => #fallthrough,
+                }
+            }
+        }
+    } else {
+        if collect_other_fields {
+            quote! {
+                fn visit_i16<__E>(self, __value: i16) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I16(__value)))
+                }
+            }
+        } else {
+            quote! {}
+        }
+    };
+    let visit_u32 = if let Some(field_u32) = field_u32 {
+        let fallthrough_arm_tokens;
+        let fallthrough = if let Some(fallthrough) = &fallthrough {
+            fallthrough
+        } else  {
+            let fallthrough_msg = format!("{} discriminant", index_expecting);
+            fallthrough_arm_tokens = quote! {
+                _serde::__private::Err(_serde::de::Error::invalid_value(
+                    _serde::de::Unexpected::Unsigned(__value as u64),
+                    &#fallthrough_msg,
+                ))
+            };
+            &fallthrough_arm_tokens
+        };
+        quote! {
+            fn visit_u32<__E>(self, __value: u32) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                struct __Discriminants;
+                impl __Discriminants {
+                    #(const #discriminant_identifiers: u32 = #field_u32;)*
+                }
+
+                match __value {
+                    #(
+                        __Discriminants::#discriminant_identifiers => _serde::__private::Ok(#main_constructors),
+                    )*
+                    _ => #fallthrough,
+                }
+            }
+        }
+    } else {
+        if collect_other_fields {
+            quote! {
+                fn visit_u32<__E>(self, __value: u32) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U32(__value)))
+                }
+            }
+        } else {
+            quote! {}
+        }
+    };
+    let visit_i32 = if let Some(field_i32) = field_i32 {
+        let fallthrough_arm_tokens;
+        let fallthrough = if let Some(fallthrough) = &fallthrough {
+            fallthrough
+        } else  {
+            let fallthrough_msg = format!("{} discriminant", index_expecting);
+            fallthrough_arm_tokens = quote! {
+                _serde::__private::Err(_serde::de::Error::invalid_value(
+                    _serde::de::Unexpected::Signed(__value as i64),
+                    &#fallthrough_msg,
+                ))
+            };
+            &fallthrough_arm_tokens
+        };
+        quote! {
+            fn visit_i32<__E>(self, __value: i32) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                struct __Discriminants;
+                impl __Discriminants {
+                    #(const #discriminant_identifiers: i32 = #field_i32;)*
+                }
+
+                match __value {
+                    #(
+                        __Discriminants::#discriminant_identifiers => _serde::__private::Ok(#main_constructors),
+                    )*
+                    _ => #fallthrough,
+                }
+            }
+        }
+    } else {
+        if collect_other_fields {
+            quote! {
+                fn visit_i32<__E>(self, __value: i32) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I32(__value)))
+                }
+            }
+        } else {
+            quote! {}
+        }
+    };
+    let visit_u64 = if let Some(field_u64) = field_u64 {
+        let fallthrough_arm_tokens;
+        let fallthrough = if let Some(fallthrough) = &fallthrough {
+            fallthrough
+        } else  {
+            let fallthrough_msg = format!("{} discriminant", index_expecting);
+            fallthrough_arm_tokens = quote! {
+                _serde::__private::Err(_serde::de::Error::invalid_value(
+                    _serde::de::Unexpected::Unsigned(__value),
+                    &#fallthrough_msg,
+                ))
+            };
+            &fallthrough_arm_tokens
+        };
+        quote! {
+            fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                struct __Discriminants;
+                impl __Discriminants {
+                    #(const #discriminant_identifiers: u64 = #field_u64;)*
+                }
+
+                match __value {
+                    #(
+                        __Discriminants::#discriminant_identifiers => _serde::__private::Ok(#main_constructors),
+                    )*
+                    _ => #fallthrough,
+                }
+            }
+        }
+    } else {
+        if collect_other_fields {
+            quote! {
+                fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U64(__value)))
+                }
+            }
+        } else {
+            quote! {
+                fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    match __value {
+                        #(
+                            #field_ints => _serde::__private::Ok(#main_constructors),
+                        )*
+                        _ => #u64_fallthrough_arm,
+                    }
+                }
+            }
+        }
+    };
+    let visit_i64 = if let Some(field_i64) = field_i64 {
+        let fallthrough_arm_tokens;
+        let fallthrough = if let Some(fallthrough) = &fallthrough {
+            fallthrough
+        } else  {
+            let fallthrough_msg = format!("{} discriminant", index_expecting);
+            fallthrough_arm_tokens = quote! {
+                _serde::__private::Err(_serde::de::Error::invalid_value(
+                    _serde::de::Unexpected::Signed(__value),
+                    &#fallthrough_msg,
+                ))
+            };
+            &fallthrough_arm_tokens
+        };
+        quote! {
+            fn visit_i64<__E>(self, __value: i64) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                struct __Discriminants;
+                impl __Discriminants {
+                    #(const #discriminant_identifiers: i64 = #field_i64;)*
+                }
+
+                match __value {
+                    #(
+                        __Discriminants::#discriminant_identifiers => _serde::__private::Ok(#main_constructors),
+                    )*
+                    _ => #fallthrough,
+                }
+            }
+        }
+    } else {
+        if collect_other_fields {
+            quote! {
+                fn visit_i64<__E>(self, __value: i64) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I64(__value)))
+                }
+            }
+        } else {
+            quote! {}
+        }
+    };
     let visit_other = if collect_other_fields {
         quote! {
             fn visit_bool<__E>(self, __value: bool) -> _serde::__private::Result<Self::Value, __E>
@@ -2197,62 +2787,6 @@ fn deserialize_identifier(
                 __E: _serde::de::Error,
             {
                 _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Bool(__value)))
-            }
-
-            fn visit_i8<__E>(self, __value: i8) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I8(__value)))
-            }
-
-            fn visit_i16<__E>(self, __value: i16) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I16(__value)))
-            }
-
-            fn visit_i32<__E>(self, __value: i32) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I32(__value)))
-            }
-
-            fn visit_i64<__E>(self, __value: i64) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I64(__value)))
-            }
-
-            fn visit_u8<__E>(self, __value: u8) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U8(__value)))
-            }
-
-            fn visit_u16<__E>(self, __value: u16) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U16(__value)))
-            }
-
-            fn visit_u32<__E>(self, __value: u32) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U32(__value)))
-            }
-
-            fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U64(__value)))
             }
 
             fn visit_f32<__E>(self, __value: f32) -> _serde::__private::Result<Self::Value, __E>
@@ -2284,25 +2818,122 @@ fn deserialize_identifier(
             }
         }
     } else {
+        quote! {}
+    };
+
+    let visit_borrowed_str = if let Some(field_str) = &field_str {
+        if fallthrough_borrowed.is_some() || collect_other_fields {
+            let fallthrough_borrowed_arm = fallthrough_borrowed.as_ref().unwrap_or(fallthrough_arm);
+            Some(quote! {
+                fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    match __value {
+                        #(
+                            #field_str => _serde::__private::Ok(#constructors),
+                        )*
+                        _ => {
+                            #value_as_borrowed_str_content
+                            #fallthrough_borrowed_arm
+                        }
+                    }
+                }
+            })
+        } else {
+            None
+        }
+    } else {
+        if fallthrough_borrowed.is_some() || collect_other_fields {
+            let fallthrough_borrowed_arm = fallthrough_borrowed.as_ref().unwrap_or(fallthrough_arm);
+            Some(quote! {
+                fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    match __value {
+                        #(
+                            #field_strs => _serde::__private::Ok(#constructors),
+                        )*
+                        _ => {
+                            #value_as_borrowed_str_content
+                            #fallthrough_borrowed_arm
+                        }
+                    }
+                }
+            })
+        } else {
+            None
+        }
+    };
+    let visit_borrowed_byte = if let Some(field_byte) = &field_byte {
+        if fallthrough_borrowed.is_some() || collect_other_fields {
+            let fallthrough_borrowed_arm = fallthrough_borrowed.as_ref().unwrap_or(fallthrough_arm);
+            Some(quote! {
+                fn visit_borrowed_bytes<__E>(self, __value: &'de [u8]) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    match __value {
+                        #(
+                            #field_byte => _serde::__private::Ok(#constructors),
+                        )*
+                        _ => {
+                            #bytes_to_str
+                            #value_as_borrowed_bytes_content
+                            #fallthrough_borrowed_arm
+                        }
+                    }
+                }
+            })
+        } else {
+            None
+        }
+    } else {
+        if fallthrough_borrowed.is_some() || collect_other_fields {
+            let fallthrough_borrowed_arm = fallthrough_borrowed.as_ref().unwrap_or(fallthrough_arm);
+            Some(quote! {
+                fn visit_borrowed_bytes<__E>(self, __value: &'de [u8]) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    match __value {
+                        #(
+                            #field_bytes => _serde::__private::Ok(#constructors),
+                        )*
+                        _ => {
+                            #bytes_to_str
+                            #value_as_borrowed_bytes_content
+                            #fallthrough_borrowed_arm
+                        }
+                    }
+                }
+            })
+        } else {
+            None
+        }
+    };
+
+    let visit_str = if let Some(field_str) = &field_str {
         quote! {
-            fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
+            fn visit_str<__E>(self, __value: &str) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
                 match __value {
                     #(
-                        #variant_indices => _serde::__private::Ok(#main_constructors),
+                        #field_str => _serde::__private::Ok(#constructors),
                     )*
-                    _ => #u64_fallthrough_arm,
+                    _ => {
+                        #value_as_str_content
+                        #fallthrough_arm
+                    }
                 }
             }
         }
-    };
-
-    let visit_borrowed = if fallthrough_borrowed.is_some() || collect_other_fields {
-        let fallthrough_borrowed_arm = fallthrough_borrowed.as_ref().unwrap_or(fallthrough_arm);
-        Some(quote! {
-            fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::__private::Result<Self::Value, __E>
+    } else {
+        quote! {
+            fn visit_str<__E>(self, __value: &str) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
@@ -2311,13 +2942,34 @@ fn deserialize_identifier(
                         #field_strs => _serde::__private::Ok(#constructors),
                     )*
                     _ => {
-                        #value_as_borrowed_str_content
-                        #fallthrough_borrowed_arm
+                        #value_as_str_content
+                        #fallthrough_arm
                     }
                 }
             }
-
-            fn visit_borrowed_bytes<__E>(self, __value: &'de [u8]) -> _serde::__private::Result<Self::Value, __E>
+        }
+    };
+    let visit_byte = if let Some(field_byte) = &field_byte {
+        quote! {
+            fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                match __value {
+                    #(
+                        #field_byte => _serde::__private::Ok(#constructors),
+                    )*
+                    _ => {
+                        #bytes_to_str
+                        #value_as_bytes_content
+                        #fallthrough_arm
+                    }
+                }
+            }
+        }
+    } else {
+        quote! {
+            fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
@@ -2327,14 +2979,12 @@ fn deserialize_identifier(
                     )*
                     _ => {
                         #bytes_to_str
-                        #value_as_borrowed_bytes_content
-                        #fallthrough_borrowed_arm
+                        #value_as_bytes_content
+                        #fallthrough_arm
                     }
                 }
             }
-        })
-    } else {
-        None
+        }
     };
 
     quote_block! {
@@ -2342,40 +2992,19 @@ fn deserialize_identifier(
             _serde::__private::Formatter::write_str(__formatter, #expecting)
         }
 
+        #visit_i8
+        #visit_u8
+        #visit_i16
+        #visit_u16
+        #visit_i32
+        #visit_u32
+        #visit_i64
+        #visit_u64
         #visit_other
-
-        fn visit_str<__E>(self, __value: &str) -> _serde::__private::Result<Self::Value, __E>
-        where
-            __E: _serde::de::Error,
-        {
-            match __value {
-                #(
-                    #field_strs => _serde::__private::Ok(#constructors),
-                )*
-                _ => {
-                    #value_as_str_content
-                    #fallthrough_arm
-                }
-            }
-        }
-
-        fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::__private::Result<Self::Value, __E>
-        where
-            __E: _serde::de::Error,
-        {
-            match __value {
-                #(
-                    #field_bytes => _serde::__private::Ok(#constructors),
-                )*
-                _ => {
-                    #bytes_to_str
-                    #value_as_bytes_content
-                    #fallthrough_arm
-                }
-            }
-        }
-
-        #visit_borrowed
+        #visit_str
+        #visit_byte
+        #visit_borrowed_str
+        #visit_borrowed_byte
     }
 }
 
@@ -2410,7 +3039,7 @@ fn deserialize_struct_as_struct_visitor(
         }
     };
 
-    let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
+    let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None, None);
 
     let visit_map = deserialize_map(struct_path, params, fields, cattrs);
 
@@ -2436,7 +3065,7 @@ fn deserialize_struct_as_map_visitor(
         })
         .collect();
 
-    let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
+    let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None, None);
 
     let visit_map = deserialize_map(struct_path, params, fields, cattrs);
 
@@ -2688,7 +3317,7 @@ fn deserialize_struct_as_struct_in_place_visitor(
         }
     };
 
-    let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
+    let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None, None);
 
     let visit_map = deserialize_map_in_place(params, fields, cattrs);
 
