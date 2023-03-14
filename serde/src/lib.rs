@@ -338,8 +338,9 @@ mod std_error;
 #[allow(unused_imports)]
 #[macro_use]
 extern crate serde_derive;
+
+/// Derive macro available if serde is built with `features = ["derive"]`.
 #[cfg(feature = "serde_derive")]
-#[doc(hidden)]
 pub use serde_derive::{Deserialize, Serialize};
 
 #[cfg(all(not(no_serde_derive), any(feature = "std", feature = "alloc")))]
