@@ -225,7 +225,7 @@ mod lib {
     pub use std::ffi::CStr;
 
     #[cfg(all(not(no_core_cstr), feature = "alloc", not(feature = "std")))]
-    pub use alloc::ffi::{CString};
+    pub use alloc::ffi::CString;
     #[cfg(feature = "std")]
     pub use std::ffi::CString;
 
