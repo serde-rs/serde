@@ -1166,6 +1166,29 @@ fn deserialize_enum(
     variants: &[Variant],
     cattrs: &attr::Container,
 ) -> Fragment {
+    match variants
+        .iter()
+        .enumerate()
+        .find(|(_, var)| var.attrs.untagged())
+    {
+        Some((variant_idx, _)) => {
+            let (tagged, untagged) = variants.split_at(variant_idx);
+            let tagged_frag = Expr(deserialize_homogenious_enum(params, tagged, cattrs));
+            let tagged_frag = |deserializer| Expr(quote_block! {
+                let __deserializer = #deserializer;
+                #tagged_frag
+            });
+            deserialize_untagged_enum_after(params, untagged, cattrs, Some(tagged_frag))
+        }
+        None => deserialize_homogenious_enum(params, variants, cattrs),
+    }
+}
+
+fn deserialize_homogenious_enum(
+    params: &Parameters,
+    variants: &[Variant],
+    cattrs: &attr::Container,
+) -> Fragment {
     match cattrs.tag() {
         attr::TagType::External => deserialize_externally_tagged_enum(params, variants, cattrs),
         attr::TagType::Internal { tag } => {
@@ -1661,6 +1684,18 @@ fn deserialize_untagged_enum(
     variants: &[Variant],
     cattrs: &attr::Container,
 ) -> Fragment {
+    deserialize_untagged_enum_after(params, variants, cattrs, None::<fn(_) -> _>)
+}
+
+fn deserialize_untagged_enum_after(
+    params: &Parameters,
+    variants: &[Variant],
+    cattrs: &attr::Container,
+    first_attempt: Option<impl FnOnce(TokenStream) -> Expr>,
+) -> Fragment {
+    let deserializer = || quote!(
+        _serde::__private::de::ContentRefDeserializer::<__D::Error>::new(&__content)
+    );
     let attempts = variants
         .iter()
         .filter(|variant| !variant.attrs.skip_deserializing())
@@ -1669,12 +1704,10 @@ fn deserialize_untagged_enum(
                 params,
                 variant,
                 cattrs,
-                quote!(
-                    _serde::__private::de::ContentRefDeserializer::<__D::Error>::new(&__content)
-                ),
+                deserializer(),
             ))
         });
-
+    let attempts = first_attempt.map(|f| f(deserializer())).into_iter().chain(attempts);
     // TODO this message could be better by saving the errors from the failed
     // attempts. The heuristic used by TOML was to count the number of fields
     // processed before an error, and use the error that happened after the

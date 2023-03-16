@@ -798,6 +798,7 @@ pub struct Variant {
     serialize_with: Option<syn::ExprPath>,
     deserialize_with: Option<syn::ExprPath>,
     borrow: Option<BorrowAttribute>,
+    untagged: bool,
 }
 
 struct BorrowAttribute {
@@ -820,6 +821,7 @@ impl Variant {
         let mut serialize_with = Attr::none(cx, SERIALIZE_WITH);
         let mut deserialize_with = Attr::none(cx, DESERIALIZE_WITH);
         let mut borrow = Attr::none(cx, BORROW);
+        let mut untagged = BoolAttr::none(cx, UNTAGGED);
 
         for meta_item in variant
             .attrs
@@ -991,6 +993,11 @@ impl Variant {
                     }
                 },
 
+                // Parse `#[serde(untagged)]`
+                Meta(Path(word)) if word == UNTAGGED => {
+                    untagged.set_true(word);
+                }
+
                 Meta(meta_item) => {
                     let path = meta_item
                         .path()
@@ -1022,6 +1029,7 @@ impl Variant {
             serialize_with: serialize_with.get(),
             deserialize_with: deserialize_with.get(),
             borrow: borrow.get(),
+            untagged: untagged.get(),
         }
     }
 
@@ -1072,6 +1080,10 @@ impl Variant {
 
     pub fn deserialize_with(&self) -> Option<&syn::ExprPath> {
         self.deserialize_with.as_ref()
+    }
+
+    pub fn untagged(&self) -> bool {
+        self.untagged
     }
 }
 

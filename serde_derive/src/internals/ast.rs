@@ -140,6 +140,7 @@ fn enum_from_ast<'a>(
     variants: &'a Punctuated<syn::Variant, Token![,]>,
     container_default: &attr::Default,
 ) -> Vec<Variant<'a>> {
+    let mut seen_untagged = false;
     variants
         .iter()
         .map(|variant| {
@@ -153,8 +154,12 @@ fn enum_from_ast<'a>(
                 fields,
                 original: variant,
             }
-        })
-        .collect()
+        }).inspect(|variant| {
+            if !variant.attrs.untagged() && seen_untagged {
+                cx.error_spanned_by(&variant.ident, "all variants with the #[serde(untagged)] attribute must be placed at the end of the enum")
+            }
+            seen_untagged = variant.attrs.untagged()
+        }).collect()
 }
 
 fn struct_from_ast<'a>(

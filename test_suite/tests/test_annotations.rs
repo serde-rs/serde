@@ -2396,6 +2396,33 @@ fn test_untagged_enum_containing_flatten() {
 }
 
 #[test]
+fn test_partially_untagged_enum() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    enum Exp {
+        Lambda(u32, Box<Exp>),
+        #[serde(untagged)]
+        App(Box<Exp>, Box<Exp>),
+        #[serde(untagged)]
+        Var(u32),
+    }
+    use Exp::*;
+
+    let data = Lambda(0, Box::new(App(Box::new(Var(0)), Box::new(Var(0)))));
+    assert_tokens(
+        &data,
+        &[
+            Token::TupleVariant {name: "Exp", variant: "Lambda", len: 2},
+            Token::U32(0),
+            Token::Tuple{len: 2},
+            Token::U32(0),
+            Token::U32(0),
+            Token::TupleEnd,
+            Token::TupleVariantEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_flatten_untagged_enum() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     struct Outer {

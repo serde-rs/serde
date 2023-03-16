@@ -477,17 +477,17 @@ fn serialize_variant(
             }
         };
 
-        let body = Match(match cattrs.tag() {
-            attr::TagType::External => {
+        let body = Match(match (cattrs.tag(), variant.attrs.untagged()) {
+            (attr::TagType::External, false) => {
                 serialize_externally_tagged_variant(params, variant, variant_index, cattrs)
             }
-            attr::TagType::Internal { tag } => {
+            (attr::TagType::Internal { tag }, false) => {
                 serialize_internally_tagged_variant(params, variant, cattrs, tag)
             }
-            attr::TagType::Adjacent { tag, content } => {
+            (attr::TagType::Adjacent { tag, content }, false) => {
                 serialize_adjacently_tagged_variant(params, variant, cattrs, tag, content)
             }
-            attr::TagType::None => serialize_untagged_variant(params, variant, cattrs),
+            (attr::TagType::None, _) | (_, true) => serialize_untagged_variant(params, variant, cattrs),
         });
 
         quote! {
