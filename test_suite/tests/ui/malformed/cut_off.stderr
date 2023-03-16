@@ -1,4 +1,4 @@
-error: unexpected end of input, expected literal
+error: unexpected end of input, expected an expression
  --> tests/ui/malformed/cut_off.rs:4:17
   |
 4 | #[serde(rename =)]
