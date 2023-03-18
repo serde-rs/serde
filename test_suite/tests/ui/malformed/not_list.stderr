@@ -1,11 +1,11 @@
-error: expected #[serde(...)]
+error: expected attribute arguments in parentheses: #[serde(...)]
  --> tests/ui/malformed/not_list.rs:4:3
   |
 4 | #[serde]
   |   ^^^^^
 
-error: expected #[serde(...)]
- --> tests/ui/malformed/not_list.rs:5:3
+error: expected parentheses: #[serde(...)]
+ --> tests/ui/malformed/not_list.rs:5:9
   |
 5 | #[serde = "?"]
-  |   ^^^^^^^^^^^
+  |         ^

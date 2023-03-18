@@ -244,9 +244,9 @@ impl BorrowedLifetimes {
         }
     }
 
-    fn de_lifetime_def(&self) -> Option<syn::LifetimeDef> {
+    fn de_lifetime_param(&self) -> Option<syn::LifetimeParam> {
         match self {
-            BorrowedLifetimes::Borrowed(bounds) => Some(syn::LifetimeDef {
+            BorrowedLifetimes::Borrowed(bounds) => Some(syn::LifetimeParam {
                 attrs: Vec::new(),
                 lifetime: syn::Lifetime::new("'de", Span::call_site()),
                 colon_token: None,
@@ -3011,7 +3011,7 @@ struct InPlaceImplGenerics<'a>(&'a Parameters);
 impl<'a> ToTokens for DeImplGenerics<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
-        if let Some(de_lifetime) = self.0.borrowed.de_lifetime_def() {
+        if let Some(de_lifetime) = self.0.borrowed.de_lifetime_param() {
             generics.params = Some(syn::GenericParam::Lifetime(de_lifetime))
                 .into_iter()
                 .chain(generics.params)
@@ -3046,7 +3046,7 @@ impl<'a> ToTokens for InPlaceImplGenerics<'a> {
             .into_iter()
             .chain(generics.params)
             .collect();
-        if let Some(de_lifetime) = self.0.borrowed.de_lifetime_def() {
+        if let Some(de_lifetime) = self.0.borrowed.de_lifetime_param() {
             generics.params = Some(syn::GenericParam::Lifetime(de_lifetime))
                 .into_iter()
                 .chain(generics.params)
@@ -3071,8 +3071,8 @@ struct InPlaceTypeGenerics<'a>(&'a Parameters);
 impl<'a> ToTokens for DeTypeGenerics<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut generics = self.0.generics.clone();
-        if self.0.borrowed.de_lifetime_def().is_some() {
-            let def = syn::LifetimeDef {
+        if self.0.borrowed.de_lifetime_param().is_some() {
+            let def = syn::LifetimeParam {
                 attrs: Vec::new(),
                 lifetime: syn::Lifetime::new("'de", Span::call_site()),
                 colon_token: None,
@@ -3097,8 +3097,8 @@ impl<'a> ToTokens for InPlaceTypeGenerics<'a> {
             .chain(generics.params)
             .collect();
 
-        if self.0.borrowed.de_lifetime_def().is_some() {
-            let def = syn::LifetimeDef {
+        if self.0.borrowed.de_lifetime_param().is_some() {
+            let def = syn::LifetimeParam {
                 attrs: Vec::new(),
                 lifetime: syn::Lifetime::new("'de", Span::call_site()),
                 colon_token: None,
@@ -3122,8 +3122,8 @@ impl<'a> DeTypeGenerics<'a> {
 }
 
 #[cfg(feature = "deserialize_in_place")]
-fn place_lifetime() -> syn::LifetimeDef {
-    syn::LifetimeDef {
+fn place_lifetime() -> syn::LifetimeParam {
+    syn::LifetimeParam {
         attrs: Vec::new(),
         lifetime: syn::Lifetime::new("'place", Span::call_site()),
         colon_token: None,
