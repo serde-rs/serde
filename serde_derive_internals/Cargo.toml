@@ -9,7 +9,7 @@ include = ["lib.rs", "src/**/*.rs", "LICENSE-APACHE", "LICENSE-MIT"]
 keywords = ["serde", "serialization"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/serde-rs/serde"
-rust-version = "1.31"
+rust-version = "1.56"
 
 [lib]
 path = "lib.rs"

@@ -11,7 +11,7 @@ keywords = ["serde", "serialization", "no_std", "derive"]
 license = "MIT OR Apache-2.0"
 readme = "crates-io.md"
 repository = "https://github.com/serde-rs/serde"
-rust-version = "1.31"
+rust-version = "1.56"
 
 [features]
 default = []
