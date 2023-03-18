@@ -31,6 +31,7 @@
     clippy::module_name_repetitions,
     clippy::must_use_candidate,
     clippy::similar_names,
+    clippy::single_match_else,
     clippy::struct_excessive_bools,
     clippy::too_many_lines,
     clippy::unused_self,
