@@ -1381,21 +1381,26 @@ fn get_lit_str2(
     meta_item_name: Symbol,
     meta: &ParseNestedMeta,
 ) -> syn::Result<Option<syn::LitStr>> {
-    match meta.value()?.parse()? {
-        syn::Expr::Lit(syn::ExprLit {
-            lit: syn::Lit::Str(lit),
-            ..
-        }) => Ok(Some(lit)),
-        expr => {
-            cx.error_spanned_by(
-                expr,
-                format!(
-                    "expected serde {} attribute to be a string: `{} = \"...\"`",
-                    attr_name, meta_item_name
-                ),
-            );
-            Ok(None)
-        }
+    let expr: syn::Expr = meta.value()?.parse()?;
+    let mut value = &expr;
+    while let syn::Expr::Group(e) = value {
+        value = &e.expr;
+    }
+    if let syn::Expr::Lit(syn::ExprLit {
+        lit: syn::Lit::Str(lit),
+        ..
+    }) = value
+    {
+        Ok(Some(lit.clone()))
+    } else {
+        cx.error_spanned_by(
+            expr,
+            format!(
+                "expected serde {} attribute to be a string: `{} = \"...\"`",
+                attr_name, meta_item_name
+            ),
+        );
+        Ok(None)
     }
 }
 
