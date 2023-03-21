@@ -1173,14 +1173,14 @@ fn deserialize_enum(
     {
         Some((variant_idx, _)) => {
             let (tagged, untagged) = variants.split_at(variant_idx);
-            let tagged_frag = Expr(deserialize_homogenious_enum(params, tagged, cattrs));
+            let tagged_frag = Expr(deserialize_homogeneous_enum(params, tagged, cattrs));
             let tagged_frag = |deserializer| Expr(quote_block! {
                 let __deserializer = #deserializer;
                 #tagged_frag
             });
             deserialize_untagged_enum_after(params, untagged, cattrs, Some(tagged_frag))
         }
-        None => deserialize_homogenious_enum(params, variants, cattrs),
+        None => deserialize_homogeneous_enum(params, variants, cattrs),
     }
 }
 
