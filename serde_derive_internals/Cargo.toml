@@ -1,6 +1,6 @@
 [package]
 name = "serde_derive_internals"
-version = "0.26.0" # remember to update html_root_url
+version = "0.27.0" # remember to update html_root_url
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 description = "AST representation used by Serde derive macros. Unstable."
 documentation = "https://docs.rs/serde_derive_internals"
@@ -9,7 +9,7 @@ include = ["lib.rs", "src/**/*.rs", "LICENSE-APACHE", "LICENSE-MIT"]
 keywords = ["serde", "serialization"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/serde-rs/serde"
-rust-version = "1.31"
+rust-version = "1.56"
 
 [lib]
 path = "lib.rs"
@@ -17,7 +17,7 @@ path = "lib.rs"
 [dependencies]
 proc-macro2 = "1.0"
 quote = "1.0"
-syn = { version = "1.0.104", default-features = false, features = ["derive", "parsing", "printing", "clone-impls"] }
+syn = { version = "2.0", default-features = false, features = ["derive", "parsing", "printing", "clone-impls"] }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

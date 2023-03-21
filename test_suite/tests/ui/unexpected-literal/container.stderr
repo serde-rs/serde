@@ -1,4 +1,4 @@
-error: unexpected literal in serde container attribute
+error: unexpected literal in nested attribute, expected ident
  --> tests/ui/unexpected-literal/container.rs:4:9
   |
 4 | #[serde("literal")]
