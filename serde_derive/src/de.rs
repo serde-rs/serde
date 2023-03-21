@@ -1176,12 +1176,12 @@ fn deserialize_enum(
             let (tagged, untagged) = variants.split_at(variant_idx);
             let tagged_frag = Expr(deserialize_homogeneous_enum(params, tagged, cattrs));
             let tagged_frag = |deserializer| {
-                Expr(quote_block! {
+                Some(Expr(quote_block! {
                     let __deserializer = #deserializer;
                     #tagged_frag
-                })
+                }))
             };
-            deserialize_untagged_enum_after(params, untagged, cattrs, Some(tagged_frag))
+            deserialize_untagged_enum_after(params, untagged, cattrs, tagged_frag)
         }
         None => deserialize_homogeneous_enum(params, variants, cattrs),
     }
@@ -1687,14 +1687,14 @@ fn deserialize_untagged_enum(
     variants: &[Variant],
     cattrs: &attr::Container,
 ) -> Fragment {
-    deserialize_untagged_enum_after(params, variants, cattrs, None::<fn(_) -> _>)
+    deserialize_untagged_enum_after(params, variants, cattrs, |_| None)
 }
 
 fn deserialize_untagged_enum_after(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
-    first_attempt: Option<impl FnOnce(TokenStream) -> Expr>,
+    first_attempt: impl FnOnce(TokenStream) -> Option<Expr>,
 ) -> Fragment {
     let deserializer =
         quote!(_serde::__private::de::ContentRefDeserializer::<__D::Error>::new(&__content));
@@ -1709,8 +1709,7 @@ fn deserialize_untagged_enum_after(
                 deserializer.clone(),
             ))
         });
-    let attempts = first_attempt
-        .map(|f| f(deserializer.clone()))
+    let attempts = first_attempt(deserializer.clone())
         .into_iter()
         .chain(attempts);
     // TODO this message could be better by saving the errors from the failed
