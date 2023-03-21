@@ -2428,38 +2428,34 @@ fn test_partially_untagged_enum() {
 
 #[test]
 fn test_partially_untagged_enum_generic() {
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
-    enum Either<L, R> {
-        Left(L),
-        #[serde(untagged)]
-        Right(R),
+    trait Trait<T> {
+        type Assoc;
+        type Assoc2;
     }
-    type MyEither = Either<Either<u32, String>, bool>;
-    use Either::*;
 
-    assert_tokens::<MyEither>(&Right(true), &[Token::Bool(true)]);
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    enum E<A, B, C> where A: Trait<C, Assoc2=B> {
+        A(A::Assoc),
+        #[serde(untagged)]
+        B(A::Assoc2),
+    }
 
-    assert_tokens::<MyEither>(
-        &Left(Right("Hello".into())),
+    impl<T> Trait<T> for () {
+        type Assoc = T;
+        type Assoc2 = bool;
+    }
+
+    type MyE = E<(), bool, u32>;
+    use E::*;
+
+    assert_tokens::<MyE>(&B(true), &[Token::Bool(true)]);
+
+    assert_tokens::<MyE>(
+        &A(5),
         &[
             Token::NewtypeVariant {
-                name: "Either",
-                variant: "Left",
-            },
-            Token::String("Hello"),
-        ],
-    );
-
-    assert_tokens::<MyEither>(
-        &Left(Left(5)),
-        &[
-            Token::NewtypeVariant {
-                name: "Either",
-                variant: "Left",
-            },
-            Token::NewtypeVariant {
-                name: "Either",
-                variant: "Left",
+                name: "E",
+                variant: "A",
             },
             Token::U32(5),
         ],
