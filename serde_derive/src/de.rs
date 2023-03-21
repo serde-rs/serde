@@ -1184,7 +1184,7 @@ fn deserialize_enum(
     }
 }
 
-fn deserialize_homogenious_enum(
+fn deserialize_homogeneous_enum(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
