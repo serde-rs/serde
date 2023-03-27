@@ -1220,6 +1220,93 @@ pub trait Deserializer<'de>: Sized {
         true
     }
 
+    /// Provide generic, type-driven access to data tied to this deserializer, using the machinery
+    /// in [`std::any::Provider`] and [`std::any::Demand`].
+    ///
+    /// ```edition2018
+    /// # #![feature(provide_any)]
+    /// use serde::{Deserialize, Deserializer, de::Visitor, forward_to_deserialize_any};
+    /// # use serde::__private::doc::Error;
+    ///
+    /// /// An enum shared between both the Deserializer and Deserialize that communicates which
+    /// /// distance unit is used when deserializing.
+    /// #[derive(Copy, Clone)]
+    /// enum PreferredUnit {
+    ///     Millimeters,
+    ///     Meters,
+    /// }
+    ///
+    /// /// A deserializer that knows which distance unit is used
+    /// struct MyDeserializer {
+    ///     preferred_unit: PreferredUnit,
+    /// }
+    ///
+    /// impl<'de> Deserializer<'de> for MyDeserializer {
+    ///     type Error = Error;
+    ///
+    ///     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    ///     where V: Visitor<'de>,
+    ///     {
+    ///         unimplemented!()
+    ///     }
+    ///
+    ///     forward_to_deserialize_any! {
+    ///         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+    ///         bytes byte_buf option unit unit_struct newtype_struct seq tuple
+    ///         tuple_struct map struct enum identifier ignored_any
+    ///     }
+    ///
+    ///     fn provide<'a>(&'a self, demand: &mut std::any::Demand<'a>) {
+    ///         // If asked about this serializer's preferred distance unit, provide it!
+    ///         demand.provide_value(self.preferred_unit);
+    ///     }
+    /// }
+    ///
+    /// /// A distance that can be deserialized based on distance unit preference
+    /// pub struct Distance {
+    ///     millimeters: f64,
+    /// }
+    ///
+    /// impl Distance {
+    ///     pub fn from_millimeters(millimeters: f64) -> Self { Self { millimeters } }
+    ///     pub fn from_meters(meters: f64) -> Self { Self { millimeters: meters * 1000.0 } }
+    /// }
+    ///
+    /// impl<'de> Deserialize<'de> for Distance {
+    ///     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    ///     where
+    ///         D: Deserializer<'de>,
+    ///     {
+    ///         let provider = ProviderAdapter(&deserializer);
+    ///         if let Some(preferred_unit) = std::any::request_value::<PreferredUnit>(&provider) {
+    ///             // If the deserializer knows what distance unit was used to serialize
+    ///             let value = f64::deserialize(deserializer)?;
+    ///             match preferred_unit {
+    ///                 PreferredUnit::Millimeters => Ok(Distance::from_millimeters(value)),
+    ///                 PreferredUnit::Meters => Ok(Distance::from_meters(value)),
+    ///             }
+    ///         } else {
+    ///             // Assume millimeters
+    ///             let value = f64::deserialize(deserializer)?;
+    ///             Ok(Distance::from_millimeters(value))
+    ///         }
+    ///     }
+    /// }
+    ///
+    /// /// An adapter that implements `std::any::Provider`
+    /// struct ProviderAdapter<'a, D>(&'a D);
+    ///
+    /// impl<'a, 'de, D> std::any::Provider for ProviderAdapter<'a, D>
+    /// where D: Deserializer<'de> {
+    ///     fn provide<'b>(&'b self, demand: &mut std::any::Demand<'b>) {
+    ///         self.0.provide(demand)
+    ///     }
+    /// }
+    /// ```
+    #[cfg(feature = "unstable")]
+    #[allow(unused_variables)]
+    fn provide<'a>(&'a self, demand: &mut std::any::Demand<'a>) {}
+
     // Not public API.
     #[cfg(all(not(no_serde_derive), any(feature = "std", feature = "alloc")))]
     #[doc(hidden)]

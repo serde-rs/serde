@@ -1471,6 +1471,86 @@ pub trait Serializer: Sized {
     fn is_human_readable(&self) -> bool {
         true
     }
+
+    /// Provide generic, type-driven access to data tied to this serializer, using the machinery in
+    /// [`std::any::Provider`] and [`std::any::Demand`].
+    ///
+    /// ```edition2018
+    /// # #![feature(provide_any)]
+    /// use serde::{Serialize, Serializer};
+    /// # use serde::__private::doc::Error;
+    ///
+    /// /// An enum shared between both the Serializer and Serialize that communicates which
+    /// /// distance unit is preferred when serializing.
+    /// #[derive(Copy, Clone)]
+    /// enum PreferredUnit {
+    ///     Millimeters,
+    ///     Meters,
+    /// }
+    ///
+    /// /// A serializer that has a preference on distance units
+    /// struct MySerializer {
+    ///     preferred_unit: PreferredUnit,
+    /// }
+    ///
+    /// impl Serializer for MySerializer {
+    /// #     type Ok = ();
+    /// #     type Error = Error;
+    /// #
+    ///     fn provide<'a>(&'a self, demand: &mut std::any::Demand<'a>) {
+    ///         // If asked about this serializer's preferred distance unit, provide it!
+    ///         demand.provide_value(self.preferred_unit);
+    ///     }
+    /// #
+    /// #     serde::__serialize_unimplemented! {
+    /// #         bool bytes i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str none some
+    /// #         unit unit_struct unit_variant newtype_struct newtype_variant
+    /// #         seq tuple tuple_struct tuple_variant map struct struct_variant
+    /// #     }
+    /// }
+    ///
+    /// /// A distance that can be serialized based on distance unit preference
+    /// pub struct Distance {
+    ///     millimeters: f64,
+    /// }
+    ///
+    /// impl Distance {
+    ///     pub fn millimeters(&self) -> f64 { self.millimeters }
+    ///     pub fn meters(&self) -> f64 { self.millimeters / 1000.0 }
+    /// }
+    ///
+    /// impl Serialize for Distance {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///     where
+    ///         S: Serializer,
+    ///     {
+    ///         let provider = ProviderAdapter(&serializer);
+    ///         if let Some(preferred_unit) = std::any::request_value::<PreferredUnit>(&provider) {
+    ///             // If the serializer has a preferred distance unit, use it
+    ///             match preferred_unit {
+    ///                 PreferredUnit::Millimeters => self.millimeters().serialize(serializer),
+    ///                 PreferredUnit::Meters => self.meters().serialize(serializer),
+    ///             }
+    ///         } else {
+    ///             // Otherwise always serialize as millimeters
+    ///             self.millimeters().serialize(serializer)
+    ///         }
+    ///     }
+    /// }
+    ///
+    /// /// An adapter that implements `std::any::Provider`
+    /// struct ProviderAdapter<'a, S>(&'a S);
+    ///
+    /// impl<'a, S> std::any::Provider for ProviderAdapter<'a, S>
+    /// where S: Serializer {
+    ///     fn provide<'b>(&'b self, demand: &mut std::any::Demand<'b>) {
+    ///         self.0.provide(demand)
+    ///     }
+    /// }
+    /// ```
+    #[cfg(feature = "unstable")]
+    #[allow(unused_variables)]
+    fn provide<'a>(&'a self, demand: &mut std::any::Demand<'a>) {}
 }
 
 /// Returned from `Serializer::serialize_seq`.

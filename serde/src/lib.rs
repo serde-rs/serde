@@ -100,7 +100,7 @@
 // discussion of these features please refer to this issue:
 //
 //    https://github.com/serde-rs/serde/issues/812
-#![cfg_attr(feature = "unstable", feature(error_in_core, never_type))]
+#![cfg_attr(feature = "unstable", feature(error_in_core, never_type, provide_any))]
 #![allow(unknown_lints, bare_trait_objects, deprecated)]
 #![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
 // Ignored clippy and clippy_pedantic lints

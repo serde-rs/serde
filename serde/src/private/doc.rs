@@ -2,6 +2,7 @@
 
 use lib::*;
 
+use de;
 use ser;
 
 #[doc(hidden)]
@@ -9,6 +10,15 @@ use ser;
 pub struct Error;
 
 impl ser::Error for Error {
+    fn custom<T>(_: T) -> Self
+    where
+        T: Display,
+    {
+        unimplemented!()
+    }
+}
+
+impl de::Error for Error {
     fn custom<T>(_: T) -> Self
     where
         T: Display,
