@@ -1,0 +1,5 @@
+error: unexpected end of input, unexpected token in nested attribute, expected ident
+ --> tests/ui/unexpected-literal/empty_args.rs:4:9
+  |
+4 | #[serde()]
+  |         ^
