@@ -307,6 +307,12 @@ impl Container {
                 continue;
             }
 
+            if let syn::Meta::List(meta) = &attr.meta {
+                if meta.tokens.is_empty() {
+                    continue;
+                }
+            }
+
             if let Err(err) = attr.parse_nested_meta(|meta| {
                 if meta.path == RENAME {
                     // #[serde(rename = "foo")]
@@ -762,6 +768,12 @@ impl Variant {
                 continue;
             }
 
+            if let syn::Meta::List(meta) = &attr.meta {
+                if meta.tokens.is_empty() {
+                    continue;
+                }
+            }
+
             if let Err(err) = attr.parse_nested_meta(|meta| {
                 if meta.path == RENAME {
                     // #[serde(rename = "foo")]
@@ -1031,6 +1043,12 @@ impl Field {
         for attr in &field.attrs {
             if attr.path() != SERDE {
                 continue;
+            }
+
+            if let syn::Meta::List(meta) = &attr.meta {
+                if meta.tokens.is_empty() {
+                    continue;
+                }
             }
 
             if let Err(err) = attr.parse_nested_meta(|meta| {
