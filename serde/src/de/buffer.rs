@@ -67,7 +67,7 @@ macro_rules! impl_from_for_buffer {
         $(
             impl<'de> From<$type> for Buffer<'de> {
                 fn from(value: $type) -> Self {
-                    Self(BufferInner::$constructor(value))
+                    Buffer(BufferInner::$constructor(value))
                 }
             }
         )*
@@ -98,13 +98,13 @@ impl_from_for_buffer! {
 
 impl<'de> From<&'de str> for Buffer<'de> {
     fn from(value: &'de str) -> Self {
-        Self(BufferInner::Str(value))
+        Buffer(BufferInner::Str(value))
     }
 }
 
 impl<'de> From<&'de [u8]> for Buffer<'de> {
     fn from(value: &'de [u8]) -> Self {
-        Self(BufferInner::Bytes(value))
+        Buffer(BufferInner::Bytes(value))
     }
 }
 
