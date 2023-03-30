@@ -2142,16 +2142,16 @@ fn deserialize_identifier(
     ) = if collect_other_fields {
         (
             Some(quote! {
-                let __value = _serde::de::buffer::BufferVisitor::new().visit_string::<_serde::de::value::Error>(_serde::__private::ToString::to_string(__value)).unwrap();
+                let __value = _serde::de::buffer::Buffer::from(_serde::__private::ToString::to_string(__value));
             }),
             Some(quote! {
-                let __value = _serde::de::buffer::BufferVisitor::new().visit_borrowed_str::<_serde::de::value::Error>(__value).unwrap();
+                let __value = _serde::de::buffer::Buffer::from(__value);
             }),
             Some(quote! {
-                let __value = _serde::de::buffer::BufferVisitor::new().visit_byte_buf::<_serde::de::value::Error>(__value.to_vec()).unwrap();
+                let __value = _serde::de::buffer::Buffer::from(__value.to_vec());
             }),
             Some(quote! {
-                let __value = _serde::de::buffer::BufferVisitor::new().visit_borrowed_bytes::<_serde::de::value::Error>(__value).unwrap();
+                let __value = _serde::de::buffer::Buffer::from(__value);
             }),
         )
     } else {

@@ -62,6 +62,52 @@ impl<'a, 'de, E: de::Error> de::IntoDeserializer<'de, E> for &'a Buffer<'de> {
     }
 }
 
+macro_rules! impl_from_for_buffer {
+    ($($type:ty => $constructor:ident ,)*) => {
+        $(
+            impl<'de> From<$type> for Buffer<'de> {
+                fn from(value: $type) -> Self {
+                    Self(BufferInner::$constructor(value))
+                }
+            }
+        )*
+    };
+}
+
+impl_from_for_buffer! {
+    bool => Bool,
+
+    u8 => U8,
+    u16 => U16,
+    u32 => U32,
+    u64 => U64,
+
+    i8 => I8,
+    i16 => I16,
+    i32 => I32,
+    i64 => I64,
+
+    f32 => F32,
+    f64 => F64,
+
+    char => Char,
+
+    String => String,
+    Vec<u8> => ByteBuf,
+}
+
+impl<'de> From<&'de str> for Buffer<'de> {
+    fn from(value: &'de str) -> Self {
+        Self(BufferInner::Str(value))
+    }
+}
+
+impl<'de> From<&'de [u8]> for Buffer<'de> {
+    fn from(value: &'de [u8]) -> Self {
+        Self(BufferInner::Bytes(value))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) enum BufferInner<'de> {
     Bool(bool),
