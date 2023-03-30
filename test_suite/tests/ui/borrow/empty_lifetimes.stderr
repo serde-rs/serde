@@ -3,3 +3,9 @@ error: at least one lifetime must be borrowed
   |
 5 |     #[serde(borrow = "")]
   |                      ^^
+
+error: at least one lifetime must be borrowed
+ --> tests/ui/borrow/empty_lifetimes.rs:7:22
+  |
+7 |     #[serde(borrow = "  ")]
+  |                      ^^^^

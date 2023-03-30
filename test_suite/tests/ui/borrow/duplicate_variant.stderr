@@ -1,5 +1,5 @@
 error: duplicate serde attribute `borrow`
- --> tests/ui/borrow/duplicate_variant.rs:8:13
+ --> tests/ui/borrow/duplicate_variant.rs:9:15
   |
-8 |     #[serde(borrow)]
-  |             ^^^^^^
+9 |     S(#[serde(borrow)] Str<'a>),
+  |               ^^^^^^

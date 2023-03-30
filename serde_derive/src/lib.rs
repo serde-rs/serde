@@ -13,7 +13,7 @@
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
-#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.152")]
+#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.159")]
 #![allow(unknown_lints, bare_trait_objects)]
 // Ignored clippy lints
 #![allow(
@@ -43,6 +43,7 @@
     clippy::enum_glob_use,
     clippy::indexing_slicing,
     clippy::items_after_statements,
+    clippy::let_underscore_untyped,
     clippy::manual_assert,
     clippy::map_err_ignore,
     clippy::match_same_arms,

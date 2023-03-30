@@ -78,11 +78,6 @@ fn main() {
         println!("cargo:rustc-cfg=no_num_nonzero");
     }
 
-    // Current minimum supported version of serde_derive crate is Rust 1.31.
-    if minor < 31 {
-        println!("cargo:rustc-cfg=no_serde_derive");
-    }
-
     // TryFrom, Atomic types, non-zero signed integers, and SystemTime::checked_add
     // stabilized in Rust 1.34:
     // https://blog.rust-lang.org/2019/04/11/Rust-1.34.0.html#tryfrom-and-tryinto
@@ -92,6 +87,11 @@ fn main() {
         println!("cargo:rustc-cfg=no_num_nonzero_signed");
         println!("cargo:rustc-cfg=no_systemtime_checked_add");
         println!("cargo:rustc-cfg=no_relaxed_trait_bounds");
+    }
+
+    // Current minimum supported version of serde_derive crate is Rust 1.56.
+    if minor < 56 {
+        println!("cargo:rustc-cfg=no_serde_derive");
     }
 
     // Support for #[cfg(target_has_atomic = "...")] stabilized in Rust 1.60.
@@ -113,6 +113,12 @@ fn main() {
         if minor < 34 || !has_atomic32 {
             println!("cargo:rustc-cfg=no_std_atomic");
         }
+    }
+
+    // Support for core::ffi::CStr and alloc::ffi::CString stabilized in Rust 1.64.
+    // https://blog.rust-lang.org/2022/09/22/Rust-1.64.0.html#c-compatible-ffi-types-in-core-and-alloc
+    if minor < 64 {
+        println!("cargo:rustc-cfg=no_core_cstr");
     }
 }
 
