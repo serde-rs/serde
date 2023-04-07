@@ -86,6 +86,7 @@
 //!    - RangeInclusive\<T\>
 //!    - Bound\<T\>
 //!    - num::NonZero*
+//!    - core::convert::Infallible
 //!    - `!` *(unstable)*
 //!  - **Net types**:
 //!    - IpAddr

@@ -40,6 +40,17 @@ serde_if_integer128! {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+impl Serialize for core::convert::Infallible {
+    fn serialize<S>(&self, _: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match *self {}
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 impl Serialize for str {
     #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

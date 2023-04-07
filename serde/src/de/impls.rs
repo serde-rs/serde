@@ -428,6 +428,17 @@ serde_if_integer128! {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+impl<'de> Deserialize<'de> for core::convert::Infallible {
+    fn deserialize<D>(_: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Err(D::Error::custom("cannot deserialize `Infallible`"))
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 struct CharVisitor;
 
 impl<'de> Visitor<'de> for CharVisitor {
