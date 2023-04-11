@@ -719,6 +719,7 @@ fn serialize_adjacently_tagged_variant(
     let (wrapper_impl_generics, wrapper_ty_generics, _) = wrapper_generics.split_for_impl();
 
     quote_block! {
+        #[doc(hidden)]
         struct __AdjacentlyTagged #wrapper_generics #where_clause {
             data: (#(&'__a #fields_ty,)*),
             phantom: _serde::__private::PhantomData<#this_type #ty_generics>,
@@ -982,6 +983,7 @@ fn serialize_struct_variant_with_flatten(
             let (wrapper_impl_generics, wrapper_ty_generics, _) = wrapper_generics.split_for_impl();
 
             quote_block! {
+                #[doc(hidden)]
                 struct __EnumFlatten #wrapper_generics #where_clause {
                     data: (#(&'__a #fields_ty,)*),
                     phantom: _serde::__private::PhantomData<#this_type #ty_generics>,
@@ -1212,6 +1214,7 @@ fn wrap_serialize_with(
     });
 
     quote!({
+        #[doc(hidden)]
         struct __SerializeWith #wrapper_impl_generics #where_clause {
             values: (#(&'__a #field_tys, )*),
             phantom: _serde::__private::PhantomData<#this_type #ty_generics>,
