@@ -419,6 +419,7 @@ fn deserialize_unit_struct(params: &Parameters, cattrs: &attr::Container) -> Fra
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     quote_block! {
+        #[doc(hidden)]
         struct __Visitor;
 
         impl<'de> _serde::de::Visitor<'de> for __Visitor {
@@ -515,6 +516,7 @@ fn deserialize_tuple(
     };
 
     quote_block! {
+        #[doc(hidden)]
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::__private::PhantomData<#this_type #ty_generics>,
             lifetime: _serde::__private::PhantomData<&#delife ()>,
@@ -605,6 +607,7 @@ fn deserialize_tuple_in_place(
     let place_life = place_lifetime();
 
     quote_block! {
+        #[doc(hidden)]
         struct __Visitor #in_place_impl_generics #where_clause {
             place: &#place_life mut #this_type #ty_generics,
             lifetime: _serde::__private::PhantomData<&#delife ()>,
@@ -1020,6 +1023,7 @@ fn deserialize_struct(
     quote_block! {
         #field_visitor
 
+        #[doc(hidden)]
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::__private::PhantomData<#this_type #ty_generics>,
             lifetime: _serde::__private::PhantomData<&#delife ()>,
@@ -1132,6 +1136,7 @@ fn deserialize_struct_in_place(
     Some(quote_block! {
         #field_visitor
 
+        #[doc(hidden)]
         struct __Visitor #in_place_impl_generics #where_clause {
             place: &#place_life mut #this_type #ty_generics,
             lifetime: _serde::__private::PhantomData<&#delife ()>,
@@ -1203,6 +1208,7 @@ fn prepare_enum_variant_enum(
     let variants_stmt = {
         let variant_names = variant_names_idents.iter().map(|(name, _, _)| name);
         quote! {
+            #[doc(hidden)]
             const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
         }
     };
@@ -1275,6 +1281,7 @@ fn deserialize_externally_tagged_enum(
     quote_block! {
         #variant_visitor
 
+        #[doc(hidden)]
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::__private::PhantomData<#this_type #ty_generics>,
             lifetime: _serde::__private::PhantomData<&#delife ()>,
@@ -1522,6 +1529,7 @@ fn deserialize_adjacently_tagged_enum(
 
         #variants_stmt
 
+        #[doc(hidden)]
         struct __Seed #de_impl_generics #where_clause {
             field: __Field,
             marker: _serde::__private::PhantomData<#this_type #ty_generics>,
@@ -1541,6 +1549,7 @@ fn deserialize_adjacently_tagged_enum(
             }
         }
 
+        #[doc(hidden)]
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::__private::PhantomData<#this_type #ty_generics>,
             lifetime: _serde::__private::PhantomData<&#delife ()>,
@@ -1643,6 +1652,7 @@ fn deserialize_adjacently_tagged_enum(
             }
         }
 
+        #[doc(hidden)]
         const FIELDS: &'static [&'static str] = &[#tag, #content];
         _serde::Deserializer::deserialize_struct(
             __deserializer,
@@ -1954,11 +1964,13 @@ fn deserialize_generated_identifier(
 
     quote_block! {
         #[allow(non_camel_case_types)]
+        #[doc(hidden)]
         enum __Field #lifetime {
             #(#field_idents,)*
             #ignore_variant
         }
 
+        #[doc(hidden)]
         struct __FieldVisitor;
 
         impl<'de> _serde::de::Visitor<'de> for __FieldVisitor {
@@ -2046,11 +2058,13 @@ fn deserialize_custom_identifier(
         None
     } else if is_variant {
         let variants = quote! {
+            #[doc(hidden)]
             const VARIANTS: &'static [&'static str] = &[ #(#names),* ];
         };
         Some(variants)
     } else {
         let fields = quote! {
+            #[doc(hidden)]
             const FIELDS: &'static [&'static str] = &[ #(#names),* ];
         };
         Some(fields)
@@ -2072,6 +2086,7 @@ fn deserialize_custom_identifier(
     quote_block! {
         #names_const
 
+        #[doc(hidden)]
         struct __FieldVisitor #de_impl_generics #where_clause {
             marker: _serde::__private::PhantomData<#this_type #ty_generics>,
             lifetime: _serde::__private::PhantomData<&#delife ()>,
@@ -2406,6 +2421,7 @@ fn deserialize_struct_as_struct_visitor(
             .flat_map(|(_, _, aliases)| aliases);
 
         quote_block! {
+            #[doc(hidden)]
             const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
         }
     };
@@ -2684,6 +2700,7 @@ fn deserialize_struct_as_struct_in_place_visitor(
     let fields_stmt = {
         let field_names = field_names_idents.iter().map(|(name, _, _)| name);
         quote_block! {
+            #[doc(hidden)]
             const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
         }
     };
@@ -2864,6 +2881,7 @@ fn wrap_deserialize_with(
     let delife = params.borrowed.de_lifetime();
 
     let wrapper = quote! {
+        #[doc(hidden)]
         struct __DeserializeWith #de_impl_generics #where_clause {
             value: #value_ty,
             phantom: _serde::__private::PhantomData<#this_type #ty_generics>,
