@@ -1,6 +1,6 @@
 [package]
 name = "serde"
-version = "1.0.159" # remember to update html_root_url and serde_derive dependency
+version = "1.0.160" # remember to update html_root_url and serde_derive dependency
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 build = "build.rs"
 categories = ["encoding", "no-std"]
@@ -15,7 +15,7 @@ repository = "https://github.com/serde-rs/serde"
 rust-version = "1.19"
 
 [dependencies]
-serde_derive = { version = "=1.0.159", optional = true, path = "../serde_derive" }
+serde_derive = { version = "=1.0.160", optional = true, path = "../serde_derive" }
 
 [dev-dependencies]
 serde_derive = { version = "1.0", path = "../serde_derive" }
