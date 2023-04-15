@@ -46,6 +46,7 @@ pub fn expand_derive_serialize(
     } else {
         quote! {
             #[automatically_derived]
+            #[allow(deprecated)]
             impl #impl_generics #serde::Serialize for #ident #ty_generics #where_clause {
                 fn serialize<__S>(&self, __serializer: __S) -> #serde::__private::Result<__S::Ok, __S::Error>
                 where

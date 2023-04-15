@@ -54,6 +54,7 @@ pub fn expand_derive_deserialize(
 
         quote! {
             #[automatically_derived]
+            #[allow(deprecated)]
             impl #de_impl_generics #serde::Deserialize<#delife> for #ident #ty_generics #where_clause {
                 fn deserialize<__D>(__deserializer: __D) -> #serde::__private::Result<Self, __D::Error>
                 where
