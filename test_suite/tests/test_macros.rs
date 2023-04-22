@@ -679,8 +679,9 @@ fn test_untagged_enum() {
     );
 }
 
-#[test]
-fn test_internally_tagged_enum() {
+mod internally_tagged_enum {
+    use super::*;
+
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     struct Newtype(BTreeMap<String, String>);
 
@@ -699,119 +700,137 @@ fn test_internally_tagged_enum() {
         E(Struct),
     }
 
-    assert_tokens(
-        &InternallyTagged::A { a: 1 },
-        &[
-            Token::Struct {
-                name: "InternallyTagged",
-                len: 2,
-            },
-            Token::Str("type"),
-            Token::Str("A"),
-            Token::Str("a"),
-            Token::U8(1),
-            Token::StructEnd,
-        ],
-    );
+    #[test]
+    fn struct_() {
+        assert_tokens(
+            &InternallyTagged::A { a: 1 },
+            &[
+                Token::Struct {
+                    name: "InternallyTagged",
+                    len: 2,
+                },
+                Token::Str("type"),
+                Token::Str("A"),
+                Token::Str("a"),
+                Token::U8(1),
+                Token::StructEnd,
+            ],
+        );
 
-    assert_de_tokens(
-        &InternallyTagged::A { a: 1 },
-        &[
-            Token::Seq { len: Some(2) },
-            Token::Str("A"),
-            Token::U8(1),
-            Token::SeqEnd,
-        ],
-    );
+        assert_de_tokens(
+            &InternallyTagged::A { a: 1 },
+            &[
+                Token::Seq { len: Some(2) },
+                Token::Str("A"),
+                Token::U8(1),
+                Token::SeqEnd,
+            ],
+        );
+    }
 
-    assert_tokens(
-        &InternallyTagged::B,
-        &[
-            Token::Struct {
-                name: "InternallyTagged",
-                len: 1,
-            },
-            Token::Str("type"),
-            Token::Str("B"),
-            Token::StructEnd,
-        ],
-    );
+    #[test]
+    fn unit() {
+        assert_tokens(
+            &InternallyTagged::B,
+            &[
+                Token::Struct {
+                    name: "InternallyTagged",
+                    len: 1,
+                },
+                Token::Str("type"),
+                Token::Str("B"),
+                Token::StructEnd,
+            ],
+        );
 
-    assert_de_tokens(
-        &InternallyTagged::B,
-        &[Token::Seq { len: Some(1) }, Token::Str("B"), Token::SeqEnd],
-    );
+        assert_de_tokens(
+            &InternallyTagged::B,
+            &[Token::Seq { len: Some(1) }, Token::Str("B"), Token::SeqEnd],
+        );
+    }
 
-    assert_tokens(
-        &InternallyTagged::C(BTreeMap::new()),
-        &[
-            Token::Map { len: Some(1) },
-            Token::Str("type"),
-            Token::Str("C"),
-            Token::MapEnd,
-        ],
-    );
+    #[test]
+    fn newtype_map() {
+        assert_tokens(
+            &InternallyTagged::C(BTreeMap::new()),
+            &[
+                Token::Map { len: Some(1) },
+                Token::Str("type"),
+                Token::Str("C"),
+                Token::MapEnd,
+            ],
+        );
 
-    assert_de_tokens_error::<InternallyTagged>(
-        &[
-            Token::Seq { len: Some(2) },
-            Token::Str("C"),
-            Token::Map { len: Some(0) },
-            Token::MapEnd,
-            Token::SeqEnd,
-        ],
-        "invalid type: sequence, expected a map",
-    );
+        assert_de_tokens_error::<InternallyTagged>(
+            &[
+                Token::Seq { len: Some(2) },
+                Token::Str("C"),
+                Token::Map { len: Some(0) },
+                Token::MapEnd,
+                Token::SeqEnd,
+            ],
+            "invalid type: sequence, expected a map",
+        );
+    }
 
-    assert_tokens(
-        &InternallyTagged::D(Newtype(BTreeMap::new())),
-        &[
-            Token::Map { len: Some(1) },
-            Token::Str("type"),
-            Token::Str("D"),
-            Token::MapEnd,
-        ],
-    );
+    #[test]
+    fn newtype_newtype() {
+        assert_tokens(
+            &InternallyTagged::D(Newtype(BTreeMap::new())),
+            &[
+                Token::Map { len: Some(1) },
+                Token::Str("type"),
+                Token::Str("D"),
+                Token::MapEnd,
+            ],
+        );
+    }
 
-    assert_tokens(
-        &InternallyTagged::E(Struct { f: 6 }),
-        &[
-            Token::Struct {
-                name: "Struct",
-                len: 2,
-            },
-            Token::Str("type"),
-            Token::Str("E"),
-            Token::Str("f"),
-            Token::U8(6),
-            Token::StructEnd,
-        ],
-    );
+    #[test]
+    fn newtype_struct() {
+        assert_tokens(
+            &InternallyTagged::E(Struct { f: 6 }),
+            &[
+                Token::Struct {
+                    name: "Struct",
+                    len: 2,
+                },
+                Token::Str("type"),
+                Token::Str("E"),
+                Token::Str("f"),
+                Token::U8(6),
+                Token::StructEnd,
+            ],
+        );
 
-    assert_de_tokens(
-        &InternallyTagged::E(Struct { f: 6 }),
-        &[
-            Token::Seq { len: Some(2) },
-            Token::Str("E"),
-            Token::U8(6),
-            Token::SeqEnd,
-        ],
-    );
+        assert_de_tokens(
+            &InternallyTagged::E(Struct { f: 6 }),
+            &[
+                Token::Seq { len: Some(2) },
+                Token::Str("E"),
+                Token::U8(6),
+                Token::SeqEnd,
+            ],
+        );
+    }
 
-    assert_de_tokens_error::<InternallyTagged>(
-        &[Token::Map { len: Some(0) }, Token::MapEnd],
-        "missing field `type`",
-    );
+    #[test]
+    fn wrong_tag() {
+        assert_de_tokens_error::<InternallyTagged>(
+            &[Token::Map { len: Some(0) }, Token::MapEnd],
+            "missing field `type`",
+        );
 
-    assert_de_tokens_error::<InternallyTagged>(
-        &[
-            Token::Map { len: Some(1) },
-            Token::Str("type"),
-            Token::Str("Z"),
-            Token::MapEnd,
-        ],
-        "unknown variant `Z`, expected one of `A`, `B`, `C`, `D`, `E`",
-    );
+        assert_de_tokens_error::<InternallyTagged>(
+            &[
+                Token::Map { len: Some(1) },
+                Token::Str("type"),
+                Token::Str("Z"),
+                Token::MapEnd,
+            ],
+            "unknown variant `Z`, expected one of `A`, `B`, `C`, `D`, `E`",
+        );
+    }
 }
 
 #[test]
