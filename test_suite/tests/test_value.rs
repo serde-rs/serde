@@ -1,7 +1,7 @@
 #![allow(clippy::derive_partial_eq_without_eq, clippy::similar_names)]
 
-use serde::de::value::{self, MapAccessDeserializer};
-use serde::de::{Deserialize, Deserializer, IntoDeserializer, MapAccess, Visitor};
+use serde::de::value;
+use serde::de::{Deserialize, Deserializer, IntoDeserializer, Visitor};
 use serde_derive::Deserialize;
 use serde_test::{assert_de_tokens, Token};
 use std::fmt;
@@ -37,8 +37,11 @@ fn test_integer128() {
     assert_eq!(1i128, i128::deserialize(de_i128).unwrap());
 }
 
-#[test]
-fn test_map_access_to_enum() {
+mod access_to_enum {
+    use super::*;
+    use serde::de::value::MapAccessDeserializer;
+    use serde::de::MapAccess;
+
     #[derive(PartialEq, Debug)]
     struct Potential(PotentialKind);
 
@@ -78,18 +81,27 @@ fn test_map_access_to_enum() {
         }
     }
 
-    let expected = Potential(PotentialKind::Airebo(Airebo { lj_sigma: 14.0 }));
+    /// Because [`serde_test::de::Deserializer`] handles both tokens [`Token::Map`]
+    /// and [`Token::Struct`] the same, we test only `Token::Map` tokens here.
+    mod map {
+        use super::*;
 
-    assert_de_tokens(
-        &expected,
-        &[
-            Token::Map { len: Some(1) },
-            Token::Str("Airebo"),
-            Token::Map { len: Some(1) },
-            Token::Str("lj_sigma"),
-            Token::F64(14.0),
-            Token::MapEnd,
-            Token::MapEnd,
-        ],
-    );
+        #[test]
+        fn newtype() {
+            let expected = Potential(PotentialKind::Airebo(Airebo { lj_sigma: 14.0 }));
+
+            assert_de_tokens(
+                &expected,
+                &[
+                    Token::Map { len: Some(1) },
+                    Token::Str("Airebo"),
+                    Token::Map { len: Some(1) },
+                    Token::Str("lj_sigma"),
+                    Token::F64(14.0),
+                    Token::MapEnd,
+                    Token::MapEnd,
+                ],
+            );
+        }
+    }
 }
