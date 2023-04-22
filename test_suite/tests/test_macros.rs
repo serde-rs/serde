@@ -693,24 +693,24 @@ mod internally_tagged_enum {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "type")]
     enum InternallyTagged {
-        A { a: u8 },
-        B,
-        C(BTreeMap<String, String>),
-        D(Newtype),
-        E(Struct),
+        Struct { a: u8 },
+        Unit,
+        NewtypeMap(BTreeMap<String, String>),
+        NewtypeNewtype(Newtype),
+        NewtypeStruct(Struct),
     }
 
     #[test]
     fn struct_() {
         assert_tokens(
-            &InternallyTagged::A { a: 1 },
+            &InternallyTagged::Struct { a: 1 },
             &[
                 Token::Struct {
                     name: "InternallyTagged",
                     len: 2,
                 },
                 Token::Str("type"),
-                Token::Str("A"),
+                Token::Str("Struct"),
                 Token::Str("a"),
                 Token::U8(1),
                 Token::StructEnd,
@@ -718,10 +718,10 @@ mod internally_tagged_enum {
         );
 
         assert_de_tokens(
-            &InternallyTagged::A { a: 1 },
+            &InternallyTagged::Struct { a: 1 },
             &[
                 Token::Seq { len: Some(2) },
-                Token::Str("A"),
+                Token::Str("Struct"),
                 Token::U8(1),
                 Token::SeqEnd,
             ],
@@ -731,32 +731,36 @@ mod internally_tagged_enum {
     #[test]
     fn unit() {
         assert_tokens(
-            &InternallyTagged::B,
+            &InternallyTagged::Unit,
             &[
                 Token::Struct {
                     name: "InternallyTagged",
                     len: 1,
                 },
                 Token::Str("type"),
-                Token::Str("B"),
+                Token::Str("Unit"),
                 Token::StructEnd,
             ],
         );
 
         assert_de_tokens(
-            &InternallyTagged::B,
-            &[Token::Seq { len: Some(1) }, Token::Str("B"), Token::SeqEnd],
+            &InternallyTagged::Unit,
+            &[
+                Token::Seq { len: Some(1) },
+                Token::Str("Unit"),
+                Token::SeqEnd,
+            ],
         );
     }
 
     #[test]
     fn newtype_map() {
         assert_tokens(
-            &InternallyTagged::C(BTreeMap::new()),
+            &InternallyTagged::NewtypeMap(BTreeMap::new()),
             &[
                 Token::Map { len: Some(1) },
                 Token::Str("type"),
-                Token::Str("C"),
+                Token::Str("NewtypeMap"),
                 Token::MapEnd,
             ],
         );
@@ -764,7 +768,7 @@ mod internally_tagged_enum {
         assert_de_tokens_error::<InternallyTagged>(
             &[
                 Token::Seq { len: Some(2) },
-                Token::Str("C"),
+                Token::Str("NewtypeMap"),
                 Token::Map { len: Some(0) },
                 Token::MapEnd,
                 Token::SeqEnd,
@@ -776,11 +780,11 @@ mod internally_tagged_enum {
     #[test]
     fn newtype_newtype() {
         assert_tokens(
-            &InternallyTagged::D(Newtype(BTreeMap::new())),
+            &InternallyTagged::NewtypeNewtype(Newtype(BTreeMap::new())),
             &[
                 Token::Map { len: Some(1) },
                 Token::Str("type"),
-                Token::Str("D"),
+                Token::Str("NewtypeNewtype"),
                 Token::MapEnd,
             ],
         );
@@ -789,14 +793,14 @@ mod internally_tagged_enum {
     #[test]
     fn newtype_struct() {
         assert_tokens(
-            &InternallyTagged::E(Struct { f: 6 }),
+            &InternallyTagged::NewtypeStruct(Struct { f: 6 }),
             &[
                 Token::Struct {
                     name: "Struct",
                     len: 2,
                 },
                 Token::Str("type"),
-                Token::Str("E"),
+                Token::Str("NewtypeStruct"),
                 Token::Str("f"),
                 Token::U8(6),
                 Token::StructEnd,
@@ -804,10 +808,10 @@ mod internally_tagged_enum {
         );
 
         assert_de_tokens(
-            &InternallyTagged::E(Struct { f: 6 }),
+            &InternallyTagged::NewtypeStruct(Struct { f: 6 }),
             &[
                 Token::Seq { len: Some(2) },
-                Token::Str("E"),
+                Token::Str("NewtypeStruct"),
                 Token::U8(6),
                 Token::SeqEnd,
             ],
@@ -828,7 +832,7 @@ mod internally_tagged_enum {
                 Token::Str("Z"),
                 Token::MapEnd,
             ],
-            "unknown variant `Z`, expected one of `A`, `B`, `C`, `D`, `E`",
+            "unknown variant `Z`, expected one of `Struct`, `Unit`, `NewtypeMap`, `NewtypeNewtype`, `NewtypeStruct`",
         );
     }
 
