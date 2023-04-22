@@ -683,9 +683,6 @@ mod internally_tagged_enum {
     use super::*;
 
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    struct Newtype(BTreeMap<String, String>);
-
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
     struct Struct {
         f: u8,
     }
@@ -696,7 +693,6 @@ mod internally_tagged_enum {
         A { a: u8 },
         B,
         C(BTreeMap<String, String>),
-        D(Newtype),
         E(Struct),
     }
 
@@ -774,19 +770,6 @@ mod internally_tagged_enum {
     }
 
     #[test]
-    fn newtype_newtype() {
-        assert_tokens(
-            &InternallyTagged::D(Newtype(BTreeMap::new())),
-            &[
-                Token::Map { len: Some(1) },
-                Token::Str("type"),
-                Token::Str("D"),
-                Token::MapEnd,
-            ],
-        );
-    }
-
-    #[test]
     fn newtype_struct() {
         assert_tokens(
             &InternallyTagged::E(Struct { f: 6 }),
@@ -828,7 +811,7 @@ mod internally_tagged_enum {
                 Token::Str("Z"),
                 Token::MapEnd,
             ],
-            "unknown variant `Z`, expected one of `A`, `B`, `C`, `D`, `E`",
+            "unknown variant `Z`, expected one of `A`, `B`, `C`, `E`",
         );
     }
 
