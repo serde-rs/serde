@@ -690,38 +690,10 @@ mod internally_tagged_enum {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "type")]
     enum InternallyTagged {
-        Struct { a: u8 },
         Unit,
         NewtypeMap(BTreeMap<String, String>),
         NewtypeStruct(Struct),
-    }
-
-    #[test]
-    fn struct_() {
-        assert_tokens(
-            &InternallyTagged::Struct { a: 1 },
-            &[
-                Token::Struct {
-                    name: "InternallyTagged",
-                    len: 2,
-                },
-                Token::Str("type"),
-                Token::Str("Struct"),
-                Token::Str("a"),
-                Token::U8(1),
-                Token::StructEnd,
-            ],
-        );
-
-        assert_de_tokens(
-            &InternallyTagged::Struct { a: 1 },
-            &[
-                Token::Seq { len: Some(2) },
-                Token::Str("Struct"),
-                Token::U8(1),
-                Token::SeqEnd,
-            ],
-        );
+        Struct { a: u8 },
     }
 
     #[test]
@@ -802,6 +774,34 @@ mod internally_tagged_enum {
     }
 
     #[test]
+    fn struct_() {
+        assert_tokens(
+            &InternallyTagged::Struct { a: 1 },
+            &[
+                Token::Struct {
+                    name: "InternallyTagged",
+                    len: 2,
+                },
+                Token::Str("type"),
+                Token::Str("Struct"),
+                Token::Str("a"),
+                Token::U8(1),
+                Token::StructEnd,
+            ],
+        );
+
+        assert_de_tokens(
+            &InternallyTagged::Struct { a: 1 },
+            &[
+                Token::Seq { len: Some(2) },
+                Token::Str("Struct"),
+                Token::U8(1),
+                Token::SeqEnd,
+            ],
+        );
+    }
+
+    #[test]
     fn wrong_tag() {
         assert_de_tokens_error::<InternallyTagged>(
             &[Token::Map { len: Some(0) }, Token::MapEnd],
@@ -815,7 +815,7 @@ mod internally_tagged_enum {
                 Token::Str("Z"),
                 Token::MapEnd,
             ],
-            "unknown variant `Z`, expected one of `Struct`, `Unit`, `NewtypeMap`, `NewtypeStruct`",
+            "unknown variant `Z`, expected one of `Unit`, `NewtypeMap`, `NewtypeStruct`, `Struct`",
         );
     }
 
