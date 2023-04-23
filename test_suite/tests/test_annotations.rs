@@ -1642,7 +1642,7 @@ fn test_collect_other() {
             Token::U32(2),
             Token::Str("c"),
             Token::U32(3),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 }
@@ -1674,7 +1674,7 @@ fn test_flatten_struct_enum() {
             Token::MapEnd,
             Token::Str("extra_key"),
             Token::Str("extra value"),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
     assert_ser_tokens(
@@ -1696,7 +1696,7 @@ fn test_flatten_struct_enum() {
             Token::StructEnd,
             Token::Str("extra_key"),
             Token::Str("extra value"),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 }
@@ -1728,7 +1728,7 @@ fn test_flatten_struct_tag_content_enum() {
             Token::Str("value"),
             Token::U32(42),
             Token::MapEnd,
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
     assert_ser_tokens(
@@ -1752,7 +1752,7 @@ fn test_flatten_struct_tag_content_enum() {
             Token::Str("value"),
             Token::U32(42),
             Token::StructEnd,
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 }
@@ -1781,7 +1781,7 @@ fn test_flatten_struct_tag_content_enum_newtype() {
             Token::Str("value"),
             Token::U32(23),
             Token::MapEnd,
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
     assert_ser_tokens(
@@ -1803,7 +1803,7 @@ fn test_flatten_struct_tag_content_enum_newtype() {
             Token::Str("value"),
             Token::U32(23),
             Token::StructEnd,
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 }
@@ -1909,7 +1909,7 @@ fn test_complex_flatten() {
             Token::U32(3),
             Token::Str("z"),
             Token::U32(4),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 
@@ -1951,7 +1951,7 @@ fn test_complex_flatten() {
             Token::U32(3),
             Token::Str("z"),
             Token::U32(4),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 }
@@ -2020,7 +2020,7 @@ fn test_flatten_unit() {
             },
             Token::Str("status"),
             Token::U64(0),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 }
@@ -2059,7 +2059,7 @@ fn test_flatten_unsupported_type() {
             Token::Str("foo"),
             Token::Str("a"),
             Token::Str("b"),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
         "can only flatten structs and maps",
     );
@@ -2094,7 +2094,7 @@ fn test_non_string_keys() {
             Token::U32(3),
             Token::U32(0),
             Token::U32(42),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 }
@@ -2130,7 +2130,7 @@ fn test_lifetime_propagation_for_flatten() {
             },
             Token::Str("x"),
             Token::U32(42),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 
@@ -2147,7 +2147,7 @@ fn test_lifetime_propagation_for_flatten() {
             },
             Token::BorrowedStr("x"),
             Token::U32(42),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 
@@ -2160,7 +2160,7 @@ fn test_lifetime_propagation_for_flatten() {
             },
             Token::BorrowedStr("x"),
             Token::U32(42),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 
@@ -2179,7 +2179,7 @@ fn test_lifetime_propagation_for_flatten() {
             Token::U8(120),
             Token::SeqEnd,
             Token::U32(42),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 
@@ -2192,7 +2192,7 @@ fn test_lifetime_propagation_for_flatten() {
             },
             Token::BorrowedBytes(b"x"),
             Token::U32(42),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 }
@@ -2229,7 +2229,7 @@ fn test_flatten_enum_newtype() {
             Token::Str("k"),
             Token::Str("v"),
             Token::MapEnd,
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 }
@@ -2278,7 +2278,7 @@ fn test_flatten_internally_tagged() {
             Token::Str("D"),
             Token::Str("d"),
             Token::I32(2),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 }
@@ -2482,7 +2482,7 @@ fn test_flatten_untagged_enum() {
             },
             Token::Str("a"),
             Token::I32(0),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 }
@@ -2521,7 +2521,7 @@ fn test_flatten_option() {
             Token::I32(1),
             Token::Str("inner2"),
             Token::I32(2),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 
@@ -2537,7 +2537,7 @@ fn test_flatten_option() {
             },
             Token::Str("inner1"),
             Token::I32(1),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 
@@ -2553,7 +2553,7 @@ fn test_flatten_option() {
             },
             Token::Str("inner2"),
             Token::I32(2),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 
@@ -2567,7 +2567,7 @@ fn test_flatten_option() {
                 name: "Outer",
                 len: None,
             },
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 }

@@ -1491,7 +1491,7 @@ fn test_internally_tagged_struct_with_flattened_field() {
             Token::Str("A"),
             Token::Str("content"),
             Token::U64(0),
-            Token::MapEnd,
+            Token::MapStructEnd,
         ],
     );
 

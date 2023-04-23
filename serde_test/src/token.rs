@@ -423,13 +423,16 @@ pub enum Token {
     ///     Token::I32(65),
     ///     Token::Char('Z'),
     ///     Token::I32(90),
-    ///     Token::MapEnd,
+    ///     Token::MapStructEnd,
     /// ]);
     /// ```
     MapStruct {
         name: &'static str,
         len: Option<usize>,
     },
+
+    /// An indicator of the end of a map.
+    MapStructEnd,
 
     /// The header of a struct.
     ///

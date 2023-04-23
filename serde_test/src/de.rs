@@ -159,7 +159,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                 self.visit_seq(Some(len), Token::TupleStructEnd, visitor)
             }
             Token::Map { len } => self.visit_map(len, Token::MapEnd, visitor),
-            Token::MapStruct { len, .. } => self.visit_map(len, Token::MapEnd, visitor),
+            Token::MapStruct { len, .. } => self.visit_map(len, Token::MapStructEnd, visitor),
             Token::Struct { len, .. } => self.visit_map(Some(len), Token::StructEnd, visitor),
             Token::Enum { .. } => {
                 let variant = self.next_token();
@@ -231,6 +231,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             | Token::TupleEnd
             | Token::TupleStructEnd
             | Token::MapEnd
+            | Token::MapStructEnd
             | Token::StructEnd
             | Token::TupleVariantEnd
             | Token::StructVariantEnd => {

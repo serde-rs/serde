@@ -13,7 +13,7 @@ pub struct Serializer<'a> {
 impl<'a> Serializer<'a> {
     /// Creates the serializer.
     pub fn new(tokens: &'a [Token]) -> Self {
-        Serializer { tokens: tokens }
+        Serializer { tokens }
     }
 
     /// Pulls the next token off of the serializer, ignoring it.
@@ -83,7 +83,7 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
     type SerializeTuple = Self;
     type SerializeTupleStruct = Self;
     type SerializeTupleVariant = Variant<'s, 'a>;
-    type SerializeMap = Self;
+    type SerializeMap = Variant<'s, 'a>;
     type SerializeStruct = Self;
     type SerializeStructVariant = Variant<'s, 'a>;
 
@@ -277,12 +277,12 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
         len: Option<usize>,
     ) -> Result<Self::SerializeMap, Self::Error> {
         assert_next_token!(self, MapStruct { name, len });
-        Ok(self)
+        Ok(Variant { ser: self, end: Token::MapStructEnd })
     }
 
-    fn serialize_map(self, len: Option<usize>) -> Result<Self, Error> {
+    fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Error> {
         assert_next_token!(self, Map { len });
-        Ok(self)
+        Ok(Variant { ser: self, end: Token::MapEnd })
     }
 
     fn serialize_struct(self, name: &'static str, len: usize) -> Result<Self, Error> {
@@ -400,7 +400,7 @@ impl<'s, 'a> ser::SerializeTupleVariant for Variant<'s, 'a> {
     }
 }
 
-impl<'s, 'a> ser::SerializeMap for &'s mut Serializer<'a> {
+impl<'s, 'a> ser::SerializeMap for Variant<'s, 'a> {
     type Ok = ();
     type Error = Error;
 
@@ -408,18 +408,22 @@ impl<'s, 'a> ser::SerializeMap for &'s mut Serializer<'a> {
     where
         T: Serialize,
     {
-        key.serialize(&mut **self)
+        key.serialize(&mut *self.ser)
     }
 
     fn serialize_value<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
     where
         T: Serialize,
     {
-        value.serialize(&mut **self)
+        value.serialize(&mut *self.ser)
     }
 
     fn end(self) -> Result<(), Self::Error> {
-        assert_next_token!(self, MapEnd);
+        match self.end {
+            Token::MapStructEnd => assert_next_token!(self.ser, MapStructEnd),
+            Token::MapEnd => assert_next_token!(self.ser, MapEnd),
+            _ => unreachable!(),
+        }
         Ok(())
     }
 }
