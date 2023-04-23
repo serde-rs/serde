@@ -277,12 +277,18 @@ impl<'s, 'a> ser::Serializer for &'s mut Serializer<'a> {
         len: Option<usize>,
     ) -> Result<Self::SerializeMap, Self::Error> {
         assert_next_token!(self, MapStruct { name, len });
-        Ok(Variant { ser: self, end: Token::MapStructEnd })
+        Ok(Variant {
+            ser: self,
+            end: Token::MapStructEnd,
+        })
     }
 
     fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Error> {
         assert_next_token!(self, Map { len });
-        Ok(Variant { ser: self, end: Token::MapEnd })
+        Ok(Variant {
+            ser: self,
+            end: Token::MapEnd,
+        })
     }
 
     fn serialize_struct(self, name: &'static str, len: usize) -> Result<Self, Error> {
