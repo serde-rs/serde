@@ -60,6 +60,15 @@ struct Struct {
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
+struct MapStruct {
+    a: i32,
+    b: i32,
+    c: i32,
+    #[serde(flatten)]
+    others: BTreeMap<String, i32>,
+}
+
+#[derive(PartialEq, Debug, Deserialize)]
 #[serde(default)]
 struct StructDefault<T> {
     a: i32,

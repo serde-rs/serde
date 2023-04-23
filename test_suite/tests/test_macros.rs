@@ -1481,7 +1481,10 @@ fn test_internally_tagged_struct_with_flattened_field() {
     assert_tokens(
         &Struct { flat: Enum::A(0) },
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "Struct",
+                len: None,
+            },
             Token::Str("tag_struct"),
             Token::Str("Struct"),
             Token::Str("tag_enum"),

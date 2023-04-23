@@ -1632,7 +1632,10 @@ fn test_collect_other() {
     assert_tokens(
         &CollectOther { a: 1, b: 2, extra },
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "CollectOther",
+                len: None,
+            },
             Token::Str("a"),
             Token::U32(1),
             Token::Str("b"),
@@ -1658,7 +1661,10 @@ fn test_flatten_struct_enum() {
     assert_de_tokens(
         &change_request,
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "FlattenStructEnumWrapper",
+                len: None,
+            },
             Token::Str("insert_integer"),
             Token::Map { len: None },
             Token::Str("index"),
@@ -1674,7 +1680,10 @@ fn test_flatten_struct_enum() {
     assert_ser_tokens(
         &change_request,
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "FlattenStructEnumWrapper",
+                len: None,
+            },
             Token::Str("insert_integer"),
             Token::Struct {
                 len: 2,
@@ -1704,7 +1713,10 @@ fn test_flatten_struct_tag_content_enum() {
     assert_de_tokens(
         &change_request,
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "FlattenStructTagContentEnumWrapper",
+                len: None,
+            },
             Token::Str("outer"),
             Token::U32(42),
             Token::Str("type"),
@@ -1722,7 +1734,10 @@ fn test_flatten_struct_tag_content_enum() {
     assert_ser_tokens(
         &change_request,
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "FlattenStructTagContentEnumWrapper",
+                len: None,
+            },
             Token::Str("outer"),
             Token::U32(42),
             Token::Str("type"),
@@ -1753,7 +1768,10 @@ fn test_flatten_struct_tag_content_enum_newtype() {
     assert_de_tokens(
         &change_request,
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "FlattenStructTagContentEnumWrapper",
+                len: None,
+            },
             Token::Str("outer"),
             Token::U32(42),
             Token::Str("type"),
@@ -1769,7 +1787,10 @@ fn test_flatten_struct_tag_content_enum_newtype() {
     assert_ser_tokens(
         &change_request,
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "FlattenStructTagContentEnumWrapper",
+                len: None,
+            },
             Token::Str("outer"),
             Token::U32(42),
             Token::Str("type"),
@@ -1865,7 +1886,10 @@ fn test_complex_flatten() {
             z: 4,
         },
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "Outer",
+                len: None,
+            },
             Token::Str("y"),
             Token::U32(0),
             Token::Str("a"),
@@ -1903,7 +1927,10 @@ fn test_complex_flatten() {
             z: 4,
         },
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "Outer",
+                len: None,
+            },
             Token::Str("y"),
             Token::U32(0),
             Token::Str("a"),
@@ -1987,7 +2014,10 @@ fn test_flatten_unit() {
             status: 0,
         },
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "Response",
+                len: None,
+            },
             Token::Str("status"),
             Token::U64(0),
             Token::MapEnd,
@@ -2010,7 +2040,10 @@ fn test_flatten_unsupported_type() {
             inner: "bar".into(),
         },
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "Outer",
+                len: None,
+            },
             Token::Str("outer"),
             Token::Str("foo"),
         ],
@@ -2018,7 +2051,10 @@ fn test_flatten_unsupported_type() {
     );
     assert_de_tokens_error::<Outer>(
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "Outer",
+                len: None,
+            },
             Token::Str("outer"),
             Token::Str("foo"),
             Token::Str("a"),
@@ -2048,7 +2084,10 @@ fn test_non_string_keys() {
             mapping,
         },
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "TestStruct",
+                len: None,
+            },
             Token::Str("name"),
             Token::Str("peter"),
             Token::Str("age"),
@@ -2085,7 +2124,10 @@ fn test_lifetime_propagation_for_flatten() {
     assert_tokens(
         &A { t: owned_map },
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "A",
+                len: None,
+            },
             Token::Str("x"),
             Token::U32(42),
             Token::MapEnd,
@@ -2099,7 +2141,10 @@ fn test_lifetime_propagation_for_flatten() {
             t: borrowed_map.clone(),
         },
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "B",
+                len: None,
+            },
             Token::BorrowedStr("x"),
             Token::U32(42),
             Token::MapEnd,
@@ -2109,7 +2154,10 @@ fn test_lifetime_propagation_for_flatten() {
     assert_de_tokens(
         &B { t: borrowed_map },
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "B",
+                len: None,
+            },
             Token::BorrowedStr("x"),
             Token::U32(42),
             Token::MapEnd,
@@ -2123,7 +2171,10 @@ fn test_lifetime_propagation_for_flatten() {
             t: borrowed_map.clone(),
         },
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "C",
+                len: None,
+            },
             Token::Seq { len: Some(1) },
             Token::U8(120),
             Token::SeqEnd,
@@ -2135,7 +2186,10 @@ fn test_lifetime_propagation_for_flatten() {
     assert_de_tokens(
         &C { t: borrowed_map },
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "C",
+                len: None,
+            },
             Token::BorrowedBytes(b"x"),
             Token::U32(42),
             Token::MapEnd,
@@ -2166,7 +2220,10 @@ fn test_flatten_enum_newtype() {
     assert_tokens(
         &s,
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "S",
+                len: None,
+            },
             Token::Str("Q"),
             Token::Map { len: Some(1) },
             Token::Str("k"),
@@ -2209,7 +2266,10 @@ fn test_flatten_internally_tagged() {
     assert_tokens(
         &s,
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "S",
+                len: None,
+            },
             Token::Str("typeX"),
             Token::Str("B"),
             Token::Str("b"),
@@ -2416,7 +2476,10 @@ fn test_flatten_untagged_enum() {
     assert_tokens(
         &data,
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "Outer",
+                len: None,
+            },
             Token::Str("a"),
             Token::I32(0),
             Token::MapEnd,
@@ -2450,7 +2513,10 @@ fn test_flatten_option() {
             inner2: Some(Inner2 { inner2: 2 }),
         },
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "Outer",
+                len: None,
+            },
             Token::Str("inner1"),
             Token::I32(1),
             Token::Str("inner2"),
@@ -2465,7 +2531,10 @@ fn test_flatten_option() {
             inner2: None,
         },
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "Outer",
+                len: None,
+            },
             Token::Str("inner1"),
             Token::I32(1),
             Token::MapEnd,
@@ -2478,7 +2547,10 @@ fn test_flatten_option() {
             inner2: Some(Inner2 { inner2: 2 }),
         },
         &[
-            Token::Map { len: None },
+            Token::MapStruct {
+                name: "Outer",
+                len: None,
+            },
             Token::Str("inner2"),
             Token::I32(2),
             Token::MapEnd,
@@ -2490,7 +2562,13 @@ fn test_flatten_option() {
             inner1: None,
             inner2: None,
         },
-        &[Token::Map { len: None }, Token::MapEnd],
+        &[
+            Token::MapStruct {
+                name: "Outer",
+                len: None,
+            },
+            Token::MapEnd,
+        ],
     );
 }
 

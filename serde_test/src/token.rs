@@ -395,6 +395,42 @@ pub enum Token {
     /// An indicator of the end of a map.
     MapEnd,
 
+    /// The header to a map.
+    ///
+    /// After this header are the entries of the map, followed by `MapEnd`.
+    ///
+    /// ```edition2018
+    /// # use serde::{Serialize, Deserialize};
+    /// # use serde_test::{assert_tokens, Token};
+    /// #
+    /// use std::collections::BTreeMap;
+    /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    /// struct S {
+    ///     a: u8,
+    ///     #[serde(flatten)]
+    ///     other: BTreeMap<char, i32>,
+    /// }
+    /// let mut map = BTreeMap::new();
+    /// map.insert('A', 65);
+    /// map.insert('Z', 90);
+    /// let s = S { a: 0, other: map };
+    ///
+    /// assert_tokens(&s, &[
+    ///     Token::MapStruct { name: "S", len: None },
+    ///     Token::Str("a"),
+    ///     Token::U8(0),
+    ///     Token::Char('A'),
+    ///     Token::I32(65),
+    ///     Token::Char('Z'),
+    ///     Token::I32(90),
+    ///     Token::MapEnd,
+    /// ]);
+    /// ```
+    MapStruct {
+        name: &'static str,
+        len: Option<usize>,
+    },
+
     /// The header of a struct.
     ///
     /// After this header are the fields of the struct, followed by `StructEnd`.
