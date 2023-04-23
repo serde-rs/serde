@@ -948,7 +948,7 @@ fn deserialize_struct(
         deserialize_struct_as_struct_visitor(&type_path, params, fields, cattrs)
     };
     let field_visitor = Stmts(field_visitor);
-    let fields_stmt = fields_stmt.map(Stmts);
+    let fields_stmt = Stmts(fields_stmt);
     let visit_map = Stmts(visit_map);
 
     let visitor_expr = quote! {
@@ -971,8 +971,9 @@ fn deserialize_struct(
             _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
         }
     } else if cattrs.has_flatten() {
+        let type_name = cattrs.name().deserialize_name();
         quote! {
-            _serde::Deserializer::deserialize_map(__deserializer, #visitor_expr)
+            _serde::Deserializer::deserialize_map_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
         }
     } else {
         let type_name = cattrs.name().deserialize_name();
@@ -2399,7 +2400,7 @@ fn deserialize_struct_as_struct_visitor(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
-) -> (Fragment, Option<Fragment>, Fragment) {
+) -> (Fragment, Fragment, Fragment) {
     assert!(!cattrs.has_flatten());
 
     let field_names_idents: Vec<_> = fields
@@ -2430,7 +2431,7 @@ fn deserialize_struct_as_struct_visitor(
 
     let visit_map = deserialize_map(struct_path, params, fields, cattrs);
 
-    (field_visitor, Some(fields_stmt), visit_map)
+    (field_visitor, fields_stmt, visit_map)
 }
 
 fn deserialize_struct_as_map_visitor(
@@ -2438,7 +2439,7 @@ fn deserialize_struct_as_map_visitor(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
-) -> (Fragment, Option<Fragment>, Fragment) {
+) -> (Fragment, Fragment, Fragment) {
     let field_names_idents: Vec<_> = fields
         .iter()
         .enumerate()
@@ -2452,11 +2453,22 @@ fn deserialize_struct_as_map_visitor(
         })
         .collect();
 
+    let fields_stmt = {
+        let field_names = field_names_idents
+            .iter()
+            .flat_map(|(_, _, aliases)| aliases);
+
+        quote_block! {
+            #[doc(hidden)]
+            const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
+        }
+    };
+
     let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
 
     let visit_map = deserialize_map(struct_path, params, fields, cattrs);
 
-    (field_visitor, None, visit_map)
+    (field_visitor, fields_stmt, visit_map)
 }
 
 fn deserialize_map(

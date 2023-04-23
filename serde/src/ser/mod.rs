@@ -1171,6 +1171,64 @@ pub trait Serializer: Sized {
     /// ```
     fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Self::Error>;
 
+    /// Begin to serialize a map. This call must be followed by zero or more
+    /// calls to `serialize_key` and `serialize_value`, then a call to `end`.
+    ///
+    /// The argument is the number of elements in the map, which may or may not
+    /// be computable before the map is iterated. Some serializers only support
+    /// maps whose length is known up front.
+    ///
+    /// ```edition2018
+    /// # use std::marker::PhantomData;
+    /// #
+    /// # struct HashMap<K, V>(PhantomData<K>, PhantomData<V>);
+    /// #
+    /// # impl<K, V> HashMap<K, V> {
+    /// #     fn len(&self) -> usize {
+    /// #         unimplemented!()
+    /// #     }
+    /// # }
+    /// #
+    /// # impl<'a, K, V> IntoIterator for &'a HashMap<K, V> {
+    /// #     type Item = (&'a K, &'a V);
+    /// #     type IntoIter = Box<Iterator<Item = (&'a K, &'a V)>>;
+    /// #
+    /// #     fn into_iter(self) -> Self::IntoIter {
+    /// #         unimplemented!()
+    /// #     }
+    /// # }
+    /// #
+    /// use serde::ser::{Serialize, Serializer, SerializeMap};
+    ///
+    /// struct Config {
+    ///     name: String,
+    ///     others: HashMap<String, String>,
+    /// }
+    ///
+    /// impl Serialize for Config {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///     where
+    ///         S: Serializer,
+    ///     {
+    ///         let mut map = serializer.serialize_map_struct("Config", Some(1 + self.others.len()))?;
+    ///         map.serialize_field("name", &self.name)?;
+    ///         for (k, v) in &self.others {
+    ///             map.serialize_entry(k, v)?;
+    ///         }
+    ///         map.end()
+    ///     }
+    /// }
+    /// ```
+    fn serialize_map_struct(
+        self,
+        name: &'static str,
+        len: Option<usize>,
+    ) -> Result<Self::SerializeMap, Self::Error> {
+        let _ = name;
+        let _ = len;
+        self.serialize_map(len)
+    }
+
     /// Begin to serialize a struct like `struct Rgb { r: u8, g: u8, b: u8 }`.
     /// This call must be followed by zero or more calls to `serialize_field`,
     /// then a call to `end`.
@@ -1845,6 +1903,26 @@ pub trait SerializeMap {
     {
         try!(self.serialize_key(key));
         self.serialize_value(value)
+    }
+
+    /// Serialize a struct field consisting of a key and a value.
+    ///
+    /// Some [`Serializer`] types would like to handle struct field key
+    /// differently, since the key would be `&'static str` here.
+    ///
+    /// The default implementation delegates to [`serialize_entry`].
+    ///
+    /// [`Serialize`]: ../trait.Serialize.html
+    /// [`serialize_field`]: #tymethod.serialize_field
+    fn serialize_field<V: ?Sized>(
+        &mut self,
+        key: &'static str,
+        value: &V,
+    ) -> Result<(), Self::Error>
+    where
+        V: Serialize,
+    {
+        self.serialize_entry(key, value)
     }
 
     /// Finish serializing a map.

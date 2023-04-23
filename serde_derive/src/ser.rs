@@ -367,6 +367,8 @@ fn serialize_struct_as_map(
     let serialize_fields =
         serialize_struct_visitor(fields, params, false, &StructTrait::SerializeMap);
 
+    let type_name = cattrs.name().serialize_name();
+
     let tag_field = serialize_struct_tag_field(cattrs, &StructTrait::SerializeMap);
     let tag_field_exists = !tag_field.is_empty();
 
@@ -396,7 +398,7 @@ fn serialize_struct_as_map(
     };
 
     quote_block! {
-        let #let_mut __serde_state = try!(_serde::Serializer::serialize_map(__serializer, #len));
+        let #let_mut __serde_state = try!(_serde::Serializer::serialize_map_struct(__serializer, #type_name, #len));
         #tag_field
         #(#serialize_fields)*
         _serde::ser::SerializeMap::end(__serde_state)
@@ -1296,7 +1298,7 @@ impl StructTrait {
     fn serialize_field(&self, span: Span) -> TokenStream {
         match *self {
             StructTrait::SerializeMap => {
-                quote_spanned!(span=> _serde::ser::SerializeMap::serialize_entry)
+                quote_spanned!(span=> _serde::ser::SerializeMap::serialize_field)
             }
             StructTrait::SerializeStruct => {
                 quote_spanned!(span=> _serde::ser::SerializeStruct::serialize_field)

@@ -1113,6 +1113,22 @@ pub trait Deserializer<'de>: Sized {
     where
         V: Visitor<'de>;
 
+    /// Hint that the `Deserialize` type is expecting a map of key-value pairs.
+    /// Additional name and fields information is provided
+    fn deserialize_map_struct<V>(
+        self,
+        name: &'static str,
+        fields: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        let _ = name;
+        let _ = fields;
+        self.deserialize_map(visitor)
+    }
+
     /// Hint that the `Deserialize` type is expecting a struct with a particular
     /// name and fields.
     fn deserialize_struct<V>(
