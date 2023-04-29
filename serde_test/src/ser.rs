@@ -63,14 +63,12 @@ macro_rules! assert_next_token {
     ($ser:expr, $actual:expr, $pat:pat, $guard:expr) => {
         match $ser.next_token() {
             Some($pat) if $guard => {}
-            Some(expected) => {
-                panic!("expected Token::{} but serialized as {}",
-                       expected, $actual);
-            }
-            None => {
-                panic!("expected end of tokens, but {} was serialized",
-                       $actual);
-            }
+            Some(expected) => return Err(ser::Error::custom(
+                format!("expected Token::{} but serialized as {}", expected, $actual)
+            )),
+            None => return Err(ser::Error::custom(
+                format!("expected end of tokens, but {} was serialized", $actual)
+            )),
         }
     };
 }
