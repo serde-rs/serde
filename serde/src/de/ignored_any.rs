@@ -108,7 +108,7 @@ use de::{
 /// #     Ok(())
 /// # }
 /// ```
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct IgnoredAny;
 
 impl<'de> Visitor<'de> for IgnoredAny {
