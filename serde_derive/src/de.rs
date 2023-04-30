@@ -954,28 +954,12 @@ fn deserialize_struct(
             )
         })
         .collect();
-    let (field_visitor, fields_stmt) = if cattrs.has_flatten() {
-        let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
-
-        (field_visitor, None)
-    } else {
-        let fields_stmt = {
-            let field_names = field_names_idents
-                .iter()
-                .flat_map(|(_, _, aliases)| aliases);
-
-            quote_block! {
-                #[doc(hidden)]
-                const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
-            }
-        };
-
-        let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
-
-        (field_visitor, Some(fields_stmt))
-    };
-    let field_visitor = Stmts(field_visitor);
-    let fields_stmt = fields_stmt.map(Stmts);
+    let field_visitor = Stmts(deserialize_generated_identifier(
+        &field_names_idents,
+        cattrs,
+        false,
+        None,
+    ));
 
     // untagged struct variants do not get a visit_seq method. The same applies to
     // structs that only have a map representation.
@@ -1022,6 +1006,19 @@ fn deserialize_struct(
         })
     } else {
         None
+    };
+
+    let fields_stmt = if cattrs.has_flatten() {
+        None
+    } else {
+        let field_names = field_names_idents
+            .iter()
+            .flat_map(|(_, _, aliases)| aliases);
+
+        Some(quote! {
+            #[doc(hidden)]
+            const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
+        })
     };
 
     let visitor_expr = quote! {
