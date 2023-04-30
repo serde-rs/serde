@@ -1158,10 +1158,31 @@ fn deserialize_struct_in_place(
     };
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
-    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
+    let field_names_idents: Vec<_> = fields
+        .iter()
+        .enumerate()
+        .filter(|&(_, field)| !field.attrs.skip_deserializing())
+        .map(|(i, field)| {
+            (
+                field.attrs.name().deserialize_name(),
+                field_i(i),
+                field.attrs.aliases(),
+            )
+        })
+        .collect();
 
-    let (field_visitor, fields_stmt, visit_map) =
-        deserialize_struct_as_struct_in_place_visitor(params, fields, cattrs);
+    let fields_stmt = {
+        let field_names = field_names_idents.iter().map(|(name, _, _)| name);
+        quote_block! {
+            #[doc(hidden)]
+            const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
+        }
+    };
+
+    let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
+
+    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
+    let visit_map = deserialize_map_in_place(params, fields, cattrs);
 
     let field_visitor = Stmts(field_visitor);
     let fields_stmt = Stmts(fields_stmt);
@@ -2705,42 +2726,6 @@ fn deserialize_map(
 
         _serde::__private::Ok(#result)
     }
-}
-
-#[cfg(feature = "deserialize_in_place")]
-fn deserialize_struct_as_struct_in_place_visitor(
-    params: &Parameters,
-    fields: &[Field],
-    cattrs: &attr::Container,
-) -> (Fragment, Fragment, Fragment) {
-    assert!(!cattrs.has_flatten());
-
-    let field_names_idents: Vec<_> = fields
-        .iter()
-        .enumerate()
-        .filter(|&(_, field)| !field.attrs.skip_deserializing())
-        .map(|(i, field)| {
-            (
-                field.attrs.name().deserialize_name(),
-                field_i(i),
-                field.attrs.aliases(),
-            )
-        })
-        .collect();
-
-    let fields_stmt = {
-        let field_names = field_names_idents.iter().map(|(name, _, _)| name);
-        quote_block! {
-            #[doc(hidden)]
-            const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
-        }
-    };
-
-    let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
-
-    let visit_map = deserialize_map_in_place(params, fields, cattrs);
-
-    (field_visitor, fields_stmt, visit_map)
 }
 
 #[cfg(feature = "deserialize_in_place")]
