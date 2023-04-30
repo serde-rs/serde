@@ -1171,13 +1171,21 @@ fn deserialize_struct_in_place(
         })
         .collect();
 
-    let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
+    let field_visitor = Stmts(deserialize_generated_identifier(
+        &field_names_idents,
+        cattrs,
+        false,
+        None,
+    ));
 
+    let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
+    let visitor_var = if all_skipped {
+        quote!(_)
+    } else {
+        quote!(mut __seq)
+    };
     let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
-    let visit_map = deserialize_map_in_place(params, fields, cattrs);
-
-    let field_visitor = Stmts(field_visitor);
-    let visit_map = Stmts(visit_map);
+    let visit_map = Stmts(deserialize_map_in_place(params, fields, cattrs));
     let field_names = field_names_idents.iter().map(|(name, _, _)| name);
 
     let visitor_expr = quote! {
@@ -1199,13 +1207,6 @@ fn deserialize_struct_in_place(
         quote! {
             _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
         }
-    };
-
-    let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
-    let visitor_var = if all_skipped {
-        quote!(_)
-    } else {
-        quote!(mut __seq)
     };
 
     let in_place_impl_generics = de_impl_generics.in_place();
