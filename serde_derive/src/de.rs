@@ -941,9 +941,50 @@ fn deserialize_struct(
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     let (field_visitor, fields_stmt) = if cattrs.has_flatten() {
-        deserialize_struct_as_map_visitor(fields, cattrs)
+        let field_names_idents: Vec<_> = fields
+            .iter()
+            .enumerate()
+            .filter(|&(_, field)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
+            .map(|(i, field)| {
+                (
+                    field.attrs.name().deserialize_name(),
+                    field_i(i),
+                    field.attrs.aliases(),
+                )
+            })
+            .collect();
+
+        let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
+
+        (field_visitor, None)
     } else {
-        deserialize_struct_as_struct_visitor(fields, cattrs)
+        let field_names_idents: Vec<_> = fields
+            .iter()
+            .enumerate()
+            .filter(|&(_, field)| !field.attrs.skip_deserializing())
+            .map(|(i, field)| {
+                (
+                    field.attrs.name().deserialize_name(),
+                    field_i(i),
+                    field.attrs.aliases(),
+                )
+            })
+            .collect();
+
+        let fields_stmt = {
+            let field_names = field_names_idents
+                .iter()
+                .flat_map(|(_, _, aliases)| aliases);
+
+            quote_block! {
+                #[doc(hidden)]
+                const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
+            }
+        };
+
+        let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
+
+        (field_visitor, Some(fields_stmt))
     };
     let field_visitor = Stmts(field_visitor);
     let fields_stmt = fields_stmt.map(Stmts);
@@ -2422,63 +2463,6 @@ fn deserialize_identifier(
 
         #visit_borrowed
     }
-}
-
-fn deserialize_struct_as_struct_visitor(
-    fields: &[Field],
-    cattrs: &attr::Container,
-) -> (Fragment, Option<Fragment>) {
-    assert!(!cattrs.has_flatten());
-
-    let field_names_idents: Vec<_> = fields
-        .iter()
-        .enumerate()
-        .filter(|&(_, field)| !field.attrs.skip_deserializing())
-        .map(|(i, field)| {
-            (
-                field.attrs.name().deserialize_name(),
-                field_i(i),
-                field.attrs.aliases(),
-            )
-        })
-        .collect();
-
-    let fields_stmt = {
-        let field_names = field_names_idents
-            .iter()
-            .flat_map(|(_, _, aliases)| aliases);
-
-        quote_block! {
-            #[doc(hidden)]
-            const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
-        }
-    };
-
-    let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
-
-    (field_visitor, Some(fields_stmt))
-}
-
-fn deserialize_struct_as_map_visitor(
-    fields: &[Field],
-    cattrs: &attr::Container,
-) -> (Fragment, Option<Fragment>) {
-    let field_names_idents: Vec<_> = fields
-        .iter()
-        .enumerate()
-        .filter(|&(_, field)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
-        .map(|(i, field)| {
-            (
-                field.attrs.name().deserialize_name(),
-                field_i(i),
-                field.attrs.aliases(),
-            )
-        })
-        .collect();
-
-    let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
-
-    (field_visitor, None)
 }
 
 fn deserialize_map(
