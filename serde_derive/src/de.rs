@@ -942,10 +942,6 @@ fn deserialize_struct(
     };
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
-    let visit_seq = Stmts(deserialize_seq(
-        &type_path, params, fields, true, cattrs, expecting,
-    ));
-
     let (field_visitor, fields_stmt, visit_map) = if cattrs.has_flatten() {
         deserialize_struct_as_map_visitor(&type_path, params, fields, cattrs)
     } else {
@@ -985,25 +981,31 @@ fn deserialize_struct(
         }
     };
 
-    let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
-    let visitor_var = if all_skipped {
-        quote!(_)
-    } else {
-        quote!(mut __seq)
-    };
-
     // untagged struct variants do not get a visit_seq method. The same applies to
     // structs that only have a map representation.
     let visit_seq = match *untagged {
-        Untagged::No if !cattrs.has_flatten() => Some(quote! {
-            #[inline]
-            fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::__private::Result<Self::Value, __A::Error>
-            where
-                __A: _serde::de::SeqAccess<#delife>,
-            {
-                #visit_seq
-            }
-        }),
+        Untagged::No if !cattrs.has_flatten() => {
+            let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
+            let mut_seq = if all_skipped {
+                quote!(_)
+            } else {
+                quote!(mut __seq)
+            };
+
+            let visit_seq = Stmts(deserialize_seq(
+                &type_path, params, fields, true, cattrs, expecting,
+            ));
+
+            Some(quote! {
+                #[inline]
+                fn visit_seq<__A>(self, #mut_seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
+                where
+                    __A: _serde::de::SeqAccess<#delife>,
+                {
+                    #visit_seq
+                }
+            })
+        }
         _ => None,
     };
 
