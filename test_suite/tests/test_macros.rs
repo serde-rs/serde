@@ -606,7 +606,7 @@ fn test_enum_state_field() {
 #[test]
 fn test_untagged_enum() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(untagged)]
+    #[serde(untagged, deny_unknown_fields)]
     enum Untagged {
         A { a: u8 },
         B { b: u8 },

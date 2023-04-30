@@ -509,7 +509,7 @@ fn deserialize_tuple(
     };
 
     let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
-    let visitor_var = if all_skipped {
+    let visitor_var = if all_skipped && cattrs.deny_unknown_fields() {
         quote!(_)
     } else {
         quote!(mut __seq)
@@ -574,7 +574,9 @@ fn deserialize_tuple_in_place(
         None
     };
 
-    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
+    let visit_seq = Stmts(deserialize_seq_in_place(
+        params, fields, false, cattrs, expecting,
+    ));
 
     let visitor_expr = quote! {
         __Visitor {
@@ -596,7 +598,7 @@ fn deserialize_tuple_in_place(
     };
 
     let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
-    let visitor_var = if all_skipped {
+    let visitor_var = if all_skipped && cattrs.deny_unknown_fields() {
         quote!(_)
     } else {
         quote!(mut __seq)
@@ -735,9 +737,28 @@ fn deserialize_seq(
         }
     };
 
+    let skip_rest = if !cattrs.deny_unknown_fields() {
+        Some(quote!(
+            while let _serde::__private::Some(_serde::de::IgnoredAny) =
+                try!(_serde::de::SeqAccess::next_element(&mut __seq))
+            {}
+        ))
+    } else if is_struct {
+        Some(quote!(
+            if let _serde::__private::Some(_serde::de::IgnoredAny) =
+                try!(_serde::de::SeqAccess::next_element(&mut __seq))
+            {
+                return _serde::__private::Err(_serde::de::Error::invalid_length(#deserialized_count, &#expecting));
+            }
+        ))
+    } else {
+        None
+    };
+
     quote_block! {
         #let_default
         #(#let_values)*
+        #skip_rest
         _serde::__private::Ok(#result)
     }
 }
@@ -746,6 +767,7 @@ fn deserialize_seq(
 fn deserialize_seq_in_place(
     params: &Parameters,
     fields: &[Field],
+    is_struct: bool,
     cattrs: &attr::Container,
     expecting: &str,
 ) -> Fragment {
@@ -827,9 +849,28 @@ fn deserialize_seq_in_place(
         }
     };
 
+    let skip_rest = if !cattrs.deny_unknown_fields() {
+        Some(quote!(
+            while let _serde::__private::Some(_serde::de::IgnoredAny) =
+                try!(_serde::de::SeqAccess::next_element(&mut __seq))
+            {}
+        ))
+    } else if is_struct {
+        Some(quote!(
+            if let _serde::__private::Some(_serde::de::IgnoredAny) =
+                try!(_serde::de::SeqAccess::next_element(&mut __seq))
+            {
+                return _serde::__private::Err(_serde::de::Error::invalid_length(#deserialized_count, &#expecting));
+            }
+        ))
+    } else {
+        None
+    };
+
     quote_block! {
         #let_default
         #(#write_values)*
+        #skip_rest
         _serde::__private::Ok(())
     }
 }
@@ -981,19 +1022,12 @@ fn deserialize_struct(
         }
     };
 
-    let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
-    let visitor_var = if all_skipped {
-        quote!(_)
-    } else {
-        quote!(mut __seq)
-    };
-
     // untagged struct variants do not get a visit_seq method. The same applies to
     // structs that only have a map representation.
     let visit_seq = match *untagged {
         Untagged::No if !cattrs.has_flatten() => Some(quote! {
             #[inline]
-            fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::__private::Result<Self::Value, __A::Error>
+            fn visit_seq<__A>(self, mut __seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
             where
                 __A: _serde::de::SeqAccess<#delife>,
             {
@@ -1082,7 +1116,9 @@ fn deserialize_struct_in_place(
     };
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
-    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
+    let visit_seq = Stmts(deserialize_seq_in_place(
+        params, fields, true, cattrs, expecting,
+    ));
 
     let (field_visitor, fields_stmt, visit_map) =
         deserialize_struct_as_struct_in_place_visitor(params, fields, cattrs);
@@ -1112,16 +1148,9 @@ fn deserialize_struct_in_place(
         }
     };
 
-    let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
-    let visitor_var = if all_skipped {
-        quote!(_)
-    } else {
-        quote!(mut __seq)
-    };
-
     let visit_seq = quote! {
         #[inline]
-        fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::__private::Result<Self::Value, __A::Error>
+        fn visit_seq<__A>(self, mut __seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
         where
             __A: _serde::de::SeqAccess<#delife>,
         {
