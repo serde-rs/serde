@@ -940,37 +940,25 @@ fn deserialize_struct(
     };
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
+    let field_names_idents: Vec<_> = fields
+        .iter()
+        .enumerate()
+        // Skip fields that shouldn't be deserialized or that were flattened,
+        // so they don't appear in the storage in their literal form
+        .filter(|&(_, field)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
+        .map(|(i, field)| {
+            (
+                field.attrs.name().deserialize_name(),
+                field_i(i),
+                field.attrs.aliases(),
+            )
+        })
+        .collect();
     let (field_visitor, fields_stmt) = if cattrs.has_flatten() {
-        let field_names_idents: Vec<_> = fields
-            .iter()
-            .enumerate()
-            .filter(|&(_, field)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
-            .map(|(i, field)| {
-                (
-                    field.attrs.name().deserialize_name(),
-                    field_i(i),
-                    field.attrs.aliases(),
-                )
-            })
-            .collect();
-
         let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
 
         (field_visitor, None)
     } else {
-        let field_names_idents: Vec<_> = fields
-            .iter()
-            .enumerate()
-            .filter(|&(_, field)| !field.attrs.skip_deserializing())
-            .map(|(i, field)| {
-                (
-                    field.attrs.name().deserialize_name(),
-                    field_i(i),
-                    field.attrs.aliases(),
-                )
-            })
-            .collect();
-
         let fields_stmt = {
             let field_names = field_names_idents
                 .iter()
