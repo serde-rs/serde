@@ -1171,22 +1171,14 @@ fn deserialize_struct_in_place(
         })
         .collect();
 
-    let fields_stmt = {
-        let field_names = field_names_idents.iter().map(|(name, _, _)| name);
-        quote_block! {
-            #[doc(hidden)]
-            const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
-        }
-    };
-
     let field_visitor = deserialize_generated_identifier(&field_names_idents, cattrs, false, None);
 
     let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
     let visit_map = deserialize_map_in_place(params, fields, cattrs);
 
     let field_visitor = Stmts(field_visitor);
-    let fields_stmt = Stmts(fields_stmt);
     let visit_map = Stmts(visit_map);
+    let field_names = field_names_idents.iter().map(|(name, _, _)| name);
 
     let visitor_expr = quote! {
         __Visitor {
@@ -1216,16 +1208,6 @@ fn deserialize_struct_in_place(
         quote!(mut __seq)
     };
 
-    let visit_seq = quote! {
-        #[inline]
-        fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::__private::Result<Self::Value, __A::Error>
-        where
-            __A: _serde::de::SeqAccess<#delife>,
-        {
-            #visit_seq
-        }
-    };
-
     let in_place_impl_generics = de_impl_generics.in_place();
     let in_place_ty_generics = de_ty_generics.in_place();
     let place_life = place_lifetime();
@@ -1246,7 +1228,13 @@ fn deserialize_struct_in_place(
                 _serde::__private::Formatter::write_str(__formatter, #expecting)
             }
 
-            #visit_seq
+            #[inline]
+            fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::__private::Result<Self::Value, __A::Error>
+            where
+                __A: _serde::de::SeqAccess<#delife>,
+            {
+                #visit_seq
+            }
 
             #[inline]
             fn visit_map<__A>(self, mut __map: __A) -> _serde::__private::Result<Self::Value, __A::Error>
@@ -1257,7 +1245,8 @@ fn deserialize_struct_in_place(
             }
         }
 
-        #fields_stmt
+        #[doc(hidden)]
+        const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
 
         #dispatch
     })
