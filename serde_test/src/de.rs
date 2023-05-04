@@ -16,21 +16,28 @@ macro_rules! assert_next_token {
     ($de:expr, $expected:expr) => {
         match $de.next_token_opt() {
             Some(token) if token == $expected => {}
-            Some(other) => panic!(
-                "expected Token::{} but deserialization wants Token::{}",
-                other, $expected
-            ),
-            None => panic!(
-                "end of tokens but deserialization wants Token::{}",
-                $expected
-            ),
+            Some(other) => {
+                return Err(de::Error::custom(format!(
+                    "expected Token::{} but deserialization wants Token::{}",
+                    other, $expected
+                )))
+            }
+            None => {
+                return Err(de::Error::custom(format!(
+                    "end of tokens but deserialization wants Token::{}",
+                    $expected
+                )))
+            }
         }
     };
 }
 
 macro_rules! unexpected {
     ($token:expr) => {
-        panic!("deserialization did not expect this token: {}", $token)
+        Err(de::Error::custom(format!(
+            "deserialization did not expect this token: {}",
+            $token
+        )))
     };
 }
 
@@ -233,7 +240,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             | Token::StructEnd
             | Token::TupleVariantEnd
             | Token::StructVariantEnd => {
-                unexpected!(token);
+                unexpected!(token)
             }
         }
     }
@@ -531,7 +538,7 @@ impl<'de, 'a> VariantAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
                     self.de
                         .visit_seq(Some(len), Token::TupleVariantEnd, visitor)
                 } else {
-                    unexpected!(token);
+                    unexpected!(token)
                 }
             }
             Token::Seq {
@@ -542,7 +549,7 @@ impl<'de, 'a> VariantAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
                 if len == enum_len {
                     self.de.visit_seq(Some(len), Token::SeqEnd, visitor)
                 } else {
-                    unexpected!(token);
+                    unexpected!(token)
                 }
             }
             _ => de::Deserializer::deserialize_any(self.de, visitor),
@@ -565,7 +572,7 @@ impl<'de, 'a> VariantAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
                     self.de
                         .visit_map(Some(fields.len()), Token::StructVariantEnd, visitor)
                 } else {
-                    unexpected!(token);
+                    unexpected!(token)
                 }
             }
             Token::Map {
@@ -577,7 +584,7 @@ impl<'de, 'a> VariantAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
                     self.de
                         .visit_map(Some(fields.len()), Token::MapEnd, visitor)
                 } else {
-                    unexpected!(token);
+                    unexpected!(token)
                 }
             }
             _ => de::Deserializer::deserialize_any(self.de, visitor),
