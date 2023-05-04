@@ -32,13 +32,11 @@ macro_rules! assert_next_token {
     };
 }
 
-macro_rules! unexpected {
-    ($token:expr) => {
-        Err(de::Error::custom(format!(
-            "deserialization did not expect this token: {}",
-            $token
-        )))
-    };
+fn unexpected(token: Token) -> Error {
+    de::Error::custom(format!(
+        "deserialization did not expect this token: {}",
+        token,
+    ))
 }
 
 macro_rules! end_of_tokens {
@@ -211,7 +209,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
                         self.next_token();
                         visitor.visit_u64(variant)
                     }
-                    (variant, Token::Unit) => unexpected!(variant),
+                    (variant, Token::Unit) => Err(unexpected(variant)),
                     (variant, _) => {
                         visitor.visit_map(EnumMapVisitor::new(self, variant, EnumFormat::Any))
                     }
@@ -239,9 +237,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             | Token::MapEnd
             | Token::StructEnd
             | Token::TupleVariantEnd
-            | Token::StructVariantEnd => {
-                unexpected!(token)
-            }
+            | Token::StructVariantEnd => Err(unexpected(token)),
         }
     }
 
@@ -538,7 +534,7 @@ impl<'de, 'a> VariantAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
                     self.de
                         .visit_seq(Some(len), Token::TupleVariantEnd, visitor)
                 } else {
-                    unexpected!(token)
+                    Err(unexpected(token))
                 }
             }
             Token::Seq {
@@ -549,7 +545,7 @@ impl<'de, 'a> VariantAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
                 if len == enum_len {
                     self.de.visit_seq(Some(len), Token::SeqEnd, visitor)
                 } else {
-                    unexpected!(token)
+                    Err(unexpected(token))
                 }
             }
             _ => de::Deserializer::deserialize_any(self.de, visitor),
@@ -572,7 +568,7 @@ impl<'de, 'a> VariantAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
                     self.de
                         .visit_map(Some(fields.len()), Token::StructVariantEnd, visitor)
                 } else {
-                    unexpected!(token)
+                    Err(unexpected(token))
                 }
             }
             Token::Map {
@@ -584,7 +580,7 @@ impl<'de, 'a> VariantAccess<'de> for DeserializerEnumVisitor<'a, 'de> {
                     self.de
                         .visit_map(Some(fields.len()), Token::MapEnd, visitor)
                 } else {
-                    unexpected!(token)
+                    Err(unexpected(token))
                 }
             }
             _ => de::Deserializer::deserialize_any(self.de, visitor),
@@ -629,7 +625,7 @@ impl<'de, 'a> MapAccess<'de> for EnumMapVisitor<'a, 'de> {
                 .deserialize(BytesDeserializer { value: variant })
                 .map(Some),
             Some(Token::U32(variant)) => seed.deserialize(variant.into_deserializer()).map(Some),
-            Some(other) => unexpected!(other),
+            Some(other) => Err(unexpected(other)),
             None => Ok(None),
         }
     }
