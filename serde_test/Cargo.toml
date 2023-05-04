@@ -1,6 +1,6 @@
 [package]
 name = "serde_test"
-version = "1.0.160" # remember to update html_root_url
+version = "1.0.161" # remember to update html_root_url
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 build = "build.rs"
 categories = ["development-tools::testing"]
