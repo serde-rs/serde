@@ -59,8 +59,6 @@ pub fn expand_derive_serialize(
 
     Ok(dummy::wrap_in_const(
         cont.attrs.custom_serde_path(),
-        "SERIALIZE",
-        ident,
         impl_block,
     ))
 }
