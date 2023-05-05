@@ -182,7 +182,3 @@ pub use assert::{
 pub use token::Token;
 
 pub use configure::{Compact, Configure, Readable};
-
-// Not public API.
-#[doc(hidden)]
-pub use de::Deserializer;

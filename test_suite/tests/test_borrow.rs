@@ -4,6 +4,8 @@
     clippy::used_underscore_binding
 )]
 
+use serde::de::value::{BorrowedStrDeserializer, MapDeserializer};
+use serde::de::IntoDeserializer;
 use serde::{Deserialize, Deserializer};
 use serde_test::{assert_de_tokens, assert_de_tokens_error, Token};
 
@@ -130,20 +132,22 @@ fn test_cow() {
         borrowed: Cow<'b, str>,
     }
 
-    let tokens = &[
-        Token::Struct {
-            name: "Cows",
-            len: 2,
-        },
-        Token::Str("copied"),
-        Token::BorrowedStr("copied"),
-        Token::Str("borrowed"),
-        Token::BorrowedStr("borrowed"),
-        Token::StructEnd,
-    ];
+    struct BorrowedStr(&'static str);
 
-    let mut de = serde_test::Deserializer::new(tokens);
-    let cows = Cows::deserialize(&mut de).unwrap();
+    impl<'de> IntoDeserializer<'de> for BorrowedStr {
+        type Deserializer = BorrowedStrDeserializer<'de, serde::de::value::Error>;
+
+        fn into_deserializer(self) -> Self::Deserializer {
+            BorrowedStrDeserializer::new(self.0)
+        }
+    }
+
+    let de = MapDeserializer::new(IntoIterator::into_iter([
+        ("copied", BorrowedStr("copied")),
+        ("borrowed", BorrowedStr("borrowed")),
+    ]));
+
+    let cows = Cows::deserialize(de).unwrap();
 
     match cows.copied {
         Cow::Owned(ref s) if s == "copied" => {}
