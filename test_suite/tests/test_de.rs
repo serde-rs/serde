@@ -33,7 +33,7 @@ use std::time::{Duration, UNIX_EPOCH};
 use std::sync::atomic::{AtomicI64, AtomicU64};
 
 use fnv::FnvHasher;
-use serde::de::DeserializeOwned;
+use serde::de::{DeserializeOwned, IntoDeserializer};
 use serde::{Deserialize, Deserializer};
 use serde_test::{assert_de_tokens, Configure, Token};
 
@@ -202,9 +202,8 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
     .chain(vec![Token::MapEnd].into_iter())
     .collect();
 
-    let mut de = serde_test::Deserializer::new(&concated_tokens);
-    let base = IgnoreBase::deserialize(&mut de).unwrap();
-    assert_eq!(base, IgnoreBase { a: 1 });
+    let expected = IgnoreBase { a: 1 };
+    assert_de_tokens(&expected, &concated_tokens);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -2245,39 +2244,34 @@ fn test_cstr() {
 
 #[test]
 fn test_atomics() {
-    fn test<L, A, T>(load: L, val: T, token: Token)
+    fn test<L, A, T>(load: L, val: T)
     where
         L: Fn(&A, Ordering) -> T,
         A: DeserializeOwned,
-        T: PartialEq + Debug,
+        T: PartialEq + Debug + Copy + for<'de> IntoDeserializer<'de>,
     {
-        let tokens = &[token];
-        let mut de = serde_test::Deserializer::new(tokens);
-        match A::deserialize(&mut de) {
+        match A::deserialize(val.into_deserializer()) {
             Ok(v) => {
                 let loaded = load(&v, Ordering::Relaxed);
                 assert_eq!(val, loaded);
             }
             Err(e) => panic!("tokens failed to deserialize: {}", e),
-        };
-        if de.remaining() > 0 {
-            panic!("{} remaining tokens", de.remaining());
         }
     }
 
-    test(AtomicBool::load, true, Token::Bool(true));
-    test(AtomicI8::load, -127, Token::I8(-127i8));
-    test(AtomicI16::load, -510, Token::I16(-510i16));
-    test(AtomicI32::load, -131072, Token::I32(-131072i32));
-    test(AtomicIsize::load, -131072isize, Token::I32(-131072));
-    test(AtomicU8::load, 127, Token::U8(127u8));
-    test(AtomicU16::load, 510u16, Token::U16(510u16));
-    test(AtomicU32::load, 131072u32, Token::U32(131072u32));
-    test(AtomicUsize::load, 131072usize, Token::U32(131072));
+    test(AtomicBool::load, true);
+    test(AtomicI8::load, -127i8);
+    test(AtomicI16::load, -510i16);
+    test(AtomicI32::load, -131072i32);
+    test(AtomicIsize::load, -131072isize);
+    test(AtomicU8::load, 127u8);
+    test(AtomicU16::load, 510u16);
+    test(AtomicU32::load, 131072u32);
+    test(AtomicUsize::load, 131072usize);
 
     #[cfg(target_arch = "x86_64")]
     {
-        test(AtomicI64::load, -8589934592, Token::I64(-8589934592));
-        test(AtomicU64::load, 8589934592u64, Token::U64(8589934592));
+        test(AtomicI64::load, -8589934592i64);
+        test(AtomicU64::load, 8589934592u64);
     }
 }
