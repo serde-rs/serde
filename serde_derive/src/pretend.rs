@@ -97,29 +97,14 @@ fn pretend_fields_used_struct_packed(cont: &Container, fields: &[Field]) -> Toke
 
     let members = fields.iter().map(|field| &field.member).collect::<Vec<_>>();
 
-    #[cfg(not(no_ptr_addr_of))]
-    {
-        quote! {
-            match _serde::__private::None::<&#type_ident #ty_generics> {
-                _serde::__private::Some(__v @ #type_ident { #(#members: _),* }) => {
-                    #(
-                        let _ = _serde::__private::ptr::addr_of!(__v.#members);
-                    )*
-                }
-                _ => {}
+    quote! {
+        match _serde::__private::None::<&#type_ident #ty_generics> {
+            _serde::__private::Some(__v @ #type_ident { #(#members: _),* }) => {
+                #(
+                    let _ = _serde::__private::ptr::addr_of!(__v.#members);
+                )*
             }
-        }
-    }
-
-    #[cfg(no_ptr_addr_of)]
-    {
-        let placeholders = (0usize..).map(|i| format_ident!("__v{}", i));
-
-        quote! {
-            match _serde::__private::None::<#type_ident #ty_generics> {
-                _serde::__private::Some(#type_ident { #(#members: #placeholders),* }) => {}
-                _ => {}
-            }
+            _ => {}
         }
     }
 }

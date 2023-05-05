@@ -69,8 +69,6 @@ pub fn expand_derive_deserialize(
 
     Ok(dummy::wrap_in_const(
         cont.attrs.custom_serde_path(),
-        "DESERIALIZE",
-        ident,
         impl_block,
     ))
 }
