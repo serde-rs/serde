@@ -982,13 +982,7 @@ mod content {
         where
             E: de::Error,
         {
-            if field == self.tag {
-                Ok(TagContentOtherField::Tag)
-            } else if field == self.content {
-                Ok(TagContentOtherField::Content)
-            } else {
-                Ok(TagContentOtherField::Other)
-            }
+            self.visit_bytes(field.as_bytes())
         }
 
         fn visit_bytes<E>(self, field: &[u8]) -> Result<Self::Value, E>
