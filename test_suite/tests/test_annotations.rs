@@ -2337,10 +2337,7 @@ fn test_adjacently_tagged_enum_bytes() {
             Token::Str("t"),
             Token::Str("A"),
             Token::Str("c"),
-            Token::Struct {
-                name: "A",
-                len: 1,
-            },
+            Token::Struct { name: "A", len: 1 },
             Token::Str("a"),
             Token::I32(0),
             Token::StructEnd,
@@ -2358,10 +2355,7 @@ fn test_adjacently_tagged_enum_bytes() {
             Token::Bytes(b"t"),
             Token::Str("A"),
             Token::Bytes(b"c"),
-            Token::Struct {
-                name: "A",
-                len: 1,
-            },
+            Token::Struct { name: "A", len: 1 },
             Token::Str("a"),
             Token::I32(0),
             Token::StructEnd,
