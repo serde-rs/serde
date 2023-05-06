@@ -1178,8 +1178,7 @@ fn deserialize_struct_in_place(
         None,
     ));
 
-    let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
-    let visitor_var = if all_skipped {
+    let mut_seq = if field_names_idents.is_empty() {
         quote!(_)
     } else {
         quote!(mut __seq)
@@ -1230,7 +1229,7 @@ fn deserialize_struct_in_place(
             }
 
             #[inline]
-            fn visit_seq<__A>(self, #visitor_var: __A) -> _serde::__private::Result<Self::Value, __A::Error>
+            fn visit_seq<__A>(self, #mut_seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
             where
                 __A: _serde::de::SeqAccess<#delife>,
             {
