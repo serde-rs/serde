@@ -290,7 +290,7 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
                 deserialize_struct(params, fields, &cont.attrs, StructForm::Struct)
             }
             Data::Struct(Style::Tuple, fields) | Data::Struct(Style::Newtype, fields) => {
-                deserialize_tuple(None, params, fields, &cont.attrs, None)
+                deserialize_tuple(params, fields, &cont.attrs, TupleForm::Tuple)
             }
             Data::Struct(Style::Unit, _) => deserialize_unit_struct(params, &cont.attrs),
         }
@@ -438,12 +438,20 @@ fn deserialize_unit_struct(params: &Parameters, cattrs: &attr::Container) -> Fra
     }
 }
 
+enum TupleForm<'a> {
+    Tuple,
+    /// Contains a variant name
+    ExternallyTagged(&'a syn::Ident),
+    /// Contains a variant name and an intermediate deserializer from which actual
+    /// deserialization will be performed
+    Untagged(&'a syn::Ident, TokenStream),
+}
+
 fn deserialize_tuple(
-    variant_ident: Option<&syn::Ident>,
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
-    deserializer: Option<TokenStream>,
+    form: TupleForm,
 ) -> Fragment {
     assert!(!cattrs.has_flatten());
 
@@ -468,23 +476,27 @@ fn deserialize_tuple(
         quote!(#this_value)
     };
 
-    let is_enum = variant_ident.is_some();
-    let type_path = match variant_ident {
-        Some(variant_ident) => quote!(#construct::#variant_ident),
-        None => construct,
+    let type_path = match form {
+        TupleForm::Tuple => construct,
+        TupleForm::ExternallyTagged(variant_ident) | TupleForm::Untagged(variant_ident, _) => {
+            quote!(#construct::#variant_ident)
+        }
     };
-    let expecting = match variant_ident {
-        Some(variant_ident) => format!("tuple variant {}::{}", params.type_name(), variant_ident),
-        None => format!("tuple struct {}", params.type_name()),
+    let expecting = match form {
+        TupleForm::Tuple => format!("tuple struct {}", params.type_name()),
+        TupleForm::ExternallyTagged(variant_ident) | TupleForm::Untagged(variant_ident, _) => {
+            format!("tuple variant {}::{}", params.type_name(), variant_ident)
+        }
     };
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     let nfields = fields.len();
 
-    let visit_newtype_struct = if !is_enum && nfields == 1 {
-        Some(deserialize_newtype_struct(&type_path, params, &fields[0]))
-    } else {
-        None
+    let visit_newtype_struct = match form {
+        TupleForm::Tuple if nfields == 1 => {
+            Some(deserialize_newtype_struct(&type_path, params, &fields[0]))
+        }
+        _ => None,
     };
 
     let visit_seq = Stmts(deserialize_seq(
@@ -497,16 +509,25 @@ fn deserialize_tuple(
             lifetime: _serde::__private::PhantomData,
         }
     };
-    let dispatch = if let Some(deserializer) = deserializer {
-        quote!(_serde::Deserializer::deserialize_tuple(#deserializer, #field_count, #visitor_expr))
-    } else if is_enum {
-        quote!(_serde::de::VariantAccess::tuple_variant(__variant, #field_count, #visitor_expr))
-    } else if nfields == 1 {
-        let type_name = cattrs.name().deserialize_name();
-        quote!(_serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
-    } else {
-        let type_name = cattrs.name().deserialize_name();
-        quote!(_serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #field_count, #visitor_expr))
+    let dispatch = match form {
+        TupleForm::Tuple if nfields == 1 => {
+            let type_name = cattrs.name().deserialize_name();
+            quote! {
+                _serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr)
+            }
+        }
+        TupleForm::Tuple => {
+            let type_name = cattrs.name().deserialize_name();
+            quote! {
+                _serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #field_count, #visitor_expr)
+            }
+        }
+        TupleForm::ExternallyTagged(_) => quote! {
+            _serde::de::VariantAccess::tuple_variant(__variant, #field_count, #visitor_expr)
+        },
+        TupleForm::Untagged(_, deserializer) => quote! {
+            _serde::Deserializer::deserialize_tuple(#deserializer, #field_count, #visitor_expr)
+        },
     };
 
     let visitor_var = if field_count == 0 {
@@ -1805,9 +1826,12 @@ fn deserialize_externally_tagged_variant(
             &variant.fields[0],
             cattrs,
         ),
-        Style::Tuple => {
-            deserialize_tuple(Some(variant_ident), params, &variant.fields, cattrs, None)
-        }
+        Style::Tuple => deserialize_tuple(
+            params,
+            &variant.fields,
+            cattrs,
+            TupleForm::ExternallyTagged(variant_ident),
+        ),
         Style::Struct => deserialize_struct(
             params,
             &variant.fields,
@@ -1902,11 +1926,10 @@ fn deserialize_untagged_variant(
             &deserializer,
         ),
         Style::Tuple => deserialize_tuple(
-            Some(variant_ident),
             params,
             &variant.fields,
             cattrs,
-            Some(deserializer),
+            TupleForm::Untagged(variant_ident, deserializer),
         ),
         Style::Struct => deserialize_struct(
             params,
