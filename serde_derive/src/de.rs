@@ -630,11 +630,10 @@ fn deserialize_tuple_in_place(
         }
     };
 
+    let type_name = cattrs.name().deserialize_name();
     let dispatch = if nfields == 1 {
-        let type_name = cattrs.name().deserialize_name();
         quote!(_serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
     } else {
-        let type_name = cattrs.name().deserialize_name();
         quote!(_serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #field_count, #visitor_expr))
     };
 
@@ -1164,19 +1163,7 @@ fn deserialize_struct_in_place(
     let field_names = field_names_idents
         .iter()
         .flat_map(|(_, _, aliases)| aliases);
-
-    let visitor_expr = quote! {
-        __Visitor {
-            place: __place,
-            lifetime: _serde::__private::PhantomData,
-        }
-    };
-    let dispatch = {
-        let type_name = cattrs.name().deserialize_name();
-        quote! {
-            _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
-        }
-    };
+    let type_name = cattrs.name().deserialize_name();
 
     let in_place_impl_generics = de_impl_generics.in_place();
     let in_place_ty_generics = de_ty_generics.in_place();
@@ -1218,7 +1205,10 @@ fn deserialize_struct_in_place(
         #[doc(hidden)]
         const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
 
-        #dispatch
+        _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, __Visitor {
+            place: __place,
+            lifetime: _serde::__private::PhantomData,
+        })
     })
 }
 
