@@ -287,7 +287,7 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
         match &cont.data {
             Data::Enum(variants) => deserialize_enum(params, variants, &cont.attrs),
             Data::Struct(Style::Struct, fields) => {
-                deserialize_struct(None, params, fields, &cont.attrs, None, false)
+                deserialize_struct(params, fields, &cont.attrs, StructForm::Struct)
             }
             Data::Struct(Style::Tuple, fields) | Data::Struct(Style::Newtype, fields) => {
                 deserialize_tuple(None, params, fields, &cont.attrs, None)
@@ -901,13 +901,23 @@ fn deserialize_newtype_struct_in_place(params: &Parameters, field: &Field) -> To
     }
 }
 
+enum StructForm<'a> {
+    Struct,
+    /// Contains a variant name
+    ExternallyTagged(&'a syn::Ident),
+    /// Contains a variant name and an intermediate deserializer from which actual
+    /// deserialization will be performed
+    InternallyTagged(&'a syn::Ident, TokenStream),
+    /// Contains a variant name and an intermediate deserializer from which actual
+    /// deserialization will be performed
+    Untagged(&'a syn::Ident, TokenStream),
+}
+
 fn deserialize_struct(
-    variant_ident: Option<&syn::Ident>,
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
-    deserializer: Option<TokenStream>,
-    untagged: bool,
+    form: StructForm,
 ) -> Fragment {
     let this_type = &params.this_type;
     let this_value = &params.this_value;
@@ -925,13 +935,19 @@ fn deserialize_struct(
         quote!(#this_value)
     };
 
-    let type_path = match variant_ident {
-        Some(variant_ident) => quote!(#construct::#variant_ident),
-        None => construct,
+    let type_path = match form {
+        StructForm::Struct => construct,
+        StructForm::ExternallyTagged(variant_ident)
+        | StructForm::InternallyTagged(variant_ident, _)
+        | StructForm::Untagged(variant_ident, _) => quote!(#construct::#variant_ident),
     };
-    let expecting = match variant_ident {
-        Some(variant_ident) => format!("struct variant {}::{}", params.type_name(), variant_ident),
-        None => format!("struct {}", params.type_name()),
+    let expecting = match form {
+        StructForm::Struct => format!("struct {}", params.type_name()),
+        StructForm::ExternallyTagged(variant_ident)
+        | StructForm::InternallyTagged(variant_ident, _)
+        | StructForm::Untagged(variant_ident, _) => {
+            format!("struct variant {}::{}", params.type_name(), variant_ident)
+        }
     };
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
@@ -958,35 +974,35 @@ fn deserialize_struct(
 
     // untagged struct variants do not get a visit_seq method. The same applies to
     // structs that only have a map representation.
-    let visit_seq = if untagged || cattrs.has_flatten() {
-        None
-    } else {
-        let mut_seq = if field_names_idents.is_empty() {
-            quote!(_)
-        } else {
-            quote!(mut __seq)
-        };
+    let visit_seq = match form {
+        StructForm::Untagged(..) => None,
+        _ if cattrs.has_flatten() => None,
+        _ => {
+            let mut_seq = if field_names_idents.is_empty() {
+                quote!(_)
+            } else {
+                quote!(mut __seq)
+            };
 
-        let visit_seq = Stmts(deserialize_seq(
-            &type_path, params, fields, true, cattrs, expecting,
-        ));
+            let visit_seq = Stmts(deserialize_seq(
+                &type_path, params, fields, true, cattrs, expecting,
+            ));
 
-        Some(quote! {
-            #[inline]
-            fn visit_seq<__A>(self, #mut_seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
-            where
-                __A: _serde::de::SeqAccess<#delife>,
-            {
-                #visit_seq
-            }
-        })
+            Some(quote! {
+                #[inline]
+                fn visit_seq<__A>(self, #mut_seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
+                where
+                    __A: _serde::de::SeqAccess<#delife>,
+                {
+                    #visit_seq
+                }
+            })
+        }
     };
     let visit_map = Stmts(deserialize_map(&type_path, params, fields, cattrs));
 
-    let is_enum = variant_ident.is_some();
-    let need_seed = deserializer.is_none();
-    let visitor_seed = if need_seed && is_enum && cattrs.has_flatten() {
-        Some(quote! {
+    let visitor_seed = match form {
+        StructForm::ExternallyTagged(..) if cattrs.has_flatten() => Some(quote! {
             impl #de_impl_generics _serde::de::DeserializeSeed<#delife> for __Visitor #de_ty_generics #where_clause {
                 type Value = #this_type #ty_generics;
 
@@ -997,9 +1013,8 @@ fn deserialize_struct(
                     _serde::Deserializer::deserialize_map(__deserializer, self)
                 }
             }
-        })
-    } else {
-        None
+        }),
+        _ => None,
     };
 
     let fields_stmt = if cattrs.has_flatten() {
@@ -1021,27 +1036,28 @@ fn deserialize_struct(
             lifetime: _serde::__private::PhantomData,
         }
     };
-    let dispatch = if let Some(deserializer) = deserializer {
-        quote! {
-            _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
-        }
-    } else if is_enum && cattrs.has_flatten() {
-        quote! {
-            _serde::de::VariantAccess::newtype_variant_seed(__variant, #visitor_expr)
-        }
-    } else if is_enum {
-        quote! {
-            _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
-        }
-    } else if cattrs.has_flatten() {
-        quote! {
+    let dispatch = match form {
+        StructForm::Struct if cattrs.has_flatten() => quote! {
             _serde::Deserializer::deserialize_map(__deserializer, #visitor_expr)
+        },
+        StructForm::Struct => {
+            let type_name = cattrs.name().deserialize_name();
+            quote! {
+                _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
+            }
         }
-    } else {
-        let type_name = cattrs.name().deserialize_name();
-        quote! {
-            _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
-        }
+        StructForm::ExternallyTagged(_) if cattrs.has_flatten() => quote! {
+            _serde::de::VariantAccess::newtype_variant_seed(__variant, #visitor_expr)
+        },
+        StructForm::ExternallyTagged(_) => quote! {
+            _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
+        },
+        StructForm::InternallyTagged(_, deserializer) => quote! {
+            _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
+        },
+        StructForm::Untagged(_, deserializer) => quote! {
+            _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
+        },
     };
 
     quote_block! {
@@ -1793,12 +1809,10 @@ fn deserialize_externally_tagged_variant(
             deserialize_tuple(Some(variant_ident), params, &variant.fields, cattrs, None)
         }
         Style::Struct => deserialize_struct(
-            Some(variant_ident),
             params,
             &variant.fields,
             cattrs,
-            None,
-            false,
+            StructForm::ExternallyTagged(variant_ident),
         ),
     }
 }
@@ -1838,12 +1852,10 @@ fn deserialize_internally_tagged_variant(
             &deserializer,
         ),
         Style::Struct => deserialize_struct(
-            Some(variant_ident),
             params,
             &variant.fields,
             cattrs,
-            Some(deserializer),
-            false,
+            StructForm::InternallyTagged(variant_ident, deserializer),
         ),
         Style::Tuple => unreachable!("checked in serde_derive_internals"),
     }
@@ -1897,12 +1909,10 @@ fn deserialize_untagged_variant(
             Some(deserializer),
         ),
         Style::Struct => deserialize_struct(
-            Some(variant_ident),
             params,
             &variant.fields,
             cattrs,
-            Some(deserializer),
-            true,
+            StructForm::Untagged(variant_ident, deserializer),
         ),
     }
 }
