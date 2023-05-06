@@ -324,10 +324,10 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
 
     let code = match &cont.data {
         Data::Struct(Style::Struct, fields) => {
-            deserialize_struct_in_place(None, params, fields, &cont.attrs, None)?
+            deserialize_struct_in_place(params, fields, &cont.attrs)?
         }
         Data::Struct(Style::Tuple, fields) | Data::Struct(Style::Newtype, fields) => {
-            deserialize_tuple_in_place(None, params, fields, &cont.attrs, None)
+            deserialize_tuple_in_place(params, fields, &cont.attrs)
         }
         Data::Enum(_) | Data::Struct(Style::Unit, _) => {
             return None;
@@ -582,11 +582,9 @@ fn deserialize_tuple(
 
 #[cfg(feature = "deserialize_in_place")]
 fn deserialize_tuple_in_place(
-    variant_ident: Option<syn::Ident>,
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
-    deserializer: Option<TokenStream>,
 ) -> Fragment {
     assert!(!cattrs.has_flatten());
 
@@ -600,16 +598,12 @@ fn deserialize_tuple_in_place(
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
 
-    let is_enum = variant_ident.is_some();
-    let expecting = match variant_ident {
-        Some(variant_ident) => format!("tuple variant {}::{}", params.type_name(), variant_ident),
-        None => format!("tuple struct {}", params.type_name()),
-    };
+    let expecting = format!("tuple struct {}", params.type_name());
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     let nfields = fields.len();
 
-    let visit_newtype_struct = if !is_enum && nfields == 1 {
+    let visit_newtype_struct = if nfields == 1 {
         // We do not generate deserialize_in_place if every field has a
         // deserialize_with.
         assert!(fields[0].attrs.deserialize_with().is_none());
@@ -636,11 +630,7 @@ fn deserialize_tuple_in_place(
         }
     };
 
-    let dispatch = if let Some(deserializer) = deserializer {
-        quote!(_serde::Deserializer::deserialize_tuple(#deserializer, #field_count, #visitor_expr))
-    } else if is_enum {
-        quote!(_serde::de::VariantAccess::tuple_variant(__variant, #field_count, #visitor_expr))
-    } else if nfields == 1 {
+    let dispatch = if nfields == 1 {
         let type_name = cattrs.name().deserialize_name();
         quote!(_serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
     } else {
@@ -1126,14 +1116,10 @@ fn deserialize_struct(
 
 #[cfg(feature = "deserialize_in_place")]
 fn deserialize_struct_in_place(
-    variant_ident: Option<syn::Ident>,
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
-    deserializer: Option<TokenStream>,
 ) -> Option<Fragment> {
-    let is_enum = variant_ident.is_some();
-
     // for now we do not support in_place deserialization for structs that
     // are represented as map.
     if cattrs.has_flatten() {
@@ -1145,10 +1131,7 @@ fn deserialize_struct_in_place(
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
 
-    let expecting = match variant_ident {
-        Some(variant_ident) => format!("struct variant {}::{}", params.type_name(), variant_ident),
-        None => format!("struct {}", params.type_name()),
-    };
+    let expecting = format!("struct {}", params.type_name());
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     let field_names_idents: Vec<_> = fields
@@ -1188,15 +1171,7 @@ fn deserialize_struct_in_place(
             lifetime: _serde::__private::PhantomData,
         }
     };
-    let dispatch = if let Some(deserializer) = deserializer {
-        quote! {
-            _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
-        }
-    } else if is_enum {
-        quote! {
-            _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
-        }
-    } else {
+    let dispatch = {
         let type_name = cattrs.name().deserialize_name();
         quote! {
             _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
