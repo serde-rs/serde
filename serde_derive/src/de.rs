@@ -981,8 +981,7 @@ fn deserialize_struct(
     // structs that only have a map representation.
     let visit_seq = match *untagged {
         Untagged::No if !cattrs.has_flatten() => {
-            let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
-            let mut_seq = if all_skipped {
+            let mut_seq = if field_names_idents.is_empty() {
                 quote!(_)
             } else {
                 quote!(mut __seq)
