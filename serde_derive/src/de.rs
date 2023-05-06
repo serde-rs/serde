@@ -610,7 +610,19 @@ fn deserialize_tuple_in_place(
     let nfields = fields.len();
 
     let visit_newtype_struct = if !is_enum && nfields == 1 {
-        Some(deserialize_newtype_struct_in_place(params, &fields[0]))
+        // We do not generate deserialize_in_place if every field has a
+        // deserialize_with.
+        assert!(fields[0].attrs.deserialize_with().is_none());
+
+        Some(quote! {
+            #[inline]
+            fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::__private::Result<Self::Value, __E::Error>
+            where
+                __E: _serde::Deserializer<#delife>,
+            {
+                _serde::Deserialize::deserialize_in_place(__e, &mut self.place.0)
+            }
+        })
     } else {
         None
     };
@@ -914,25 +926,6 @@ fn deserialize_newtype_struct(
         {
             let __field0: #field_ty = #value;
             _serde::__private::Ok(#result)
-        }
-    }
-}
-
-#[cfg(feature = "deserialize_in_place")]
-fn deserialize_newtype_struct_in_place(params: &Parameters, field: &Field) -> TokenStream {
-    // We do not generate deserialize_in_place if every field has a
-    // deserialize_with.
-    assert!(field.attrs.deserialize_with().is_none());
-
-    let delife = params.borrowed.de_lifetime();
-
-    quote! {
-        #[inline]
-        fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::__private::Result<Self::Value, __E::Error>
-        where
-            __E: _serde::Deserializer<#delife>,
-        {
-            _serde::Deserialize::deserialize_in_place(__e, &mut self.place.0)
         }
     }
 }
