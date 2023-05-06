@@ -1185,7 +1185,9 @@ fn deserialize_struct_in_place(
     };
     let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
     let visit_map = Stmts(deserialize_map_in_place(params, fields, cattrs));
-    let field_names = field_names_idents.iter().map(|(name, _, _)| name);
+    let field_names = field_names_idents
+        .iter()
+        .flat_map(|(_, _, aliases)| aliases);
 
     let visitor_expr = quote! {
         __Visitor {
