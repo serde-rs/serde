@@ -287,7 +287,7 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
         match &cont.data {
             Data::Enum(variants) => deserialize_enum(params, variants, &cont.attrs),
             Data::Struct(Style::Struct, fields) => {
-                deserialize_struct(None, params, fields, &cont.attrs, None, &Untagged::No)
+                deserialize_struct(None, params, fields, &cont.attrs, None, false)
             }
             Data::Struct(Style::Tuple, fields) | Data::Struct(Style::Newtype, fields) => {
                 deserialize_tuple(None, params, fields, &cont.attrs, None)
@@ -901,18 +901,13 @@ fn deserialize_newtype_struct_in_place(params: &Parameters, field: &Field) -> To
     }
 }
 
-enum Untagged {
-    Yes,
-    No,
-}
-
 fn deserialize_struct(
     variant_ident: Option<&syn::Ident>,
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
     deserializer: Option<TokenStream>,
-    untagged: &Untagged,
+    untagged: bool,
 ) -> Fragment {
     let this_type = &params.this_type;
     let this_value = &params.this_value;
@@ -963,29 +958,28 @@ fn deserialize_struct(
 
     // untagged struct variants do not get a visit_seq method. The same applies to
     // structs that only have a map representation.
-    let visit_seq = match *untagged {
-        Untagged::No if !cattrs.has_flatten() => {
-            let mut_seq = if field_names_idents.is_empty() {
-                quote!(_)
-            } else {
-                quote!(mut __seq)
-            };
+    let visit_seq = if untagged || cattrs.has_flatten() {
+        None
+    } else {
+        let mut_seq = if field_names_idents.is_empty() {
+            quote!(_)
+        } else {
+            quote!(mut __seq)
+        };
 
-            let visit_seq = Stmts(deserialize_seq(
-                &type_path, params, fields, true, cattrs, expecting,
-            ));
+        let visit_seq = Stmts(deserialize_seq(
+            &type_path, params, fields, true, cattrs, expecting,
+        ));
 
-            Some(quote! {
-                #[inline]
-                fn visit_seq<__A>(self, #mut_seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
-                where
-                    __A: _serde::de::SeqAccess<#delife>,
-                {
-                    #visit_seq
-                }
-            })
-        }
-        _ => None,
+        Some(quote! {
+            #[inline]
+            fn visit_seq<__A>(self, #mut_seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
+            where
+                __A: _serde::de::SeqAccess<#delife>,
+            {
+                #visit_seq
+            }
+        })
     };
     let visit_map = Stmts(deserialize_map(&type_path, params, fields, cattrs));
 
@@ -1804,7 +1798,7 @@ fn deserialize_externally_tagged_variant(
             &variant.fields,
             cattrs,
             None,
-            &Untagged::No,
+            false,
         ),
     }
 }
@@ -1849,7 +1843,7 @@ fn deserialize_internally_tagged_variant(
             &variant.fields,
             cattrs,
             Some(deserializer),
-            &Untagged::No,
+            false,
         ),
         Style::Tuple => unreachable!("checked in serde_derive_internals"),
     }
@@ -1908,7 +1902,7 @@ fn deserialize_untagged_variant(
             &variant.fields,
             cattrs,
             Some(deserializer),
-            &Untagged::Yes,
+            true,
         ),
     }
 }
