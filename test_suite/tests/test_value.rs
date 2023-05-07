@@ -43,11 +43,11 @@ mod access_to_enum {
     use serde::de::MapAccess;
 
     #[derive(PartialEq, Debug)]
-    struct Potential(PotentialKind);
+    struct UseAccess(Enum);
 
     #[derive(PartialEq, Debug, Deserialize)]
-    enum PotentialKind {
-        Airebo(Airebo),
+    enum Enum {
+        Newtype(Airebo),
     }
 
     #[derive(PartialEq, Debug, Deserialize)]
@@ -55,15 +55,15 @@ mod access_to_enum {
         lj_sigma: f64,
     }
 
-    impl<'de> Deserialize<'de> for Potential {
+    impl<'de> Deserialize<'de> for UseAccess {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
             D: Deserializer<'de>,
         {
-            struct PotentialVisitor;
+            struct UseAccessVisitor;
 
-            impl<'de> Visitor<'de> for PotentialVisitor {
-                type Value = Potential;
+            impl<'de> Visitor<'de> for UseAccessVisitor {
+                type Value = UseAccess;
 
                 fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                     formatter.write_str("a map")
@@ -73,11 +73,11 @@ mod access_to_enum {
                 where
                     A: MapAccess<'de>,
                 {
-                    Deserialize::deserialize(MapAccessDeserializer::new(map)).map(Potential)
+                    Deserialize::deserialize(MapAccessDeserializer::new(map)).map(UseAccess)
                 }
             }
 
-            deserializer.deserialize_any(PotentialVisitor)
+            deserializer.deserialize_any(UseAccessVisitor)
         }
     }
 
@@ -88,13 +88,11 @@ mod access_to_enum {
 
         #[test]
         fn newtype() {
-            let expected = Potential(PotentialKind::Airebo(Airebo { lj_sigma: 14.0 }));
-
             assert_de_tokens(
-                &expected,
+                &UseAccess(Enum::Newtype(Airebo { lj_sigma: 14.0 })),
                 &[
                     Token::Map { len: Some(1) },
-                    Token::Str("Airebo"),
+                    Token::Str("Newtype"),
                     Token::Map { len: Some(1) },
                     Token::Str("lj_sigma"),
                     Token::F64(14.0),
