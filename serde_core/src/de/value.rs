@@ -1675,7 +1675,10 @@ where
     {
         match tri!(self.map.next_key_seed(seed)) {
             Some(key) => Ok((key, private::map_as_enum(self.map))),
-            None => Err(de::Error::invalid_type(de::Unexpected::Map, &"enum")),
+            None => Err(de::Error::invalid_length(
+                self.map.size_hint().unwrap_or(0),
+                &"enum",
+            )),
         }
     }
 }
