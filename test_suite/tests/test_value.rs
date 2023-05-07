@@ -3,7 +3,7 @@
 use serde::de::value;
 use serde::de::{Deserialize, Deserializer, IntoDeserializer, Visitor};
 use serde_derive::Deserialize;
-use serde_test::{assert_de_tokens, Token};
+use serde_test::{assert_de_tokens, assert_de_tokens_error, Token};
 use std::fmt;
 
 #[test]
@@ -147,6 +147,31 @@ mod access_to_enum {
                     Token::MapEnd,
                     Token::MapEnd,
                 ],
+            );
+        }
+
+        #[test]
+        fn wrong_tag() {
+            assert_de_tokens_error::<UseAccess>(
+                &[
+                    Token::Map { len: Some(1) },
+                    Token::Str("AnotherTag"),
+                    Token::Map { len: Some(1) },
+                    // Tokens that could follow, but assert_de_tokens_error do not want them
+                    // Token::Str("lj_sigma"),
+                    // Token::F64(14.0),
+                    // Token::MapEnd,
+                    // Token::MapEnd,
+                ],
+                "unknown variant `AnotherTag`, expected one of `Unit`, `Newtype`, `Tuple`, `Struct`",
+            );
+        }
+
+        #[test]
+        fn empty_map() {
+            assert_de_tokens_error::<UseAccess>(
+                &[Token::Map { len: Some(0) }, Token::MapEnd],
+                "invalid type: map, expected enum",
             );
         }
     }
