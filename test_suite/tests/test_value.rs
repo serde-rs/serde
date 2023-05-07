@@ -47,7 +47,10 @@ mod access_to_enum {
 
     #[derive(PartialEq, Debug, Deserialize)]
     enum Enum {
+        Unit,
         Newtype(Airebo),
+        Tuple(String, f64),
+        Struct { lj_sigma: f64 },
     }
 
     #[derive(PartialEq, Debug, Deserialize)]
@@ -87,12 +90,57 @@ mod access_to_enum {
         use super::*;
 
         #[test]
+        fn unit() {
+            assert_de_tokens(
+                &UseAccess(Enum::Unit),
+                &[
+                    Token::Map { len: Some(1) },
+                    Token::Str("Unit"),
+                    Token::Unit,
+                    Token::MapEnd,
+                ],
+            );
+        }
+
+        #[test]
         fn newtype() {
             assert_de_tokens(
                 &UseAccess(Enum::Newtype(Airebo { lj_sigma: 14.0 })),
                 &[
                     Token::Map { len: Some(1) },
                     Token::Str("Newtype"),
+                    Token::Map { len: Some(1) },
+                    Token::Str("lj_sigma"),
+                    Token::F64(14.0),
+                    Token::MapEnd,
+                    Token::MapEnd,
+                ],
+            );
+        }
+
+        #[test]
+        fn tuple() {
+            assert_de_tokens(
+                &UseAccess(Enum::Tuple("lj_sigma".to_string(), 14.0)),
+                &[
+                    Token::Map { len: Some(1) },
+                    Token::Str("Tuple"),
+                    Token::Seq { len: Some(2) },
+                    Token::Str("lj_sigma"),
+                    Token::F64(14.0),
+                    Token::SeqEnd,
+                    Token::MapEnd,
+                ],
+            );
+        }
+
+        #[test]
+        fn struct_() {
+            assert_de_tokens(
+                &UseAccess(Enum::Struct { lj_sigma: 14.0 }),
+                &[
+                    Token::Map { len: Some(1) },
+                    Token::Str("Struct"),
                     Token::Map { len: Some(1) },
                     Token::Str("lj_sigma"),
                     Token::F64(14.0),
