@@ -1178,6 +1178,12 @@ where
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A deserializer holding a `SeqAccess`.
+///
+/// This deserializer will call [`Visitor::visit_seq`] for all requests except
+/// for [`Deserializer::deserialize_enum`]. In the latest case the enum will be
+/// deserialized from the first two elements of a sequence. The first element
+/// would be interpreted as a variant name and the second as a content of
+/// a variant. In case of unit variant the second element is optional.
 #[derive(Clone, Debug)]
 pub struct SeqAccessDeserializer<A> {
     seq: A,
@@ -1640,6 +1646,12 @@ where
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A deserializer holding a `MapAccess`.
+///
+/// This deserializer will call [`Visitor::visit_map`] for all requests except
+/// for [`Deserializer::deserialize_enum`]. In the latest case the enum will be
+/// deserialized from the first entry of a map. The map key would be interpreted
+/// as a variant name and the map value would be interpreted as a content of
+/// a variant.
 #[derive(Clone, Debug)]
 pub struct MapAccessDeserializer<A> {
     map: A,
