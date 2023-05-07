@@ -171,7 +171,7 @@ mod access_to_enum {
         fn empty_map() {
             assert_de_tokens_error::<UseAccess>(
                 &[Token::Map { len: Some(0) }, Token::MapEnd],
-                "invalid type: map, expected enum",
+                "invalid length 0, expected enum",
             );
         }
     }
