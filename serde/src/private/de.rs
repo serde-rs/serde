@@ -2775,7 +2775,11 @@ where
     where
         V: Visitor<'de>,
     {
-        visitor.visit_map(FlatMapAccess::new(self.0.iter()))
+        visitor.visit_map(FlatMapAccess {
+            iter: self.0.iter(),
+            pending_content: None,
+            _marker: PhantomData,
+        })
     }
 
     fn deserialize_struct<V>(
@@ -2787,7 +2791,12 @@ where
     where
         V: Visitor<'de>,
     {
-        visitor.visit_map(FlatStructAccess::new(self.0.iter_mut(), fields))
+        visitor.visit_map(FlatStructAccess {
+            iter: self.0.iter_mut(),
+            pending_content: None,
+            fields: fields,
+            _marker: PhantomData,
+        })
     }
 
     fn deserialize_newtype_struct<V>(self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
@@ -2848,19 +2857,6 @@ struct FlatMapAccess<'a, 'de: 'a, E> {
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<'a, 'de, E> FlatMapAccess<'a, 'de, E> {
-    fn new(
-        iter: slice::Iter<'a, Option<(Content<'de>, Content<'de>)>>,
-    ) -> FlatMapAccess<'a, 'de, E> {
-        FlatMapAccess {
-            iter: iter,
-            pending_content: None,
-            _marker: PhantomData,
-        }
-    }
-}
-
-#[cfg(any(feature = "std", feature = "alloc"))]
 impl<'a, 'de, E> MapAccess<'de> for FlatMapAccess<'a, 'de, E>
 where
     E: Error,
@@ -2902,21 +2898,6 @@ struct FlatStructAccess<'a, 'de: 'a, E> {
     pending_content: Option<Content<'de>>,
     fields: &'static [&'static str],
     _marker: PhantomData<E>,
-}
-
-#[cfg(any(feature = "std", feature = "alloc"))]
-impl<'a, 'de, E> FlatStructAccess<'a, 'de, E> {
-    fn new(
-        iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
-        fields: &'static [&'static str],
-    ) -> FlatStructAccess<'a, 'de, E> {
-        FlatStructAccess {
-            iter: iter,
-            pending_content: None,
-            fields: fields,
-            _marker: PhantomData,
-        }
-    }
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
