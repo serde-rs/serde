@@ -2751,16 +2751,7 @@ where
         V: Visitor<'de>,
     {
         for item in self.0.iter_mut() {
-            // items in the vector are nulled out when used.  So we can only use
-            // an item if it's still filled in and if the field is one we care
-            // about.
-            let use_item = match *item {
-                None => false,
-                Some((ref c, _)) => c.as_str().map_or(false, |x| variants.contains(&x)),
-            };
-
-            if use_item {
-                let (key, value) = item.take().unwrap();
+            if let Some((key, value)) = use_item(item, variants) {
                 return visitor.visit_enum(EnumDeserializer::new(key, Some(value)));
             }
         }
@@ -2912,16 +2903,7 @@ where
         T: DeserializeSeed<'de>,
     {
         while let Some(item) = self.iter.next() {
-            // items in the vector are nulled out when used.  So we can only use
-            // an item if it's still filled in and if the field is one we care
-            // about.  In case we do not know which fields we want, we take them all.
-            let use_item = match *item {
-                None => false,
-                Some((ref c, _)) => c.as_str().map_or(false, |key| self.fields.contains(&key)),
-            };
-
-            if use_item {
-                let (key, content) = item.take().unwrap();
+            if let Some((key, content)) = use_item(item, self.fields) {
                 self.pending_content = Some(content);
                 return seed.deserialize(ContentDeserializer::new(key)).map(Some);
             }
@@ -2937,5 +2919,28 @@ where
             Some(value) => seed.deserialize(ContentDeserializer::new(value)),
             None => Err(Error::custom("value is missing")),
         }
+    }
+}
+
+/// Checks if first element of the specified pair matches one of the key from
+/// `keys` parameter and if this is true, takes it from the option and returns.
+/// Otherwise, or if `item` already empty, returns `None`.
+#[cfg(any(feature = "std", feature = "alloc"))]
+fn use_item<'de>(
+    item: &mut Option<(Content<'de>, Content<'de>)>,
+    keys: &[&str],
+) -> Option<(Content<'de>, Content<'de>)> {
+    // items in the vector are nulled out when used.  So we can only use
+    // an item if it's still filled in and if the field is one we care
+    // about.
+    let use_item = match *item {
+        None => false,
+        Some((ref c, _)) => c.as_str().map_or(false, |key| keys.contains(&key)),
+    };
+
+    if use_item {
+        item.take()
+    } else {
+        None
     }
 }
