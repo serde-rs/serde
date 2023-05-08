@@ -2841,7 +2841,7 @@ where
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub struct FlatMapAccess<'a, 'de: 'a, E> {
+struct FlatMapAccess<'a, 'de: 'a, E> {
     iter: slice::Iter<'a, Option<(Content<'de>, Content<'de>)>>,
     pending_content: Option<&'a Content<'de>>,
     _marker: PhantomData<E>,
@@ -2897,7 +2897,7 @@ where
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub struct FlatStructAccess<'a, 'de: 'a, E> {
+struct FlatStructAccess<'a, 'de: 'a, E> {
     iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
     pending_content: Option<Content<'de>>,
     fields: &'static [&'static str],
