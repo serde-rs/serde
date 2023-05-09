@@ -2833,6 +2833,7 @@ mod flatten {
             struct Flatten {
                 #[serde(flatten)]
                 data: Enum,
+
                 #[serde(flatten)]
                 extra: HashMap<String, String>,
             }
@@ -2846,31 +2847,14 @@ mod flatten {
             fn struct_() {
                 let mut extra = HashMap::new();
                 extra.insert("extra_key".into(), "extra value".into());
-                let change_request = Flatten {
-                    data: Enum::Struct {
-                        index: 0,
-                        value: 42,
+                assert_tokens(
+                    &Flatten {
+                        data: Enum::Struct {
+                            index: 0,
+                            value: 42,
+                        },
+                        extra,
                     },
-                    extra,
-                };
-                assert_de_tokens(
-                    &change_request,
-                    &[
-                        Token::Map { len: None },
-                        Token::Str("Struct"),
-                        Token::Map { len: None },
-                        Token::Str("index"),
-                        Token::U32(0),
-                        Token::Str("value"),
-                        Token::U32(42),
-                        Token::MapEnd,
-                        Token::Str("extra_key"),
-                        Token::Str("extra value"),
-                        Token::MapEnd,
-                    ],
-                );
-                assert_ser_tokens(
-                    &change_request,
                     &[
                         Token::Map { len: None },
                         Token::Str("Struct"),
@@ -2897,6 +2881,7 @@ mod flatten {
             #[derive(Debug, PartialEq, Serialize, Deserialize)]
             struct Flatten {
                 outer: u32,
+
                 #[serde(flatten)]
                 data: NewtypeWrapper,
             }
@@ -2918,33 +2903,14 @@ mod flatten {
 
             #[test]
             fn struct_() {
-                let change_request = Flatten {
-                    outer: 42,
-                    data: NewtypeWrapper(Enum::Struct {
-                        index: 0,
-                        value: 42,
-                    }),
-                };
-                assert_de_tokens(
-                    &change_request,
-                    &[
-                        Token::Map { len: None },
-                        Token::Str("outer"),
-                        Token::U32(42),
-                        Token::Str("type"),
-                        Token::Str("Struct"),
-                        Token::Str("value"),
-                        Token::Map { len: None },
-                        Token::Str("index"),
-                        Token::U32(0),
-                        Token::Str("value"),
-                        Token::U32(42),
-                        Token::MapEnd,
-                        Token::MapEnd,
-                    ],
-                );
-                assert_ser_tokens(
-                    &change_request,
+                assert_tokens(
+                    &Flatten {
+                        outer: 42,
+                        data: NewtypeWrapper(Enum::Struct {
+                            index: 0,
+                            value: 42,
+                        }),
+                    },
                     &[
                         Token::Map { len: None },
                         Token::Str("outer"),
@@ -2968,28 +2934,11 @@ mod flatten {
 
             #[test]
             fn newtype() {
-                let change_request = Flatten {
-                    outer: 42,
-                    data: NewtypeWrapper(Enum::Newtype(NewtypeVariant { value: 23 })),
-                };
-                assert_de_tokens(
-                    &change_request,
-                    &[
-                        Token::Map { len: None },
-                        Token::Str("outer"),
-                        Token::U32(42),
-                        Token::Str("type"),
-                        Token::Str("Newtype"),
-                        Token::Str("value"),
-                        Token::Map { len: None },
-                        Token::Str("value"),
-                        Token::U32(23),
-                        Token::MapEnd,
-                        Token::MapEnd,
-                    ],
-                );
-                assert_ser_tokens(
-                    &change_request,
+                assert_tokens(
+                    &Flatten {
+                        outer: 42,
+                        data: NewtypeWrapper(Enum::Newtype(NewtypeVariant { value: 23 })),
+                    },
                     &[
                         Token::Map { len: None },
                         Token::Str("outer"),
