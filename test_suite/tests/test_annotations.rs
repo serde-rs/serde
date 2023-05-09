@@ -2856,7 +2856,7 @@ mod flatten {
                     },
                     &[
                         Token::Map { len: None },
-                        Token::Str("Struct"),
+                        Token::Str("Struct"), // variant
                         Token::Struct {
                             len: 2,
                             name: "Struct",
@@ -2889,10 +2889,10 @@ mod flatten {
             struct NewtypeWrapper(pub Enum);
 
             #[derive(Debug, PartialEq, Serialize, Deserialize)]
-            #[serde(tag = "type", content = "value")]
+            #[serde(tag = "tag", content = "content")]
             enum Enum {
-                Struct { index: u32, value: u32 },
                 Newtype(NewtypeVariant),
+                Struct { index: u32, value: u32 },
             }
 
             #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -2914,9 +2914,9 @@ mod flatten {
                         Token::Map { len: None },
                         Token::Str("outer"),
                         Token::U32(42),
-                        Token::Str("type"),
+                        Token::Str("tag"),
                         Token::Str("Struct"),
-                        Token::Str("value"),
+                        Token::Str("content"),
                         Token::Struct {
                             len: 2,
                             name: "Struct",
@@ -2942,9 +2942,9 @@ mod flatten {
                         Token::Map { len: None },
                         Token::Str("outer"),
                         Token::U32(42),
-                        Token::Str("type"),
+                        Token::Str("tag"),
                         Token::Str("Newtype"),
-                        Token::Str("value"),
+                        Token::Str("content"),
                         Token::Struct {
                             len: 1,
                             name: "NewtypeVariant",
