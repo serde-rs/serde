@@ -2828,6 +2828,7 @@ mod flatten {
 
         mod externally_tagged {
             use super::*;
+            use std::iter::FromIterator;
 
             #[derive(Debug, PartialEq, Serialize, Deserialize)]
             struct Flatten {
@@ -2845,15 +2846,13 @@ mod flatten {
 
             #[test]
             fn struct_() {
-                let mut extra = HashMap::new();
-                extra.insert("extra_key".into(), "extra value".into());
                 assert_tokens(
                     &Flatten {
                         data: Enum::Struct {
                             index: 0,
                             value: 42,
                         },
-                        extra,
+                        extra: HashMap::from_iter([("extra_key".into(), "extra value".into())]),
                     },
                     &[
                         Token::Map { len: None },
