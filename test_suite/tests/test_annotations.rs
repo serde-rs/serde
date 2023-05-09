@@ -2830,25 +2830,24 @@ mod flatten {
             use super::*;
 
             #[derive(Debug, PartialEq, Serialize, Deserialize)]
-            struct FlattenStructEnumWrapper {
+            struct Flatten {
                 #[serde(flatten)]
-                data: FlattenStructEnum,
+                data: Enum,
                 #[serde(flatten)]
                 extra: HashMap<String, String>,
             }
 
             #[derive(Debug, PartialEq, Serialize, Deserialize)]
-            #[serde(rename_all = "snake_case")]
-            enum FlattenStructEnum {
-                InsertInteger { index: u32, value: u32 },
+            enum Enum {
+                Struct { index: u32, value: u32 },
             }
 
             #[test]
-            fn test_flatten_struct_enum() {
+            fn struct_() {
                 let mut extra = HashMap::new();
                 extra.insert("extra_key".into(), "extra value".into());
-                let change_request = FlattenStructEnumWrapper {
-                    data: FlattenStructEnum::InsertInteger {
+                let change_request = Flatten {
+                    data: Enum::Struct {
                         index: 0,
                         value: 42,
                     },
@@ -2858,7 +2857,7 @@ mod flatten {
                     &change_request,
                     &[
                         Token::Map { len: None },
-                        Token::Str("insert_integer"),
+                        Token::Str("Struct"),
                         Token::Map { len: None },
                         Token::Str("index"),
                         Token::U32(0),
@@ -2874,10 +2873,10 @@ mod flatten {
                     &change_request,
                     &[
                         Token::Map { len: None },
-                        Token::Str("insert_integer"),
+                        Token::Str("Struct"),
                         Token::Struct {
                             len: 2,
-                            name: "insert_integer",
+                            name: "Struct",
                         },
                         Token::Str("index"),
                         Token::U32(0),
@@ -2896,32 +2895,32 @@ mod flatten {
             use super::*;
 
             #[derive(Debug, PartialEq, Serialize, Deserialize)]
-            struct FlattenStructTagContentEnumWrapper {
+            struct Flatten {
                 outer: u32,
                 #[serde(flatten)]
-                data: FlattenStructTagContentEnumNewtype,
+                data: NewtypeWrapper,
             }
 
             #[derive(Debug, PartialEq, Serialize, Deserialize)]
-            struct FlattenStructTagContentEnumNewtype(pub FlattenStructTagContentEnum);
+            struct NewtypeWrapper(pub Enum);
 
             #[derive(Debug, PartialEq, Serialize, Deserialize)]
-            #[serde(rename_all = "snake_case", tag = "type", content = "value")]
-            enum FlattenStructTagContentEnum {
-                InsertInteger { index: u32, value: u32 },
-                NewtypeVariant(FlattenStructTagContentEnumNewtypeVariant),
+            #[serde(tag = "type", content = "value")]
+            enum Enum {
+                Struct { index: u32, value: u32 },
+                Newtype(NewtypeVariant),
             }
 
             #[derive(Debug, PartialEq, Serialize, Deserialize)]
-            struct FlattenStructTagContentEnumNewtypeVariant {
+            struct NewtypeVariant {
                 value: u32,
             }
 
             #[test]
-            fn test_flatten_struct_tag_content_enum() {
-                let change_request = FlattenStructTagContentEnumWrapper {
+            fn struct_() {
+                let change_request = Flatten {
                     outer: 42,
-                    data: FlattenStructTagContentEnumNewtype(FlattenStructTagContentEnum::InsertInteger {
+                    data: NewtypeWrapper(Enum::Struct {
                         index: 0,
                         value: 42,
                     }),
@@ -2933,7 +2932,7 @@ mod flatten {
                         Token::Str("outer"),
                         Token::U32(42),
                         Token::Str("type"),
-                        Token::Str("insert_integer"),
+                        Token::Str("Struct"),
                         Token::Str("value"),
                         Token::Map { len: None },
                         Token::Str("index"),
@@ -2951,11 +2950,11 @@ mod flatten {
                         Token::Str("outer"),
                         Token::U32(42),
                         Token::Str("type"),
-                        Token::Str("insert_integer"),
+                        Token::Str("Struct"),
                         Token::Str("value"),
                         Token::Struct {
                             len: 2,
-                            name: "insert_integer",
+                            name: "Struct",
                         },
                         Token::Str("index"),
                         Token::U32(0),
@@ -2968,12 +2967,10 @@ mod flatten {
             }
 
             #[test]
-            fn test_flatten_struct_tag_content_enum_newtype() {
-                let change_request = FlattenStructTagContentEnumWrapper {
+            fn newtype() {
+                let change_request = Flatten {
                     outer: 42,
-                    data: FlattenStructTagContentEnumNewtype(FlattenStructTagContentEnum::NewtypeVariant(
-                        FlattenStructTagContentEnumNewtypeVariant { value: 23 },
-                    )),
+                    data: NewtypeWrapper(Enum::Newtype(NewtypeVariant { value: 23 })),
                 };
                 assert_de_tokens(
                     &change_request,
@@ -2982,7 +2979,7 @@ mod flatten {
                         Token::Str("outer"),
                         Token::U32(42),
                         Token::Str("type"),
-                        Token::Str("newtype_variant"),
+                        Token::Str("Newtype"),
                         Token::Str("value"),
                         Token::Map { len: None },
                         Token::Str("value"),
@@ -2998,11 +2995,11 @@ mod flatten {
                         Token::Str("outer"),
                         Token::U32(42),
                         Token::Str("type"),
-                        Token::Str("newtype_variant"),
+                        Token::Str("Newtype"),
                         Token::Str("value"),
                         Token::Struct {
                             len: 1,
-                            name: "FlattenStructTagContentEnumNewtypeVariant",
+                            name: "NewtypeVariant",
                         },
                         Token::Str("value"),
                         Token::U32(23),
@@ -3017,9 +3014,9 @@ mod flatten {
             use super::*;
 
             #[test]
-            fn test_flatten_internally_tagged() {
+            fn structs() {
                 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-                struct S {
+                struct Flatten {
                     #[serde(flatten)]
                     x: X,
                     #[serde(flatten)]
@@ -3040,7 +3037,7 @@ mod flatten {
                     D { d: i32 },
                 }
 
-                let s = S {
+                let s = Flatten {
                     x: X::B { b: 1 },
                     y: Y::D { d: 2 },
                 };
@@ -3063,9 +3060,9 @@ mod flatten {
             }
 
             #[test]
-            fn test_flattened_internally_tagged_unit_enum_with_unknown_fields() {
+            fn unit_enum_with_unknown_fields() {
                 #[derive(Deserialize, PartialEq, Debug)]
-                struct S {
+                struct Flatten {
                     #[serde(flatten)]
                     x: X,
                     #[serde(flatten)]
@@ -3084,7 +3081,7 @@ mod flatten {
                     B { c: u32 },
                 }
 
-                let s = S {
+                let s = Flatten {
                     x: X::A,
                     y: Y::B { c: 0 },
                 };
@@ -3109,21 +3106,21 @@ mod flatten {
             use super::*;
 
             #[test]
-            fn test_flatten_untagged_enum() {
+            fn struct_() {
                 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-                struct Outer {
+                struct Flatten {
                     #[serde(flatten)]
-                    inner: Inner,
+                    data: Enum,
                 }
 
                 #[derive(Serialize, Deserialize, PartialEq, Debug)]
                 #[serde(untagged)]
-                enum Inner {
-                    Variant { a: i32 },
+                enum Enum {
+                    Struct { a: i32 },
                 }
 
-                let data = Outer {
-                    inner: Inner::Variant { a: 0 },
+                let data = Flatten {
+                    data: Enum::Struct { a: 0 },
                 };
 
                 assert_tokens(
