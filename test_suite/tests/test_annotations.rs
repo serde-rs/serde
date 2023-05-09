@@ -1965,40 +1965,6 @@ fn test_lifetime_propagation_for_flatten() {
 }
 
 #[test]
-fn test_flatten_enum_newtype() {
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
-    struct S {
-        #[serde(flatten)]
-        flat: E,
-    }
-
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
-    enum E {
-        Q(HashMap<String, String>),
-    }
-
-    let e = E::Q({
-        let mut map = HashMap::new();
-        map.insert("k".to_owned(), "v".to_owned());
-        map
-    });
-    let s = S { flat: e };
-
-    assert_tokens(
-        &s,
-        &[
-            Token::Map { len: None },
-            Token::Str("Q"),
-            Token::Map { len: Some(1) },
-            Token::Str("k"),
-            Token::Str("v"),
-            Token::MapEnd,
-            Token::MapEnd,
-        ],
-    );
-}
-
-#[test]
 fn test_externally_tagged_enum_containing_flatten() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     enum Data {
@@ -2841,8 +2807,30 @@ mod flatten {
 
             #[derive(Debug, PartialEq, Serialize, Deserialize)]
             enum Enum {
+                Newtype(HashMap<String, String>),
                 Tuple(u32, u32),
                 Struct { index: u32, value: u32 },
+            }
+
+            #[test]
+            fn newtype() {
+                assert_tokens(
+                    &Flatten {
+                        data: Enum::Newtype(HashMap::from_iter([("key".into(), "value".into())])),
+                        extra: HashMap::from_iter([("extra_key".into(), "extra value".into())]),
+                    },
+                    &[
+                        Token::Map { len: None },
+                        Token::Str("Newtype"), // variant
+                        Token::Map { len: Some(1) },
+                        Token::Str("key"),
+                        Token::Str("value"),
+                        Token::MapEnd,
+                        Token::Str("extra_key"),
+                        Token::Str("extra value"),
+                        Token::MapEnd,
+                    ],
+                );
             }
 
             /// Reaches crate::private::de::content::VariantDeserializer::tuple_variant
