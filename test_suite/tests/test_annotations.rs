@@ -3015,7 +3015,7 @@ mod flatten {
 
             #[test]
             fn structs() {
-                #[derive(Serialize, Deserialize, PartialEq, Debug)]
+                #[derive(Debug, PartialEq, Serialize, Deserialize)]
                 struct Flatten {
                     #[serde(flatten)]
                     x: X,
@@ -3023,27 +3023,25 @@ mod flatten {
                     y: Y,
                 }
 
-                #[derive(Serialize, Deserialize, PartialEq, Debug)]
+                #[derive(Debug, PartialEq, Serialize, Deserialize)]
                 #[serde(tag = "typeX")]
                 enum X {
                     A { a: i32 },
                     B { b: i32 },
                 }
 
-                #[derive(Serialize, Deserialize, PartialEq, Debug)]
+                #[derive(Debug, PartialEq, Serialize, Deserialize)]
                 #[serde(tag = "typeY")]
                 enum Y {
                     C { c: i32 },
                     D { d: i32 },
                 }
 
-                let s = Flatten {
-                    x: X::B { b: 1 },
-                    y: Y::D { d: 2 },
-                };
-
                 assert_tokens(
-                    &s,
+                    &Flatten {
+                        x: X::B { b: 1 },
+                        y: Y::D { d: 2 },
+                    },
                     &[
                         Token::Map { len: None },
                         Token::Str("typeX"),
@@ -3061,7 +3059,7 @@ mod flatten {
 
             #[test]
             fn unit_enum_with_unknown_fields() {
-                #[derive(Deserialize, PartialEq, Debug)]
+                #[derive(Debug, PartialEq, Deserialize)]
                 struct Flatten {
                     #[serde(flatten)]
                     x: X,
@@ -3069,25 +3067,23 @@ mod flatten {
                     y: Y,
                 }
 
-                #[derive(Deserialize, PartialEq, Debug)]
+                #[derive(Debug, PartialEq, Deserialize)]
                 #[serde(tag = "typeX")]
                 enum X {
                     A,
                 }
 
-                #[derive(Deserialize, PartialEq, Debug)]
+                #[derive(Debug, PartialEq, Deserialize)]
                 #[serde(tag = "typeY")]
                 enum Y {
                     B { c: u32 },
                 }
 
-                let s = Flatten {
-                    x: X::A,
-                    y: Y::B { c: 0 },
-                };
-
                 assert_de_tokens(
-                    &s,
+                    &Flatten {
+                        x: X::A,
+                        y: Y::B { c: 0 },
+                    },
                     &[
                         Token::Map { len: None },
                         Token::Str("typeX"),
@@ -3105,26 +3101,24 @@ mod flatten {
         mod untagged {
             use super::*;
 
+            #[derive(Debug, PartialEq, Serialize, Deserialize)]
+            struct Flatten {
+                #[serde(flatten)]
+                data: Enum,
+            }
+
+            #[derive(Debug, PartialEq, Serialize, Deserialize)]
+            #[serde(untagged)]
+            enum Enum {
+                Struct { a: i32 },
+            }
+
             #[test]
             fn struct_() {
-                #[derive(Serialize, Deserialize, PartialEq, Debug)]
-                struct Flatten {
-                    #[serde(flatten)]
-                    data: Enum,
-                }
-
-                #[derive(Serialize, Deserialize, PartialEq, Debug)]
-                #[serde(untagged)]
-                enum Enum {
-                    Struct { a: i32 },
-                }
-
-                let data = Flatten {
-                    data: Enum::Struct { a: 0 },
-                };
-
                 assert_tokens(
-                    &data,
+                    &Flatten {
+                        data: Enum::Struct { a: 0 },
+                    },
                     &[
                         Token::Map { len: None },
                         Token::Str("a"),
