@@ -1025,7 +1025,7 @@ where
     type SerializeTupleStruct = Impossible<Self::Ok, M::Error>;
     type SerializeMap = FlatMapSerializeMap<'a, M>;
     type SerializeStruct = FlatMapSerializeStruct<'a, M>;
-    type SerializeTupleVariant = Impossible<Self::Ok, M::Error>;
+    type SerializeTupleVariant = FlatMapSerializeTupleVariantAsMapValue<'a, M>;
     type SerializeStructVariant = FlatMapSerializeStructVariantAsMapValue<'a, M>;
 
     fn serialize_bool(self, _: bool) -> Result<Self::Ok, Self::Error> {
@@ -1157,10 +1157,11 @@ where
         self,
         _: &'static str,
         _: u32,
-        _: &'static str,
+        variant: &'static str,
         _: usize,
     ) -> Result<Self::SerializeTupleVariant, Self::Error> {
-        Err(Self::bad_type(Unsupported::Enum))
+        try!(self.0.serialize_key(variant));
+        Ok(FlatMapSerializeTupleVariantAsMapValue::new(self.0))
     }
 
     fn serialize_map(self, _: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
@@ -1258,6 +1259,52 @@ where
         Ok(())
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub struct FlatMapSerializeTupleVariantAsMapValue<'a, M: 'a> {
+    map: &'a mut M,
+    fields: Vec<Content>,
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, M> FlatMapSerializeTupleVariantAsMapValue<'a, M>
+where
+    M: SerializeMap + 'a,
+{
+    fn new(map: &'a mut M) -> Self {
+        FlatMapSerializeTupleVariantAsMapValue {
+            map: map,
+            fields: Vec::new(),
+        }
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, M> ser::SerializeTupleVariant for FlatMapSerializeTupleVariantAsMapValue<'a, M>
+where
+    M: SerializeMap + 'a,
+{
+    type Ok = ();
+    type Error = M::Error;
+
+    fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+    where
+        T: Serialize,
+    {
+        let value = try!(value.serialize(ContentSerializer::<M::Error>::new()));
+        self.fields.push(value);
+        Ok(())
+    }
+
+    fn end(self) -> Result<(), Self::Error> {
+        try!(self.map.serialize_value(&Content::Seq(self.fields)));
+        Ok(())
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub struct FlatMapSerializeStructVariantAsMapValue<'a, M: 'a> {
