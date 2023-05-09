@@ -115,42 +115,6 @@ struct CollectOther {
     extra: HashMap<String, u32>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct FlattenStructEnumWrapper {
-    #[serde(flatten)]
-    data: FlattenStructEnum,
-    #[serde(flatten)]
-    extra: HashMap<String, String>,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum FlattenStructEnum {
-    InsertInteger { index: u32, value: u32 },
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct FlattenStructTagContentEnumWrapper {
-    outer: u32,
-    #[serde(flatten)]
-    data: FlattenStructTagContentEnumNewtype,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct FlattenStructTagContentEnumNewtype(pub FlattenStructTagContentEnum);
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case", tag = "type", content = "value")]
-enum FlattenStructTagContentEnum {
-    InsertInteger { index: u32, value: u32 },
-    NewtypeVariant(FlattenStructTagContentEnumNewtypeVariant),
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct FlattenStructTagContentEnumNewtypeVariant {
-    value: u32,
-}
-
 #[test]
 fn test_default_struct() {
     assert_de_tokens(
@@ -1645,149 +1609,6 @@ fn test_collect_other() {
 }
 
 #[test]
-fn test_flatten_struct_enum() {
-    let mut extra = HashMap::new();
-    extra.insert("extra_key".into(), "extra value".into());
-    let change_request = FlattenStructEnumWrapper {
-        data: FlattenStructEnum::InsertInteger {
-            index: 0,
-            value: 42,
-        },
-        extra,
-    };
-    assert_de_tokens(
-        &change_request,
-        &[
-            Token::Map { len: None },
-            Token::Str("insert_integer"),
-            Token::Map { len: None },
-            Token::Str("index"),
-            Token::U32(0),
-            Token::Str("value"),
-            Token::U32(42),
-            Token::MapEnd,
-            Token::Str("extra_key"),
-            Token::Str("extra value"),
-            Token::MapEnd,
-        ],
-    );
-    assert_ser_tokens(
-        &change_request,
-        &[
-            Token::Map { len: None },
-            Token::Str("insert_integer"),
-            Token::Struct {
-                len: 2,
-                name: "insert_integer",
-            },
-            Token::Str("index"),
-            Token::U32(0),
-            Token::Str("value"),
-            Token::U32(42),
-            Token::StructEnd,
-            Token::Str("extra_key"),
-            Token::Str("extra value"),
-            Token::MapEnd,
-        ],
-    );
-}
-
-#[test]
-fn test_flatten_struct_tag_content_enum() {
-    let change_request = FlattenStructTagContentEnumWrapper {
-        outer: 42,
-        data: FlattenStructTagContentEnumNewtype(FlattenStructTagContentEnum::InsertInteger {
-            index: 0,
-            value: 42,
-        }),
-    };
-    assert_de_tokens(
-        &change_request,
-        &[
-            Token::Map { len: None },
-            Token::Str("outer"),
-            Token::U32(42),
-            Token::Str("type"),
-            Token::Str("insert_integer"),
-            Token::Str("value"),
-            Token::Map { len: None },
-            Token::Str("index"),
-            Token::U32(0),
-            Token::Str("value"),
-            Token::U32(42),
-            Token::MapEnd,
-            Token::MapEnd,
-        ],
-    );
-    assert_ser_tokens(
-        &change_request,
-        &[
-            Token::Map { len: None },
-            Token::Str("outer"),
-            Token::U32(42),
-            Token::Str("type"),
-            Token::Str("insert_integer"),
-            Token::Str("value"),
-            Token::Struct {
-                len: 2,
-                name: "insert_integer",
-            },
-            Token::Str("index"),
-            Token::U32(0),
-            Token::Str("value"),
-            Token::U32(42),
-            Token::StructEnd,
-            Token::MapEnd,
-        ],
-    );
-}
-
-#[test]
-fn test_flatten_struct_tag_content_enum_newtype() {
-    let change_request = FlattenStructTagContentEnumWrapper {
-        outer: 42,
-        data: FlattenStructTagContentEnumNewtype(FlattenStructTagContentEnum::NewtypeVariant(
-            FlattenStructTagContentEnumNewtypeVariant { value: 23 },
-        )),
-    };
-    assert_de_tokens(
-        &change_request,
-        &[
-            Token::Map { len: None },
-            Token::Str("outer"),
-            Token::U32(42),
-            Token::Str("type"),
-            Token::Str("newtype_variant"),
-            Token::Str("value"),
-            Token::Map { len: None },
-            Token::Str("value"),
-            Token::U32(23),
-            Token::MapEnd,
-            Token::MapEnd,
-        ],
-    );
-    assert_ser_tokens(
-        &change_request,
-        &[
-            Token::Map { len: None },
-            Token::Str("outer"),
-            Token::U32(42),
-            Token::Str("type"),
-            Token::Str("newtype_variant"),
-            Token::Str("value"),
-            Token::Struct {
-                len: 1,
-                name: "FlattenStructTagContentEnumNewtypeVariant",
-            },
-            Token::Str("value"),
-            Token::U32(23),
-            Token::StructEnd,
-            Token::MapEnd,
-        ],
-    );
-}
-
-#[test]
 fn test_unknown_field_in_flatten() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
@@ -2178,52 +1999,6 @@ fn test_flatten_enum_newtype() {
 }
 
 #[test]
-fn test_flatten_internally_tagged() {
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
-    struct S {
-        #[serde(flatten)]
-        x: X,
-        #[serde(flatten)]
-        y: Y,
-    }
-
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
-    #[serde(tag = "typeX")]
-    enum X {
-        A { a: i32 },
-        B { b: i32 },
-    }
-
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
-    #[serde(tag = "typeY")]
-    enum Y {
-        C { c: i32 },
-        D { d: i32 },
-    }
-
-    let s = S {
-        x: X::B { b: 1 },
-        y: Y::D { d: 2 },
-    };
-
-    assert_tokens(
-        &s,
-        &[
-            Token::Map { len: None },
-            Token::Str("typeX"),
-            Token::Str("B"),
-            Token::Str("b"),
-            Token::I32(1),
-            Token::Str("typeY"),
-            Token::Str("D"),
-            Token::Str("d"),
-            Token::I32(2),
-            Token::MapEnd,
-        ],
-    );
-}
-
-#[test]
 fn test_externally_tagged_enum_containing_flatten() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     enum Data {
@@ -2599,35 +2374,6 @@ fn test_partially_untagged_enum_desugared() {
 }
 
 #[test]
-fn test_flatten_untagged_enum() {
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
-    struct Outer {
-        #[serde(flatten)]
-        inner: Inner,
-    }
-
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
-    #[serde(untagged)]
-    enum Inner {
-        Variant { a: i32 },
-    }
-
-    let data = Outer {
-        inner: Inner::Variant { a: 0 },
-    };
-
-    assert_tokens(
-        &data,
-        &[
-            Token::Map { len: None },
-            Token::Str("a"),
-            Token::I32(0),
-            Token::MapEnd,
-        ],
-    );
-}
-
-#[test]
 fn test_flatten_option() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     struct Outer {
@@ -2777,48 +2523,6 @@ fn test_internally_tagged_unit_enum_with_unknown_fields() {
             Token::Str("t"),
             Token::Str("A"),
             Token::Str("b"),
-            Token::I32(0),
-            Token::MapEnd,
-        ],
-    );
-}
-
-#[test]
-fn test_flattened_internally_tagged_unit_enum_with_unknown_fields() {
-    #[derive(Deserialize, PartialEq, Debug)]
-    struct S {
-        #[serde(flatten)]
-        x: X,
-        #[serde(flatten)]
-        y: Y,
-    }
-
-    #[derive(Deserialize, PartialEq, Debug)]
-    #[serde(tag = "typeX")]
-    enum X {
-        A,
-    }
-
-    #[derive(Deserialize, PartialEq, Debug)]
-    #[serde(tag = "typeY")]
-    enum Y {
-        B { c: u32 },
-    }
-
-    let s = S {
-        x: X::A,
-        y: Y::B { c: 0 },
-    };
-
-    assert_de_tokens(
-        &s,
-        &[
-            Token::Map { len: None },
-            Token::Str("typeX"),
-            Token::Str("A"),
-            Token::Str("typeY"),
-            Token::Str("B"),
-            Token::Str("c"),
             Token::I32(0),
             Token::MapEnd,
         ],
@@ -3114,4 +2818,324 @@ fn test_expecting_message_identifier_enum() {
         ],
         r#"invalid type: map, expected something strange..."#,
     );
+}
+
+mod flatten {
+    use super::*;
+
+    mod enum_ {
+        use super::*;
+
+        mod externally_tagged {
+            use super::*;
+
+            #[derive(Debug, PartialEq, Serialize, Deserialize)]
+            struct FlattenStructEnumWrapper {
+                #[serde(flatten)]
+                data: FlattenStructEnum,
+                #[serde(flatten)]
+                extra: HashMap<String, String>,
+            }
+
+            #[derive(Debug, PartialEq, Serialize, Deserialize)]
+            #[serde(rename_all = "snake_case")]
+            enum FlattenStructEnum {
+                InsertInteger { index: u32, value: u32 },
+            }
+
+            #[test]
+            fn test_flatten_struct_enum() {
+                let mut extra = HashMap::new();
+                extra.insert("extra_key".into(), "extra value".into());
+                let change_request = FlattenStructEnumWrapper {
+                    data: FlattenStructEnum::InsertInteger {
+                        index: 0,
+                        value: 42,
+                    },
+                    extra,
+                };
+                assert_de_tokens(
+                    &change_request,
+                    &[
+                        Token::Map { len: None },
+                        Token::Str("insert_integer"),
+                        Token::Map { len: None },
+                        Token::Str("index"),
+                        Token::U32(0),
+                        Token::Str("value"),
+                        Token::U32(42),
+                        Token::MapEnd,
+                        Token::Str("extra_key"),
+                        Token::Str("extra value"),
+                        Token::MapEnd,
+                    ],
+                );
+                assert_ser_tokens(
+                    &change_request,
+                    &[
+                        Token::Map { len: None },
+                        Token::Str("insert_integer"),
+                        Token::Struct {
+                            len: 2,
+                            name: "insert_integer",
+                        },
+                        Token::Str("index"),
+                        Token::U32(0),
+                        Token::Str("value"),
+                        Token::U32(42),
+                        Token::StructEnd,
+                        Token::Str("extra_key"),
+                        Token::Str("extra value"),
+                        Token::MapEnd,
+                    ],
+                );
+            }
+        }
+
+        mod adjacently_tagged {
+            use super::*;
+
+            #[derive(Debug, PartialEq, Serialize, Deserialize)]
+            struct FlattenStructTagContentEnumWrapper {
+                outer: u32,
+                #[serde(flatten)]
+                data: FlattenStructTagContentEnumNewtype,
+            }
+
+            #[derive(Debug, PartialEq, Serialize, Deserialize)]
+            struct FlattenStructTagContentEnumNewtype(pub FlattenStructTagContentEnum);
+
+            #[derive(Debug, PartialEq, Serialize, Deserialize)]
+            #[serde(rename_all = "snake_case", tag = "type", content = "value")]
+            enum FlattenStructTagContentEnum {
+                InsertInteger { index: u32, value: u32 },
+                NewtypeVariant(FlattenStructTagContentEnumNewtypeVariant),
+            }
+
+            #[derive(Debug, PartialEq, Serialize, Deserialize)]
+            struct FlattenStructTagContentEnumNewtypeVariant {
+                value: u32,
+            }
+
+            #[test]
+            fn test_flatten_struct_tag_content_enum() {
+                let change_request = FlattenStructTagContentEnumWrapper {
+                    outer: 42,
+                    data: FlattenStructTagContentEnumNewtype(FlattenStructTagContentEnum::InsertInteger {
+                        index: 0,
+                        value: 42,
+                    }),
+                };
+                assert_de_tokens(
+                    &change_request,
+                    &[
+                        Token::Map { len: None },
+                        Token::Str("outer"),
+                        Token::U32(42),
+                        Token::Str("type"),
+                        Token::Str("insert_integer"),
+                        Token::Str("value"),
+                        Token::Map { len: None },
+                        Token::Str("index"),
+                        Token::U32(0),
+                        Token::Str("value"),
+                        Token::U32(42),
+                        Token::MapEnd,
+                        Token::MapEnd,
+                    ],
+                );
+                assert_ser_tokens(
+                    &change_request,
+                    &[
+                        Token::Map { len: None },
+                        Token::Str("outer"),
+                        Token::U32(42),
+                        Token::Str("type"),
+                        Token::Str("insert_integer"),
+                        Token::Str("value"),
+                        Token::Struct {
+                            len: 2,
+                            name: "insert_integer",
+                        },
+                        Token::Str("index"),
+                        Token::U32(0),
+                        Token::Str("value"),
+                        Token::U32(42),
+                        Token::StructEnd,
+                        Token::MapEnd,
+                    ],
+                );
+            }
+
+            #[test]
+            fn test_flatten_struct_tag_content_enum_newtype() {
+                let change_request = FlattenStructTagContentEnumWrapper {
+                    outer: 42,
+                    data: FlattenStructTagContentEnumNewtype(FlattenStructTagContentEnum::NewtypeVariant(
+                        FlattenStructTagContentEnumNewtypeVariant { value: 23 },
+                    )),
+                };
+                assert_de_tokens(
+                    &change_request,
+                    &[
+                        Token::Map { len: None },
+                        Token::Str("outer"),
+                        Token::U32(42),
+                        Token::Str("type"),
+                        Token::Str("newtype_variant"),
+                        Token::Str("value"),
+                        Token::Map { len: None },
+                        Token::Str("value"),
+                        Token::U32(23),
+                        Token::MapEnd,
+                        Token::MapEnd,
+                    ],
+                );
+                assert_ser_tokens(
+                    &change_request,
+                    &[
+                        Token::Map { len: None },
+                        Token::Str("outer"),
+                        Token::U32(42),
+                        Token::Str("type"),
+                        Token::Str("newtype_variant"),
+                        Token::Str("value"),
+                        Token::Struct {
+                            len: 1,
+                            name: "FlattenStructTagContentEnumNewtypeVariant",
+                        },
+                        Token::Str("value"),
+                        Token::U32(23),
+                        Token::StructEnd,
+                        Token::MapEnd,
+                    ],
+                );
+            }
+        }
+
+        mod internally_tagged {
+            use super::*;
+
+            #[test]
+            fn test_flatten_internally_tagged() {
+                #[derive(Serialize, Deserialize, PartialEq, Debug)]
+                struct S {
+                    #[serde(flatten)]
+                    x: X,
+                    #[serde(flatten)]
+                    y: Y,
+                }
+
+                #[derive(Serialize, Deserialize, PartialEq, Debug)]
+                #[serde(tag = "typeX")]
+                enum X {
+                    A { a: i32 },
+                    B { b: i32 },
+                }
+
+                #[derive(Serialize, Deserialize, PartialEq, Debug)]
+                #[serde(tag = "typeY")]
+                enum Y {
+                    C { c: i32 },
+                    D { d: i32 },
+                }
+
+                let s = S {
+                    x: X::B { b: 1 },
+                    y: Y::D { d: 2 },
+                };
+
+                assert_tokens(
+                    &s,
+                    &[
+                        Token::Map { len: None },
+                        Token::Str("typeX"),
+                        Token::Str("B"),
+                        Token::Str("b"),
+                        Token::I32(1),
+                        Token::Str("typeY"),
+                        Token::Str("D"),
+                        Token::Str("d"),
+                        Token::I32(2),
+                        Token::MapEnd,
+                    ],
+                );
+            }
+
+            #[test]
+            fn test_flattened_internally_tagged_unit_enum_with_unknown_fields() {
+                #[derive(Deserialize, PartialEq, Debug)]
+                struct S {
+                    #[serde(flatten)]
+                    x: X,
+                    #[serde(flatten)]
+                    y: Y,
+                }
+
+                #[derive(Deserialize, PartialEq, Debug)]
+                #[serde(tag = "typeX")]
+                enum X {
+                    A,
+                }
+
+                #[derive(Deserialize, PartialEq, Debug)]
+                #[serde(tag = "typeY")]
+                enum Y {
+                    B { c: u32 },
+                }
+
+                let s = S {
+                    x: X::A,
+                    y: Y::B { c: 0 },
+                };
+
+                assert_de_tokens(
+                    &s,
+                    &[
+                        Token::Map { len: None },
+                        Token::Str("typeX"),
+                        Token::Str("A"),
+                        Token::Str("typeY"),
+                        Token::Str("B"),
+                        Token::Str("c"),
+                        Token::I32(0),
+                        Token::MapEnd,
+                    ],
+                );
+            }
+        }
+
+        mod untagged {
+            use super::*;
+
+            #[test]
+            fn test_flatten_untagged_enum() {
+                #[derive(Serialize, Deserialize, PartialEq, Debug)]
+                struct Outer {
+                    #[serde(flatten)]
+                    inner: Inner,
+                }
+
+                #[derive(Serialize, Deserialize, PartialEq, Debug)]
+                #[serde(untagged)]
+                enum Inner {
+                    Variant { a: i32 },
+                }
+
+                let data = Outer {
+                    inner: Inner::Variant { a: 0 },
+                };
+
+                assert_tokens(
+                    &data,
+                    &[
+                        Token::Map { len: None },
+                        Token::Str("a"),
+                        Token::I32(0),
+                        Token::MapEnd,
+                    ],
+                );
+            }
+        }
+    }
 }
