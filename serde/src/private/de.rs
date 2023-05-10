@@ -2902,7 +2902,7 @@ where
     where
         T: DeserializeSeed<'de>,
     {
-        while let Some(item) = self.iter.next() {
+        for item in self.iter.by_ref() {
             if let Some((key, content)) = use_item(item, self.fields) {
                 self.pending_content = Some(content);
                 return seed.deserialize(ContentDeserializer::new(key)).map(Some);
