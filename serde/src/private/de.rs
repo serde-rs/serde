@@ -2750,8 +2750,8 @@ where
     where
         V: Visitor<'de>,
     {
-        for item in self.0.iter_mut() {
-            if let Some((key, value)) = use_item(item, variants) {
+        for entry in self.0.iter_mut() {
+            if let Some((key, value)) = flat_map_take_entry(entry, variants) {
                 return visitor.visit_enum(EnumDeserializer::new(key, Some(value)));
             }
         }
@@ -2902,8 +2902,8 @@ where
     where
         T: DeserializeSeed<'de>,
     {
-        for item in self.iter.by_ref() {
-            if let Some((key, content)) = use_item(item, self.fields) {
+        for entry in self.iter.by_ref() {
+            if let Some((key, content)) = flat_map_take_entry(entry, self.fields) {
                 self.pending_content = Some(content);
                 return seed.deserialize(ContentDeserializer::new(key)).map(Some);
             }
@@ -2922,24 +2922,23 @@ where
     }
 }
 
-/// Checks if first element of the specified pair matches one of the key from
-/// `keys` parameter and if this is true, takes it from the option and returns.
-/// Otherwise, or if `item` already empty, returns `None`.
+/// Claims one key-value pair from a FlatMapDeserializer's field buffer if the
+/// field name matches any of the recognized ones.
 #[cfg(any(feature = "std", feature = "alloc"))]
-fn use_item<'de>(
-    item: &mut Option<(Content<'de>, Content<'de>)>,
-    keys: &[&str],
+fn flat_map_take_entry<'de>(
+    entry: &mut Option<(Content<'de>, Content<'de>)>,
+    recognized: &[&str],
 ) -> Option<(Content<'de>, Content<'de>)> {
-    // items in the vector are nulled out when used.  So we can only use
-    // an item if it's still filled in and if the field is one we care
-    // about.
-    let use_item = match *item {
+    // Entries in the FlatMapDeserializer buffer are nulled out as they get
+    // claimed for deserialization. We only use an entry if it is still present
+    // and if the field is one recognized by the current data structure.
+    let is_recognized = match entry {
         None => false,
-        Some((ref c, _)) => c.as_str().map_or(false, |key| keys.contains(&key)),
+        Some((k, _v)) => k.as_str().map_or(false, |name| recognized.contains(&name)),
     };
 
-    if use_item {
-        item.take()
+    if is_recognized {
+        entry.take()
     } else {
         None
     }
