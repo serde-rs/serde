@@ -994,7 +994,8 @@ seq_impl!(
     HashSet::clear,
     HashSet::with_capacity_and_hasher(size_hint::cautious(seq.size_hint()), S::default()),
     HashSet::reserve,
-    HashSet::insert);
+    HashSet::insert
+);
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(
@@ -1409,16 +1410,14 @@ macro_rules! map_impl {
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-map_impl!(
-    BTreeMap<K: Ord, V>,
-    map,
-    BTreeMap::new());
+map_impl!(BTreeMap<K: Ord, V>, map, BTreeMap::new());
 
 #[cfg(feature = "std")]
 map_impl!(
     HashMap<K: Eq + Hash, V, S: BuildHasher + Default>,
     map,
-    HashMap::with_capacity_and_hasher(size_hint::cautious(map.size_hint()), S::default()));
+    HashMap::with_capacity_and_hasher(size_hint::cautious(map.size_hint()), S::default())
+);
 
 ////////////////////////////////////////////////////////////////////////////////
 
