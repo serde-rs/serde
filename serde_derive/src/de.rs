@@ -3084,23 +3084,29 @@ struct DeTypeGenerics<'a>(&'a Parameters);
 #[cfg(feature = "deserialize_in_place")]
 struct InPlaceTypeGenerics<'a>(&'a Parameters);
 
+/// If `'de` lifetime is defined, prepends it to list of generics
+/// and then produces tokens for declaration generics on type
+fn to_tokens(mut generics: syn::Generics, borrowed: &BorrowedLifetimes, tokens: &mut TokenStream) {
+    if borrowed.de_lifetime_param().is_some() {
+        let def = syn::LifetimeParam {
+            attrs: Vec::new(),
+            lifetime: syn::Lifetime::new("'de", Span::call_site()),
+            colon_token: None,
+            bounds: Punctuated::new(),
+        };
+        // Prepend 'de lifetime to list of generics
+        generics.params = Some(syn::GenericParam::Lifetime(def))
+            .into_iter()
+            .chain(generics.params)
+            .collect();
+    }
+    let (_, ty_generics, _) = generics.split_for_impl();
+    ty_generics.to_tokens(tokens);
+}
+
 impl<'a> ToTokens for DeTypeGenerics<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let mut generics = self.0.generics.clone();
-        if self.0.borrowed.de_lifetime_param().is_some() {
-            let def = syn::LifetimeParam {
-                attrs: Vec::new(),
-                lifetime: syn::Lifetime::new("'de", Span::call_site()),
-                colon_token: None,
-                bounds: Punctuated::new(),
-            };
-            generics.params = Some(syn::GenericParam::Lifetime(def))
-                .into_iter()
-                .chain(generics.params)
-                .collect();
-        }
-        let (_, ty_generics, _) = generics.split_for_impl();
-        ty_generics.to_tokens(tokens);
+        to_tokens(self.0.generics.clone(), &self.0.borrowed, tokens);
     }
 }
 
@@ -3113,20 +3119,7 @@ impl<'a> ToTokens for InPlaceTypeGenerics<'a> {
             .chain(generics.params)
             .collect();
 
-        if self.0.borrowed.de_lifetime_param().is_some() {
-            let def = syn::LifetimeParam {
-                attrs: Vec::new(),
-                lifetime: syn::Lifetime::new("'de", Span::call_site()),
-                colon_token: None,
-                bounds: Punctuated::new(),
-            };
-            generics.params = Some(syn::GenericParam::Lifetime(def))
-                .into_iter()
-                .chain(generics.params)
-                .collect();
-        }
-        let (_, ty_generics, _) = generics.split_for_impl();
-        ty_generics.to_tokens(tokens);
+        to_tokens(generics, &self.0.borrowed, tokens);
     }
 }
 
