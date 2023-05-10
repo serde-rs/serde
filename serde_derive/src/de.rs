@@ -3084,9 +3084,11 @@ struct DeTypeGenerics<'a>(&'a Parameters);
 #[cfg(feature = "deserialize_in_place")]
 struct InPlaceTypeGenerics<'a>(&'a Parameters);
 
-/// If `'de` lifetime is defined, prepends it to list of generics
-/// and then produces tokens for declaration generics on type
-fn to_tokens(mut generics: syn::Generics, borrowed: &BorrowedLifetimes, tokens: &mut TokenStream) {
+fn de_type_generics_to_tokens(
+    mut generics: syn::Generics,
+    borrowed: &BorrowedLifetimes,
+    tokens: &mut TokenStream,
+) {
     if borrowed.de_lifetime_param().is_some() {
         let def = syn::LifetimeParam {
             attrs: Vec::new(),
@@ -3106,7 +3108,7 @@ fn to_tokens(mut generics: syn::Generics, borrowed: &BorrowedLifetimes, tokens: 
 
 impl<'a> ToTokens for DeTypeGenerics<'a> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        to_tokens(self.0.generics.clone(), &self.0.borrowed, tokens);
+        de_type_generics_to_tokens(self.0.generics.clone(), &self.0.borrowed, tokens);
     }
 }
 
@@ -3119,7 +3121,7 @@ impl<'a> ToTokens for InPlaceTypeGenerics<'a> {
             .chain(generics.params)
             .collect();
 
-        to_tokens(generics, &self.0.borrowed, tokens);
+        de_type_generics_to_tokens(generics, &self.0.borrowed, tokens);
     }
 }
 
