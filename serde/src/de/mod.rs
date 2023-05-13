@@ -116,6 +116,90 @@ use lib::*;
 
 ////////////////////////////////////////////////////////////////////////////////
 
+// For structs that contain a PhantomData. We do not want the trait
+// bound `E: Clone` inferred by derive(Clone).
+macro_rules! impl_copy_clone {
+    ($ty:ident $(<$lifetime:tt>)*) => {
+        impl<$($lifetime,)* E> Copy for $ty<$($lifetime,)* E> {}
+
+        impl<$($lifetime,)* E> Clone for $ty<$($lifetime,)* E> {
+            fn clone(&self) -> Self {
+                *self
+            }
+        }
+    };
+}
+
+macro_rules! primitive_deserializer {
+    ($(#[$meta:meta])* pub $name:ident, u32, $method:ident) => {
+        // u32 does not require IntoDeserializer implementation
+        primitive_deserializer!($(#[$meta])* private $name, u32, $method);
+    };
+    ($(#[$meta:meta])* pub $name:ident, $ty:ty, $method:ident $($cast:tt)*) => {
+        primitive_deserializer!($(#[$meta])* private $name, $ty, $method $($cast)*);
+
+        impl<'de, E> IntoDeserializer<'de, E> for $ty
+        where
+            E: de::Error,
+        {
+            type Deserializer = $name<E>;
+
+            fn into_deserializer(self) -> $name<E> {
+                $name::new(self)
+            }
+        }
+    };
+    ($(#[$meta:meta])* private $name:ident, $ty:ty, $method:ident $($cast:tt)*) => {
+        $(#[$meta])*
+        pub struct $name<E> {
+            value: $ty,
+            marker: PhantomData<E>,
+        }
+
+        impl<E> $name<E> {
+            #[allow(missing_docs)]
+            pub fn new(value: $ty) -> Self {
+                $name {
+                    value,
+                    marker: PhantomData,
+                }
+            }
+        }
+
+        impl<'de, E> Deserializer<'de> for $name<E>
+        where
+            E: de::Error,
+        {
+            type Error = E;
+
+            forward_to_deserialize_any! {
+                bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str
+                string bytes byte_buf option unit unit_struct newtype_struct seq
+                tuple tuple_struct map struct enum identifier ignored_any
+            }
+
+            fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+            where
+                V: Visitor<'de>,
+            {
+                visitor.$method(self.value $($cast)*)
+            }
+        }
+
+        impl<E> Debug for $name<E> {
+            fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter
+                    .debug_struct(stringify!($name))
+                    .field("value", &self.value)
+                    .finish()
+            }
+        }
+
+        impl_copy_clone!($name);
+    };
+}
+
+pub mod adapters;
 pub mod value;
 
 #[cfg(not(no_integer128))]

@@ -30,22 +30,6 @@ use ser;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// For structs that contain a PhantomData. We do not want the trait
-// bound `E: Clone` inferred by derive(Clone).
-macro_rules! impl_copy_clone {
-    ($ty:ident $(<$lifetime:tt>)*) => {
-        impl<$($lifetime,)* E> Copy for $ty<$($lifetime,)* E> {}
-
-        impl<$($lifetime,)* E> Clone for $ty<$($lifetime,)* E> {
-            fn clone(&self) -> Self {
-                *self
-            }
-        }
-    };
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
 /// A minimal representation of all possible errors that can occur using the
 /// `IntoDeserializer` trait.
 #[derive(Clone, PartialEq)]
@@ -133,6 +117,9 @@ where
 }
 
 /// A deserializer holding a `()`.
+///
+/// Unlike [`de::adapters::UnitDeserializer`], this deserializer will convert
+/// `deserialize_option` requests to [`Visitor::visit_none`].
 pub struct UnitDeserializer<E> {
     marker: PhantomData<E>,
 }
@@ -225,89 +212,49 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-macro_rules! primitive_deserializer {
-    ($ty:ty, $doc:tt, $name:ident, $method:ident $($cast:tt)*) => {
-        #[doc = "A deserializer holding"]
-        #[doc = $doc]
-        pub struct $name<E> {
-            value: $ty,
-            marker: PhantomData<E>
-        }
+pub use de::adapters::BoolDeserializer;
 
-        impl_copy_clone!($name);
+pub use de::adapters::I16Deserializer;
+pub use de::adapters::I32Deserializer;
+pub use de::adapters::I64Deserializer;
+pub use de::adapters::I8Deserializer;
 
-        impl<'de, E> IntoDeserializer<'de, E> for $ty
-        where
-            E: de::Error,
-        {
-            type Deserializer = $name<E>;
+pub use de::adapters::U16Deserializer;
+pub use de::adapters::U64Deserializer;
+pub use de::adapters::U8Deserializer;
 
-            fn into_deserializer(self) -> $name<E> {
-                $name::new(self)
-            }
-        }
+pub use de::adapters::F32Deserializer;
+pub use de::adapters::F64Deserializer;
 
-        impl<E> $name<E> {
-            #[allow(missing_docs)]
-            pub fn new(value: $ty) -> Self {
-                $name {
-                    value,
-                    marker: PhantomData,
-                }
-            }
-        }
-
-        impl<'de, E> Deserializer<'de> for $name<E>
-        where
-            E: de::Error,
-        {
-            type Error = E;
-
-            forward_to_deserialize_any! {
-                bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str
-                string bytes byte_buf option unit unit_struct newtype_struct seq
-                tuple tuple_struct map struct enum identifier ignored_any
-            }
-
-            fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-            where
-                V: Visitor<'de>,
-            {
-                visitor.$method(self.value $($cast)*)
-            }
-        }
-
-        impl<E> Debug for $name<E> {
-            fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter
-                    .debug_struct(stringify!($name))
-                    .field("value", &self.value)
-                    .finish()
-            }
-        }
-    }
-}
-
-primitive_deserializer!(bool, "a `bool`.", BoolDeserializer, visit_bool);
-primitive_deserializer!(i8, "an `i8`.", I8Deserializer, visit_i8);
-primitive_deserializer!(i16, "an `i16`.", I16Deserializer, visit_i16);
-primitive_deserializer!(i32, "an `i32`.", I32Deserializer, visit_i32);
-primitive_deserializer!(i64, "an `i64`.", I64Deserializer, visit_i64);
-primitive_deserializer!(isize, "an `isize`.", IsizeDeserializer, visit_i64 as i64);
-primitive_deserializer!(u8, "a `u8`.", U8Deserializer, visit_u8);
-primitive_deserializer!(u16, "a `u16`.", U16Deserializer, visit_u16);
-primitive_deserializer!(u64, "a `u64`.", U64Deserializer, visit_u64);
-primitive_deserializer!(usize, "a `usize`.", UsizeDeserializer, visit_u64 as u64);
-primitive_deserializer!(f32, "an `f32`.", F32Deserializer, visit_f32);
-primitive_deserializer!(f64, "an `f64`.", F64Deserializer, visit_f64);
-primitive_deserializer!(char, "a `char`.", CharDeserializer, visit_char);
+pub use de::adapters::CharDeserializer;
 
 serde_if_integer128! {
-    primitive_deserializer!(i128, "an `i128`.", I128Deserializer, visit_i128);
-    primitive_deserializer!(u128, "a `u128`.", U128Deserializer, visit_u128);
+    pub use de::adapters::I128Deserializer;
+    pub use de::adapters::U128Deserializer;
 }
 
+pub use de::adapters::BorrowedBytesDeserializer;
+pub use de::adapters::BytesDeserializer;
+pub use de::adapters::EnumAccessDeserializer;
+
+primitive_deserializer!(
+    /// A deserializer holding an `isize`.
+    ///
+    /// This deserializer will call [`Visitor::visit_i64`] for all requests.
+    pub IsizeDeserializer, isize, visit_i64 as i64
+);
+primitive_deserializer!(
+    /// A deserializer holding a `usize`.
+    ///
+    /// This deserializer will call [`Visitor::visit_u64`] for all requests.
+    pub UsizeDeserializer, usize, visit_u64 as u64
+);
+
 /// A deserializer holding a `u32`.
+///
+/// Unlike [`de::adapters::U32Deserializer`], this deserializer will convert
+/// `deserialize_enum` requests to [`Visitor::visit_enum`]. The number will be
+/// treated as an discriminant of unit variants. Only unit variants are supported.
 pub struct U32Deserializer<E> {
     value: u32,
     marker: PhantomData<E>,
@@ -397,6 +344,10 @@ impl<E> Debug for U32Deserializer<E> {
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A deserializer holding a `&str`.
+///
+/// Unlike [`de::adapters::StrDeserializer`], this deserializer will convert
+/// `deserialize_enum` requests to [`Visitor::visit_enum`]. The value will be
+/// treated as a name of unit variant. Only unit variants are supported.
 pub struct StrDeserializer<'a, E> {
     value: &'a str,
     marker: PhantomData<E>,
@@ -487,6 +438,10 @@ impl<'a, E> Debug for StrDeserializer<'a, E> {
 
 /// A deserializer holding a `&str` with a lifetime tied to another
 /// deserializer.
+///
+/// Unlike [`de::adapters::BorrowedStrDeserializer`], this deserializer will convert
+/// `deserialize_enum` requests to [`Visitor::visit_enum`]. The value will be
+/// treated as a name of unit variant. Only unit variants are supported.
 pub struct BorrowedStrDeserializer<'de, E> {
     value: &'de str,
     marker: PhantomData<E>,
@@ -565,6 +520,10 @@ impl<'de, E> Debug for BorrowedStrDeserializer<'de, E> {
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A deserializer holding a `String`.
+///
+/// Unlike [`de::adapters::StringDeserializer`], this deserializer will convert
+/// `deserialize_enum` requests to [`Visitor::visit_enum`]. The value will be
+/// treated as a name of unit variant. Only unit variants are supported.
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub struct StringDeserializer<E> {
     value: String,
@@ -766,114 +725,6 @@ impl<'a, E> Debug for CowStrDeserializer<'a, E> {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter
             .debug_struct("CowStrDeserializer")
-            .field("value", &self.value)
-            .finish()
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-/// A deserializer holding a `&[u8]`. Always calls [`Visitor::visit_bytes`].
-pub struct BytesDeserializer<'a, E> {
-    value: &'a [u8],
-    marker: PhantomData<E>,
-}
-
-impl<'a, E> BytesDeserializer<'a, E> {
-    /// Create a new deserializer from the given bytes.
-    pub fn new(value: &'a [u8]) -> Self {
-        BytesDeserializer {
-            value,
-            marker: PhantomData,
-        }
-    }
-}
-
-impl_copy_clone!(BytesDeserializer<'a>);
-
-impl<'de, 'a, E> IntoDeserializer<'de, E> for &'a [u8]
-where
-    E: de::Error,
-{
-    type Deserializer = BytesDeserializer<'a, E>;
-
-    fn into_deserializer(self) -> BytesDeserializer<'a, E> {
-        BytesDeserializer::new(self)
-    }
-}
-
-impl<'de, 'a, E> Deserializer<'de> for BytesDeserializer<'a, E>
-where
-    E: de::Error,
-{
-    type Error = E;
-
-    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>,
-    {
-        visitor.visit_bytes(self.value)
-    }
-
-    forward_to_deserialize_any! {
-        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
-        tuple_struct map struct enum identifier ignored_any
-    }
-}
-
-impl<'a, E> Debug for BytesDeserializer<'a, E> {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter
-            .debug_struct("BytesDeserializer")
-            .field("value", &self.value)
-            .finish()
-    }
-}
-
-/// A deserializer holding a `&[u8]` with a lifetime tied to another
-/// deserializer. Always calls [`Visitor::visit_borrowed_bytes`].
-pub struct BorrowedBytesDeserializer<'de, E> {
-    value: &'de [u8],
-    marker: PhantomData<E>,
-}
-
-impl<'de, E> BorrowedBytesDeserializer<'de, E> {
-    /// Create a new borrowed deserializer from the given borrowed bytes.
-    pub fn new(value: &'de [u8]) -> Self {
-        BorrowedBytesDeserializer {
-            value,
-            marker: PhantomData,
-        }
-    }
-}
-
-impl_copy_clone!(BorrowedBytesDeserializer<'de>);
-
-impl<'de, E> Deserializer<'de> for BorrowedBytesDeserializer<'de, E>
-where
-    E: de::Error,
-{
-    type Error = E;
-
-    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>,
-    {
-        visitor.visit_borrowed_bytes(self.value)
-    }
-
-    forward_to_deserialize_any! {
-        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
-        tuple_struct map struct enum identifier ignored_any
-    }
-}
-
-impl<'de, E> Debug for BorrowedBytesDeserializer<'de, E> {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter
-            .debug_struct("BorrowedBytesDeserializer")
             .field("value", &self.value)
             .finish()
     }
@@ -1446,6 +1297,11 @@ where
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A deserializer holding a `MapAccess`.
+///
+/// Unlike [`de::adapters::MapAccessDeserializer`], this deserializer will convert
+/// `deserialize_enum` requests to [`Visitor::visit_enum`]. The map key will be
+/// treated as a variant name and the map value will be deserialized as a variant
+/// content.
 #[derive(Clone, Debug)]
 pub struct MapAccessDeserializer<A> {
     map: A,
@@ -1505,41 +1361,6 @@ where
             Some(key) => Ok((key, private::map_as_enum(self.map))),
             None => Err(de::Error::invalid_type(de::Unexpected::Map, &"enum")),
         }
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-/// A deserializer holding an `EnumAccess`.
-#[derive(Clone, Debug)]
-pub struct EnumAccessDeserializer<A> {
-    access: A,
-}
-
-impl<A> EnumAccessDeserializer<A> {
-    /// Construct a new `EnumAccessDeserializer<A>`.
-    pub fn new(access: A) -> Self {
-        EnumAccessDeserializer { access }
-    }
-}
-
-impl<'de, A> Deserializer<'de> for EnumAccessDeserializer<A>
-where
-    A: de::EnumAccess<'de>,
-{
-    type Error = A::Error;
-
-    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>,
-    {
-        visitor.visit_enum(self.access)
-    }
-
-    forward_to_deserialize_any! {
-        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
-        tuple_struct map struct enum identifier ignored_any
     }
 }
 
