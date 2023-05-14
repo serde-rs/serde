@@ -5,7 +5,9 @@
 
 use lib::*;
 
-use de::{self, Deserializer, EnumAccess, IntoDeserializer, MapAccess, SeqAccess, Visitor};
+use de::{
+    self, Deserialize, Deserializer, EnumAccess, IntoDeserializer, MapAccess, SeqAccess, Visitor,
+};
 
 primitive_deserializer!(
     /// A deserializer holding a `bool`.
@@ -722,4 +724,121 @@ where
     {
         visitor.visit_enum(self.access)
     }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+/// Forwards specified method of [`Visitor`] to [`Deserialize::deserialize`]
+/// implementation with specified deserializer
+macro_rules! forward {
+    // Unit, None
+    ($visit:ident => $deserializer:ident) => {
+        fn $visit<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Deserialize::deserialize($deserializer::new())
+        }
+    };
+    // iXX, uXX, fXX, bool, char, str, borrowed_str, bytes, borrowed_bytes
+    ($visit:ident($ty:ty) => $deserializer:ident) => {
+        fn $visit<E>(self, value: $ty) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Deserialize::deserialize($deserializer::new(value))
+        }
+    };
+    // some, newtype, seq, map, enum
+    ($visit:ident : $bound:path => $deserializer:ident) => {
+        fn $visit<A>(self, accessor: A) -> Result<Self::Value, A::Error>
+        where
+            A: $bound,
+        {
+            Deserialize::deserialize($deserializer::new(accessor))
+        }
+    };
+}
+
+/// Converts any deserializable type to a [`Visitor`] that will deserialize that
+/// type from the content, captured from another deserializer.
+pub struct AsVisitor<'de, T, M> {
+    expecting: M,
+    marker: PhantomData<(&'de (), T)>,
+}
+
+impl<'de, T, M> AsVisitor<'de, T, M> {
+    /// Creates a new instance of a visitor that will use the specified message
+    /// as an "expecting" string in error messages.
+    pub fn new(expecting: M) -> Self {
+        AsVisitor {
+            expecting,
+            marker: PhantomData,
+        }
+    }
+}
+
+impl<'de, T, M> Visitor<'de> for AsVisitor<'de, T, M>
+where
+    T: Deserialize<'de>,
+    M: Display,
+{
+    type Value = T;
+
+    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.expecting)
+    }
+
+    forward!(visit_bool(bool) => BoolDeserializer);
+
+    forward!(visit_u8(u8) => U8Deserializer);
+    forward!(visit_u16(u16) => U16Deserializer);
+    forward!(visit_u32(u32) => U32Deserializer);
+    forward!(visit_u64(u64) => U64Deserializer);
+
+    forward!(visit_i8(i8) => I8Deserializer);
+    forward!(visit_i16(i16) => I16Deserializer);
+    forward!(visit_i32(i32) => I32Deserializer);
+    forward!(visit_i64(i64) => I64Deserializer);
+
+    serde_if_integer128! {
+        forward!(visit_u128(u128) => U128Deserializer);
+        forward!(visit_i128(i128) => I128Deserializer);
+    }
+
+    forward!(visit_f32(f32) => F32Deserializer);
+    forward!(visit_f64(f64) => F64Deserializer);
+
+    forward!(visit_char(char) => CharDeserializer);
+
+    forward!(visit_str(&str) => StrDeserializer);
+    forward!(visit_borrowed_str(&'de str) => BorrowedStrDeserializer);
+
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Deserialize::deserialize(StringDeserializer::new(value))
+    }
+
+    forward!(visit_bytes(&[u8]) => BytesDeserializer);
+    forward!(visit_borrowed_bytes(&'de [u8]) => BorrowedBytesDeserializer);
+
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    fn visit_byte_buf<E>(self, value: Vec<u8>) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Deserialize::deserialize(ByteBufDeserializer::new(value))
+    }
+
+    forward!(visit_none => NoneDeserializer);
+    forward!(visit_some: Deserializer<'de> => SomeDeserializer);
+
+    forward!(visit_unit => UnitDeserializer);
+    forward!(visit_newtype_struct: Deserializer<'de> => NewtypeDeserializer);
+    forward!(visit_seq: SeqAccess<'de> => SeqAccessDeserializer);
+    forward!(visit_map: MapAccess<'de> => MapAccessDeserializer);
+    forward!(visit_enum: EnumAccess<'de> => EnumAccessDeserializer);
 }
