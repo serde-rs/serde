@@ -3,7 +3,7 @@
 #![allow(clippy::derive_partial_eq_without_eq)]
 
 use serde_derive::Deserialize;
-use serde_test::{assert_de_tokens, Token};
+use serde_test::{assert_de_tokens, assert_de_tokens_error, Token};
 
 mod variant_identifier {
     use super::*;
@@ -23,6 +23,34 @@ mod variant_identifier {
         assert_de_tokens(&V::Aaa, &[Token::U64(0)]);
         assert_de_tokens(&V::Aaa, &[Token::Str("Aaa")]);
         assert_de_tokens(&V::Aaa, &[Token::Bytes(b"Aaa")]);
+    }
+
+    #[test]
+    fn unknown() {
+        assert_de_tokens_error::<V>(
+            &[Token::U8(42)],
+            "invalid value: integer `42`, expected variant index 0 <= i < 2",
+        );
+        assert_de_tokens_error::<V>(
+            &[Token::U16(42)],
+            "invalid value: integer `42`, expected variant index 0 <= i < 2",
+        );
+        assert_de_tokens_error::<V>(
+            &[Token::U32(42)],
+            "invalid value: integer `42`, expected variant index 0 <= i < 2",
+        );
+        assert_de_tokens_error::<V>(
+            &[Token::U64(42)],
+            "invalid value: integer `42`, expected variant index 0 <= i < 2",
+        );
+        assert_de_tokens_error::<V>(
+            &[Token::Str("Unknown")],
+            "unknown variant `Unknown`, expected `Aaa` or `Bbb`",
+        );
+        assert_de_tokens_error::<V>(
+            &[Token::Bytes(b"Unknown")],
+            "unknown variant `Unknown`, expected `Aaa` or `Bbb`",
+        );
     }
 }
 
@@ -44,6 +72,34 @@ mod field_identifier {
         assert_de_tokens(&F::Aaa, &[Token::U64(0)]);
         assert_de_tokens(&F::Aaa, &[Token::Str("aaa")]);
         assert_de_tokens(&F::Aaa, &[Token::Bytes(b"aaa")]);
+    }
+
+    #[test]
+    fn unknown() {
+        assert_de_tokens_error::<F>(
+            &[Token::U8(42)],
+            "invalid value: integer `42`, expected field index 0 <= i < 2",
+        );
+        assert_de_tokens_error::<F>(
+            &[Token::U16(42)],
+            "invalid value: integer `42`, expected field index 0 <= i < 2",
+        );
+        assert_de_tokens_error::<F>(
+            &[Token::U32(42)],
+            "invalid value: integer `42`, expected field index 0 <= i < 2",
+        );
+        assert_de_tokens_error::<F>(
+            &[Token::U64(42)],
+            "invalid value: integer `42`, expected field index 0 <= i < 2",
+        );
+        assert_de_tokens_error::<F>(
+            &[Token::Str("unknown")],
+            "unknown field `unknown`, expected `aaa` or `bbb`",
+        );
+        assert_de_tokens_error::<F>(
+            &[Token::Bytes(b"unknown")],
+            "unknown field `unknown`, expected `aaa` or `bbb`",
+        );
     }
 
     #[test]
