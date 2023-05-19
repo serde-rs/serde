@@ -184,12 +184,20 @@ impl Name {
     }
 
     fn deserialize_aliases(&self) -> Vec<String> {
-        let mut aliases = self.deserialize_aliases.clone();
-        let main_name = self.deserialize_name();
-        if !aliases.contains(&main_name) {
-            aliases.push(main_name);
+        self.deserialize_aliases.clone()
+    }
+
+    fn correct_aliases(&mut self) {
+        // `deserialize_aliases` got from a BTreeSet, so it sorted and does not
+        // contain duplicates.
+        // We cannot insert main name in `new` because rename_all rules not yet
+        // applied there.
+        match self.deserialize_aliases.binary_search(&self.deserialize) {
+            Ok(_) => {} // element already here
+            Err(pos) => self
+                .deserialize_aliases
+                .insert(pos, self.deserialize.clone()),
         }
-        aliases
     }
 }
 
@@ -928,6 +936,7 @@ impl Variant {
         if !self.name.deserialize_renamed {
             self.name.deserialize = rules.deserialize.apply_to_variant(&self.name.deserialize);
         }
+        self.name.correct_aliases();
     }
 
     pub fn rename_all_rules(&self) -> &RenameAllRules {
@@ -1267,6 +1276,7 @@ impl Field {
         if !self.name.deserialize_renamed {
             self.name.deserialize = rules.deserialize.apply_to_field(&self.name.deserialize);
         }
+        self.name.correct_aliases();
     }
 
     pub fn skip_serializing(&self) -> bool {
