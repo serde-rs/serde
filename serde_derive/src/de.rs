@@ -2153,7 +2153,7 @@ fn deserialize_custom_identifier(
         })
         .collect();
 
-    let names = names_idents.iter().map(|(name, _, _)| name);
+    let names = names_idents.iter().flat_map(|(_, _, aliases)| aliases);
 
     let names_const = if fallthrough.is_some() {
         None
