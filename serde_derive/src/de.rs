@@ -2221,16 +2221,14 @@ fn deserialize_identifier(
         flat_fields.extend(aliases.iter().map(|alias| (alias, ident)));
     }
 
-    let field_strs: &Vec<_> = &flat_fields.iter().map(|(name, _)| name).collect();
-    let field_bytes: &Vec<_> = &flat_fields
-        .iter()
-        .map(|(name, _)| Literal::byte_string(name.as_bytes()))
-        .collect();
+    let str_mapping = flat_fields.iter().map(|(name, ident)| {
+        quote!(#name => _serde::__private::Ok(#this_value::#ident))
+    });
+    let bytes_mapping = flat_fields.iter().map(|(name, ident)| {
+        let name = Literal::byte_string(name.as_bytes());
+        quote!(#name => _serde::__private::Ok(#this_value::#ident))
+    });
 
-    let constructors: &Vec<_> = &flat_fields
-        .iter()
-        .map(|(_, ident)| quote!(#this_value::#ident))
-        .collect();
     let main_constructors: &Vec<_> = &fields
         .iter()
         .map(|(_, ident, _)| quote!(#this_value::#ident))
@@ -2416,6 +2414,8 @@ fn deserialize_identifier(
     };
 
     let visit_borrowed = if fallthrough_borrowed.is_some() || collect_other_fields {
+        let str_mapping = str_mapping.clone();
+        let bytes_mapping = bytes_mapping.clone();
         let fallthrough_borrowed_arm = fallthrough_borrowed.as_ref().unwrap_or(fallthrough_arm);
         Some(quote! {
             fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::__private::Result<Self::Value, __E>
@@ -2423,9 +2423,7 @@ fn deserialize_identifier(
                 __E: _serde::de::Error,
             {
                 match __value {
-                    #(
-                        #field_strs => _serde::__private::Ok(#constructors),
-                    )*
+                    #(#str_mapping,)*
                     _ => {
                         #value_as_borrowed_str_content
                         #fallthrough_borrowed_arm
@@ -2438,9 +2436,7 @@ fn deserialize_identifier(
                 __E: _serde::de::Error,
             {
                 match __value {
-                    #(
-                        #field_bytes => _serde::__private::Ok(#constructors),
-                    )*
+                    #(#bytes_mapping,)*
                     _ => {
                         #bytes_to_str
                         #value_as_borrowed_bytes_content
@@ -2465,9 +2461,7 @@ fn deserialize_identifier(
             __E: _serde::de::Error,
         {
             match __value {
-                #(
-                    #field_strs => _serde::__private::Ok(#constructors),
-                )*
+                #(#str_mapping,)*
                 _ => {
                     #value_as_str_content
                     #fallthrough_arm
@@ -2480,9 +2474,7 @@ fn deserialize_identifier(
             __E: _serde::de::Error,
         {
             match __value {
-                #(
-                    #field_bytes => _serde::__private::Ok(#constructors),
-                )*
+                #(#bytes_mapping,)*
                 _ => {
                     #bytes_to_str
                     #value_as_bytes_content
