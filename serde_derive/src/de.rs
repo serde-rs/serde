@@ -2216,17 +2216,16 @@ fn deserialize_identifier(
     collect_other_fields: bool,
     expecting: Option<&str>,
 ) -> Fragment {
-    let mut flat_fields = Vec::new();
-    for (_, ident, aliases) in fields {
-        flat_fields.extend(aliases.iter().map(|alias| (alias, ident)));
-    }
-
-    let str_mapping = flat_fields.iter().map(|(name, ident)| {
-        quote!(#name => _serde::__private::Ok(#this_value::#ident))
+    let str_mapping = fields.iter().map(|(_, ident, aliases)| {
+        // `aliases` also contains a main name
+        quote!(#(#aliases)|* => _serde::__private::Ok(#this_value::#ident))
     });
-    let bytes_mapping = flat_fields.iter().map(|(name, ident)| {
-        let name = Literal::byte_string(name.as_bytes());
-        quote!(#name => _serde::__private::Ok(#this_value::#ident))
+    let bytes_mapping = fields.iter().map(|(_, ident, aliases)| {
+        // `aliases` also contains a main name
+        let aliases = aliases
+            .iter()
+            .map(|alias| Literal::byte_string(alias.as_bytes()));
+        quote!(#(#aliases)|* => _serde::__private::Ok(#this_value::#ident))
     });
 
     let main_constructors: &Vec<_> = &fields
