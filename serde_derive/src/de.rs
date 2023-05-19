@@ -2281,21 +2281,6 @@ fn deserialize_identifier(
         &fallthrough_arm_tokens
     };
 
-    let u64_fallthrough_arm_tokens;
-    let u64_fallthrough_arm = if let Some(fallthrough) = &fallthrough {
-        fallthrough
-    } else {
-        let index_expecting = if is_variant { "variant" } else { "field" };
-        let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
-        u64_fallthrough_arm_tokens = quote! {
-            _serde::__private::Err(_serde::de::Error::invalid_value(
-                _serde::de::Unexpected::Unsigned(__value),
-                &#fallthrough_msg,
-            ))
-        };
-        &u64_fallthrough_arm_tokens
-    };
-
     let visit_other = if collect_other_fields {
         quote! {
             fn visit_bool<__E>(self, __value: bool) -> _serde::__private::Result<Self::Value, __E>
@@ -2394,6 +2379,21 @@ fn deserialize_identifier(
             let i = i as u64;
             quote!(#i => _serde::__private::Ok(#this_value::#ident))
         });
+
+        let u64_fallthrough_arm_tokens;
+        let u64_fallthrough_arm = if let Some(fallthrough) = &fallthrough {
+            fallthrough
+        } else {
+            let index_expecting = if is_variant { "variant" } else { "field" };
+            let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
+            u64_fallthrough_arm_tokens = quote! {
+                _serde::__private::Err(_serde::de::Error::invalid_value(
+                    _serde::de::Unexpected::Unsigned(__value),
+                    &#fallthrough_msg,
+                ))
+            };
+            &u64_fallthrough_arm_tokens
+        };
 
         quote! {
             fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
