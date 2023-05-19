@@ -12,6 +12,7 @@ mod variant_identifier {
     #[serde(variant_identifier)]
     enum V {
         Aaa,
+        #[serde(alias = "Ccc", alias = "Ddd")]
         Bbb,
     }
 
@@ -23,6 +24,23 @@ mod variant_identifier {
         assert_de_tokens(&V::Aaa, &[Token::U64(0)]);
         assert_de_tokens(&V::Aaa, &[Token::Str("Aaa")]);
         assert_de_tokens(&V::Aaa, &[Token::Bytes(b"Aaa")]);
+    }
+
+    #[test]
+    fn aliases() {
+        assert_de_tokens(&V::Bbb, &[Token::U8(1)]);
+        assert_de_tokens(&V::Bbb, &[Token::U16(1)]);
+        assert_de_tokens(&V::Bbb, &[Token::U32(1)]);
+        assert_de_tokens(&V::Bbb, &[Token::U64(1)]);
+
+        assert_de_tokens(&V::Bbb, &[Token::Str("Bbb")]);
+        assert_de_tokens(&V::Bbb, &[Token::Bytes(b"Bbb")]);
+
+        assert_de_tokens(&V::Bbb, &[Token::Str("Ccc")]);
+        assert_de_tokens(&V::Bbb, &[Token::Bytes(b"Ccc")]);
+
+        assert_de_tokens(&V::Bbb, &[Token::Str("Ddd")]);
+        assert_de_tokens(&V::Bbb, &[Token::Bytes(b"Ddd")]);
     }
 
     #[test]
@@ -45,11 +63,11 @@ mod variant_identifier {
         );
         assert_de_tokens_error::<V>(
             &[Token::Str("Unknown")],
-            "unknown variant `Unknown`, expected `Aaa` or `Bbb`",
+            "unknown variant `Unknown`, expected one of `Aaa`, `Bbb`, `Ccc`, `Ddd`",
         );
         assert_de_tokens_error::<V>(
             &[Token::Bytes(b"Unknown")],
-            "unknown variant `Unknown`, expected `Aaa` or `Bbb`",
+            "unknown variant `Unknown`, expected one of `Aaa`, `Bbb`, `Ccc`, `Ddd`",
         );
     }
 }
@@ -61,6 +79,7 @@ mod field_identifier {
     #[serde(field_identifier, rename_all = "snake_case")]
     enum F {
         Aaa,
+        #[serde(alias = "ccc", alias = "ddd")]
         Bbb,
     }
 
@@ -72,6 +91,23 @@ mod field_identifier {
         assert_de_tokens(&F::Aaa, &[Token::U64(0)]);
         assert_de_tokens(&F::Aaa, &[Token::Str("aaa")]);
         assert_de_tokens(&F::Aaa, &[Token::Bytes(b"aaa")]);
+    }
+
+    #[test]
+    fn aliases() {
+        assert_de_tokens(&F::Bbb, &[Token::U8(1)]);
+        assert_de_tokens(&F::Bbb, &[Token::U16(1)]);
+        assert_de_tokens(&F::Bbb, &[Token::U32(1)]);
+        assert_de_tokens(&F::Bbb, &[Token::U64(1)]);
+
+        assert_de_tokens(&F::Bbb, &[Token::Str("bbb")]);
+        assert_de_tokens(&F::Bbb, &[Token::Bytes(b"bbb")]);
+
+        assert_de_tokens(&F::Bbb, &[Token::Str("ccc")]);
+        assert_de_tokens(&F::Bbb, &[Token::Bytes(b"ccc")]);
+
+        assert_de_tokens(&F::Bbb, &[Token::Str("ddd")]);
+        assert_de_tokens(&F::Bbb, &[Token::Bytes(b"ddd")]);
     }
 
     #[test]
@@ -94,11 +130,11 @@ mod field_identifier {
         );
         assert_de_tokens_error::<F>(
             &[Token::Str("unknown")],
-            "unknown field `unknown`, expected `aaa` or `bbb`",
+            "unknown field `unknown`, expected one of `aaa`, `bbb`, `ccc`, `ddd`",
         );
         assert_de_tokens_error::<F>(
             &[Token::Bytes(b"unknown")],
-            "unknown field `unknown`, expected `aaa` or `bbb`",
+            "unknown field `unknown`, expected one of `aaa`, `bbb`, `ccc`, `ddd`",
         );
     }
 
