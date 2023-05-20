@@ -739,6 +739,69 @@ fn duplicated_content() {
 }
 
 #[test]
+fn duplicated_field_in_struct() {
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Struct",
+            },
+            Token::Str("c"),
+            Token::Map { len: Some(2) },
+            Token::Str("f"),
+            Token::I32(1),
+            Token::Str("f"),
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::I32(2),
+            // Token::MapEnd,
+            // Token::MapEnd,
+        ],
+        "duplicate field `f`",
+    );
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("c"),
+            Token::Map { len: Some(2) },
+            Token::Str("f"),
+            Token::I32(1),
+            Token::Str("f"),
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            Token::I32(2),
+            Token::MapEnd,
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Struct",
+            },
+            Token::MapEnd,
+        ],
+        "duplicate field `f`",
+    );
+
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Seq { len: Some(2) },
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Struct",
+            },
+            Token::Map { len: Some(2) }, // content
+            Token::Str("f"),
+            Token::I32(1),
+            Token::Str("f"),
+            Token::I32(2),
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::MapEnd,
+            // Token::SeqEnd,
+        ],
+        "duplicate field `f`",
+    );
+}
+
+#[test]
 fn struct_with_flatten() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     #[serde(tag = "t", content = "c")]

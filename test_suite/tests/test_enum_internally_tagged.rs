@@ -1142,6 +1142,49 @@ fn duplicated_tag() {
 }
 
 #[test]
+fn duplicate_field_in_struct() {
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Map { len: None },
+            Token::Str("tag"),
+            Token::Str("Struct"),
+            Token::Str("a"),
+            Token::I32(1),
+            Token::Str("a"),
+            Token::I32(2),
+            Token::MapEnd,
+        ],
+        "duplicate field `a`",
+    );
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Map { len: None },
+            Token::Str("a"),
+            Token::I32(1),
+            Token::Str("tag"),
+            Token::Str("Struct"),
+            Token::Str("a"),
+            Token::I32(2),
+            Token::MapEnd,
+        ],
+        "duplicate field `a`",
+    );
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Map { len: None },
+            Token::Str("a"),
+            Token::I32(1),
+            Token::Str("a"),
+            Token::I32(2),
+            Token::Str("tag"),
+            Token::Str("Struct"),
+            Token::MapEnd,
+        ],
+        "duplicate field `a`",
+    );
+}
+
+#[test]
 fn untagged_variant() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "tag")]
