@@ -206,11 +206,15 @@ where
 #[cfg_attr(not(no_track_caller), track_caller)]
 pub fn assert_de_tokens_error<'de, T>(tokens: &'de [Token], error: &str)
 where
-    T: Deserialize<'de>,
+    T: Deserialize<'de> + Debug,
 {
     let mut de = Deserializer::new(tokens);
     match T::deserialize(&mut de) {
-        Ok(_) => panic!("tokens deserialized successfully"),
+        Ok(x) => assert_eq!(
+            error,
+            format!("{:?}", x),
+            "expected error (left) but tokens deserialized successfully (right)"
+        ),
         Err(e) => assert_eq!(e, *error),
     }
 
