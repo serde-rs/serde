@@ -1,12 +1,16 @@
+#[cfg(feature = "deserialize_in_place")]
+use crate::de::{expr_is_missing, place_lifetime, read_fields_in_order_in_place};
 use crate::de::{has_flatten, read_fields_in_order, read_from_seq_access, Parameters, TupleForm};
 #[cfg(feature = "deserialize_in_place")]
-use crate::de::{place_lifetime, read_fields_in_order_in_place};
+use crate::fragment::Expr;
 use crate::fragment::{Fragment, Stmts};
 use crate::internals::ast::Field;
 use crate::internals::attr;
 use crate::private;
 use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
+#[cfg(feature = "deserialize_in_place")]
+use syn::Index;
 
 /// Generates `Deserialize::deserialize` body for a `struct Tuple(...);` including `struct Newtype(T);`
 pub(super) fn deserialize(
@@ -59,31 +63,33 @@ pub(super) fn deserialize(
 
     let visit_newtype_struct = match form {
         TupleForm::Tuple if nfields == 1 => {
-            let field = &fields[0];
-            let field_ty = field.ty;
+            let visit_newtype_struct = Stmts(read_fields_in_order(
+                &type_path,
+                params,
+                fields,
+                false,
+                cattrs,
+                expecting,
+                |_, _, field, _, _| {
+                    let deserialize = match field.attrs.deserialize_with() {
+                        None => {
+                            let field_ty = field.ty;
 
-            let deserialize = match field.attrs.deserialize_with() {
-                None => {
-                    let span = field.original.span();
-                    quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize)
-                }
-                Some(path) => {
-                    // If #path returns wrong type, error will be reported here (^^^^^).
-                    // We attach span of the path to the function so it will be reported
-                    // on the #[serde(with = "...")]
-                    //                       ^^^^^
-                    quote_spanned!(path.span()=> #path)
-                }
-            };
-
-            let mut result = quote!(#type_path(__field0));
-            if params.has_getter {
-                let this_type = &params.this_type;
-                let (_, ty_generics, _) = params.generics.split_for_impl();
-                result = quote! {
-                    _serde::#private::Into::<#this_type #ty_generics>::into(#result)
-                };
-            }
+                            let span = field.original.span();
+                            quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize)
+                        }
+                        Some(path) => {
+                            // If #path returns wrong type, error will be reported here (^^^^^).
+                            // We attach span of the path to the function so it will be reported
+                            // on the #[serde(with = "...")]
+                            //                       ^^^^^
+                            quote_spanned!(path.span()=> #path)
+                        }
+                    };
+                    // __e cannot be in quote_spanned! because of macro hygiene
+                    quote!(#deserialize(__e)?)
+                },
+            ));
 
             Some(quote! {
                 #[inline]
@@ -91,8 +97,7 @@ pub(super) fn deserialize(
                 where
                     __E: _serde::Deserializer<#delife>,
                 {
-                    let __field0: #field_ty = #deserialize(__e)?;
-                    _serde::#private::Ok(#result)
+                    #visit_newtype_struct
                 }
             })
         }
@@ -200,9 +205,44 @@ pub(super) fn deserialize_in_place(
     let nfields = fields.len();
 
     let visit_newtype_struct = if nfields == 1 {
-        // We do not generate deserialize_in_place if every field has a
-        // deserialize_with.
-        assert!(fields[0].attrs.deserialize_with().is_none());
+        // We deserialize newtype, so only one field is not skipped
+
+        let index = fields
+            .iter()
+            .position(|field| !field.attrs.skip_deserializing())
+            .unwrap_or(0);
+        let index = Index::from(index);
+        let mut deserialize = quote! {
+            _serde::Deserialize::deserialize_in_place(__e, &mut self.place.#index)
+        };
+        let write_defaults = fields.iter().enumerate().filter_map(|(index, field)| {
+            if field.attrs.skip_deserializing() {
+                let index = Index::from(index);
+                let default = Expr(expr_is_missing(field, cattrs));
+                return Some(quote!(self.place.#index = #default;));
+            }
+            None
+        });
+        // If there are no deserialized fields, write only defaults
+        if field_count == 0 {
+            deserialize = quote! {
+                #(#write_defaults)*
+                _serde::#private::Ok(())
+            }
+        } else
+        // Deserialize and write defaults if at least one field is skipped,
+        // otherwise only deserialize
+        if nfields > field_count {
+            deserialize = quote! {
+                match #deserialize {
+                    _serde::#private::Ok(_) => {
+                        #(#write_defaults)*
+                        _serde::#private::Ok(())
+                    }
+                    _serde::#private::Err(__err) => _serde::#private::Err(__err),
+                }
+            }
+        }
 
         Some(quote! {
             #[inline]
@@ -210,7 +250,7 @@ pub(super) fn deserialize_in_place(
             where
                 __E: _serde::Deserializer<#delife>,
             {
-                _serde::Deserialize::deserialize_in_place(__e, &mut self.place.0)
+                #deserialize
             }
         })
     } else {
