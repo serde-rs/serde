@@ -149,6 +149,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@miri
+      - run: cargo miri setup
       - run: cd serde && cargo miri test --features derive,rc,unstable
         env:
           MIRIFLAGS: -Zmiri-strict-provenance
