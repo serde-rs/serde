@@ -517,8 +517,14 @@ fn deserialize_tuple(
         _ => None,
     };
 
-    let visit_seq = Stmts(deserialize_seq(
-        &type_path, params, fields, false, cattrs, expecting,
+    let visit_seq = Stmts(read_fields_in_order(
+        &type_path,
+        params,
+        fields,
+        false,
+        cattrs,
+        expecting,
+        read_from_seq_access,
     ));
 
     let visitor_expr = quote! {
@@ -628,7 +634,9 @@ fn deserialize_tuple_in_place(
         None
     };
 
-    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
+    let visit_seq = Stmts(read_fields_in_order_in_place(
+        params, fields, cattrs, expecting,
+    ));
 
     let visitor_expr = quote! {
         __Visitor {
@@ -684,13 +692,18 @@ fn deserialize_tuple_in_place(
     }
 }
 
-fn deserialize_seq(
+/// Generates code that will read specified `fields` in order, one-by-one,
+/// and then construct a final value from them. All skipped fields will receive
+/// their default values, all other will be read using the code, returned by
+/// the `read_field` function.
+fn read_fields_in_order(
     type_path: &TokenStream,
     params: &Parameters,
     fields: &[Field],
     is_struct: bool,
     cattrs: &attr::Container,
     expecting: &str,
+    read_field: impl Fn(&Parameters, usize, &Field, &attr::Container, &str) -> TokenStream,
 ) -> Fragment {
     let vars = (0..fields.len()).map(field_i as fn(_) -> _);
 
@@ -713,7 +726,7 @@ fn deserialize_seq(
                 let #var = #default;
             }
         } else {
-            let read = read_from_seq_access(params, index_in_seq, field, cattrs, expecting);
+            let read = read_field(params, index_in_seq, field, cattrs, expecting);
             index_in_seq += 1;
             quote! {
                 let #var = #read;
@@ -800,8 +813,11 @@ fn read_from_seq_access(
     }
 }
 
+/// Generates code that will read specified `fields` in order, one-by-one,
+/// and then construct a final value from them. All skipped fields will receive
+/// their default values, all other will be read from a `SeqAccess`.
 #[cfg(feature = "deserialize_in_place")]
-fn deserialize_seq_in_place(
+fn read_fields_in_order_in_place(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
@@ -1012,8 +1028,14 @@ fn deserialize_struct(
                 quote!(mut __seq)
             };
 
-            let visit_seq = Stmts(deserialize_seq(
-                &type_path, params, fields, true, cattrs, expecting,
+            let visit_seq = Stmts(read_fields_in_order(
+                &type_path,
+                params,
+                fields,
+                true,
+                cattrs,
+                expecting,
+                read_from_seq_access,
             ));
 
             Some(quote! {
@@ -1166,7 +1188,9 @@ fn deserialize_struct_in_place(
     } else {
         quote!(mut __seq)
     };
-    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
+    let visit_seq = Stmts(read_fields_in_order_in_place(
+        params, fields, cattrs, expecting,
+    ));
     let visit_map = Stmts(deserialize_map_in_place(params, fields, cattrs));
     let field_names = deserialized_fields.iter().flat_map(|field| field.aliases);
     let type_name = cattrs.name().deserialize_name();
