@@ -1,7 +1,7 @@
 use crate::de::identifier;
 use crate::de::{
-    expr_is_missing, field_i, has_flatten, read_fields_in_order, wrap_deserialize_field_with,
-    FieldWithAliases, Parameters, StructForm,
+    expr_is_missing, field_i, has_flatten, read_fields_in_order, read_from_seq_access,
+    wrap_deserialize_field_with, FieldWithAliases, Parameters, StructForm,
 };
 #[cfg(feature = "deserialize_in_place")]
 use crate::de::{place_lifetime, read_fields_in_order_in_place};
@@ -80,7 +80,13 @@ pub(super) fn deserialize(
             };
 
             let visit_seq = Stmts(read_fields_in_order(
-                &type_path, params, fields, true, cattrs, expecting,
+                &type_path,
+                params,
+                fields,
+                true,
+                cattrs,
+                expecting,
+                read_from_seq_access,
             ));
 
             Some(quote! {
