@@ -5,7 +5,6 @@ use crate::fragment::{Fragment, Stmts};
 use crate::internals::ast::Field;
 use crate::internals::attr;
 use crate::private;
-use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 
@@ -60,7 +59,49 @@ pub(super) fn deserialize(
 
     let visit_newtype_struct = match form {
         TupleForm::Tuple if nfields == 1 => {
-            Some(deserialize_newtype_struct(&type_path, params, &fields[0]))
+            let field = &fields[0];
+            let field_ty = field.ty;
+            let deserializer_var = quote!(__e);
+
+            let value = match field.attrs.deserialize_with() {
+                None => {
+                    let span = field.original.span();
+                    let func =
+                        quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize);
+                    quote! {
+                        #func(#deserializer_var)?
+                    }
+                }
+                Some(path) => {
+                    // If #path returns wrong type, error will be reported here (^^^^^).
+                    // We attach span of the path to the function so it will be reported
+                    // on the #[serde(with = "...")]
+                    //                       ^^^^^
+                    quote_spanned! {path.span()=>
+                        #path(#deserializer_var)?
+                    }
+                }
+            };
+
+            let mut result = quote!(#type_path(__field0));
+            if params.has_getter {
+                let this_type = &params.this_type;
+                let (_, ty_generics, _) = params.generics.split_for_impl();
+                result = quote! {
+                    _serde::#private::Into::<#this_type #ty_generics>::into(#result)
+                };
+            }
+
+            Some(quote! {
+                #[inline]
+                fn visit_newtype_struct<__E>(self, #deserializer_var: __E) -> _serde::#private::Result<Self::Value, __E::Error>
+                where
+                    __E: _serde::Deserializer<#delife>,
+                {
+                    let __field0: #field_ty = #value;
+                    _serde::#private::Ok(#result)
+                }
+            })
         }
         _ => None,
     };
@@ -135,55 +176,6 @@ pub(super) fn deserialize(
         }
 
         #dispatch
-    }
-}
-
-fn deserialize_newtype_struct(
-    type_path: &TokenStream,
-    params: &Parameters,
-    field: &Field,
-) -> TokenStream {
-    let delife = params.borrowed.de_lifetime();
-    let field_ty = field.ty;
-    let deserializer_var = quote!(__e);
-
-    let value = match field.attrs.deserialize_with() {
-        None => {
-            let span = field.original.span();
-            let func = quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize);
-            quote! {
-                #func(#deserializer_var)?
-            }
-        }
-        Some(path) => {
-            // If #path returns wrong type, error will be reported here (^^^^^).
-            // We attach span of the path to the function so it will be reported
-            // on the #[serde(with = "...")]
-            //                       ^^^^^
-            quote_spanned! {path.span()=>
-                #path(#deserializer_var)?
-            }
-        }
-    };
-
-    let mut result = quote!(#type_path(__field0));
-    if params.has_getter {
-        let this_type = &params.this_type;
-        let (_, ty_generics, _) = params.generics.split_for_impl();
-        result = quote! {
-            _serde::#private::Into::<#this_type #ty_generics>::into(#result)
-        };
-    }
-
-    quote! {
-        #[inline]
-        fn visit_newtype_struct<__E>(self, #deserializer_var: __E) -> _serde::#private::Result<Self::Value, __E::Error>
-        where
-            __E: _serde::Deserializer<#delife>,
-        {
-            let __field0: #field_ty = #value;
-            _serde::#private::Ok(#result)
-        }
     }
 }
 
