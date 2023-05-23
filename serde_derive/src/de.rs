@@ -448,13 +448,18 @@ enum TupleForm<'a> {
     Untagged(&'a syn::Ident),
 }
 
-fn deserialize_seq(
+/// Generates code that will read specified `fields` in order, one-by-one,
+/// and then construct a final value from them. All skipped fields will receive
+/// their default values, all other will be read using the code, returned by
+/// the `read_field` function.
+fn read_fields_in_order(
     type_path: &TokenStream,
     params: &Parameters,
     fields: &[Field],
     is_struct: bool,
     cattrs: &attr::Container,
     expecting: &str,
+    read_field: impl Fn(&Parameters, usize, &Field, &attr::Container, &str) -> TokenStream,
 ) -> Fragment {
     let vars = (0..fields.len()).map(field_i as fn(_) -> _);
 
@@ -477,7 +482,7 @@ fn deserialize_seq(
                 let #var = #default;
             }
         } else {
-            let read = read_from_seq_access(params, index_in_seq, field, cattrs, expecting);
+            let read = read_field(params, index_in_seq, field, cattrs, expecting);
             index_in_seq += 1;
             quote! {
                 let #var = #read;
@@ -564,8 +569,11 @@ fn read_from_seq_access(
     }
 }
 
+/// Generates code that will read specified `fields` in order, one-by-one,
+/// and then construct a final value from them. All skipped fields will receive
+/// their default values, all other will be read from a `SeqAccess`.
 #[cfg(feature = "deserialize_in_place")]
-fn deserialize_seq_in_place(
+fn read_fields_in_order_in_place(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,

@@ -1,6 +1,6 @@
-use crate::de::{deserialize_seq, has_flatten, Parameters, TupleForm};
+use crate::de::{has_flatten, read_fields_in_order, read_from_seq_access, Parameters, TupleForm};
 #[cfg(feature = "deserialize_in_place")]
-use crate::de::{deserialize_seq_in_place, place_lifetime};
+use crate::de::{place_lifetime, read_fields_in_order_in_place};
 use crate::fragment::{Fragment, Stmts};
 use crate::internals::ast::Field;
 use crate::internals::attr;
@@ -65,8 +65,14 @@ pub(super) fn deserialize(
         _ => None,
     };
 
-    let visit_seq = Stmts(deserialize_seq(
-        &type_path, params, fields, false, cattrs, expecting,
+    let visit_seq = Stmts(read_fields_in_order(
+        &type_path,
+        params,
+        fields,
+        false,
+        cattrs,
+        expecting,
+        read_from_seq_access,
     ));
 
     let visitor_expr = quote! {
@@ -226,7 +232,9 @@ pub(super) fn deserialize_in_place(
         None
     };
 
-    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
+    let visit_seq = Stmts(read_fields_in_order_in_place(
+        params, fields, cattrs, expecting,
+    ));
 
     let visitor_expr = quote! {
         __Visitor {
