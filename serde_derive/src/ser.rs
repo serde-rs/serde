@@ -10,9 +10,7 @@ use internals::{attr, replace_receiver, Ctxt, Derive};
 use pretend;
 use this;
 
-pub fn expand_derive_serialize(
-    input: &mut syn::DeriveInput,
-) -> Result<TokenStream, Vec<syn::Error>> {
+pub fn expand_derive_serialize(input: &mut syn::DeriveInput) -> syn::Result<TokenStream> {
     replace_receiver(input);
 
     let ctxt = Ctxt::new();
