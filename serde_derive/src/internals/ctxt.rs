@@ -44,12 +44,19 @@ impl Ctxt {
     }
 
     /// Consume this object, producing a formatted error string if there are errors.
-    pub fn check(self) -> Result<(), Vec<syn::Error>> {
-        let errors = self.errors.borrow_mut().take().unwrap();
-        match errors.len() {
-            0 => Ok(()),
-            _ => Err(errors),
+    pub fn check(self) -> syn::Result<()> {
+        let mut errors = self.errors.borrow_mut().take().unwrap().into_iter();
+
+        let mut combined = match errors.next() {
+            Some(first) => first,
+            None => return Ok(()),
+        };
+
+        for rest in errors {
+            combined.combine(rest);
         }
+
+        Err(combined)
     }
 }
 

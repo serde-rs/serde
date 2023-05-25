@@ -15,9 +15,7 @@ use this;
 use std::collections::BTreeSet;
 use std::ptr;
 
-pub fn expand_derive_deserialize(
-    input: &mut syn::DeriveInput,
-) -> Result<TokenStream, Vec<syn::Error>> {
+pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<TokenStream> {
     replace_receiver(input);
 
     let ctxt = Ctxt::new();

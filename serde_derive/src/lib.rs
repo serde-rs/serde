@@ -92,7 +92,7 @@ mod try;
 pub fn derive_serialize(input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as DeriveInput);
     ser::expand_derive_serialize(&mut input)
-        .unwrap_or_else(to_compile_errors)
+        .unwrap_or_else(syn::Error::into_compile_error)
         .into()
 }
 
@@ -100,11 +100,6 @@ pub fn derive_serialize(input: TokenStream) -> TokenStream {
 pub fn derive_deserialize(input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as DeriveInput);
     de::expand_derive_deserialize(&mut input)
-        .unwrap_or_else(to_compile_errors)
+        .unwrap_or_else(syn::Error::into_compile_error)
         .into()
-}
-
-fn to_compile_errors(errors: Vec<syn::Error>) -> proc_macro2::TokenStream {
-    let compile_errors = errors.iter().map(syn::Error::to_compile_error);
-    quote!(#(#compile_errors)*)
 }
