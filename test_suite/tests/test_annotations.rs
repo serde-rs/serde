@@ -1533,7 +1533,7 @@ fn test_invalid_length_enum() {
             Token::TupleVariant {
                 name: "InvalidLengthEnum",
                 variant: "B",
-                len: 3,
+                len: 2,
             },
             Token::I32(1),
             Token::TupleVariantEnd,

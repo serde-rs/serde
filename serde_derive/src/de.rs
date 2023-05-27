@@ -445,13 +445,18 @@ fn deserialize_tuple(
     cattrs: &attr::Container,
     deserializer: Option<TokenStream>,
 ) -> Fragment {
+    assert!(!cattrs.has_flatten());
+
+    let field_count = fields
+        .iter()
+        .filter(|field| !field.attrs.skip_deserializing())
+        .count();
+
     let this_type = &params.this_type;
     let this_value = &params.this_value;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
-
-    assert!(!cattrs.has_flatten());
 
     // If there are getters (implying private fields), construct the local type
     // and use an `Into` conversion to get the remote type. If there are no
@@ -493,19 +498,18 @@ fn deserialize_tuple(
         }
     };
     let dispatch = if let Some(deserializer) = deserializer {
-        quote!(_serde::Deserializer::deserialize_tuple(#deserializer, #nfields, #visitor_expr))
+        quote!(_serde::Deserializer::deserialize_tuple(#deserializer, #field_count, #visitor_expr))
     } else if is_enum {
-        quote!(_serde::de::VariantAccess::tuple_variant(__variant, #nfields, #visitor_expr))
+        quote!(_serde::de::VariantAccess::tuple_variant(__variant, #field_count, #visitor_expr))
     } else if nfields == 1 {
         let type_name = cattrs.name().deserialize_name();
         quote!(_serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
     } else {
         let type_name = cattrs.name().deserialize_name();
-        quote!(_serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #nfields, #visitor_expr))
+        quote!(_serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #field_count, #visitor_expr))
     };
 
-    let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
-    let visitor_var = if all_skipped {
+    let visitor_var = if field_count == 0 {
         quote!(_)
     } else {
         quote!(mut __seq)
@@ -548,12 +552,17 @@ fn deserialize_tuple_in_place(
     cattrs: &attr::Container,
     deserializer: Option<TokenStream>,
 ) -> Fragment {
+    assert!(!cattrs.has_flatten());
+
+    let field_count = fields
+        .iter()
+        .filter(|field| !field.attrs.skip_deserializing())
+        .count();
+
     let this_type = &params.this_type;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
-
-    assert!(!cattrs.has_flatten());
 
     let is_enum = variant_ident.is_some();
     let expecting = match variant_ident {
@@ -580,19 +589,18 @@ fn deserialize_tuple_in_place(
     };
 
     let dispatch = if let Some(deserializer) = deserializer {
-        quote!(_serde::Deserializer::deserialize_tuple(#deserializer, #nfields, #visitor_expr))
+        quote!(_serde::Deserializer::deserialize_tuple(#deserializer, #field_count, #visitor_expr))
     } else if is_enum {
-        quote!(_serde::de::VariantAccess::tuple_variant(__variant, #nfields, #visitor_expr))
+        quote!(_serde::de::VariantAccess::tuple_variant(__variant, #field_count, #visitor_expr))
     } else if nfields == 1 {
         let type_name = cattrs.name().deserialize_name();
         quote!(_serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
     } else {
         let type_name = cattrs.name().deserialize_name();
-        quote!(_serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #nfields, #visitor_expr))
+        quote!(_serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #field_count, #visitor_expr))
     };
 
-    let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
-    let visitor_var = if all_skipped {
+    let visitor_var = if field_count == 0 {
         quote!(_)
     } else {
         quote!(mut __seq)
