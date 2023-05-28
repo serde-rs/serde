@@ -62,7 +62,7 @@ pub(super) fn deserialize(
     let nfields = fields.len();
 
     let visit_newtype_struct = match form {
-        TupleForm::Tuple if nfields == 1 => {
+        TupleForm::Tuple if field_count == 1 => {
             let visit_newtype_struct = Stmts(read_fields_in_order(
                 &type_path,
                 params,
@@ -121,7 +121,7 @@ pub(super) fn deserialize(
         }
     };
     let dispatch = match form {
-        TupleForm::Tuple if nfields == 1 => {
+        TupleForm::Tuple if field_count != 0 && nfields == 1 => {
             let type_name = cattrs.name().deserialize_name();
             quote! {
                 _serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr)
@@ -204,35 +204,28 @@ pub(super) fn deserialize_in_place(
 
     let nfields = fields.len();
 
-    let visit_newtype_struct = if nfields == 1 {
+    let visit_newtype_struct = if field_count == 1 {
         // We deserialize newtype, so only one field is not skipped
 
         let index = fields
             .iter()
             .position(|field| !field.attrs.skip_deserializing())
-            .unwrap_or(0);
-        let index = Index::from(index);
+            .map(Index::from)
+            .unwrap();
         let mut deserialize = quote! {
             _serde::Deserialize::deserialize_in_place(__e, &mut self.place.#index)
         };
-        let write_defaults = fields.iter().enumerate().filter_map(|(index, field)| {
-            if field.attrs.skip_deserializing() {
-                let index = Index::from(index);
-                let default = Expr(expr_is_missing(field, cattrs));
-                return Some(quote!(self.place.#index = #default;));
-            }
-            None
-        });
-        // If there are no deserialized fields, write only defaults
-        if field_count == 0 {
-            deserialize = quote! {
-                #(#write_defaults)*
-                _serde::#private::Ok(())
-            }
-        } else
         // Deserialize and write defaults if at least one field is skipped,
         // otherwise only deserialize
-        if nfields > field_count {
+        if nfields > 1 {
+            let write_defaults = fields.iter().enumerate().filter_map(|(index, field)| {
+                if field.attrs.skip_deserializing() {
+                    let index = Index::from(index);
+                    let default = Expr(expr_is_missing(field, cattrs));
+                    return Some(quote!(self.place.#index = #default;));
+                }
+                None
+            });
             deserialize = quote! {
                 match #deserialize {
                     _serde::#private::Ok(_) => {
@@ -269,7 +262,7 @@ pub(super) fn deserialize_in_place(
     };
 
     let type_name = cattrs.name().deserialize_name();
-    let dispatch = if nfields == 1 {
+    let dispatch = if field_count != 0 && nfields == 1 {
         quote!(_serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
     } else {
         quote!(_serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #field_count, #visitor_expr))

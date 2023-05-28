@@ -87,7 +87,6 @@ mod tuple_struct {
         );
     }
 
-    /* FIXME: compilation error: https://github.com/serde-rs/serde/issues/2105
     #[test]
     fn tuple1as0() {
         /// This newtype struct in the serialized form the same as `struct Tuple0();`
@@ -107,7 +106,7 @@ mod tuple_struct {
                 Token::TupleStructEnd,
             ],
         );
-    }*/
+    }
 
     #[test]
     fn tuple2as0() {
