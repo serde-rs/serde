@@ -628,6 +628,10 @@ fn test_untagged_enum() {
             Token::StructEnd,
         ],
     );
+    assert_de_tokens(
+        &Untagged::A { a: 1 },
+        &[Token::Tuple { len: 1 }, Token::U8(1), Token::TupleEnd],
+    );
 
     assert_tokens(
         &Untagged::B { b: 2 },
@@ -658,11 +662,6 @@ fn test_untagged_enum() {
             Token::U8(2),
             Token::TupleEnd,
         ],
-    );
-
-    assert_de_tokens_error::<Untagged>(
-        &[Token::Tuple { len: 1 }, Token::U8(1), Token::TupleEnd],
-        "data did not match any variant of untagged enum Untagged",
     );
 
     assert_de_tokens_error::<Untagged>(
