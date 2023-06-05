@@ -27,7 +27,7 @@ quote = "1.0"
 syn = "2.0.3"
 
 [dev-dependencies]
-serde = { version = "1.0", path = "../serde" }
+serde = { version = "1.0", path = "../serde", features = ["derive"] }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
