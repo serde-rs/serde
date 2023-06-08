@@ -1168,12 +1168,8 @@ fn deserialize_enum(
     cattrs: &attr::Container,
 ) -> Fragment {
     // The variants have already been checked (in ast.rs) that all untagged variants appear at the end
-    match variants
-        .iter()
-        .enumerate()
-        .find(|(_, var)| var.attrs.untagged())
-    {
-        Some((variant_idx, _)) => {
+    match variants.iter().position(|var| var.attrs.untagged()) {
+        Some(variant_idx) => {
             let (tagged, untagged) = variants.split_at(variant_idx);
             let tagged_frag = Expr(deserialize_homogeneous_enum(params, tagged, cattrs));
             let tagged_frag = |deserializer| {
