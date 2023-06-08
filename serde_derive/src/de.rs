@@ -1008,29 +1008,28 @@ fn deserialize_struct(
 
     // untagged struct variants do not get a visit_seq method. The same applies to
     // structs that only have a map representation.
-    let visit_seq = match form {
-        _ if cattrs.has_flatten() => None,
-        _ => {
-            let mut_seq = if field_names_idents.is_empty() {
-                quote!(_)
-            } else {
-                quote!(mut __seq)
-            };
+    let visit_seq = if cattrs.has_flatten() {
+        None
+    } else {
+        let mut_seq = if field_names_idents.is_empty() {
+            quote!(_)
+        } else {
+            quote!(mut __seq)
+        };
 
-            let visit_seq = Stmts(deserialize_seq(
-                &type_path, params, fields, true, cattrs, expecting,
-            ));
+        let visit_seq = Stmts(deserialize_seq(
+            &type_path, params, fields, true, cattrs, expecting,
+        ));
 
-            Some(quote! {
-                #[inline]
-                fn visit_seq<__A>(self, #mut_seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
-                where
-                    __A: _serde::de::SeqAccess<#delife>,
-                {
-                    #visit_seq
-                }
-            })
-        }
+        Some(quote! {
+            #[inline]
+            fn visit_seq<__A>(self, #mut_seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
+            where
+                __A: _serde::de::SeqAccess<#delife>,
+            {
+                #visit_seq
+            }
+        })
     };
     let visit_map = Stmts(deserialize_map(&type_path, params, fields, cattrs));
 
