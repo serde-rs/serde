@@ -156,9 +156,9 @@ fn enum_from_ast<'a>(
             }
         }).inspect(|variant| {
             if !variant.attrs.untagged() && seen_untagged {
-                cx.error_spanned_by(&variant.ident, "all variants with the #[serde(untagged)] attribute must be placed at the end of the enum")
+                cx.error_spanned_by(&variant.ident, "all variants with the #[serde(untagged)] attribute must be placed at the end of the enum");
             }
-            seen_untagged = variant.attrs.untagged()
+            seen_untagged = variant.attrs.untagged();
         }).collect()
 }
 
