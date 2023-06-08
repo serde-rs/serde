@@ -1,5 +1,9 @@
 error: failed to parse type: into = "Option<T"
  --> tests/ui/type-attribute/into.rs:4:16
   |
+3 | #[derive(Serialize)]
+  |          --------- in this derive macro expansion
 4 | #[serde(into = "Option<T")]
   |                ^^^^^^^^^^
+  |
+  = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)

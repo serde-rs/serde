@@ -1,5 +1,10 @@
 error: #[serde(default)] can only be used on structs with named fields
  --> tests/ui/default-attribute/nameless_struct_fields.rs:5:9
   |
+3 | #[derive(Deserialize)]
+  |          ----------- in this derive macro expansion
+4 | #[serde(default)]
 5 | struct T(u8, u8);
   |         ^^^^^^^^
+  |
+  = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)

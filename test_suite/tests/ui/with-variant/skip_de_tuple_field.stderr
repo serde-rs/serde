@@ -1,6 +1,11 @@
 error: variant `Tuple` cannot have both #[serde(deserialize_with)] and a field #0 marked with #[serde(skip_deserializing)]
  --> tests/ui/with-variant/skip_de_tuple_field.rs:5:5
   |
+3 |   #[derive(Deserialize)]
+  |            ----------- in this derive macro expansion
+4 |   enum Enum {
 5 | /     #[serde(deserialize_with = "deserialize_some_other_variant")]
 6 | |     Tuple(#[serde(skip_deserializing)] String, u8),
   | |__________________________________________________^
+  |
+  = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)

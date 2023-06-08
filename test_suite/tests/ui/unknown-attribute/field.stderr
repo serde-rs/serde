@@ -1,5 +1,10 @@
 error: unknown serde field attribute `abc`
  --> tests/ui/unknown-attribute/field.rs:5:13
   |
+3 | #[derive(Serialize)]
+  |          --------- in this derive macro expansion
+4 | struct C {
 5 |     #[serde(abc = "xyz")]
   |             ^^^
+  |
+  = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)

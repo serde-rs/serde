@@ -1,5 +1,9 @@
 error: failed to parse path: "~~~"
   --> tests/ui/remote/bad_remote.rs:10:18
    |
+9  | #[derive(Serialize)]
+   |          --------- in this derive macro expansion
 10 | #[serde(remote = "~~~")]
    |                  ^^^^^
+   |
+   = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)

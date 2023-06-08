@@ -1,5 +1,10 @@
 error: duplicate serde attribute `borrow`
  --> tests/ui/borrow/duplicate_variant.rs:9:15
   |
+6 | #[derive(Deserialize)]
+  |          ----------- in this derive macro expansion
+...
 9 |     S(#[serde(borrow)] Str<'a>),
   |               ^^^^^^
+  |
+  = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)

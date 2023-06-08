@@ -1,17 +1,31 @@
 error: untagged enum cannot have #[serde(tag = "...", content = "...")]
  --> tests/ui/enum-representation/untagged-and-adjacent.rs:4:9
   |
+3 | #[derive(Serialize)]
+  |          --------- in this derive macro expansion
 4 | #[serde(untagged)]
   |         ^^^^^^^^
+  |
+  = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: untagged enum cannot have #[serde(tag = "...", content = "...")]
  --> tests/ui/enum-representation/untagged-and-adjacent.rs:5:9
   |
+3 | #[derive(Serialize)]
+  |          --------- in this derive macro expansion
+4 | #[serde(untagged)]
 5 | #[serde(tag = "t", content = "c")]
   |         ^^^
+  |
+  = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: untagged enum cannot have #[serde(tag = "...", content = "...")]
  --> tests/ui/enum-representation/untagged-and-adjacent.rs:5:20
   |
+3 | #[derive(Serialize)]
+  |          --------- in this derive macro expansion
+4 | #[serde(untagged)]
 5 | #[serde(tag = "t", content = "c")]
   |                    ^^^^^^^
+  |
+  = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)

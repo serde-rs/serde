@@ -1,6 +1,11 @@
 error: #[serde(other)] may not be used on a variant identifier
  --> tests/ui/identifier/other_variant.rs:6:5
   |
+3 |   #[derive(Deserialize)]
+  |            ----------- in this derive macro expansion
+...
 6 | /     #[serde(other)]
 7 | |     Other,
   | |_________^
+  |
+  = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)

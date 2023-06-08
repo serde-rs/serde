@@ -1,6 +1,11 @@
 error: field `s` has no lifetimes to borrow
  --> tests/ui/borrow/no_lifetimes.rs:5:5
   |
+3 |   #[derive(Deserialize)]
+  |            ----------- in this derive macro expansion
+4 |   struct Test {
 5 | /     #[serde(borrow)]
 6 | |     s: String,
   | |_____________^
+  |
+  = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)

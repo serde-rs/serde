@@ -1,11 +1,20 @@
 error: expected attribute arguments in parentheses: #[serde(...)]
  --> tests/ui/malformed/not_list.rs:4:3
   |
+3 | #[derive(Serialize)]
+  |          --------- in this derive macro expansion
 4 | #[serde]
   |   ^^^^^
+  |
+  = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected parentheses: #[serde(...)]
  --> tests/ui/malformed/not_list.rs:5:9
   |
+3 | #[derive(Serialize)]
+  |          --------- in this derive macro expansion
+4 | #[serde]
 5 | #[serde = "?"]
   |         ^
+  |
+  = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)

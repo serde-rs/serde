@@ -1,6 +1,11 @@
 error: #[serde(borrow)] may only be used on newtype variants
  --> tests/ui/borrow/struct_variant.rs:8:5
   |
+6 |   #[derive(Deserialize)]
+  |            ----------- in this derive macro expansion
+7 |   enum Test<'a> {
 8 | /     #[serde(borrow)]
 9 | |     S { s: Str<'a> },
   | |____________________^
+  |
+  = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)

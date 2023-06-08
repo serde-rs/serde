@@ -1,5 +1,10 @@
 error: duplicate borrowed lifetime `'a`
  --> tests/ui/borrow/duplicate_lifetime.rs:5:22
   |
+3 | #[derive(Deserialize)]
+  |          ----------- in this derive macro expansion
+4 | struct Test<'a> {
 5 |     #[serde(borrow = "'a + 'a")]
   |                      ^^^^^^^^^
+  |
+  = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)
