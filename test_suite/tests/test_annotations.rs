@@ -2481,7 +2481,10 @@ fn test_partially_untagged_enum_generic() {
     }
 
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
-    enum E<A, B, C> where A: Trait<C, Assoc2=B> {
+    enum E<A, B, C>
+    where
+        A: Trait<C, Assoc2 = B>,
+    {
         A(A::Assoc),
         #[serde(untagged)]
         B(A::Assoc2),

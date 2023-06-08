@@ -483,7 +483,9 @@ fn serialize_variant(
             (attr::TagType::Adjacent { tag, content }, false) => {
                 serialize_adjacently_tagged_variant(params, variant, cattrs, tag, content)
             }
-            (attr::TagType::None, _) | (_, true) => serialize_untagged_variant(params, variant, cattrs),
+            (attr::TagType::None, _) | (_, true) => {
+                serialize_untagged_variant(params, variant, cattrs)
+            }
         });
 
         quote! {
