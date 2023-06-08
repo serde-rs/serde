@@ -740,6 +740,7 @@ pub struct Variant {
     serialize_with: Option<syn::ExprPath>,
     deserialize_with: Option<syn::ExprPath>,
     borrow: Option<BorrowAttribute>,
+    untagged: bool,
 }
 
 struct BorrowAttribute {
@@ -762,6 +763,7 @@ impl Variant {
         let mut serialize_with = Attr::none(cx, SERIALIZE_WITH);
         let mut deserialize_with = Attr::none(cx, DESERIALIZE_WITH);
         let mut borrow = Attr::none(cx, BORROW);
+        let mut untagged = BoolAttr::none(cx, UNTAGGED);
 
         for attr in &variant.attrs {
             if attr.path() != SERDE {
@@ -879,6 +881,8 @@ impl Variant {
                             cx.error_spanned_by(variant, msg);
                         }
                     }
+                } else if meta.path == UNTAGGED {
+                    untagged.set_true(&meta.path);
                 } else {
                     let path = meta.path.to_token_stream().to_string().replace(' ', "");
                     return Err(
@@ -905,6 +909,7 @@ impl Variant {
             serialize_with: serialize_with.get(),
             deserialize_with: deserialize_with.get(),
             borrow: borrow.get(),
+            untagged: untagged.get(),
         }
     }
 
@@ -955,6 +960,10 @@ impl Variant {
 
     pub fn deserialize_with(&self) -> Option<&syn::ExprPath> {
         self.deserialize_with.as_ref()
+    }
+
+    pub fn untagged(&self) -> bool {
+        self.untagged
     }
 }
 

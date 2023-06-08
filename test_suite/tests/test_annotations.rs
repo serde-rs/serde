@@ -2443,6 +2443,159 @@ fn test_untagged_enum_containing_flatten() {
 }
 
 #[test]
+fn test_partially_untagged_enum() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    enum Exp {
+        Lambda(u32, Box<Exp>),
+        #[serde(untagged)]
+        App(Box<Exp>, Box<Exp>),
+        #[serde(untagged)]
+        Var(u32),
+    }
+    use Exp::*;
+
+    let data = Lambda(0, Box::new(App(Box::new(Var(0)), Box::new(Var(0)))));
+    assert_tokens(
+        &data,
+        &[
+            Token::TupleVariant {
+                name: "Exp",
+                variant: "Lambda",
+                len: 2,
+            },
+            Token::U32(0),
+            Token::Tuple { len: 2 },
+            Token::U32(0),
+            Token::U32(0),
+            Token::TupleEnd,
+            Token::TupleVariantEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_partially_untagged_enum_generic() {
+    trait Trait<T> {
+        type Assoc;
+        type Assoc2;
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    enum E<A, B, C> where A: Trait<C, Assoc2=B> {
+        A(A::Assoc),
+        #[serde(untagged)]
+        B(A::Assoc2),
+    }
+
+    impl<T> Trait<T> for () {
+        type Assoc = T;
+        type Assoc2 = bool;
+    }
+
+    type MyE = E<(), bool, u32>;
+    use E::*;
+
+    assert_tokens::<MyE>(&B(true), &[Token::Bool(true)]);
+
+    assert_tokens::<MyE>(
+        &A(5),
+        &[
+            Token::NewtypeVariant {
+                name: "E",
+                variant: "A",
+            },
+            Token::U32(5),
+        ],
+    );
+}
+
+#[test]
+fn test_partially_untagged_enum_desugared() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    enum Test {
+        A(u32, u32),
+        B(u32),
+        #[serde(untagged)]
+        C(u32),
+        #[serde(untagged)]
+        D(u32, u32),
+    }
+    use Test::*;
+
+    mod desugared {
+        use super::*;
+        #[derive(Serialize, Deserialize, PartialEq, Debug)]
+        pub(super) enum Test {
+            A(u32, u32),
+            B(u32),
+        }
+    }
+    use desugared::Test as TestTagged;
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(untagged)]
+    enum TestUntagged {
+        Tagged(TestTagged),
+        C(u32),
+        D(u32, u32),
+    }
+
+    impl From<Test> for TestUntagged {
+        fn from(test: Test) -> Self {
+            match test {
+                A(x, y) => TestUntagged::Tagged(TestTagged::A(x, y)),
+                B(x) => TestUntagged::Tagged(TestTagged::B(x)),
+                C(x) => TestUntagged::C(x),
+                D(x, y) => TestUntagged::D(x, y),
+            }
+        }
+    }
+
+    fn assert_tokens_desugared(value: Test, tokens: &[Token]) {
+        assert_tokens(&value, tokens);
+        let desugared: TestUntagged = value.into();
+        assert_tokens(&desugared, tokens);
+    }
+
+    assert_tokens_desugared(
+        A(0, 1),
+        &[
+            Token::TupleVariant {
+                name: "Test",
+                variant: "A",
+                len: 2,
+            },
+            Token::U32(0),
+            Token::U32(1),
+            Token::TupleVariantEnd,
+        ],
+    );
+
+    assert_tokens_desugared(
+        B(1),
+        &[
+            Token::NewtypeVariant {
+                name: "Test",
+                variant: "B",
+            },
+            Token::U32(1),
+        ],
+    );
+
+    assert_tokens_desugared(C(2), &[Token::U32(2)]);
+
+    assert_tokens_desugared(
+        D(3, 5),
+        &[
+            Token::Tuple { len: 2 },
+            Token::U32(3),
+            Token::U32(5),
+            Token::TupleEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_flatten_untagged_enum() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     struct Outer {

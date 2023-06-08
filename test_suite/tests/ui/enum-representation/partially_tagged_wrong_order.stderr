@@ -1,0 +1,5 @@
+error: all variants with the #[serde(untagged)] attribute must be placed at the end of the enum
+ --> tests/ui/enum-representation/partially_tagged_wrong_order.rs:7:5
+  |
+7 |     B(String),
+  |     ^
