@@ -1,9 +1,5 @@
 error: #[serde(flatten)] cannot be used on newtype structs
  --> tests/ui/conflict/flatten-newtype-struct.rs:6:12
   |
-5 | #[derive(Serialize)]
-  |          --------- in this derive macro expansion
 6 | struct Foo(#[serde(flatten)] HashMap<String, String>);
   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  |
-  = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)

@@ -1,13 +1,9 @@
 error: #[serde(transparent)] requires struct to have at most one transparent field
  --> tests/ui/transparent/at_most_one.rs:4:1
   |
-3 |   #[derive(Serialize)]
-  |            --------- in this derive macro expansion
 4 | / #[serde(transparent)]
 5 | | struct S {
 6 | |     a: u8,
 7 | |     b: u8,
 8 | | }
   | |_^
-  |
-  = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)

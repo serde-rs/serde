@@ -1,10 +1,5 @@
 error: malformed bound attribute, expected `bound(serialize = ..., deserialize = ...)`
  --> tests/ui/malformed/bound.rs:5:19
   |
-3 | #[derive(Serialize)]
-  |          --------- in this derive macro expansion
-4 | struct S {
 5 |     #[serde(bound(unknown))]
   |                   ^^^^^^^
-  |
-  = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)

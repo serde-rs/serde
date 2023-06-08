@@ -1,10 +1,5 @@
 error: expected serde rename attribute to be a string: `rename = "..."`
  --> tests/ui/expected-string/float.rs:5:22
   |
-3 | #[derive(Serialize)]
-  |          --------- in this derive macro expansion
-4 | struct S {
 5 |     #[serde(rename = 3.14)]
   |                      ^^^^
-  |
-  = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)

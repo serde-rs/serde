@@ -1,19 +1,5 @@
 error: remove generic parameters from this path
   --> tests/ui/remote/double_generic.rs:11:18
    |
-10 | #[derive(Serialize, Deserialize)]
-   |          --------- in this derive macro expansion
 11 | #[serde(remote = "remote::StructGeneric<u8>")]
    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   |
-   = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error: remove generic parameters from this path
-  --> tests/ui/remote/double_generic.rs:11:18
-   |
-10 | #[derive(Serialize, Deserialize)]
-   |                     ----------- in this derive macro expansion
-11 | #[serde(remote = "remote::StructGeneric<u8>")]
-   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   |
-   = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)

@@ -1,9 +1,5 @@
 error: #[serde(flatten)] cannot be used on tuple structs
  --> tests/ui/conflict/flatten-tuple-struct.rs:6:17
   |
-5 | #[derive(Serialize)]
-  |          --------- in this derive macro expansion
 6 | struct Foo(u32, #[serde(flatten)] HashMap<String, String>);
   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  |
-  = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)

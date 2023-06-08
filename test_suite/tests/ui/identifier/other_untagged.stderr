@@ -1,11 +1,6 @@
 error: #[serde(other)] cannot appear on untagged enum
  --> tests/ui/identifier/other_untagged.rs:6:5
   |
-3 |   #[derive(Deserialize)]
-  |            ----------- in this derive macro expansion
-...
 6 | /     #[serde(other)]
 7 | |     Other,
   | |_________^
-  |
-  = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)

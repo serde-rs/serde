@@ -1,10 +1,5 @@
 error: unknown rename rule `rename_all = "abc"`, expected one of "lowercase", "UPPERCASE", "PascalCase", "camelCase", "snake_case", "SCREAMING_SNAKE_CASE", "kebab-case", "SCREAMING-KEBAB-CASE"
  --> tests/ui/rename/variant_unknown_rename_rule.rs:5:26
   |
-3 | #[derive(Serialize)]
-  |          --------- in this derive macro expansion
-4 | enum S {
 5 |     #[serde(rename_all = "abc")]
   |                          ^^^^^
-  |
-  = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)

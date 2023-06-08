@@ -1,19 +1,11 @@
 error: #[serde(field_identifier)] and #[serde(variant_identifier)] cannot both be set
  --> tests/ui/identifier/both.rs:4:9
   |
-3 | #[derive(Deserialize)]
-  |          ----------- in this derive macro expansion
 4 | #[serde(field_identifier, variant_identifier)]
   |         ^^^^^^^^^^^^^^^^
-  |
-  = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: #[serde(field_identifier)] and #[serde(variant_identifier)] cannot both be set
  --> tests/ui/identifier/both.rs:4:27
   |
-3 | #[derive(Deserialize)]
-  |          ----------- in this derive macro expansion
 4 | #[serde(field_identifier, variant_identifier)]
   |                           ^^^^^^^^^^^^^^^^^^
-  |
-  = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)

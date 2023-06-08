@@ -1,9 +1,5 @@
 error: cannot deserialize when there is a lifetime parameter called 'de
  --> tests/ui/precondition/deserialize_de_lifetime.rs:4:10
   |
-3 | #[derive(Deserialize)]
-  |          ----------- in this derive macro expansion
 4 | struct S<'de> {
   |          ^^^
-  |
-  = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)

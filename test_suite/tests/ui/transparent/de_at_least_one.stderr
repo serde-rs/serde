@@ -1,8 +1,6 @@
 error: #[serde(transparent)] requires at least one field that is neither skipped nor has a default
   --> tests/ui/transparent/de_at_least_one.rs:4:1
    |
-3  |   #[derive(Deserialize)]
-   |            ----------- in this derive macro expansion
 4  | / #[serde(transparent)]
 5  | | struct S {
 6  | |     #[serde(skip)]
@@ -11,5 +9,3 @@ error: #[serde(transparent)] requires at least one field that is neither skipped
 9  | |     b: u8,
 10 | | }
    | |_^
-   |
-   = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)

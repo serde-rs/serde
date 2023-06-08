@@ -1,10 +1,5 @@
 error: #[serde(field_identifier)] may only contain unit variants
  --> tests/ui/identifier/field_tuple.rs:7:5
   |
-3 | #[derive(Deserialize)]
-  |          ----------- in this derive macro expansion
-...
 7 |     B(u8, u8),
   |     ^^^^^^^^^
-  |
-  = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)

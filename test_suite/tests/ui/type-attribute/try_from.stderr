@@ -1,9 +1,5 @@
 error: failed to parse type: try_from = "Option<T"
  --> tests/ui/type-attribute/try_from.rs:4:20
   |
-3 | #[derive(Deserialize)]
-  |          ----------- in this derive macro expansion
 4 | #[serde(try_from = "Option<T")]
   |                    ^^^^^^^^^^
-  |
-  = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)

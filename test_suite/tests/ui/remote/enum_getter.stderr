@@ -1,8 +1,6 @@
 error: #[serde(getter = "...")] is not allowed in an enum
   --> tests/ui/remote/enum_getter.rs:10:1
    |
-9  |   #[derive(Serialize)]
-   |            --------- in this derive macro expansion
 10 | / #[serde(remote = "remote::E")]
 11 | | pub enum E {
 12 | |     A {
@@ -11,5 +9,3 @@ error: #[serde(getter = "...")] is not allowed in an enum
 15 | |     },
 16 | | }
    | |_^
-   |
-   = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)

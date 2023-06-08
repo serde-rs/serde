@@ -1,10 +1,5 @@
 error: failed to parse borrowed lifetimes: "zzz"
  --> tests/ui/borrow/bad_lifetimes.rs:5:22
   |
-3 | #[derive(Deserialize)]
-  |          ----------- in this derive macro expansion
-4 | struct Test<'a> {
 5 |     #[serde(borrow = "zzz")]
   |                      ^^^^^
-  |
-  = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)

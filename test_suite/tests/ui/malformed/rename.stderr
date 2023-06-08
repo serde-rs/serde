@@ -1,10 +1,5 @@
 error: malformed rename attribute, expected `rename(serialize = ..., deserialize = ...)`
  --> tests/ui/malformed/rename.rs:5:20
   |
-3 | #[derive(Serialize)]
-  |          --------- in this derive macro expansion
-4 | struct S {
 5 |     #[serde(rename(unknown))]
   |                    ^^^^^^^
-  |
-  = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)

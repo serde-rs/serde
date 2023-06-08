@@ -1,9 +1,5 @@
 error: #[serde(tag = "...", content = "...")] must be used together
  --> tests/ui/enum-representation/content-no-tag.rs:4:9
   |
-3 | #[derive(Serialize)]
-  |          --------- in this derive macro expansion
 4 | #[serde(content = "c")]
   |         ^^^^^^^
-  |
-  = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)

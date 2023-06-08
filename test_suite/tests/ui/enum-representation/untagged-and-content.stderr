@@ -1,20 +1,11 @@
 error: untagged enum cannot have #[serde(content = "...")]
  --> tests/ui/enum-representation/untagged-and-content.rs:4:9
   |
-3 | #[derive(Serialize)]
-  |          --------- in this derive macro expansion
 4 | #[serde(untagged)]
   |         ^^^^^^^^
-  |
-  = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: untagged enum cannot have #[serde(content = "...")]
  --> tests/ui/enum-representation/untagged-and-content.rs:5:9
   |
-3 | #[derive(Serialize)]
-  |          --------- in this derive macro expansion
-4 | #[serde(untagged)]
 5 | #[serde(content = "c")]
   |         ^^^^^^^
-  |
-  = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)
