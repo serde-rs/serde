@@ -2193,6 +2193,14 @@ mod content {
         }
     }
 
+    impl<'a, 'de: 'a, E> Copy for ContentRefDeserializer<'a, 'de, E> {}
+
+    impl<'a, 'de: 'a, E> Clone for ContentRefDeserializer<'a, 'de, E> {
+        fn clone(&self) -> Self {
+            *self
+        }
+    }
+
     struct EnumRefDeserializer<'a, 'de: 'a, E>
     where
         E: de::Error,
