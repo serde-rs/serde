@@ -915,7 +915,7 @@ mod content {
         where
             D: Deserializer<'de>,
         {
-            deserializer.deserialize_str(self)
+            deserializer.deserialize_identifier(self)
         }
     }
 
@@ -923,7 +923,25 @@ mod content {
         type Value = TagOrContentField;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            write!(formatter, "{:?} or {:?}", self.tag, self.content)
+            write!(
+                formatter,
+                "{:?}, {:?}, b{0:?}, b{1:?}, 0 or 1",
+                self.tag, self.content
+            )
+        }
+
+        fn visit_u64<E>(self, field_index: u64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            match field_index {
+                0 => Ok(TagOrContentField::Tag),
+                1 => Ok(TagOrContentField::Content),
+                _ => Err(de::Error::invalid_value(
+                    Unexpected::Unsigned(field_index),
+                    &self,
+                )),
+            }
         }
 
         fn visit_str<E>(self, field: &str) -> Result<Self::Value, E>
@@ -936,6 +954,19 @@ mod content {
                 Ok(TagOrContentField::Content)
             } else {
                 Err(de::Error::invalid_value(Unexpected::Str(field), &self))
+            }
+        }
+
+        fn visit_bytes<E>(self, field: &[u8]) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            if field == self.tag.as_bytes() {
+                Ok(TagOrContentField::Tag)
+            } else if field == self.content.as_bytes() {
+                Ok(TagOrContentField::Content)
+            } else {
+                Err(de::Error::invalid_value(Unexpected::Bytes(field), &self))
             }
         }
     }
@@ -963,7 +994,7 @@ mod content {
         where
             D: Deserializer<'de>,
         {
-            deserializer.deserialize_str(self)
+            deserializer.deserialize_identifier(self)
         }
     }
 
@@ -973,9 +1004,20 @@ mod content {
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
             write!(
                 formatter,
-                "{:?}, {:?}, or other ignored fields",
+                "{:?}, {:?}, b{0:?}, b{1:?}, 0, 1, or other ignored field identifiers",
                 self.tag, self.content
             )
+        }
+
+        fn visit_u64<E>(self, field_index: u64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            match field_index {
+                0 => Ok(TagContentOtherField::Tag),
+                1 => Ok(TagContentOtherField::Content),
+                _ => Ok(TagContentOtherField::Other),
+            }
         }
 
         fn visit_str<E>(self, field: &str) -> Result<Self::Value, E>
