@@ -3022,7 +3022,7 @@ fn test_expecting_message_adjacently_tagged_enum() {
 
     assert_de_tokens_error::<Enum>(
         &[Token::Map { len: None }, Token::Unit],
-        r#"invalid type: unit value, expected "tag", "content", or other ignored fields"#,
+        r#"invalid type: unit value, expected "tag", "content", b"tag", b"content", 0, 1, or other ignored field identifiers"#,
     );
 
     // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
