@@ -1094,7 +1094,7 @@ fn test_adjacently_tagged_enum() {
                 name: "AdjacentlyTagged",
                 len: 2,
             },
-            Token::U64(0),
+            Token::U64(0), // tag field
             Token::Str("Unit"),
             Token::StructEnd,
         ],
@@ -1138,9 +1138,9 @@ fn test_adjacently_tagged_enum() {
                 name: "AdjacentlyTagged",
                 len: 2,
             },
-            Token::U64(0),
+            Token::U64(0), // tag field
             Token::Str("Unit"),
-            Token::U64(1),
+            Token::U64(1), // content field
             Token::Unit,
             Token::StructEnd,
         ],
@@ -1186,9 +1186,9 @@ fn test_adjacently_tagged_enum() {
                 name: "AdjacentlyTagged",
                 len: 2,
             },
-            Token::U64(1),
+            Token::U64(1), // content field
             Token::Unit,
-            Token::U64(0),
+            Token::U64(0), // tag field
             Token::Str("Unit"),
             Token::StructEnd,
         ],
@@ -1242,13 +1242,13 @@ fn test_adjacently_tagged_enum() {
             },
             Token::Str("f"),
             Token::Unit,
-            Token::U64(0),
+            Token::U64(0), // tag field
             Token::Str("Unit"),
             Token::Str("g"),
             Token::Unit,
-            Token::U64(1),
+            Token::U64(1), // content field
             Token::Unit,
-            Token::U64(3),
+            Token::U64(3), // unknown field
             Token::Unit,
             Token::StructEnd,
         ],
@@ -1300,9 +1300,9 @@ fn test_adjacently_tagged_enum() {
                 name: "AdjacentlyTagged",
                 len: 2,
             },
-            Token::U64(0),
+            Token::U64(0), // tag field
             Token::Str("Newtype"),
-            Token::U64(1),
+            Token::U64(1), // content field
             Token::U8(1),
             Token::StructEnd,
         ],
@@ -1348,9 +1348,9 @@ fn test_adjacently_tagged_enum() {
                 name: "AdjacentlyTagged",
                 len: 2,
             },
-            Token::U64(1),
+            Token::U64(1), // content field
             Token::U8(1),
-            Token::U64(0),
+            Token::U64(0), // tag field
             Token::Str("Newtype"),
             Token::StructEnd,
         ],
@@ -1394,7 +1394,7 @@ fn test_adjacently_tagged_enum() {
                 name: "AdjacentlyTagged",
                 len: 1,
             },
-            Token::U64(0),
+            Token::U64(0), // tag field
             Token::Str("Newtype"),
             Token::StructEnd,
         ],
@@ -1441,9 +1441,9 @@ fn test_adjacently_tagged_enum() {
                 name: "AdjacentlyTagged",
                 len: 2,
             },
-            Token::U64(0),
+            Token::U64(0), // tag field
             Token::Str("Tuple"),
-            Token::U64(1),
+            Token::U64(1), // content field
             Token::Tuple { len: 2 },
             Token::U8(1),
             Token::U8(1),
@@ -1498,12 +1498,12 @@ fn test_adjacently_tagged_enum() {
                 name: "AdjacentlyTagged",
                 len: 2,
             },
-            Token::U64(1),
+            Token::U64(1), // content field
             Token::Tuple { len: 2 },
             Token::U8(1),
             Token::U8(1),
             Token::TupleEnd,
-            Token::U64(0),
+            Token::U64(0), // tag field
             Token::Str("Tuple"),
             Token::StructEnd,
         ],
@@ -1558,9 +1558,9 @@ fn test_adjacently_tagged_enum() {
                 name: "AdjacentlyTagged",
                 len: 2,
             },
-            Token::U64(0),
+            Token::U64(0), // tag field
             Token::Str("Struct"),
-            Token::U64(1),
+            Token::U64(1), // content field
             Token::Struct {
                 name: "Struct",
                 len: 1,
@@ -1624,7 +1624,7 @@ fn test_adjacently_tagged_enum() {
                 name: "AdjacentlyTagged",
                 len: 2,
             },
-            Token::U64(1),
+            Token::U64(1), // content field
             Token::Struct {
                 name: "Struct",
                 len: 1,
@@ -1632,7 +1632,7 @@ fn test_adjacently_tagged_enum() {
             Token::Str("f"),
             Token::U8(1),
             Token::StructEnd,
-            Token::U64(0),
+            Token::U64(0), // tag field
             Token::Str("Struct"),
             Token::StructEnd,
         ],
@@ -1691,9 +1691,9 @@ fn test_adjacently_tagged_enum_deny_unknown_fields() {
                 name: "AdjacentlyTagged",
                 len: 2,
             },
-            Token::U64(0),
+            Token::U64(0), // tag field
             Token::Str("Unit"),
-            Token::U64(1),
+            Token::U64(1), // content field
             Token::Unit,
             Token::StructEnd,
         ],
@@ -1723,7 +1723,7 @@ fn test_adjacently_tagged_enum_deny_unknown_fields() {
             },
             Token::Str("t"),
             Token::Str("Unit"),
-            Token::U64(1),
+            Token::U64(1), // content field
             Token::Unit,
             Token::StructEnd,
         ],
@@ -1736,7 +1736,7 @@ fn test_adjacently_tagged_enum_deny_unknown_fields() {
                 name: "AdjacentlyTagged",
                 len: 2,
             },
-            Token::U64(0),
+            Token::U64(0), // tag field
             Token::Str("Unit"),
             Token::Str("c"),
             Token::Unit,
@@ -1753,7 +1753,7 @@ fn test_adjacently_tagged_enum_deny_unknown_fields() {
             },
             Token::Bytes(b"t"),
             Token::Str("Unit"),
-            Token::U64(1),
+            Token::U64(1), // content field
             Token::Unit,
             Token::StructEnd,
         ],
@@ -1860,7 +1860,7 @@ fn test_adjacently_tagged_enum_deny_unknown_fields() {
                 name: "AdjacentlyTagged",
                 len: 2,
             },
-            Token::U64(0),
+            Token::U64(0), // tag field
             Token::Str("Unit"),
             Token::U64(3),
         ],
