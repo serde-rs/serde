@@ -805,6 +805,7 @@ mod content {
     /// Not public API.
     pub struct TaggedContentVisitor<'de, T> {
         tag_name: &'static str,
+        tag_default: Option<T>,
         expecting: &'static str,
         value: PhantomData<TaggedContent<'de, T>>,
     }
@@ -812,9 +813,10 @@ mod content {
     impl<'de, T> TaggedContentVisitor<'de, T> {
         /// Visitor for the content of an internally tagged enum with the given
         /// tag name.
-        pub fn new(name: &'static str, expecting: &'static str) -> Self {
+        pub fn new(name: &'static str, default_tag: Option<T>, expecting: &'static str) -> Self {
             TaggedContentVisitor {
                 tag_name: name,
+                tag_default: default_tag,
                 expecting: expecting,
                 value: PhantomData,
             }
@@ -852,9 +854,14 @@ mod content {
             S: SeqAccess<'de>,
         {
             let tag = match try!(seq.next_element()) {
-                Some(tag) => tag,
+                Some(tag) => {
+                    tag
+                },
                 None => {
-                    return Err(de::Error::missing_field(self.tag_name));
+                    match self.tag_default {
+                        Some(default) => default,
+                        None => return Err(de::Error::missing_field(self.tag_name)),
+                    }
                 }
             };
             let rest = de::value::SeqAccessDeserializer::new(seq);
@@ -885,11 +892,21 @@ mod content {
                 }
             }
             match tag {
-                None => Err(de::Error::missing_field(self.tag_name)),
-                Some(tag) => Ok(TaggedContent {
-                    tag: tag,
-                    content: Content::Map(vec),
-                }),
+                None => match self.tag_default {
+                    Some(default) => {
+                        Ok(TaggedContent {
+                            tag: default,
+                            content: Content::Map(vec),
+                        })
+                    },
+                    None => Err(de::Error::missing_field(self.tag_name))
+                },
+                Some(tag) => {
+                    Ok(TaggedContent {
+                        tag: tag,
+                        content: Content::Map(vec),
+                    })
+                },
             }
         }
     }

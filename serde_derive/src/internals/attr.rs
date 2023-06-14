@@ -736,6 +736,7 @@ pub struct Variant {
     de_bound: Option<Vec<syn::WherePredicate>>,
     skip_deserializing: bool,
     skip_serializing: bool,
+    default: bool,
     other: bool,
     serialize_with: Option<syn::ExprPath>,
     deserialize_with: Option<syn::ExprPath>,
@@ -755,6 +756,7 @@ impl Variant {
         let mut de_aliases = VecAttr::none(cx, RENAME);
         let mut skip_deserializing = BoolAttr::none(cx, SKIP_DESERIALIZING);
         let mut skip_serializing = BoolAttr::none(cx, SKIP_SERIALIZING);
+        let mut default = BoolAttr::none(cx, DEFAULT);
         let mut rename_all_ser_rule = Attr::none(cx, RENAME_ALL);
         let mut rename_all_de_rule = Attr::none(cx, RENAME_ALL);
         let mut ser_bound = Attr::none(cx, BOUND);
@@ -812,6 +814,8 @@ impl Variant {
                             }
                         }
                     }
+                } else if meta.path == DEFAULT {
+                    default.set_true(&meta.path);
                 } else if meta.path == SKIP {
                     // #[serde(skip)]
                     skip_serializing.set_true(&meta.path);
@@ -905,6 +909,7 @@ impl Variant {
             de_bound: de_bound.get(),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing: skip_serializing.get(),
+            default: default.get(),
             other: other.get(),
             serialize_with: serialize_with.get(),
             deserialize_with: deserialize_with.get(),
@@ -948,6 +953,10 @@ impl Variant {
 
     pub fn skip_serializing(&self) -> bool {
         self.skip_serializing
+    }
+
+    pub fn default(&self) -> bool {
+        self.default
     }
 
     pub fn other(&self) -> bool {
