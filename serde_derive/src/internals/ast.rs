@@ -156,6 +156,19 @@ fn enum_from_ast<'a>(
         })
         .collect();
 
+    // Check only one enum arm is marked #[serde(default)]
+    let mut has_default = false;
+    for variant in &variants {
+        if !variant.attrs.default() {
+            continue;
+        }
+        if has_default {
+            cx.error_spanned_by(&variant.ident, "only one variant can be marked as default");
+            break;
+        }
+        has_default = true;
+    }
+
     let index_of_last_tagged_variant = variants
         .iter()
         .rposition(|variant| !variant.attrs.untagged());

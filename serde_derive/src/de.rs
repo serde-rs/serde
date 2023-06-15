@@ -1344,13 +1344,11 @@ fn deserialize_internally_tagged_enum(
 ) -> Fragment {
     let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants, cattrs);
 
-    let mut default_tag = quote! { None };
+    let mut default_variant = quote! { None };
     for (i, variant) in variants.iter().enumerate() {
         if variant.attrs.default() {
-            let default_ident = field_i(i);
-            default_tag = quote!{
-                Some(__Field::#default_ident)
-            };
+            let variant_name = field_i(i);
+            default_variant = quote!{ Some(__Field::#variant_name) };
         }
     }
 
@@ -1386,7 +1384,7 @@ fn deserialize_internally_tagged_enum(
 
         let __tagged = try!(_serde::Deserializer::deserialize_any(
             __deserializer,
-            _serde::__private::de::TaggedContentVisitor::<__Field>::new(#tag, #default_tag, #expecting)));
+            _serde::__private::de::TaggedContentVisitor::<__Field>::new(#tag, #default_variant, #expecting)));
 
         match __tagged.tag {
             #(#variant_arms)*
