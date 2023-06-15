@@ -156,7 +156,6 @@ fn enum_from_ast<'a>(
         })
         .collect();
 
-    // Check only one enum arm is marked #[serde(default)]
     let mut has_default = false;
     for variant in &variants {
         if !variant.attrs.default() {

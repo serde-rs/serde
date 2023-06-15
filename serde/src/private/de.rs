@@ -805,7 +805,7 @@ mod content {
     /// Not public API.
     pub struct TaggedContentVisitor<'de, T> {
         tag_name: &'static str,
-        tag_default: Option<T>,
+        default_variant: Option<T>,
         expecting: &'static str,
         value: PhantomData<TaggedContent<'de, T>>,
     }
@@ -813,10 +813,10 @@ mod content {
     impl<'de, T> TaggedContentVisitor<'de, T> {
         /// Visitor for the content of an internally tagged enum with the given
         /// tag name.
-        pub fn new(name: &'static str, default_tag: Option<T>, expecting: &'static str) -> Self {
+        pub fn new(name: &'static str, default_variant: Option<T>, expecting: &'static str) -> Self {
             TaggedContentVisitor {
                 tag_name: name,
-                tag_default: default_tag,
+                default_variant: default_variant,
                 expecting: expecting,
                 value: PhantomData,
             }
@@ -853,16 +853,12 @@ mod content {
         where
             S: SeqAccess<'de>,
         {
-            let tag = match try!(seq.next_element()) {
-                Some(tag) => {
-                    tag
+            let tag = match seq.next_element()? {
+                Some(tag) => tag,
+                None => match self.default_variant {
+                    Some(variant) => variant,
+                    None => return Err(de::Error::missing_field(self.tag_name)),
                 },
-                None => {
-                    match self.tag_default {
-                        Some(default) => default,
-                        None => return Err(de::Error::missing_field(self.tag_name)),
-                    }
-                }
             };
             let rest = de::value::SeqAccessDeserializer::new(seq);
             Ok(TaggedContent {
@@ -892,7 +888,7 @@ mod content {
                 }
             }
             match tag {
-                None => match self.tag_default {
+                None => match self.default_variant {
                     Some(default) => {
                         Ok(TaggedContent {
                             tag: default,

@@ -1344,14 +1344,6 @@ fn deserialize_internally_tagged_enum(
 ) -> Fragment {
     let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants, cattrs);
 
-    let mut default_variant = quote! { None };
-    for (i, variant) in variants.iter().enumerate() {
-        if variant.attrs.default() {
-            let variant_name = field_i(i);
-            default_variant = quote!{ Some(__Field::#variant_name) };
-        }
-    }
-
     // Match arms to extract a variant from a string
     let variant_arms = variants
         .iter()
@@ -1374,6 +1366,10 @@ fn deserialize_internally_tagged_enum(
             }
         });
 
+    let default_variant = get_default_variant(variants).unwrap_or(quote! {
+        std::option::Option::None
+    });
+
     let expecting = format!("internally tagged enum {}", params.type_name());
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
@@ -1390,6 +1386,18 @@ fn deserialize_internally_tagged_enum(
             #(#variant_arms)*
         }
     }
+}
+
+fn get_default_variant(variants: &[Variant]) -> Option<TokenStream> {
+    for (i, variant) in variants.iter().enumerate() {
+        if variant.attrs.default() {
+            let variant_name = field_i(i);
+            return Some(quote! {
+                std::option::Option::Some(__Field::#variant_name)
+            });
+        }
+    }
+    None
 }
 
 fn deserialize_adjacently_tagged_enum(
