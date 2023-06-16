@@ -518,7 +518,7 @@ mod content {
     impl<'de> TagOrContentVisitor<'de> {
         fn new(name: &'static str) -> Self {
             TagOrContentVisitor {
-                name: name,
+                name,
                 value: PhantomData,
             }
         }
@@ -815,7 +815,7 @@ mod content {
         pub fn new(name: &'static str, expecting: &'static str) -> Self {
             TaggedContentVisitor {
                 tag_name: name,
-                expecting: expecting,
+                expecting,
                 value: PhantomData,
             }
         }
@@ -859,7 +859,7 @@ mod content {
             };
             let rest = de::value::SeqAccessDeserializer::new(seq);
             Ok(TaggedContent {
-                tag: tag,
+                tag,
                 content: try!(Content::deserialize(rest)),
             })
         }
@@ -887,7 +887,7 @@ mod content {
             match tag {
                 None => Err(de::Error::missing_field(self.tag_name)),
                 Some(tag) => Ok(TaggedContent {
-                    tag: tag,
+                    tag,
                     content: Content::Map(vec),
                 }),
             }
@@ -1464,7 +1464,7 @@ mod content {
         /// private API, don't use
         pub fn new(content: Content<'de>) -> Self {
             ContentDeserializer {
-                content: content,
+                content,
                 err: PhantomData,
             }
         }
@@ -1485,8 +1485,8 @@ mod content {
     {
         pub fn new(variant: Content<'de>, value: Option<Content<'de>>) -> EnumDeserializer<'de, E> {
             EnumDeserializer {
-                variant: variant,
-                value: value,
+                variant,
+                value,
                 err: PhantomData,
             }
         }
@@ -2142,8 +2142,8 @@ mod content {
             };
 
             visitor.visit_enum(EnumRefDeserializer {
-                variant: variant,
-                value: value,
+                variant,
+                value,
                 err: PhantomData,
             })
         }
@@ -2187,7 +2187,7 @@ mod content {
         /// private API, don't use
         pub fn new(content: &'a Content<'de>) -> Self {
             ContentRefDeserializer {
-                content: content,
+                content,
                 err: PhantomData,
             }
         }
@@ -2496,8 +2496,8 @@ mod content {
         /// Not public API.
         pub fn new(type_name: &'a str, variant_name: &'a str) -> Self {
             InternallyTaggedUnitVisitor {
-                type_name: type_name,
-                variant_name: variant_name,
+                type_name,
+                variant_name,
             }
         }
     }
@@ -2541,8 +2541,8 @@ mod content {
         /// Not public API.
         pub fn new(type_name: &'a str, variant_name: &'a str) -> Self {
             UntaggedUnitVisitor {
-                type_name: type_name,
-                variant_name: variant_name,
+                type_name,
+                variant_name,
             }
         }
     }
@@ -2793,7 +2793,7 @@ where
         visitor.visit_map(FlatStructAccess {
             iter: self.0.iter_mut(),
             pending_content: None,
-            fields: fields,
+            fields,
             _marker: PhantomData,
         })
     }

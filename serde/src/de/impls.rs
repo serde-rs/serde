@@ -2708,7 +2708,7 @@ struct FromStrVisitor<T> {
 impl<T> FromStrVisitor<T> {
     fn new(expecting: &'static str) -> Self {
         FromStrVisitor {
-            expecting: expecting,
+            expecting,
             ty: PhantomData,
         }
     }

@@ -27,10 +27,10 @@ where
     T: Serialize,
 {
     value.serialize(TaggedSerializer {
-        type_ident: type_ident,
-        variant_ident: variant_ident,
-        tag: tag,
-        variant_name: variant_name,
+        type_ident,
+        variant_ident,
+        tag,
+        variant_name,
         delegate: serializer,
     })
 }
@@ -350,8 +350,8 @@ mod content {
     impl<M> SerializeTupleVariantAsMapValue<M> {
         pub fn new(map: M, name: &'static str, len: usize) -> Self {
             SerializeTupleVariantAsMapValue {
-                map: map,
-                name: name,
+                map,
+                name,
                 fields: Vec::with_capacity(len),
             }
         }
@@ -390,8 +390,8 @@ mod content {
     impl<M> SerializeStructVariantAsMapValue<M> {
         pub fn new(map: M, name: &'static str, len: usize) -> Self {
             SerializeStructVariantAsMapValue {
-                map: map,
-                name: name,
+                map,
+                name,
                 fields: Vec::with_capacity(len),
             }
         }
@@ -711,7 +711,7 @@ mod content {
             len: usize,
         ) -> Result<Self::SerializeTupleStruct, E> {
             Ok(SerializeTupleStruct {
-                name: name,
+                name,
                 fields: Vec::with_capacity(len),
                 error: PhantomData,
             })
@@ -725,9 +725,9 @@ mod content {
             len: usize,
         ) -> Result<Self::SerializeTupleVariant, E> {
             Ok(SerializeTupleVariant {
-                name: name,
-                variant_index: variant_index,
-                variant: variant,
+                name,
+                variant_index,
+                variant,
                 fields: Vec::with_capacity(len),
                 error: PhantomData,
             })
@@ -747,7 +747,7 @@ mod content {
             len: usize,
         ) -> Result<Self::SerializeStruct, E> {
             Ok(SerializeStruct {
-                name: name,
+                name,
                 fields: Vec::with_capacity(len),
                 error: PhantomData,
             })
@@ -761,9 +761,9 @@ mod content {
             len: usize,
         ) -> Result<Self::SerializeStructVariant, E> {
             Ok(SerializeStructVariant {
-                name: name,
-                variant_index: variant_index,
-                variant: variant,
+                name,
+                variant_index,
+                variant,
                 fields: Vec::with_capacity(len),
                 error: PhantomData,
             })
@@ -1273,8 +1273,8 @@ where
 {
     fn new(map: &'a mut M, name: &'static str) -> FlatMapSerializeStructVariantAsMapValue<'a, M> {
         FlatMapSerializeStructVariantAsMapValue {
-            map: map,
-            name: name,
+            map,
+            name,
             fields: Vec::new(),
         }
     }
