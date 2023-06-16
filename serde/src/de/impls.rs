@@ -2098,7 +2098,7 @@ impl<'de> Deserialize<'de> for Duration {
             }
         }
 
-        const FIELDS: &'static [&'static str] = &["secs", "nanos"];
+        const FIELDS: &[&str] = &["secs", "nanos"];
         deserializer.deserialize_struct("Duration", FIELDS, DurationVisitor)
     }
 }
@@ -2240,7 +2240,7 @@ impl<'de> Deserialize<'de> for SystemTime {
             }
         }
 
-        const FIELDS: &'static [&'static str] = &["secs_since_epoch", "nanos_since_epoch"];
+        const FIELDS: &[&str] = &["secs_since_epoch", "nanos_since_epoch"];
         let duration = try!(deserializer.deserialize_struct("SystemTime", FIELDS, DurationVisitor));
         #[cfg(not(no_systemtime_checked_add))]
         let ret = UNIX_EPOCH
@@ -2308,7 +2308,7 @@ mod range {
 
     use de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
 
-    pub const FIELDS: &'static [&'static str] = &["start", "end"];
+    pub const FIELDS: &[&str] = &["start", "end"];
 
     // If this were outside of the serde crate, it would just use:
     //
@@ -2534,7 +2534,7 @@ where
             }
         }
 
-        const VARIANTS: &'static [&'static str] = &["Unbounded", "Included", "Excluded"];
+        const VARIANTS: &[&str] = &["Unbounded", "Included", "Excluded"];
 
         deserializer.deserialize_enum("Bound", VARIANTS, BoundVisitor(PhantomData))
     }
@@ -2642,7 +2642,7 @@ where
             }
         }
 
-        const VARIANTS: &'static [&'static str] = &["Ok", "Err"];
+        const VARIANTS: &[&str] = &["Ok", "Err"];
 
         deserializer.deserialize_enum("Result", VARIANTS, ResultVisitor(PhantomData))
     }
@@ -2708,7 +2708,7 @@ struct FromStrVisitor<T> {
 impl<T> FromStrVisitor<T> {
     fn new(expecting: &'static str) -> Self {
         FromStrVisitor {
-            expecting: expecting,
+            expecting,
             ty: PhantomData,
         }
     }
