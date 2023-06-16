@@ -813,6 +813,116 @@ fn test_internally_tagged_enum() {
 }
 
 #[test]
+fn test_internally_tagged_enum_with_default_variant() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Newtype(BTreeMap<String, String>);
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Struct {
+        f: u8,
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "type")]
+    enum InternallyTaggedWithDefaultStructVariant {
+        #[serde(default)]
+        A { a: u8 },
+        E(Struct),
+        B,
+        C(BTreeMap<String, String>),
+        D(Newtype),
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "type")]
+    enum InternallyTaggedWithDefaultTupleVariant {
+        A { a: u8 },
+        #[serde(default)]
+        E(Struct),
+        B,
+        C(BTreeMap<String, String>),
+        D(Newtype),
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "type")]
+    enum InternallyTaggedWithDefaultUnitVariant {
+        A { a: u8 },
+        E(Struct),
+        #[serde(default)]
+        B,
+        C(BTreeMap<String, String>),
+        D(Newtype),
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "type")]
+    enum InternallyTaggedWithDefaultMapVariant {
+        A { a: u8 },
+        E(Struct),
+        B,
+        #[serde(default)]
+        C(BTreeMap<String, String>),
+        D(Newtype),
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "type")]
+    enum InternallyTaggedWithDefaultNewtypeVariant {
+        A { a: u8 },
+        E(Struct),
+        B,
+        C(BTreeMap<String, String>),
+        #[serde(default)]
+        D(Newtype),
+    }
+
+    assert_de_tokens(
+        &InternallyTaggedWithDefaultStructVariant::A{ a: 1 },
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("a"),
+            Token::U8(1),
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &InternallyTaggedWithDefaultTupleVariant::E(Struct { f: 1 }),
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("f"),
+            Token::U8(1),
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &InternallyTaggedWithDefaultUnitVariant::B,
+        &[
+            Token::Map { len: Some(0) },
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &InternallyTaggedWithDefaultMapVariant::C(BTreeMap::new()),
+        &[
+            Token::Map { len: Some(0) },
+            Token::MapEnd,
+        ]
+    );
+
+    assert_de_tokens(
+        &InternallyTaggedWithDefaultNewtypeVariant::D(Newtype(BTreeMap::new())),
+        &[
+            Token::Map { len: Some(0) },
+            Token::MapEnd,
+        ]
+    );
+}
+
+#[test]
 fn test_internally_tagged_bytes() {
     #[derive(Debug, PartialEq, Deserialize)]
     #[serde(tag = "type")]
