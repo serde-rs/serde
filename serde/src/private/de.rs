@@ -813,7 +813,11 @@ mod content {
     impl<'de, T> TaggedContentVisitor<'de, T> {
         /// Visitor for the content of an internally tagged enum with the given
         /// tag name.
-        pub fn new(name: &'static str, default_variant: Option<T>, expecting: &'static str) -> Self {
+        pub fn new(
+            name: &'static str,
+            default_variant: Option<T>,
+            expecting: &'static str,
+        ) -> Self {
             TaggedContentVisitor {
                 tag_name: name,
                 default_variant: default_variant,
@@ -889,20 +893,16 @@ mod content {
             }
             match tag {
                 None => match self.default_variant {
-                    Some(default) => {
-                        Ok(TaggedContent {
-                            tag: default,
-                            content: Content::Map(vec),
-                        })
-                    },
-                    None => Err(de::Error::missing_field(self.tag_name))
-                },
-                Some(tag) => {
-                    Ok(TaggedContent {
-                        tag: tag,
+                    Some(default) => Ok(TaggedContent {
+                        tag: default,
                         content: Content::Map(vec),
-                    })
+                    }),
+                    None => Err(de::Error::missing_field(self.tag_name)),
                 },
+                Some(tag) => Ok(TaggedContent {
+                    tag: tag,
+                    content: Content::Map(vec),
+                }),
             }
         }
     }

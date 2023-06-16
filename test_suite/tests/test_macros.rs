@@ -826,7 +826,9 @@ fn test_internally_tagged_enum_with_default_variant() {
     #[serde(tag = "type")]
     enum InternallyTaggedWithDefaultStructVariant {
         #[serde(default)]
-        A { a: u8 },
+        A {
+            a: u8,
+        },
         E(Struct),
         B,
         C(BTreeMap<String, String>),
@@ -836,7 +838,9 @@ fn test_internally_tagged_enum_with_default_variant() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "type")]
     enum InternallyTaggedWithDefaultTupleVariant {
-        A { a: u8 },
+        A {
+            a: u8,
+        },
         #[serde(default)]
         E(Struct),
         B,
@@ -847,7 +851,9 @@ fn test_internally_tagged_enum_with_default_variant() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "type")]
     enum InternallyTaggedWithDefaultUnitVariant {
-        A { a: u8 },
+        A {
+            a: u8,
+        },
         E(Struct),
         #[serde(default)]
         B,
@@ -858,7 +864,9 @@ fn test_internally_tagged_enum_with_default_variant() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "type")]
     enum InternallyTaggedWithDefaultMapVariant {
-        A { a: u8 },
+        A {
+            a: u8,
+        },
         E(Struct),
         B,
         #[serde(default)]
@@ -869,7 +877,9 @@ fn test_internally_tagged_enum_with_default_variant() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "type")]
     enum InternallyTaggedWithDefaultNewtypeVariant {
-        A { a: u8 },
+        A {
+            a: u8,
+        },
         E(Struct),
         B,
         C(BTreeMap<String, String>),
@@ -878,13 +888,13 @@ fn test_internally_tagged_enum_with_default_variant() {
     }
 
     assert_de_tokens(
-        &InternallyTaggedWithDefaultStructVariant::A{ a: 1 },
+        &InternallyTaggedWithDefaultStructVariant::A { a: 1 },
         &[
             Token::Map { len: Some(1) },
             Token::Str("a"),
             Token::U8(1),
             Token::MapEnd,
-        ]
+        ],
     );
 
     assert_de_tokens(
@@ -894,31 +904,22 @@ fn test_internally_tagged_enum_with_default_variant() {
             Token::Str("f"),
             Token::U8(1),
             Token::MapEnd,
-        ]
+        ],
     );
 
     assert_de_tokens(
         &InternallyTaggedWithDefaultUnitVariant::B,
-        &[
-            Token::Map { len: Some(0) },
-            Token::MapEnd,
-        ]
+        &[Token::Map { len: Some(0) }, Token::MapEnd],
     );
 
     assert_de_tokens(
         &InternallyTaggedWithDefaultMapVariant::C(BTreeMap::new()),
-        &[
-            Token::Map { len: Some(0) },
-            Token::MapEnd,
-        ]
+        &[Token::Map { len: Some(0) }, Token::MapEnd],
     );
 
     assert_de_tokens(
         &InternallyTaggedWithDefaultNewtypeVariant::D(Newtype(BTreeMap::new())),
-        &[
-            Token::Map { len: Some(0) },
-            Token::MapEnd,
-        ]
+        &[Token::Map { len: Some(0) }, Token::MapEnd],
     );
 }
 
