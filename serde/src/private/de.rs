@@ -820,8 +820,8 @@ mod content {
         ) -> Self {
             TaggedContentVisitor {
                 tag_name: name,
-                default_variant: default_variant,
-                expecting: expecting,
+                default_variant,
+                expecting,
                 value: PhantomData,
             }
         }
