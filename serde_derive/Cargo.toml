@@ -16,6 +16,7 @@ rust-version = "1.56"
 [features]
 default = []
 deserialize_in_place = []
+syn_full = ["syn/full"]
 
 [lib]
 name = "serde_derive"
