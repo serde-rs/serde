@@ -15,6 +15,7 @@ repository = "https://github.com/serde-rs/serde"
 rust-version = "1.19"
 
 [dependencies]
+rustversion = "1"
 serde_derive = { version = "=1.0.164", optional = true, path = "../serde_derive" }
 
 [dev-dependencies]

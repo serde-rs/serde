@@ -1115,6 +1115,7 @@ impl<A> ArrayVisitor<A> {
     }
 }
 
+#[rustversion::before(1.51)]
 impl<'de, T> Visitor<'de> for ArrayVisitor<[T; 0]> {
     type Value = [T; 0];
 
@@ -1132,6 +1133,7 @@ impl<'de, T> Visitor<'de> for ArrayVisitor<[T; 0]> {
 }
 
 // Does not require T: Deserialize<'de>.
+#[rustversion::before(1.51)]
 impl<'de, T> Deserialize<'de> for [T; 0] {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -1141,6 +1143,7 @@ impl<'de, T> Deserialize<'de> for [T; 0] {
     }
 }
 
+#[rustversion::before(1.51)]
 macro_rules! array_impls {
     ($($len:expr => ($($n:tt)+))+) => {
         $(
@@ -1219,6 +1222,7 @@ macro_rules! array_impls {
     }
 }
 
+#[rustversion::before(1.51)]
 array_impls! {
     1 => (0)
     2 => (0 1)
@@ -1252,6 +1256,91 @@ array_impls! {
     30 => (0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29)
     31 => (0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30)
     32 => (0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31)
+}
+
+#[rustversion::since(1.51)]
+impl<'a, 'de, T, const N: usize> Visitor<'de> for ArrayInPlaceVisitor<'a, [T; N]>
+where
+    T: Deserialize<'de>,
+{
+    type Value = ();
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str(&format!("an array of length {}", N))
+    }
+
+    #[inline]
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut fail_idx = None;
+        for (idx, dest) in self.0[..].iter_mut().enumerate() {
+            if try!(seq.next_element_seed(InPlaceSeed(dest))).is_none() {
+                fail_idx = Some(idx);
+                break;
+            }
+        }
+        if let Some(idx) = fail_idx {
+            return Err(Error::invalid_length(idx, &self));
+        }
+        Ok(())
+    }
+}
+
+#[rustversion::since(1.51)]
+impl<'de, T, const N: usize> Deserialize<'de> for [T; N]
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_tuple(N, ArrayVisitor::<[T; N]>::new())
+    }
+
+    fn deserialize_in_place<D>(deserializer: D, place: &mut Self) -> Result<(), D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_tuple(N, ArrayInPlaceVisitor(place))
+    }
+}
+
+#[rustversion::since(1.51)]
+impl<'de, T, const N: usize> Visitor<'de> for ArrayVisitor<[T; N]>
+where
+    T: Deserialize<'de>,
+{
+    type Value = [T; N];
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        match N {
+            0 => formatter.write_str("an empty array"),
+            _ => formatter.write_str(&format!("an array of length {}", N)),
+        }
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut res: [T; N] =
+            std::array::from_fn(|_| unsafe { mem::MaybeUninit::uninit().assume_init() });
+
+        for idx in 0..N {
+            res[idx] = match seq.next_element() {
+                Ok(val) => match val {
+                    Some(val) => val,
+                    None => return Err(Error::invalid_length(idx, &self)),
+                },
+                Err(err) => return Err(err),
+            };
+        }
+
+        Ok(res)
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
