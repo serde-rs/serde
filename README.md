@@ -24,7 +24,6 @@ You may be looking for:
 
 ## Serde in action
 
-<details>
 <summary>
 Click to show Cargo.toml.
 <a href="https://play.rust-lang.org/?edition=2018&gist=72755f28f99afc95e01d63174b28c1f5" target="_blank">Run this code in the playground.</a>
@@ -44,7 +43,6 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 ```
 
-</details>
 <p></p>
 
 ```rust
