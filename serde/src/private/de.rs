@@ -2758,7 +2758,7 @@ where
     where
         V: Visitor<'de>,
     {
-        for entry in self.0.iter_mut() {
+        for entry in self.0 {
             if let Some((key, value)) = flat_map_take_entry(entry, variants) {
                 return visitor.visit_enum(EnumDeserializer::new(key, Some(value)));
             }

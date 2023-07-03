@@ -259,7 +259,7 @@ pub fn with_bound(
     };
     match &cont.data {
         Data::Enum(variants) => {
-            for variant in variants.iter() {
+            for variant in variants {
                 let relevant_fields = variant
                     .fields
                     .iter()

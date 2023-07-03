@@ -195,7 +195,7 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
         Data::Struct(_, _) => return,
     };
 
-    for variant in variants.iter() {
+    for variant in variants {
         if variant.attrs.serialize_with().is_some() {
             if variant.attrs.skip_serializing() {
                 cx.error_spanned_by(
