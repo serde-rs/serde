@@ -1587,7 +1587,7 @@ macro_rules! parse_socket_impl {
                 if deserializer.is_human_readable() {
                     deserializer.deserialize_str(FromStrVisitor::new($expecting))
                 } else {
-                    <(_, u16)>::deserialize(deserializer).map(|(ip, port)| $new(ip, port))
+                    <(_, u16)>::deserialize(deserializer).map($new)
                 }
             }
         }
@@ -1614,12 +1614,10 @@ impl<'de> Deserialize<'de> for net::SocketAddr {
 }
 
 #[cfg(feature = "std")]
-parse_socket_impl!("IPv4 socket address" net::SocketAddrV4, net::SocketAddrV4::new);
+parse_socket_impl!("IPv4 socket address" net::SocketAddrV4, |(ip, port)| net::SocketAddrV4::new(ip, port));
 
 #[cfg(feature = "std")]
-parse_socket_impl!("IPv6 socket address" net::SocketAddrV6, |ip, port| net::SocketAddrV6::new(
-    ip, port, 0, 0
-));
+parse_socket_impl!("IPv6 socket address" net::SocketAddrV6, |(ip, port)| net::SocketAddrV6::new(ip, port, 0, 0));
 
 ////////////////////////////////////////////////////////////////////////////////
 
