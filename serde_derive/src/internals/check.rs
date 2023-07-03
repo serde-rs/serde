@@ -110,9 +110,7 @@ fn check_flatten_field(cx: &Ctxt, style: Style, field: &Field) {
 fn check_identifier(cx: &Ctxt, cont: &Container) {
     let variants = match &cont.data {
         Data::Enum(variants) => variants,
-        Data::Struct(_, _) => {
-            return;
-        }
+        Data::Struct(_, _) => return,
     };
 
     for (i, variant) in variants.iter().enumerate() {
@@ -194,9 +192,7 @@ fn check_identifier(cx: &Ctxt, cont: &Container) {
 fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
     let variants = match &cont.data {
         Data::Enum(variants) => variants,
-        Data::Struct(_, _) => {
-            return;
-        }
+        Data::Struct(_, _) => return,
     };
 
     for variant in variants.iter() {
