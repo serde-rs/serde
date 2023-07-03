@@ -199,7 +199,7 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
     ]
     .into_iter()
     .chain(ignorable_tokens.iter().copied())
-    .chain(vec![Token::MapEnd].into_iter())
+    .chain(vec![Token::MapEnd])
     .collect();
 
     let expected = IgnoreBase { a: 1 };
