@@ -14,6 +14,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::default::Default;
 use std::ffi::{CStr, CString, OsString};
 use std::fmt::Debug;
+use std::iter;
 use std::net;
 use std::num::{
     NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
@@ -199,7 +200,7 @@ fn assert_de_tokens_ignore(ignorable_tokens: &[Token]) {
     ]
     .into_iter()
     .chain(ignorable_tokens.iter().copied())
-    .chain(vec![Token::MapEnd])
+    .chain(iter::once(Token::MapEnd))
     .collect();
 
     let expected = IgnoreBase { a: 1 };
