@@ -2240,8 +2240,8 @@ pub trait VariantAccess<'de>: Sized {
 ///
 /// ```edition2021
 /// use std::str::FromStr;
-/// use serde::Deserialize;
-/// use serde::de::{value, IntoDeserializer};
+/// use serde::de::{value, Deserialize, IntoDeserializer};
+/// use serde_derive::Deserialize;
 ///
 /// #[derive(Deserialize)]
 /// enum Setting {

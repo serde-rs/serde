@@ -18,7 +18,7 @@ rust-version = "1.19"
 serde = { version = "1.0.60", path = "../serde" }
 
 [dev-dependencies]
-serde = { version = "1.0", path = "../serde" }
+serde = { version = "1.0", path = "../serde", features = ["rc"] }
 serde_derive = { version = "1.0", path = "../serde_derive" }
 
 [lib]

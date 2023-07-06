@@ -3,8 +3,8 @@
 //!
 //! ```edition2021
 //! use std::str::FromStr;
-//! use serde::Deserialize;
-//! use serde::de::{value, IntoDeserializer};
+//! use serde_derive::Deserialize;
+//! use serde::de::{value, Deserialize, IntoDeserializer};
 //!
 //! #[derive(Deserialize)]
 //! enum Setting {
