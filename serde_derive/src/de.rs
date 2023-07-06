@@ -1356,9 +1356,7 @@ fn deserialize_internally_tagged_enum(
                 params,
                 variant,
                 cattrs,
-                quote! {
-                    _serde::__private::de::ContentDeserializer::<__D::Error>::new(__tagged.content)
-                },
+                quote!(__deserializer),
             ));
 
             quote! {
@@ -1374,11 +1372,12 @@ fn deserialize_internally_tagged_enum(
 
         #variants_stmt
 
-        let __tagged = try!(_serde::Deserializer::deserialize_any(
+        let (__tag, __content) = try!(_serde::Deserializer::deserialize_any(
             __deserializer,
             _serde::__private::de::TaggedContentVisitor::<__Field>::new(#tag, #expecting)));
+        let __deserializer = _serde::__private::de::ContentDeserializer::<__D::Error>::new(__content);
 
-        match __tagged.tag {
+        match __tag {
             #(#variant_arms)*
         }
     }
