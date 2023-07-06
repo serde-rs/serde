@@ -2708,40 +2708,6 @@ mod range_to {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// Similar to:
-//
-//     #[derive(Deserialize)]
-//     #[serde(deny_unknown_fields)]
-//     struct RangeFull;
-impl<'de> Deserialize<'de> for RangeFull {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_unit_struct("RangeFull", RangeFullVisitor)
-    }
-}
-
-struct RangeFullVisitor;
-
-impl<'de> Visitor<'de> for RangeFullVisitor {
-    type Value = RangeFull;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("unit")
-    }
-
-    #[inline]
-    fn visit_unit<E>(self) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        Ok(..)
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
 #[cfg(any(not(no_ops_bound), all(feature = "std", not(no_collections_bound))))]
 impl<'de, T> Deserialize<'de> for Bound<T>
 where

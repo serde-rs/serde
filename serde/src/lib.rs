@@ -180,7 +180,7 @@ mod lib {
     pub use self::core::fmt::{self, Debug, Display};
     pub use self::core::marker::{self, PhantomData};
     pub use self::core::num::Wrapping;
-    pub use self::core::ops::{Range, RangeFrom, RangeFull, RangeTo};
+    pub use self::core::ops::{Range, RangeFrom, RangeTo};
     pub use self::core::option::{self, Option};
     pub use self::core::result::{self, Result};
 

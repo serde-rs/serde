@@ -274,17 +274,6 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-impl Serialize for RangeFull {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_unit_struct("RangeFull")
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
 #[cfg(not(no_range_inclusive))]
 impl<Idx> Serialize for RangeInclusive<Idx>
 where
