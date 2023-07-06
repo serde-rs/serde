@@ -1450,7 +1450,7 @@ macro_rules! variant_identifier {
             $($variant),*
         }
 
-        static $variants_name: &'static [&'static str] = &[$(stringify!($variant)),*];
+        static $variants_name: &[&str] = &[$(stringify!($variant)),*];
 
         impl<'de> Deserialize<'de> for $name_kind {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -2464,7 +2464,7 @@ mod range_from {
 
     use de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
 
-    pub const FIELDS: &'static [&'static str] = &["end"];
+    pub const FIELDS: &[&str] = &["end"];
 
     // If this were outside of the serde crate, it would just use:
     //
@@ -2602,7 +2602,7 @@ mod range_to {
 
     use de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
 
-    pub const FIELDS: &'static [&'static str] = &["start"];
+    pub const FIELDS: &[&str] = &["start"];
 
     // If this were outside of the serde crate, it would just use:
     //
