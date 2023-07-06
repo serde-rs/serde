@@ -10,7 +10,7 @@
     clippy::uninlined_format_args,
 )]
 
-use serde::de::{self, MapAccess, Unexpected, Visitor};
+use serde::de::{self, IgnoredAny, MapAccess, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::collections::{BTreeMap, HashMap};
@@ -2694,6 +2694,31 @@ fn test_flatten_option() {
             inner2: None,
         },
         &[Token::Map { len: None }, Token::MapEnd],
+    );
+}
+
+#[test]
+fn test_flatten_ignored_any() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct Outer {
+        #[serde(flatten)]
+        inner: IgnoredAny,
+    }
+
+    assert_de_tokens(
+        &Outer { inner: IgnoredAny },
+        &[Token::Map { len: None }, Token::MapEnd],
+    );
+
+    assert_de_tokens(
+        &Outer { inner: IgnoredAny },
+        &[
+            Token::Struct {
+                name: "DoNotMatter",
+                len: 0,
+            },
+            Token::StructEnd,
+        ],
     );
 }
 
