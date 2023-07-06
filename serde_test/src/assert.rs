@@ -8,7 +8,7 @@ use std::fmt::Debug;
 
 /// Runs both `assert_ser_tokens` and `assert_de_tokens`.
 ///
-/// ```edition2018
+/// ```edition2021
 /// # use serde::{Serialize, Deserialize};
 /// # use serde_test::{assert_tokens, Token};
 /// #
@@ -39,7 +39,7 @@ where
 
 /// Asserts that `value` serializes to the given `tokens`.
 ///
-/// ```edition2018
+/// ```edition2021
 /// # use serde::{Serialize, Deserialize};
 /// # use serde_test::{assert_ser_tokens, Token};
 /// #
@@ -78,7 +78,7 @@ where
 /// Asserts that `value` serializes to the given `tokens`, and then yields
 /// `error`.
 ///
-/// ```edition2018
+/// ```edition2021
 /// use std::sync::{Arc, Mutex};
 /// use std::thread;
 ///
@@ -130,7 +130,7 @@ where
 
 /// Asserts that the given `tokens` deserialize into `value`.
 ///
-/// ```edition2018
+/// ```edition2021
 /// # use serde::{Serialize, Deserialize};
 /// # use serde_test::{assert_de_tokens, Token};
 /// #
@@ -184,7 +184,7 @@ where
 
 /// Asserts that the given `tokens` yield `error` when deserializing.
 ///
-/// ```edition2018
+/// ```edition2021
 /// # use serde::{Serialize, Deserialize};
 /// # use serde_test::{assert_de_tokens_error, Token};
 /// #

@@ -10,7 +10,7 @@ use de::{
 /// any type, except that it does not store any information about the data that
 /// gets deserialized.
 ///
-/// ```edition2018
+/// ```edition2021
 /// use std::fmt;
 /// use std::marker::PhantomData;
 ///
