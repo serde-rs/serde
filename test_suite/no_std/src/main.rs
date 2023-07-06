@@ -19,7 +19,7 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
 
 //////////////////////////////////////////////////////////////////////////////
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 struct Unit;

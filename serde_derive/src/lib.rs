@@ -1,7 +1,7 @@
 //! This crate provides Serde's two derive macros.
 //!
 //! ```edition2021
-//! # use serde_derive::{Serialize, Deserialize};
+//! # use serde_derive::{Deserialize, Serialize};
 //! #
 //! #[derive(Serialize, Deserialize)]
 //! # struct S;

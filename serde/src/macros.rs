@@ -79,10 +79,9 @@
 /// specified explicitly if necessary.
 ///
 /// ```edition2021
-/// # use std::marker::PhantomData;
-/// #
 /// # use serde::forward_to_deserialize_any;
 /// # use serde::de::{value, Deserializer, Visitor};
+/// # use std::marker::PhantomData;
 /// #
 /// # struct MyDeserializer<V>(PhantomData<V>);
 /// #

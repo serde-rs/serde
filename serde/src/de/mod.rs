@@ -433,9 +433,8 @@ impl<'a> fmt::Display for Unexpected<'a> {
 /// (`&self`) is an implementation of this trait.
 ///
 /// ```edition2021
-/// # use std::fmt;
-/// #
 /// # use serde::de::{self, Unexpected, Visitor};
+/// # use std::fmt;
 /// #
 /// # struct Example;
 /// #
@@ -667,10 +666,9 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 /// trait.
 ///
 /// ```edition2021
+/// use serde::de::{Deserialize, DeserializeSeed, Deserializer, SeqAccess, Visitor};
 /// use std::fmt;
 /// use std::marker::PhantomData;
-///
-/// use serde::de::{Deserialize, DeserializeSeed, Deserializer, SeqAccess, Visitor};
 ///
 /// // A DeserializeSeed implementation that uses stateful deserialization to
 /// // append array elements onto the end of an existing vector. The preexisting
@@ -1253,9 +1251,8 @@ pub trait Deserializer<'de>: Sized {
 /// # Example
 ///
 /// ```edition2021
-/// # use std::fmt;
-/// #
 /// # use serde::de::{self, Unexpected, Visitor};
+/// # use std::fmt;
 /// #
 /// /// A visitor that deserializes a long string - a string containing at least
 /// /// some minimum number of bytes.

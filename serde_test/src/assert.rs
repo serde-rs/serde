@@ -9,7 +9,7 @@ use std::fmt::Debug;
 /// Runs both `assert_ser_tokens` and `assert_de_tokens`.
 ///
 /// ```edition2021
-/// # use serde_derive::{Serialize, Deserialize};
+/// # use serde_derive::{Deserialize, Serialize};
 /// # use serde_test::{assert_tokens, Token};
 /// #
 /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -43,7 +43,7 @@ where
 /// Asserts that `value` serializes to the given `tokens`.
 ///
 /// ```edition2021
-/// # use serde_derive::{Serialize, Deserialize};
+/// # use serde_derive::{Deserialize, Serialize};
 /// # use serde_test::{assert_ser_tokens, Token};
 /// #
 /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -85,11 +85,10 @@ where
 /// `error`.
 ///
 /// ```edition2021
-/// use std::sync::{Arc, Mutex};
-/// use std::thread;
-///
 /// use serde_derive::Serialize;
 /// use serde_test::{assert_ser_tokens_error, Token};
+/// use std::sync::{Arc, Mutex};
+/// use std::thread;
 ///
 /// #[derive(Serialize)]
 /// struct Example {
@@ -102,7 +101,7 @@ where
 ///     };
 ///     let lock = example.lock.clone();
 ///
-///     let _ = thread::spawn(move || {
+///     let thread = thread::spawn(move || {
 ///         // This thread will acquire the mutex first, unwrapping the result
 ///         // of `lock` because the lock has not been poisoned.
 ///         let _guard = lock.lock().unwrap();
@@ -110,8 +109,8 @@ where
 ///         // This panic while holding the lock (`_guard` is in scope) will
 ///         // poison the mutex.
 ///         panic!()
-///     })
-///     .join();
+///     });
+///     thread.join();
 ///
 ///     let expected = &[
 ///         Token::Struct {
@@ -143,7 +142,7 @@ where
 /// Asserts that the given `tokens` deserialize into `value`.
 ///
 /// ```edition2021
-/// # use serde_derive::{Serialize, Deserialize};
+/// # use serde_derive::{Deserialize, Serialize};
 /// # use serde_test::{assert_de_tokens, Token};
 /// #
 /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -200,7 +199,7 @@ where
 /// Asserts that the given `tokens` yield `error` when deserializing.
 ///
 /// ```edition2021
-/// # use serde_derive::{Serialize, Deserialize};
+/// # use serde_derive::{Deserialize, Serialize};
 /// # use serde_test::{assert_de_tokens_error, Token};
 /// #
 /// #[derive(Serialize, Deserialize, PartialEq, Debug)]

@@ -48,7 +48,7 @@ serde_json = "1.0"
 <p></p>
 
 ```rust
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Point {
