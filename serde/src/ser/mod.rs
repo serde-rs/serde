@@ -962,7 +962,7 @@ pub trait Serializer: Sized {
     /// #
     /// # impl<'a, T> IntoIterator for &'a Vec<T> {
     /// #     type Item = &'a T;
-    /// #     type IntoIter = Box<Iterator<Item = &'a T>>;
+    /// #     type IntoIter = Box<dyn Iterator<Item = &'a T>>;
     /// #
     /// #     fn into_iter(self) -> Self::IntoIter {
     /// #         unimplemented!()
@@ -1143,7 +1143,7 @@ pub trait Serializer: Sized {
     /// #
     /// # impl<'a, K, V> IntoIterator for &'a HashMap<K, V> {
     /// #     type Item = (&'a K, &'a V);
-    /// #     type IntoIter = Box<Iterator<Item = (&'a K, &'a V)>>;
+    /// #     type IntoIter = Box<dyn Iterator<Item = (&'a K, &'a V)>>;
     /// #
     /// #     fn into_iter(self) -> Self::IntoIter {
     /// #         unimplemented!()
@@ -1490,7 +1490,7 @@ pub trait Serializer: Sized {
 /// #
 /// # impl<'a, T> IntoIterator for &'a Vec<T> {
 /// #     type Item = &'a T;
-/// #     type IntoIter = Box<Iterator<Item = &'a T>>;
+/// #     type IntoIter = Box<dyn Iterator<Item = &'a T>>;
 /// #     fn into_iter(self) -> Self::IntoIter {
 /// #         unimplemented!()
 /// #     }
@@ -1584,7 +1584,7 @@ pub trait SerializeSeq {
 /// #
 /// # impl<'a, T> IntoIterator for &'a Array<T> {
 /// #     type Item = &'a T;
-/// #     type IntoIter = Box<Iterator<Item = &'a T>>;
+/// #     type IntoIter = Box<dyn Iterator<Item = &'a T>>;
 /// #     fn into_iter(self) -> Self::IntoIter {
 /// #         unimplemented!()
 /// #     }
@@ -1757,7 +1757,7 @@ pub trait SerializeTupleVariant {
 /// #
 /// # impl<'a, K, V> IntoIterator for &'a HashMap<K, V> {
 /// #     type Item = (&'a K, &'a V);
-/// #     type IntoIter = Box<Iterator<Item = (&'a K, &'a V)>>;
+/// #     type IntoIter = Box<dyn Iterator<Item = (&'a K, &'a V)>>;
 /// #
 /// #     fn into_iter(self) -> Self::IntoIter {
 /// #         unimplemented!()
