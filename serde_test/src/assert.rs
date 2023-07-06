@@ -19,14 +19,17 @@ use std::fmt::Debug;
 /// }
 ///
 /// let s = S { a: 0, b: 0 };
-/// assert_tokens(&s, &[
-///     Token::Struct { name: "S", len: 2 },
-///     Token::Str("a"),
-///     Token::U8(0),
-///     Token::Str("b"),
-///     Token::U8(0),
-///     Token::StructEnd,
-/// ]);
+/// assert_tokens(
+///     &s,
+///     &[
+///         Token::Struct { name: "S", len: 2 },
+///         Token::Str("a"),
+///         Token::U8(0),
+///         Token::Str("b"),
+///         Token::U8(0),
+///         Token::StructEnd,
+///     ],
+/// );
 /// ```
 #[cfg_attr(not(no_track_caller), track_caller)]
 pub fn assert_tokens<'de, T>(value: &T, tokens: &'de [Token])
@@ -50,14 +53,17 @@ where
 /// }
 ///
 /// let s = S { a: 0, b: 0 };
-/// assert_ser_tokens(&s, &[
-///     Token::Struct { name: "S", len: 2 },
-///     Token::Str("a"),
-///     Token::U8(0),
-///     Token::Str("b"),
-///     Token::U8(0),
-///     Token::StructEnd,
-/// ]);
+/// assert_ser_tokens(
+///     &s,
+///     &[
+///         Token::Struct { name: "S", len: 2 },
+///         Token::Str("a"),
+///         Token::U8(0),
+///         Token::Str("b"),
+///         Token::U8(0),
+///         Token::StructEnd,
+///     ],
+/// );
 /// ```
 #[cfg_attr(not(no_track_caller), track_caller)]
 pub fn assert_ser_tokens<T: ?Sized>(value: &T, tokens: &[Token])
@@ -91,7 +97,9 @@ where
 /// }
 ///
 /// fn main() {
-///     let example = Example { lock: Arc::new(Mutex::new(0)) };
+///     let example = Example {
+///         lock: Arc::new(Mutex::new(0)),
+///     };
 ///     let lock = example.lock.clone();
 ///
 ///     let _ = thread::spawn(move || {
@@ -102,10 +110,14 @@ where
 ///         // This panic while holding the lock (`_guard` is in scope) will
 ///         // poison the mutex.
 ///         panic!()
-///     }).join();
+///     })
+///     .join();
 ///
 ///     let expected = &[
-///         Token::Struct { name: "Example", len: 1 },
+///         Token::Struct {
+///             name: "Example",
+///             len: 1,
+///         },
 ///         Token::Str("lock"),
 ///     ];
 ///     let error = "lock poison error while serializing";
@@ -141,14 +153,17 @@ where
 /// }
 ///
 /// let s = S { a: 0, b: 0 };
-/// assert_de_tokens(&s, &[
-///     Token::Struct { name: "S", len: 2 },
-///     Token::Str("a"),
-///     Token::U8(0),
-///     Token::Str("b"),
-///     Token::U8(0),
-///     Token::StructEnd,
-/// ]);
+/// assert_de_tokens(
+///     &s,
+///     &[
+///         Token::Struct { name: "S", len: 2 },
+///         Token::Str("a"),
+///         Token::U8(0),
+///         Token::Str("b"),
+///         Token::U8(0),
+///         Token::StructEnd,
+///     ],
+/// );
 /// ```
 #[cfg_attr(not(no_track_caller), track_caller)]
 pub fn assert_de_tokens<'de, T>(value: &T, tokens: &'de [Token])

@@ -2,9 +2,9 @@
 //! trait.
 //!
 //! ```edition2021
-//! use std::str::FromStr;
-//! use serde_derive::Deserialize;
 //! use serde::de::{value, Deserialize, IntoDeserializer};
+//! use serde_derive::Deserialize;
+//! use std::str::FromStr;
 //!
 //! #[derive(Deserialize)]
 //! enum Setting {

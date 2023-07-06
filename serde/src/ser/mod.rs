@@ -969,7 +969,7 @@ pub trait Serializer: Sized {
     /// #     }
     /// # }
     /// #
-    /// use serde::ser::{Serialize, Serializer, SerializeSeq};
+    /// use serde::ser::{Serialize, SerializeSeq, Serializer};
     ///
     /// impl<T> Serialize for Vec<T>
     /// where
@@ -995,7 +995,7 @@ pub trait Serializer: Sized {
     /// then a call to `end`.
     ///
     /// ```edition2021
-    /// use serde::ser::{Serialize, Serializer, SerializeTuple};
+    /// use serde::ser::{Serialize, SerializeTuple, Serializer};
     ///
     /// # mod fool {
     /// #     trait Serialize {}
@@ -1150,7 +1150,7 @@ pub trait Serializer: Sized {
     /// #     }
     /// # }
     /// #
-    /// use serde::ser::{Serialize, Serializer, SerializeMap};
+    /// use serde::ser::{Serialize, SerializeMap, Serializer};
     ///
     /// impl<K, V> Serialize for HashMap<K, V>
     /// where
@@ -1370,9 +1370,7 @@ pub trait Serializer: Sized {
     ///     where
     ///         S: Serializer,
     ///     {
-    ///         serializer.collect_str(&format_args!("{:?}{:?}",
-    ///                                              self.naive_local(),
-    ///                                              self.offset()))
+    ///         serializer.collect_str(&format_args!("{:?}{:?}", self.naive_local(), self.offset()))
     ///     }
     /// }
     /// ```
@@ -1408,9 +1406,7 @@ pub trait Serializer: Sized {
     ///     where
     ///         S: Serializer,
     ///     {
-    ///         serializer.collect_str(&format_args!("{:?}{:?}",
-    ///                                              self.naive_local(),
-    ///                                              self.offset()))
+    ///         serializer.collect_str(&format_args!("{:?}{:?}", self.naive_local(), self.offset()))
     ///     }
     /// }
     /// ```
@@ -1496,7 +1492,7 @@ pub trait Serializer: Sized {
 /// #     }
 /// # }
 /// #
-/// use serde::ser::{Serialize, Serializer, SerializeSeq};
+/// use serde::ser::{Serialize, SerializeSeq, Serializer};
 ///
 /// impl<T> Serialize for Vec<T>
 /// where
@@ -1542,7 +1538,7 @@ pub trait SerializeSeq {
 /// # Example use
 ///
 /// ```edition2021
-/// use serde::ser::{Serialize, Serializer, SerializeTuple};
+/// use serde::ser::{Serialize, SerializeTuple, Serializer};
 ///
 /// # mod fool {
 /// #     trait Serialize {}
@@ -1590,7 +1586,7 @@ pub trait SerializeSeq {
 /// #     }
 /// # }
 /// #
-/// use serde::ser::{Serialize, Serializer, SerializeTuple};
+/// use serde::ser::{Serialize, SerializeTuple, Serializer};
 ///
 /// # mod fool {
 /// #     trait Serialize {}
@@ -1764,7 +1760,7 @@ pub trait SerializeTupleVariant {
 /// #     }
 /// # }
 /// #
-/// use serde::ser::{Serialize, Serializer, SerializeMap};
+/// use serde::ser::{Serialize, SerializeMap, Serializer};
 ///
 /// impl<K, V> Serialize for HashMap<K, V>
 /// where

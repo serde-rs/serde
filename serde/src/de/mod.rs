@@ -465,7 +465,10 @@ impl<'a> fmt::Display for Unexpected<'a> {
 /// #     E: de::Error,
 /// # {
 /// #     let v = true;
-/// return Err(de::Error::invalid_type(Unexpected::Bool(v), &"a negative integer"));
+/// return Err(de::Error::invalid_type(
+///     Unexpected::Bool(v),
+///     &"a negative integer",
+/// ));
 /// # }
 /// ```
 pub trait Expected {
@@ -709,7 +712,7 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 ///             {
 ///                 // Decrease the number of reallocations if there are many elements
 ///                 if let Some(size_hint) = seq.size_hint() {
-///                    self.0.reserve(size_hint);
+///                     self.0.reserve(size_hint);
 ///                 }
 ///
 ///                 // Visit each element in the inner array and push it onto
@@ -2148,11 +2151,7 @@ pub trait VariantAccess<'de>: Sized {
     /// #         T: DeserializeSeed<'de>,
     /// #     { unimplemented!() }
     /// #
-    /// fn tuple_variant<V>(
-    ///     self,
-    ///     _len: usize,
-    ///     _visitor: V,
-    /// ) -> Result<V::Value, Self::Error>
+    /// fn tuple_variant<V>(self, _len: usize, _visitor: V) -> Result<V::Value, Self::Error>
     /// where
     ///     V: Visitor<'de>,
     /// {
@@ -2239,9 +2238,9 @@ pub trait VariantAccess<'de>: Sized {
 /// # Example
 ///
 /// ```edition2021
-/// use std::str::FromStr;
 /// use serde::de::{value, Deserialize, IntoDeserializer};
 /// use serde_derive::Deserialize;
+/// use std::str::FromStr;
 ///
 /// #[derive(Deserialize)]
 /// enum Setting {
