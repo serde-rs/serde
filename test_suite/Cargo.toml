@@ -12,7 +12,7 @@ unstable = ["serde/unstable"]
 serde = { path = "../serde" }
 
 [dev-dependencies]
-automod = "1.0"
+automod = "1.0.1"
 fnv = "1.0"
 rustversion = "1.0"
 serde = { path = "../serde", features = ["rc", "derive"] }
