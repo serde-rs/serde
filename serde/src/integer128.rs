@@ -9,7 +9,7 @@
 /// or do not target platforms that lack 128-bit integers, do not need to
 /// bother with this macro and may assume support for 128-bit integers.
 ///
-/// ```edition2018
+/// ```edition2021
 /// # use serde::__private::doc::Error;
 /// #
 /// # struct MySerializer;
@@ -50,7 +50,7 @@
 /// When Serde is built with support for 128-bit integers, this macro expands
 /// transparently into just the input tokens.
 ///
-/// ```edition2018
+/// ```edition2021
 /// macro_rules! serde_if_integer128 {
 ///     ($($tt:tt)*) => {
 ///         $($tt)*
@@ -61,7 +61,7 @@
 /// When built without support for 128-bit integers, this macro expands to
 /// nothing.
 ///
-/// ```edition2018
+/// ```edition2021
 /// macro_rules! serde_if_integer128 {
 ///     ($($tt:tt)*) => {};
 /// }

@@ -14,7 +14,7 @@ pub struct Compact<T: ?Sized>(T);
 /// Trait to determine whether a value is represented in human-readable or
 /// compact form.
 ///
-/// ```edition2018
+/// ```edition2021
 /// use serde::{Deserialize, Deserializer, Serialize, Serializer};
 /// use serde_test::{assert_tokens, Configure, Token};
 ///

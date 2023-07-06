@@ -17,7 +17,7 @@ macro_rules! fmt_primitives {
     };
 }
 
-/// ```edition2018
+/// ```edition2021
 /// use serde::Serialize;
 /// use std::fmt::{self, Display};
 ///

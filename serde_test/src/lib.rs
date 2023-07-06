@@ -20,7 +20,7 @@
 //!
 //! [`linked-hash-map`]: https://github.com/contain-rs/linked-hash-map
 //!
-//! ```edition2018
+//! ```edition2021
 //! # const IGNORE: &str = stringify! {
 //! use linked_hash_map::LinkedHashMap;
 //! # };
