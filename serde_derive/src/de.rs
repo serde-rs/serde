@@ -1417,14 +1417,34 @@ fn deserialize_internally_tagged_enum(
     let field_struct_name = field_struct_name(prefix);
 
     // Match arms to extract a variant from a string
-    let variant_arms = variants
+    let variants = variants
         .iter()
         .enumerate()
-        .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
+        .filter(|&(_, variant)| !variant.attrs.skip_deserializing());
+    let arms_visitors = variants.clone().filter_map(|(i, variant)| {
+        if variant.attrs.deserialize_with().is_some() {
+            return None;
+        }
+        match effective_style(variant) {
+            Style::Struct => {
+                let (visitor, _) = deserialize_struct_visitor(
+                    &format!("Variant{}", i),
+                    params,
+                    &variant.fields,
+                    cattrs,
+                    &StructForm::InternallyTagged(&variant.ident, quote!(__deserializer)),
+                );
+                Some(visitor)
+            }
+            _ => None,
+        }
+    });
+    let variant_arms = variants
         .map(|(i, variant)| {
             let variant_name = field_i(i);
 
             let block = Match(deserialize_internally_tagged_variant(
+                &format!("Variant{}", i),
                 params,
                 variant,
                 cattrs,
@@ -1446,6 +1466,8 @@ fn deserialize_internally_tagged_enum(
 
     quote_block! {
         #variant_visitor
+
+        #(#arms_visitors)*
 
         #variants_stmt
 
@@ -1951,6 +1973,7 @@ fn deserialize_externally_tagged_variant(
 // Generates significant part of the visit_seq and visit_map bodies of visitors
 // for the variants of internally tagged enum.
 fn deserialize_internally_tagged_variant(
+    prefix: &str,
     params: &Parameters,
     variant: &Variant,
     cattrs: &attr::Container,
@@ -1982,13 +2005,12 @@ fn deserialize_internally_tagged_variant(
             &variant.fields[0],
             &deserializer,
         ),
-        Style::Struct => deserialize_struct(
-            "",
+        Style::Struct => Fragment::Block(deserialize_struct_dispatch(
+            prefix,
             params,
-            &variant.fields,
             cattrs,
             StructForm::InternallyTagged(variant_ident, deserializer),
-        ),
+        )),
         Style::Tuple => unreachable!("checked in serde_derive_internals"),
     }
 }
