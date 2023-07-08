@@ -681,8 +681,8 @@ impl<'de> Visitor<'de> for CStringVisitor {
     where
         A: SeqAccess<'de>,
     {
-        let len = size_hint::cautious(seq.size_hint());
-        let mut values = Vec::with_capacity(len);
+        let capacity = size_hint::cautious::<u8>(seq.size_hint());
+        let mut values = Vec::<u8>::with_capacity(capacity);
 
         while let Some(value) = try!(seq.next_element()) {
             values.push(value);
@@ -936,7 +936,7 @@ macro_rules! seq_impl {
                         A: SeqAccess<'de>,
                     {
                         $clear(&mut self.0);
-                        $reserve(&mut self.0, size_hint::cautious($access.size_hint()));
+                        $reserve(&mut self.0, size_hint::cautious::<T>($access.size_hint()));
 
                         // FIXME: try to overwrite old values here? (Vec, VecDeque, LinkedList)
                         while let Some(value) = try!($access.next_element()) {
@@ -962,7 +962,7 @@ seq_impl!(
     BinaryHeap<T: Ord>,
     seq,
     BinaryHeap::clear,
-    BinaryHeap::with_capacity(size_hint::cautious(seq.size_hint())),
+    BinaryHeap::with_capacity(size_hint::cautious::<T>(seq.size_hint())),
     BinaryHeap::reserve,
     BinaryHeap::push
 );
@@ -992,7 +992,7 @@ seq_impl!(
     HashSet<T: Eq + Hash, S: BuildHasher + Default>,
     seq,
     HashSet::clear,
-    HashSet::with_capacity_and_hasher(size_hint::cautious(seq.size_hint()), S::default()),
+    HashSet::with_capacity_and_hasher(size_hint::cautious::<T>(seq.size_hint()), S::default()),
     HashSet::reserve,
     HashSet::insert
 );
@@ -1002,7 +1002,7 @@ seq_impl!(
     VecDeque<T>,
     seq,
     VecDeque::clear,
-    VecDeque::with_capacity(size_hint::cautious(seq.size_hint())),
+    VecDeque::with_capacity(size_hint::cautious::<T>(seq.size_hint())),
     VecDeque::reserve,
     VecDeque::push_back
 );
@@ -1036,7 +1036,8 @@ where
             where
                 A: SeqAccess<'de>,
             {
-                let mut values = Vec::with_capacity(size_hint::cautious(seq.size_hint()));
+                let capacity = size_hint::cautious::<T>(seq.size_hint());
+                let mut values = Vec::<T>::with_capacity(capacity);
 
                 while let Some(value) = try!(seq.next_element()) {
                     values.push(value);
@@ -1072,7 +1073,7 @@ where
             where
                 A: SeqAccess<'de>,
             {
-                let hint = size_hint::cautious(seq.size_hint());
+                let hint = size_hint::cautious::<T>(seq.size_hint());
                 if let Some(additional) = hint.checked_sub(self.0.len()) {
                     self.0.reserve(additional);
                 }
@@ -1416,7 +1417,7 @@ map_impl!(BTreeMap<K: Ord, V>, map, BTreeMap::new());
 map_impl!(
     HashMap<K: Eq + Hash, V, S: BuildHasher + Default>,
     map,
-    HashMap::with_capacity_and_hasher(size_hint::cautious(map.size_hint()), S::default())
+    HashMap::with_capacity_and_hasher(size_hint::cautious::<(K, V)>(map.size_hint()), S::default())
 );
 
 ////////////////////////////////////////////////////////////////////////////////
