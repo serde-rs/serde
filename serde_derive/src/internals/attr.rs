@@ -1418,6 +1418,13 @@ fn get_lit_str2(
         ..
     }) = value
     {
+        let suffix = lit.suffix();
+        if !suffix.is_empty() {
+            cx.error_spanned_by(
+                lit,
+                format!("unexpected suffix `{}` on string literal", suffix),
+            );
+        }
         Ok(Some(lit.clone()))
     } else {
         cx.error_spanned_by(
