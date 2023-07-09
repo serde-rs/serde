@@ -1086,6 +1086,34 @@ fn test_adjacently_tagged_enum() {
         ],
     );
 
+    // unit with no content (integer tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit::<u8>,
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::U64(0), // tag field
+            Token::Str("Unit"),
+            Token::StructEnd,
+        ],
+    );
+
+    // unit with no content (bytes tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit::<u8>,
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Bytes(b"t"),
+            Token::Str("Unit"),
+            Token::StructEnd,
+        ],
+    );
+
     // unit with tag first
     assert_de_tokens(
         &AdjacentlyTagged::Unit::<u8>,
@@ -1102,6 +1130,38 @@ fn test_adjacently_tagged_enum() {
         ],
     );
 
+    // unit with tag first (integer tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit::<u8>,
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::U64(0), // tag field
+            Token::Str("Unit"),
+            Token::U64(1), // content field
+            Token::Unit,
+            Token::StructEnd,
+        ],
+    );
+
+    // unit with tag first (bytes tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit::<u8>,
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Bytes(b"t"),
+            Token::Str("Unit"),
+            Token::Bytes(b"c"),
+            Token::Unit,
+            Token::StructEnd,
+        ],
+    );
+
     // unit with content first
     assert_de_tokens(
         &AdjacentlyTagged::Unit::<u8>,
@@ -1113,6 +1173,38 @@ fn test_adjacently_tagged_enum() {
             Token::Str("c"),
             Token::Unit,
             Token::Str("t"),
+            Token::Str("Unit"),
+            Token::StructEnd,
+        ],
+    );
+
+    // unit with content first (integer tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit::<u8>,
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::U64(1), // content field
+            Token::Unit,
+            Token::U64(0), // tag field
+            Token::Str("Unit"),
+            Token::StructEnd,
+        ],
+    );
+
+    // unit with content first (bytes tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit::<u8>,
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Bytes(b"c"),
+            Token::Unit,
+            Token::Bytes(b"t"),
             Token::Str("Unit"),
             Token::StructEnd,
         ],
@@ -1140,6 +1232,50 @@ fn test_adjacently_tagged_enum() {
         ],
     );
 
+    // unit with excess content (f, g, 3) (integer tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit::<u8>,
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Str("f"),
+            Token::Unit,
+            Token::U64(0), // tag field
+            Token::Str("Unit"),
+            Token::Str("g"),
+            Token::Unit,
+            Token::U64(1), // content field
+            Token::Unit,
+            Token::U64(3), // unknown field
+            Token::Unit,
+            Token::StructEnd,
+        ],
+    );
+
+    // unit with excess content (f, b"g", 3) (bytes tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit::<u8>,
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Str("f"),
+            Token::Unit,
+            Token::Bytes(b"t"),
+            Token::Str("Unit"),
+            Token::Bytes(b"g"),
+            Token::Unit,
+            Token::Str("c"),
+            Token::Unit,
+            Token::U64(3),
+            Token::Unit,
+            Token::StructEnd,
+        ],
+    );
+
     // newtype with tag first
     assert_tokens(
         &AdjacentlyTagged::Newtype::<u8>(1),
@@ -1151,6 +1287,38 @@ fn test_adjacently_tagged_enum() {
             Token::Str("t"),
             Token::Str("Newtype"),
             Token::Str("c"),
+            Token::U8(1),
+            Token::StructEnd,
+        ],
+    );
+
+    // newtype with tag first (integer tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Newtype::<u8>(1),
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::U64(0), // tag field
+            Token::Str("Newtype"),
+            Token::U64(1), // content field
+            Token::U8(1),
+            Token::StructEnd,
+        ],
+    );
+
+    // newtype with tag first (bytes tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Newtype::<u8>(1),
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Bytes(b"t"),
+            Token::Str("Newtype"),
+            Token::Bytes(b"c"),
             Token::U8(1),
             Token::StructEnd,
         ],
@@ -1172,6 +1340,38 @@ fn test_adjacently_tagged_enum() {
         ],
     );
 
+    // newtype with content first (integer tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Newtype::<u8>(1),
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::U64(1), // content field
+            Token::U8(1),
+            Token::U64(0), // tag field
+            Token::Str("Newtype"),
+            Token::StructEnd,
+        ],
+    );
+
+    // newtype with content first (bytes tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Newtype::<u8>(1),
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Bytes(b"c"),
+            Token::U8(1),
+            Token::Bytes(b"t"),
+            Token::Str("Newtype"),
+            Token::StructEnd,
+        ],
+    );
+
     // optional newtype with no content field
     assert_de_tokens(
         &AdjacentlyTagged::Newtype::<Option<u8>>(None),
@@ -1181,6 +1381,34 @@ fn test_adjacently_tagged_enum() {
                 len: 1,
             },
             Token::Str("t"),
+            Token::Str("Newtype"),
+            Token::StructEnd,
+        ],
+    );
+
+    // optional newtype with no content field (integer tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Newtype::<Option<u8>>(None),
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 1,
+            },
+            Token::U64(0), // tag field
+            Token::Str("Newtype"),
+            Token::StructEnd,
+        ],
+    );
+
+    // optional newtype with no content field (bytes tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Newtype::<Option<u8>>(None),
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 1,
+            },
+            Token::Bytes(b"t"),
             Token::Str("Newtype"),
             Token::StructEnd,
         ],
@@ -1197,6 +1425,44 @@ fn test_adjacently_tagged_enum() {
             Token::Str("t"),
             Token::Str("Tuple"),
             Token::Str("c"),
+            Token::Tuple { len: 2 },
+            Token::U8(1),
+            Token::U8(1),
+            Token::TupleEnd,
+            Token::StructEnd,
+        ],
+    );
+
+    // tuple with tag first (integer tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Tuple::<u8>(1, 1),
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::U64(0), // tag field
+            Token::Str("Tuple"),
+            Token::U64(1), // content field
+            Token::Tuple { len: 2 },
+            Token::U8(1),
+            Token::U8(1),
+            Token::TupleEnd,
+            Token::StructEnd,
+        ],
+    );
+
+    // tuple with tag first (bytes tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Tuple::<u8>(1, 1),
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Bytes(b"t"),
+            Token::Str("Tuple"),
+            Token::Bytes(b"c"),
             Token::Tuple { len: 2 },
             Token::U8(1),
             Token::U8(1),
@@ -1224,6 +1490,44 @@ fn test_adjacently_tagged_enum() {
         ],
     );
 
+    // tuple with content first (integer tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Tuple::<u8>(1, 1),
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::U64(1), // content field
+            Token::Tuple { len: 2 },
+            Token::U8(1),
+            Token::U8(1),
+            Token::TupleEnd,
+            Token::U64(0), // tag field
+            Token::Str("Tuple"),
+            Token::StructEnd,
+        ],
+    );
+
+    // tuple with content first (bytes tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Tuple::<u8>(1, 1),
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Bytes(b"c"),
+            Token::Tuple { len: 2 },
+            Token::U8(1),
+            Token::U8(1),
+            Token::TupleEnd,
+            Token::Bytes(b"t"),
+            Token::Str("Tuple"),
+            Token::StructEnd,
+        ],
+    );
+
     // struct with tag first
     assert_tokens(
         &AdjacentlyTagged::Struct::<u8> { f: 1 },
@@ -1235,6 +1539,50 @@ fn test_adjacently_tagged_enum() {
             Token::Str("t"),
             Token::Str("Struct"),
             Token::Str("c"),
+            Token::Struct {
+                name: "Struct",
+                len: 1,
+            },
+            Token::Str("f"),
+            Token::U8(1),
+            Token::StructEnd,
+            Token::StructEnd,
+        ],
+    );
+
+    // struct with tag first (integer tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Struct::<u8> { f: 1 },
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::U64(0), // tag field
+            Token::Str("Struct"),
+            Token::U64(1), // content field
+            Token::Struct {
+                name: "Struct",
+                len: 1,
+            },
+            Token::Str("f"),
+            Token::U8(1),
+            Token::StructEnd,
+            Token::StructEnd,
+        ],
+    );
+
+    // struct with tag first (bytes tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Struct::<u8> { f: 1 },
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Bytes(b"t"),
+            Token::Str("Struct"),
+            Token::Bytes(b"c"),
             Token::Struct {
                 name: "Struct",
                 len: 1,
@@ -1267,6 +1615,50 @@ fn test_adjacently_tagged_enum() {
             Token::StructEnd,
         ],
     );
+
+    // struct with content first (integer tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Struct::<u8> { f: 1 },
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::U64(1), // content field
+            Token::Struct {
+                name: "Struct",
+                len: 1,
+            },
+            Token::Str("f"),
+            Token::U8(1),
+            Token::StructEnd,
+            Token::U64(0), // tag field
+            Token::Str("Struct"),
+            Token::StructEnd,
+        ],
+    );
+
+    // struct with content first (bytes tag)
+    assert_de_tokens(
+        &AdjacentlyTagged::Struct::<u8> { f: 1 },
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Bytes(b"c"),
+            Token::Struct {
+                name: "Struct",
+                len: 1,
+            },
+            Token::Str("f"),
+            Token::U8(1),
+            Token::StructEnd,
+            Token::Bytes(b"t"),
+            Token::Str("Struct"),
+            Token::StructEnd,
+        ],
+    );
 }
 
 #[test]
@@ -1288,6 +1680,126 @@ fn test_adjacently_tagged_enum_deny_unknown_fields() {
             Token::Str("Unit"),
             Token::Str("c"),
             Token::Unit,
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit,
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::U64(0), // tag field
+            Token::Str("Unit"),
+            Token::U64(1), // content field
+            Token::Unit,
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit,
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Bytes(b"t"),
+            Token::Str("Unit"),
+            Token::Bytes(b"c"),
+            Token::Unit,
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit,
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Str("t"),
+            Token::Str("Unit"),
+            Token::U64(1), // content field
+            Token::Unit,
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit,
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::U64(0), // tag field
+            Token::Str("Unit"),
+            Token::Str("c"),
+            Token::Unit,
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit,
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Bytes(b"t"),
+            Token::Str("Unit"),
+            Token::U64(1), // content field
+            Token::Unit,
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit,
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Bytes(b"t"),
+            Token::Str("Unit"),
+            Token::Str("c"),
+            Token::Unit,
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit,
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Str("c"),
+            Token::Unit,
+            Token::Bytes(b"t"),
+            Token::Str("Unit"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &AdjacentlyTagged::Unit,
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Str("c"),
+            Token::Unit,
+            Token::Bytes(b"t"),
+            Token::Str("Unit"),
             Token::StructEnd,
         ],
     );
@@ -1329,6 +1841,54 @@ fn test_adjacently_tagged_enum_deny_unknown_fields() {
             Token::Str("h"),
         ],
         r#"invalid value: string "h", expected "t" or "c""#,
+    );
+
+    assert_de_tokens_error::<AdjacentlyTagged>(
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::U64(2),
+        ],
+        r#"invalid value: integer `2`, expected "t" or "c""#,
+    );
+
+    assert_de_tokens_error::<AdjacentlyTagged>(
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::U64(0), // tag field
+            Token::Str("Unit"),
+            Token::U64(3),
+        ],
+        r#"invalid value: integer `3`, expected "t" or "c""#,
+    );
+
+    assert_de_tokens_error::<AdjacentlyTagged>(
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Bytes(b"h"),
+        ],
+        r#"invalid value: byte array, expected "t" or "c""#,
+    );
+
+    assert_de_tokens_error::<AdjacentlyTagged>(
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Bytes(b"c"),
+            Token::Unit,
+            Token::Bytes(b"h"),
+        ],
+        r#"invalid value: byte array, expected "t" or "c""#,
     );
 }
 
