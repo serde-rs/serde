@@ -474,7 +474,8 @@ mod content {
         where
             V: SeqAccess<'de>,
         {
-            let mut vec = Vec::with_capacity(size_hint::cautious(visitor.size_hint()));
+            let mut vec =
+                Vec::<Content>::with_capacity(size_hint::cautious::<Content>(visitor.size_hint()));
             while let Some(e) = try!(visitor.next_element()) {
                 vec.push(e);
             }
@@ -485,7 +486,10 @@ mod content {
         where
             V: MapAccess<'de>,
         {
-            let mut vec = Vec::with_capacity(size_hint::cautious(visitor.size_hint()));
+            let mut vec =
+                Vec::<(Content, Content)>::with_capacity(
+                    size_hint::cautious::<(Content, Content)>(visitor.size_hint()),
+                );
             while let Some(kv) = try!(visitor.next_entry()) {
                 vec.push(kv);
             }
@@ -844,7 +848,10 @@ mod content {
             M: MapAccess<'de>,
         {
             let mut tag = None;
-            let mut vec = Vec::with_capacity(size_hint::cautious(map.size_hint()));
+            let mut vec = Vec::<(Content, Content)>::with_capacity(size_hint::cautious::<(
+                Content,
+                Content,
+            )>(map.size_hint()));
             while let Some(k) = try!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
                 match k {
                     TagOrContent::Tag => {
