@@ -760,6 +760,10 @@ fn test_gen() {
         #[serde(serialize_with = "vec_first_element")]
         vec: Vec<Self>,
     }
+
+    #[derive(Deserialize)]
+    #[serde(bound(deserialize = "[&'de str; N]: Copy"))]
+    struct GenericUnitStruct<const N: usize>;
 }
 
 //////////////////////////////////////////////////////////////////////////
