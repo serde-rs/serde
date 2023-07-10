@@ -417,13 +417,6 @@ fn deserialize_unit_struct(params: &Parameters, cattrs: &attr::Container) -> Fra
     let expecting = format!("unit struct {}", params.type_name());
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
-    let visitor_expr = quote! {
-        __Visitor {
-            marker: _serde::__private::PhantomData::<#this_type #ty_generics>,
-            lifetime: _serde::__private::PhantomData,
-        }
-    };
-
     quote_block! {
         #[doc(hidden)]
         struct __Visitor #de_impl_generics #where_clause {
@@ -447,7 +440,14 @@ fn deserialize_unit_struct(params: &Parameters, cattrs: &attr::Container) -> Fra
             }
         }
 
-        _serde::Deserializer::deserialize_unit_struct(__deserializer, #type_name, #visitor_expr)
+        _serde::Deserializer::deserialize_unit_struct(
+            __deserializer,
+            #type_name,
+            __Visitor {
+                marker: _serde::__private::PhantomData::<#this_type #ty_generics>,
+                lifetime: _serde::__private::PhantomData,
+            },
+        )
     }
 }
 
