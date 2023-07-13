@@ -669,13 +669,27 @@ fn serialize_adjacently_tagged_variant(
 
                 let span = field.original.span();
                 let func = quote_spanned!(span=> _serde::ser::SerializeStruct::serialize_field);
-                return quote_block! {
-                    let mut __struct = try!(_serde::Serializer::serialize_struct(
-                        __serializer, #type_name, 2));
-                    try!(_serde::ser::SerializeStruct::serialize_field(
-                        &mut __struct, #tag, #variant_name));
+                let serialize_field = quote! {
                     try!(#func(
                         &mut __struct, #content, #field_expr));
+                };
+                let should_serialize = if let Some(path) = field.attrs.skip_serializing_if() {
+                    quote! {
+                        !#path(#field_expr)
+                    }
+                } else {
+                    quote!(true)
+                };
+
+                return quote_block! {
+                    let __should_ser = #should_serialize;
+                    let mut __struct = try!(_serde::Serializer::serialize_struct(
+                        __serializer, #type_name, 1 + if __should_ser { 1 } else { 0 }));
+                    try!(#func(
+                        &mut __struct, #tag, #variant_name));
+                    if __should_ser {
+                        #serialize_field
+                    }
                     _serde::ser::SerializeStruct::end(__struct)
                 };
             }
