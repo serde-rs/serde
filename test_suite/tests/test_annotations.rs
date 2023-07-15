@@ -1638,6 +1638,36 @@ impl TryInto<OneOrTwo> for TryIntoOneOrTwo {
     }
 }
 
+#[derive(Serialize, PartialEq, Debug)]
+#[serde(borrowed_into = "u32")]
+enum BorrowedIntoOne {
+    One,
+}
+
+impl<'a> Into<u32> for &'a BorrowedIntoOne {
+    fn into(self) -> u32 {
+        match self {
+            BorrowedIntoOne::One => 1,
+        }
+    }
+}
+
+#[derive(Serialize, PartialEq, Debug)]
+#[serde(borrowed_try_into = "OneOrTwo")]
+struct BorrowedTryIntoOneOrTwo(u32);
+
+impl<'a> TryInto<OneOrTwo> for &'a BorrowedTryIntoOneOrTwo {
+    type Error = String;
+
+    fn try_into(self) -> Result<OneOrTwo, Self::Error> {
+        match self.0 {
+            1 => Ok(OneOrTwo::One),
+            2 => Ok(OneOrTwo::Two),
+            _ => Err("out of range".to_owned()),
+        }
+    }
+}
+
 #[test]
 fn test_from_into_traits() {
     assert_ser_tokens(&EnumToU32::One, &[Token::Some, Token::U32(1)]);
@@ -1656,6 +1686,15 @@ fn test_from_into_traits() {
         }],
     );
     assert_ser_tokens_error(&TryIntoOneOrTwo(3), &[], "out of range");
+    assert_ser_tokens(
+        &BorrowedTryIntoOneOrTwo(1),
+        &[Token::UnitVariant {
+            name: "OneOrTwo",
+            variant: "One",
+        }],
+    );
+    assert_ser_tokens_error(&BorrowedTryIntoOneOrTwo(3), &[], "out of range");
+    assert_ser_tokens(&BorrowedIntoOne::One, &[Token::U32(1)]);
 }
 
 #[test]

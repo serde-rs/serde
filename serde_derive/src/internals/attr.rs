@@ -212,6 +212,8 @@ pub struct Container {
     type_try_from: Option<syn::Type>,
     type_into: Option<syn::Type>,
     type_try_into: Option<syn::Type>,
+    type_borrowed_into: Option<syn::Type>,
+    type_borrowed_try_into: Option<syn::Type>,
     remote: Option<syn::Path>,
     identifier: Identifier,
     has_flatten: bool,
@@ -298,6 +300,8 @@ impl Container {
         let mut type_try_from = Attr::none(cx, TRY_FROM);
         let mut type_into = Attr::none(cx, INTO);
         let mut type_try_into = Attr::none(cx, TRY_INTO);
+        let mut type_borrowed_into = Attr::none(cx, BORROWED_INTO);
+        let mut type_borrowed_try_into = Attr::none(cx, BORROWED_TRY_INTO);
         let mut remote = Attr::none(cx, REMOTE);
         let mut field_identifier = BoolAttr::none(cx, FIELD_IDENTIFIER);
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
@@ -475,6 +479,16 @@ impl Container {
                     if let Some(try_into_ty) = parse_lit_into_ty(cx, TRY_INTO, &meta)? {
                         type_try_into.set_opt(&meta.path, Some(try_into_ty));
                     }
+                } else if meta.path == BORROWED_INTO {
+                    // #[serde(borrowed_into = "Type")]
+                    if let Some(borrowed_into_ty) = parse_lit_into_ty(cx, TRY_INTO, &meta)? {
+                        type_borrowed_into.set_opt(&meta.path, Some(borrowed_into_ty));
+                    }
+                } else if meta.path == BORROWED_TRY_INTO {
+                    // #[serde(borrowed_try_into = "Type")]
+                    if let Some(borrowed_try_into_ty) = parse_lit_into_ty(cx, TRY_INTO, &meta)? {
+                        type_borrowed_try_into.set_opt(&meta.path, Some(borrowed_try_into_ty));
+                    }
                 } else if meta.path == REMOTE {
                     // #[serde(remote = "...")]
                     if let Some(path) = parse_lit_into_path(cx, REMOTE, &meta)? {
@@ -542,6 +556,8 @@ impl Container {
             type_try_from: type_try_from.get(),
             type_into: type_into.get(),
             type_try_into: type_try_into.get(),
+            type_borrowed_into: type_borrowed_into.get(),
+            type_borrowed_try_into: type_borrowed_try_into.get(),
             remote: remote.get(),
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
             has_flatten: false,
@@ -597,6 +613,14 @@ impl Container {
 
     pub fn type_try_into(&self) -> Option<&syn::Type> {
         self.type_try_into.as_ref()
+    }
+
+    pub fn type_borrowed_into(&self) -> Option<&syn::Type> {
+        self.type_borrowed_into.as_ref()
+    }
+
+    pub fn type_borrowed_try_into(&self) -> Option<&syn::Type> {
+        self.type_borrowed_try_into.as_ref()
     }
 
     pub fn remote(&self) -> Option<&syn::Path> {

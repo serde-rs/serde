@@ -173,6 +173,10 @@ fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
         serialize_into(params, type_into)
     } else if let Some(type_try_into) = cont.attrs.type_try_into() {
         serialize_try_into(params, type_try_into)
+    } else if let Some(type_borrowed_into) = cont.attrs.type_borrowed_into() {
+        serialize_borrowed_into(params, type_borrowed_into)
+    } else if let Some(type_borrowed_try_into) = cont.attrs.type_borrowed_try_into() {
+        serialize_borrowed_try_into(params, type_borrowed_try_into)
     } else {
         match &cont.data {
             Data::Enum(variants) => serialize_enum(params, variants, &cont.attrs),
@@ -228,6 +232,27 @@ fn serialize_try_into(params: &Parameters, type_into: &syn::Type) -> Fragment {
                 _serde::__private::TryInto::<#type_into>::try_into(
                     _serde::__private::Clone::clone(#self_var)
                 ),
+                _serde::ser::Error::custom
+            ),
+            |v| _serde::Serialize::serialize(&v, __serializer))
+    }
+}
+
+fn serialize_borrowed_into(params: &Parameters, type_into: &syn::Type) -> Fragment {
+    let self_var = &params.self_var;
+    quote_block! {
+        _serde::Serialize::serialize(
+            &_serde::__private::Into::<#type_into>::into(#self_var),
+            __serializer)
+    }
+}
+
+fn serialize_borrowed_try_into(params: &Parameters, type_into: &syn::Type) -> Fragment {
+    let self_var = &params.self_var;
+    quote_block! {
+        _serde::__private::Result::and_then(
+            _serde::__private::Result::map_err(
+                _serde::__private::TryInto::<#type_into>::try_into(#self_var),
                 _serde::ser::Error::custom
             ),
             |v| _serde::Serialize::serialize(&v, __serializer))

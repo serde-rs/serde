@@ -6,6 +6,8 @@ pub struct Symbol(&'static str);
 
 pub const ALIAS: Symbol = Symbol("alias");
 pub const BORROW: Symbol = Symbol("borrow");
+pub const BORROWED_INTO: Symbol = Symbol("borrowed_into");
+pub const BORROWED_TRY_INTO: Symbol = Symbol("borrowed_try_into");
 pub const BOUND: Symbol = Symbol("bound");
 pub const CONTENT: Symbol = Symbol("content");
 pub const CRATE: Symbol = Symbol("crate");

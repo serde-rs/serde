@@ -362,6 +362,20 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
         );
     }
 
+    if cont.attrs.type_borrowed_into().is_some() {
+        cx.error_spanned_by(
+            cont.original,
+            "#[serde(transparent)] is not allowed with #[serde(borrowed_into = \"...\")]",
+        );
+    }
+
+    if cont.attrs.type_borrowed_try_into().is_some() {
+        cx.error_spanned_by(
+            cont.original,
+            "#[serde(transparent)] is not allowed with #[serde(borrowed_try_into = \"...\")]",
+        );
+    }
+
     let fields = match &mut cont.data {
         Data::Enum(_) => {
             cx.error_spanned_by(
@@ -446,10 +460,20 @@ fn check_from_and_try_from(cx: &Ctxt, cont: &mut Container) {
 }
 
 fn check_into_variants(cx: &Ctxt, cont: &mut Container) {
-    if cont.attrs.type_into().is_some() && cont.attrs.type_try_into().is_some() {
+    let count = [
+        cont.attrs.type_into().is_some(),
+        cont.attrs.type_try_into().is_some(),
+        cont.attrs.type_borrowed_into().is_some(),
+        cont.attrs.type_borrowed_try_into().is_some(),
+    ]
+    .iter()
+    .filter(|&&b| b)
+    .count();
+
+    if count > 1 {
         cx.error_spanned_by(
             cont.original,
-            "#[serde(into = \"...\")] and #[serde(try_into = \"...\")] conflict with each other",
+            "#[serde(into = \"...\")], #[serde(try_into = \"...\")], #[serde(borrowed_into = \"...\")], and #[serde(borrowed_try_into = \"...\")] conflict with each other",
         );
     }
 }
