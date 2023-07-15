@@ -15,6 +15,7 @@ pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     check_adjacent_tag_conflict(cx, cont);
     check_transparent(cx, cont, derive);
     check_from_and_try_from(cx, cont);
+    check_into_variants(cx, cont);
 }
 
 // Remote derive definition type must have either all of the generics of the
@@ -354,6 +355,13 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
         );
     }
 
+    if cont.attrs.type_try_into().is_some() {
+        cx.error_spanned_by(
+            cont.original,
+            "#[serde(transparent)] is not allowed with #[serde(try_into = \"...\")]",
+        );
+    }
+
     let fields = match &mut cont.data {
         Data::Enum(_) => {
             cx.error_spanned_by(
@@ -433,6 +441,15 @@ fn check_from_and_try_from(cx: &Ctxt, cont: &mut Container) {
         cx.error_spanned_by(
             cont.original,
             "#[serde(from = \"...\")] and #[serde(try_from = \"...\")] conflict with each other",
+        );
+    }
+}
+
+fn check_into_variants(cx: &Ctxt, cont: &mut Container) {
+    if cont.attrs.type_into().is_some() && cont.attrs.type_try_into().is_some() {
+        cx.error_spanned_by(
+            cont.original,
+            "#[serde(into = \"...\")] and #[serde(try_into = \"...\")] conflict with each other",
         );
     }
 }

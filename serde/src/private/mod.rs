@@ -23,7 +23,7 @@ pub use self::string::from_utf8_lossy;
 pub use lib::{ToString, Vec};
 
 #[cfg(not(no_core_try_from))]
-pub use lib::convert::TryFrom;
+pub use lib::convert::{TryFrom, TryInto};
 
 mod string {
     use lib::*;

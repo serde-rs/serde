@@ -34,6 +34,7 @@ pub const SKIP_SERIALIZING_IF: Symbol = Symbol("skip_serializing_if");
 pub const TAG: Symbol = Symbol("tag");
 pub const TRANSPARENT: Symbol = Symbol("transparent");
 pub const TRY_FROM: Symbol = Symbol("try_from");
+pub const TRY_INTO: Symbol = Symbol("try_into");
 pub const UNTAGGED: Symbol = Symbol("untagged");
 pub const VARIANT_IDENTIFIER: Symbol = Symbol("variant_identifier");
 pub const WITH: Symbol = Symbol("with");

@@ -14,7 +14,7 @@ use serde::de::{self, IgnoredAny, MapAccess, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::collections::{BTreeMap, HashMap};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::marker::PhantomData;
 
@@ -1594,20 +1594,45 @@ impl From<Option<u32>> for EnumToU32 {
     }
 }
 
-#[derive(Clone, Deserialize, PartialEq, Debug)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 #[serde(try_from = "u32")]
-enum TryFromU32 {
+enum OneOrTwo {
     One,
     Two,
 }
 
-impl TryFrom<u32> for TryFromU32 {
+impl TryFrom<u32> for OneOrTwo {
     type Error = String;
 
     fn try_from(value: u32) -> Result<Self, Self::Error> {
         match value {
-            1 => Ok(TryFromU32::One),
-            2 => Ok(TryFromU32::Two),
+            1 => Ok(OneOrTwo::One),
+            2 => Ok(OneOrTwo::Two),
+            _ => Err("out of range".to_owned()),
+        }
+    }
+}
+
+impl Into<u32> for OneOrTwo {
+    fn into(self) -> u32 {
+        match self {
+            OneOrTwo::One => 1,
+            OneOrTwo::Two => 2,
+        }
+    }
+}
+
+#[derive(Clone, Serialize, PartialEq, Debug)]
+#[serde(try_into = "OneOrTwo")]
+struct TryIntoOneOrTwo(u32);
+
+impl TryInto<OneOrTwo> for TryIntoOneOrTwo {
+    type Error = String;
+
+    fn try_into(self) -> Result<OneOrTwo, Self::Error> {
+        match self.0 {
+            1 => Ok(OneOrTwo::One),
+            2 => Ok(OneOrTwo::Two),
             _ => Err("out of range".to_owned()),
         }
     }
@@ -1621,8 +1646,16 @@ fn test_from_into_traits() {
     assert_ser_tokens(&StructFromEnum(Some(5)), &[Token::None]);
     assert_ser_tokens(&StructFromEnum(None), &[Token::None]);
     assert_de_tokens(&StructFromEnum(Some(2)), &[Token::Some, Token::U32(2)]);
-    assert_de_tokens(&TryFromU32::Two, &[Token::U32(2)]);
-    assert_de_tokens_error::<TryFromU32>(&[Token::U32(5)], "out of range");
+    assert_de_tokens(&OneOrTwo::Two, &[Token::U32(2)]);
+    assert_de_tokens_error::<OneOrTwo>(&[Token::U32(5)], "out of range");
+    assert_ser_tokens(
+        &TryIntoOneOrTwo(1),
+        &[Token::UnitVariant {
+            name: "OneOrTwo",
+            variant: "One",
+        }],
+    );
+    assert_ser_tokens_error(&TryIntoOneOrTwo(3), &[], "out of range");
 }
 
 #[test]
