@@ -5,11 +5,10 @@
 //! enum Enum {}
 //! ```
 
+use crate::de::enum_;
 use crate::de::struct_;
 use crate::de::tuple;
-use crate::de::{
-    effective_style, expr_is_missing, unwrap_to_variant_closure, Parameters, StructForm, TupleForm,
-};
+use crate::de::{effective_style, unwrap_to_variant_closure, Parameters, StructForm, TupleForm};
 use crate::fragment::{Expr, Fragment};
 use crate::internals::ast::{Field, Style, Variant};
 use crate::internals::attr;
@@ -78,10 +77,7 @@ pub(super) fn deserialize_variant(
             let this_value = &params.this_value;
             let type_name = params.type_name();
             let variant_name = variant.ident.to_string();
-            let default = variant.fields.first().map(|field| {
-                let default = Expr(expr_is_missing(field, cattrs));
-                quote!((#default))
-            });
+            let default = enum_::construct_default_tuple(variant, cattrs);
             quote_expr! {
                 match _serde::Deserializer::deserialize_any(
                     __deserializer,

@@ -8,10 +8,8 @@
 use crate::de::enum_;
 use crate::de::enum_untagged;
 use crate::de::struct_;
-use crate::de::{
-    effective_style, expr_is_missing, field_i, unwrap_to_variant_closure, Parameters, StructForm,
-};
-use crate::fragment::{Expr, Fragment, Match};
+use crate::de::{effective_style, field_i, unwrap_to_variant_closure, Parameters, StructForm};
+use crate::fragment::{Fragment, Match};
 use crate::internals::ast::{Style, Variant};
 use crate::internals::attr;
 use crate::private;
@@ -83,10 +81,7 @@ fn deserialize_internally_tagged_variant(
             let this_value = &params.this_value;
             let type_name = params.type_name();
             let variant_name = variant.ident.to_string();
-            let default = variant.fields.first().map(|field| {
-                let default = Expr(expr_is_missing(field, cattrs));
-                quote!((#default))
-            });
+            let default = enum_::construct_default_tuple(variant, cattrs);
             quote_block! {
                 _serde::Deserializer::deserialize_any(__deserializer, _serde::#private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name))?;
                 _serde::#private::Ok(#this_value::#variant_ident #default)
