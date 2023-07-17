@@ -87,9 +87,7 @@ fn deserialize_internally_tagged_variant(
                 _serde::#private::Ok(#this_value::#variant_ident #default)
             }
         }
-        Style::Newtype => {
-            enum_untagged::deserialize_newtype_variant(variant_ident, params, &variant.fields[0])
-        }
+        Style::Newtype => enum_untagged::deserialize_newtype_variant(params, variant, cattrs),
         Style::Struct => struct_::deserialize(
             params,
             &variant.fields,
