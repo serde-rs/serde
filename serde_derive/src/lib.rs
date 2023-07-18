@@ -68,8 +68,12 @@ extern crate quote;
 #[macro_use]
 extern crate syn;
 
+#[cfg(not(precompiled))]
 extern crate proc_macro;
 extern crate proc_macro2;
+
+#[cfg(precompiled)]
+extern crate proc_macro2 as proc_macro;
 
 mod internals;
 
@@ -88,7 +92,17 @@ mod ser;
 mod this;
 mod try;
 
-#[proc_macro_derive(Serialize, attributes(serde))]
+#[cfg(precompiled)]
+macro_rules! parse_macro_input {
+    ($tokenstream:ident as $ty:ty) => {
+        match syn::parse2::<$ty>($tokenstream) {
+            Ok(data) => data,
+            Err(err) => return err.to_compile_error(),
+        }
+    };
+}
+
+#[cfg_attr(not(precompiled), proc_macro_derive(Serialize, attributes(serde)))]
 pub fn derive_serialize(input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as DeriveInput);
     ser::expand_derive_serialize(&mut input)
@@ -96,7 +110,7 @@ pub fn derive_serialize(input: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(Deserialize, attributes(serde))]
+#[cfg_attr(not(precompiled), proc_macro_derive(Deserialize, attributes(serde)))]
 pub fn derive_deserialize(input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as DeriveInput);
     de::expand_derive_deserialize(&mut input)
