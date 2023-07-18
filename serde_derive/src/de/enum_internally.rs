@@ -8,7 +8,7 @@
 use crate::de::enum_;
 use crate::de::enum_untagged;
 use crate::de::struct_;
-use crate::de::{effective_style, field_i, unwrap_to_variant_closure, Parameters, StructForm};
+use crate::de::{field_i, unwrap_to_variant_closure, Parameters, StructForm};
 use crate::fragment::{Fragment, Match};
 use crate::internals::ast::{Style, Variant};
 use crate::internals::attr;
@@ -76,7 +76,7 @@ fn deserialize_internally_tagged_variant(
 
     let variant_ident = &variant.ident;
 
-    match effective_style(variant) {
+    match variant.de_style() {
         Style::Unit => {
             let this_value = &params.this_value;
             let type_name = params.type_name();

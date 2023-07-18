@@ -863,13 +863,6 @@ fn expr_is_missing_seq(
     }
 }
 
-fn effective_style(variant: &Variant) -> Style {
-    match variant.style {
-        Style::Newtype if variant.fields[0].attrs.skip_deserializing() => Style::Unit,
-        other => other,
-    }
-}
-
 /// True if there is any field with a `#[serde(flatten)]` attribute, other than
 /// fields which are skipped.
 fn has_flatten(fields: &[Field]) -> bool {

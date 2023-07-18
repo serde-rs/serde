@@ -9,8 +9,7 @@ use crate::de::enum_;
 use crate::de::struct_;
 use crate::de::tuple;
 use crate::de::{
-    effective_style, expr_is_missing, field_i, unwrap_to_variant_closure, Parameters, StructForm,
-    TupleForm,
+    expr_is_missing, field_i, unwrap_to_variant_closure, Parameters, StructForm, TupleForm,
 };
 use crate::fragment::{Expr, Fragment};
 use crate::internals::ast::{Style, Variant};
@@ -75,7 +74,7 @@ pub(super) fn deserialize_variant(
 
     let variant_ident = &variant.ident;
 
-    match effective_style(variant) {
+    match variant.de_style() {
         Style::Unit => {
             let this_value = &params.this_value;
             let type_name = params.type_name();
