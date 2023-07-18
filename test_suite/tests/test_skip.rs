@@ -1700,6 +1700,34 @@ mod enum_ {
                         Token::SeqEnd,
                     ],
                 );
+
+                // Map: Uses visit_seq
+                assert_de_tokens(
+                    &value,
+                    &[
+                        Token::Struct {
+                            name: "Enum",
+                            len: 2,
+                        },
+                        Token::Str("tag"),
+                        Token::Str("Struct0"),
+                        Token::Str("content"),
+                        Token::Seq { len: None },
+                        Token::SeqEnd,
+                        Token::StructEnd,
+                    ],
+                );
+                // Seq: Uses visit_seq
+                assert_de_tokens(
+                    &value,
+                    &[
+                        Token::Seq { len: None },
+                        Token::Str("Struct0"),    // tag
+                        Token::Seq { len: None }, // content
+                        Token::SeqEnd,
+                        Token::SeqEnd,
+                    ],
+                );
             }
 
             #[test]
@@ -1767,6 +1795,36 @@ mod enum_ {
                         Token::SeqEnd,
                     ],
                 );
+
+                // Map: Uses visit_seq
+                assert_de_tokens(
+                    &value,
+                    &[
+                        Token::Struct {
+                            name: "Enum",
+                            len: 2,
+                        },
+                        Token::Str("tag"),
+                        Token::Str("Struct1"),
+                        Token::Str("content"),
+                        Token::Seq { len: None },
+                        Token::U32(42), // a
+                        Token::SeqEnd,
+                        Token::StructEnd,
+                    ],
+                );
+                // Seq: Uses visit_seq
+                assert_de_tokens(
+                    &value,
+                    &[
+                        Token::Seq { len: None },
+                        Token::Str("Struct1"),    // tag
+                        Token::Seq { len: None }, // content
+                        Token::U32(42),           // a
+                        Token::SeqEnd,
+                        Token::SeqEnd,
+                    ],
+                );
             }
 
             #[test]
@@ -1828,6 +1886,34 @@ mod enum_ {
                             len: 0,
                         },
                         Token::StructEnd,
+                        Token::SeqEnd,
+                    ],
+                );
+
+                // Map: Uses visit_seq
+                assert_de_tokens(
+                    &value,
+                    &[
+                        Token::Struct {
+                            name: "Enum",
+                            len: 2,
+                        },
+                        Token::Str("tag"),
+                        Token::Str("Struct2as0"),
+                        Token::Str("content"),
+                        Token::Seq { len: None },
+                        Token::SeqEnd,
+                        Token::StructEnd,
+                    ],
+                );
+                // Seq: Uses visit_seq
+                assert_de_tokens(
+                    &value,
+                    &[
+                        Token::Seq { len: None },
+                        Token::Str("Struct2as0"), // tag
+                        Token::Seq { len: None }, // content
+                        Token::SeqEnd,
                         Token::SeqEnd,
                     ],
                 );
@@ -1898,6 +1984,36 @@ mod enum_ {
                         Token::Str("b"),
                         Token::U32(20),
                         Token::StructEnd,
+                        Token::SeqEnd,
+                    ],
+                );
+
+                // Map: Uses visit_seq
+                assert_de_tokens(
+                    &value,
+                    &[
+                        Token::Struct {
+                            name: "Enum",
+                            len: 2,
+                        },
+                        Token::Str("tag"),
+                        Token::Str("Struct2as1"),
+                        Token::Str("content"),
+                        Token::Seq { len: None },
+                        Token::U32(20), // b
+                        Token::SeqEnd,
+                        Token::StructEnd,
+                    ],
+                );
+                // Seq: Uses visit_seq
+                assert_de_tokens(
+                    &value,
+                    &[
+                        Token::Seq { len: None },
+                        Token::Str("Struct2as1"), // tag
+                        Token::Seq { len: None }, // content
+                        Token::U32(20),           // b
+                        Token::SeqEnd,
                         Token::SeqEnd,
                     ],
                 );
@@ -2087,6 +2203,9 @@ mod enum_ {
                         Token::StructEnd,
                     ],
                 );
+
+                // Uses visit_seq
+                assert_de_tokens(&value, &[Token::Seq { len: None }, Token::SeqEnd]);
             }
 
             #[test]
@@ -2104,6 +2223,16 @@ mod enum_ {
                         Token::Str("a"),
                         Token::U32(42),
                         Token::StructEnd,
+                    ],
+                );
+
+                // Uses visit_seq
+                assert_de_tokens(
+                    &value,
+                    &[
+                        Token::Seq { len: None },
+                        Token::U32(42), // a
+                        Token::SeqEnd,
                     ],
                 );
             }
@@ -2126,6 +2255,9 @@ mod enum_ {
                         Token::StructEnd,
                     ],
                 );
+
+                // Uses visit_seq
+                assert_de_tokens(&value, &[Token::Seq { len: None }, Token::SeqEnd]);
             }
 
             #[test]
@@ -2146,6 +2278,16 @@ mod enum_ {
                         Token::Str("b"),
                         Token::U32(20),
                         Token::StructEnd,
+                    ],
+                );
+
+                // Uses visit_seq
+                assert_de_tokens(
+                    &value,
+                    &[
+                        Token::Seq { len: None },
+                        Token::U32(20), // a
+                        Token::SeqEnd,
                     ],
                 );
             }
