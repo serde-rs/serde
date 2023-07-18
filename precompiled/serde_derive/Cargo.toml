@@ -1,0 +1,17 @@
+[package]
+name = "serde_derive"
+version = "1.0.171"
+authors = ["David Tolnay <dtolnay@gmail.com>"]
+publish = false
+
+[lib]
+doctest = false
+
+[[bin]]
+name = "serde_derive"
+path = "main.rs"
+
+[dependencies]
+proc-macro2 = "1"
+quote = { version = "1", default-features = false }
+syn = { version = "2.0.25", default-features = false, features = ["clone-impls", "derive", "parsing", "printing"] }
