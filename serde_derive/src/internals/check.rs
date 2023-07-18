@@ -15,6 +15,8 @@ pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     check_adjacent_tag_conflict(cx, cont);
     check_transparent(cx, cont, derive);
     check_from_and_try_from(cx, cont);
+    check_serialize_with(cx, cont);
+    check_deserialize_with(cx, cont);
 }
 
 // Remote derive definition type must have either all of the generics of the
@@ -354,6 +356,20 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
         );
     }
 
+    if cont.attrs.serialize_with().is_some() {
+        cx.error_spanned_by(
+            cont.original,
+            "#[serde(transparent)] is not allowed with #[serde(serialize_with = \"...\")]",
+        );
+    }
+
+    if cont.attrs.deserialize_with().is_some() {
+        cx.error_spanned_by(
+            cont.original,
+            "#[serde(transparent)] is not allowed with #[serde(deserialize_with = \"...\")]",
+        );
+    }
+
     let fields = match &mut cont.data {
         Data::Enum(_) => {
             cx.error_spanned_by(
@@ -433,6 +449,39 @@ fn check_from_and_try_from(cx: &Ctxt, cont: &mut Container) {
         cx.error_spanned_by(
             cont.original,
             "#[serde(from = \"...\")] and #[serde(try_from = \"...\")] conflict with each other",
+        );
+    }
+}
+
+fn check_serialize_with(cx: &Ctxt, cont: &mut Container) {
+    if cont.attrs.serialize_with().is_none() {
+        return;
+    }
+
+    if cont.attrs.type_into().is_some() {
+        cx.error_spanned_by(
+            cont.original,
+            "#[serde(into = \"...\")] and #[serde(serialize_with = \"...\")] conflict with each other",
+        );
+    }
+}
+
+fn check_deserialize_with(cx: &Ctxt, cont: &mut Container) {
+    if cont.attrs.deserialize_with().is_none() {
+        return;
+    }
+
+    if cont.attrs.type_from().is_some() {
+        cx.error_spanned_by(
+            cont.original,
+            "#[serde(from = \"...\")] and #[serde(deserialize_with = \"...\")] conflict with each other",
+        );
+    }
+
+    if cont.attrs.type_try_from().is_some() {
+        cx.error_spanned_by(
+            cont.original,
+            "#[serde(try_from = \"...\")] and #[serde(deserialize_with = \"...\")] conflict with each other",
         );
     }
 }

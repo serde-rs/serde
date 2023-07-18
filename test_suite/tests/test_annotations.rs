@@ -3115,3 +3115,85 @@ fn test_expecting_message_identifier_enum() {
         r#"invalid type: map, expected something strange..."#,
     );
 }
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(with = "enum_with")]
+enum EnumWith {
+    One,
+    Two,
+}
+
+mod enum_with {
+    use super::EnumWith;
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub(super) fn serialize<S>(value: &EnumWith, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match value {
+            EnumWith::One => serializer.serialize_u32(1),
+            EnumWith::Two => serializer.serialize_u32(2),
+        }
+    }
+
+    pub(super) fn deserialize<'de, D>(deserializer: D) -> Result<EnumWith, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        match u32::deserialize(deserializer)? {
+            1 => Ok(EnumWith::One),
+            2 => Ok(EnumWith::Two),
+            _ => Err(serde::de::Error::custom("out of range")),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(with = "num_str")]
+struct NumStr(String);
+
+impl NumStr {
+    fn validate(&self) -> Result<(), &'static str> {
+        if self.0.chars().all(|c| c >= '0' && c <= '9') {
+            Ok(())
+        } else {
+            Err("non-numeric string")
+        }
+    }
+}
+
+mod num_str {
+    use crate::NumStr;
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub(super) fn serialize<S>(value: &NumStr, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        value.validate().map_err(serde::ser::Error::custom)?;
+        serializer.serialize_str(&value.0)
+    }
+
+    pub(super) fn deserialize<'de, D>(deserializer: D) -> Result<NumStr, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        let n = NumStr(s);
+        n.validate().map_err(serde::de::Error::custom)?;
+        Ok(n)
+    }
+}
+
+#[test]
+fn test_container_with() {
+    assert_ser_tokens(&EnumWith::One, &[Token::U32(1)]);
+    assert_de_tokens(&EnumWith::Two, &[Token::U32(2)]);
+    assert_de_tokens_error::<EnumWith>(&[Token::U32(5)], "out of range");
+
+    assert_ser_tokens(&NumStr("123".to_string()), &[Token::Str("123")]);
+    assert_ser_tokens_error(&NumStr("12ab3".to_string()), &[], "non-numeric string");
+    assert_de_tokens(&NumStr("567".to_string()), &[Token::Str("567")]);
+    assert_de_tokens_error::<NumStr>(&[Token::Str("abc")], "non-numeric string");
+}
