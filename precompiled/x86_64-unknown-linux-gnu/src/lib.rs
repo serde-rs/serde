@@ -23,7 +23,7 @@ pub fn derive_serialize(input: TokenStream) -> TokenStream {
 
 #[proc_macro_derive(Deserialize, attributes(serde))]
 pub fn derive_deserialize(input: TokenStream) -> TokenStream {
-    derive(1, input)
+    derive(1 + cfg!(feature = "deserialize_in_place") as u8, input)
 }
 
 fn derive(select: u8, input: TokenStream) -> TokenStream {

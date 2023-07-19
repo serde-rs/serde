@@ -1,5 +1,7 @@
 use proc_macro2::{Literal, Span, TokenStream};
 use quote::ToTokens;
+#[cfg(precompiled)]
+use std::sync::atomic::Ordering;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::{self, Ident, Index, Member};
@@ -304,6 +306,11 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
 
 #[cfg(feature = "deserialize_in_place")]
 fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<Stmts> {
+    #[cfg(precompiled)]
+    if !crate::DESERIALIZE_IN_PLACE.load(Ordering::Relaxed) {
+        return None;
+    }
+
     // Only remote derives have getters, and we do not generate
     // deserialize_in_place for remote derives.
     assert!(!params.has_getter);

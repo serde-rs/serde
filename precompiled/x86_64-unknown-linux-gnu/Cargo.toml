@@ -16,6 +16,10 @@ repository = "https://github.com/serde-rs/serde"
 name = "serde_derive"
 proc-macro = true
 
+[features]
+default = []
+deserialize_in_place = []
+
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 

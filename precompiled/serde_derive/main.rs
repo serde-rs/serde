@@ -3,6 +3,7 @@ extern crate proc_macro2;
 use proc_macro2::watt;
 use proc_macro2::watt::buffer::InputBuffer;
 use std::io::{self, Read, Write};
+use std::sync::atomic::Ordering;
 
 fn main() {
     let mut buf = Vec::new();
@@ -12,6 +13,10 @@ fn main() {
     let derive = match buf.read_u8() {
         0 => serde_derive::derive_serialize,
         1 => serde_derive::derive_deserialize,
+        2 => {
+            serde_derive::DESERIALIZE_IN_PLACE.store(true, Ordering::Relaxed);
+            serde_derive::derive_deserialize
+        }
         _ => unreachable!(),
     };
 
