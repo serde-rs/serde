@@ -78,6 +78,8 @@ pub fn load(buf: &mut InputBuffer) -> TokenStream {
                 let repr = buf.read_str(len as usize);
                 let ident = if let Some(repr) = repr.strip_prefix("r#") {
                     proc_macro2::Ident::new_raw(repr, proc_macro2::Span::call_site())
+                } else if repr == "$crate" {
+                    proc_macro2::Ident::new("crate", proc_macro2::Span::call_site())
                 } else {
                     proc_macro2::Ident::new(repr, proc_macro2::Span::call_site())
                 };
