@@ -6,7 +6,6 @@ categories = ["no-std", "no-std::no-alloc"]
 description = "Macros 1.1 implementation of #[derive(Serialize, Deserialize)]"
 documentation = "https://serde.rs/derive.html"
 homepage = "https://serde.rs"
-include = ["build.rs", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 keywords = ["serde", "serialization", "no_std", "derive"]
 license = "MIT OR Apache-2.0"
 readme = "crates-io.md"

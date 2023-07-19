@@ -7,7 +7,6 @@ categories = ["encoding", "no-std", "no-std::no-alloc"]
 description = "A generic serialization/deserialization framework"
 documentation = "https://docs.rs/serde"
 homepage = "https://serde.rs"
-include = ["build.rs", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 keywords = ["serde", "serialization", "no_std"]
 license = "MIT OR Apache-2.0"
 readme = "crates-io.md"

@@ -7,7 +7,6 @@ categories = ["development-tools::testing"]
 description = "Token De/Serializer for testing De/Serialize implementations"
 documentation = "https://docs.rs/serde_test"
 homepage = "https://serde.rs"
-include = ["build.rs", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 keywords = ["serde", "serialization", "testing", "dev-dependencies"]
 license = "MIT OR Apache-2.0"
 readme = "crates-io.md"
