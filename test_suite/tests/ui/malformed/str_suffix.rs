@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde_derive::Serialize;
 
 #[derive(Serialize)]
 #[serde(bound = ""huh)]

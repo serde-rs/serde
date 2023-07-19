@@ -34,8 +34,8 @@ use std::time::{Duration, UNIX_EPOCH};
 use std::sync::atomic::{AtomicI64, AtomicU64};
 
 use fnv::FnvHasher;
-use serde::de::{DeserializeOwned, IntoDeserializer};
-use serde::{Deserialize, Deserializer};
+use serde::de::{Deserialize, DeserializeOwned, Deserializer, IntoDeserializer};
+use serde_derive::Deserialize;
 use serde_test::{assert_de_tokens, Configure, Token};
 
 #[macro_use]

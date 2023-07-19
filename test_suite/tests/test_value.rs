@@ -1,8 +1,8 @@
 #![allow(clippy::derive_partial_eq_without_eq, clippy::similar_names)]
 
 use serde::de::value::{self, MapAccessDeserializer};
-use serde::de::{IntoDeserializer, MapAccess, Visitor};
-use serde::{Deserialize, Deserializer};
+use serde::de::{Deserialize, Deserializer, IntoDeserializer, MapAccess, Visitor};
+use serde_derive::Deserialize;
 use serde_test::{assert_de_tokens, Token};
 use std::fmt;
 

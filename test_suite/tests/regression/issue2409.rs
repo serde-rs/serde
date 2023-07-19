@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde_derive::Deserialize;
 
 macro_rules! bug {
     ($serde_path:literal) => {

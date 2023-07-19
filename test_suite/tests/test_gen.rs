@@ -20,8 +20,9 @@
     clippy::type_repetition_in_bounds
 )]
 
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::de::{Deserialize, DeserializeOwned, Deserializer};
+use serde::ser::{Serialize, Serializer};
+use serde_derive::{Deserialize, Serialize};
 
 use std::borrow::Cow;
 use std::marker::PhantomData;
@@ -404,7 +405,7 @@ fn test_gen() {
     }
 
     mod vis {
-        use serde::{Deserialize, Serialize};
+        use serde_derive::{Deserialize, Serialize};
 
         pub struct S;
 
@@ -636,7 +637,7 @@ fn test_gen() {
 
     mod restricted {
         mod inner {
-            use serde::{Deserialize, Serialize};
+            use serde_derive::{Deserialize, Serialize};
 
             #[derive(Serialize, Deserialize)]
             struct Restricted {

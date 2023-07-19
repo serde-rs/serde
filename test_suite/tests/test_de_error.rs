@@ -5,8 +5,8 @@
 )]
 #![cfg_attr(feature = "unstable", feature(never_type))]
 
-use serde::de::IntoDeserializer;
-use serde::Deserialize;
+use serde::de::{Deserialize, IntoDeserializer};
+use serde_derive::Deserialize;
 use serde_test::{assert_de_tokens_error, Token};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ffi::{CStr, CString};

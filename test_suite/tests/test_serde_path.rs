@@ -5,7 +5,7 @@
 
 #[test]
 fn test_gen_custom_serde() {
-    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
     #[serde(crate = "fake_serde")]
     struct Foo;
 

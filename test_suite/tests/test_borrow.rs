@@ -5,8 +5,8 @@
 )]
 
 use serde::de::value::{BorrowedStrDeserializer, MapDeserializer};
-use serde::de::IntoDeserializer;
-use serde::{Deserialize, Deserializer};
+use serde::de::{Deserialize, Deserializer, IntoDeserializer};
+use serde_derive::Deserialize;
 use serde_test::{assert_de_tokens, assert_de_tokens_error, Token};
 
 use std::borrow::Cow;
