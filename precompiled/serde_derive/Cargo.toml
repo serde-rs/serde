@@ -1,6 +1,6 @@
 [package]
 name = "serde_derive"
-version = "1.0.172-alpha.0"
+version = "1.0.172"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 categories = ["no-std", "no-std::no-alloc"]
 description = "Implementation of #[derive(Serialize, Deserialize)]"
@@ -27,7 +27,7 @@ quote = "1"
 syn = "2.0.25"
 
 [dev-dependencies]
-serde = { version = "=1.0.172-alpha.0", path = "../../serde" }
+serde = { version = "1", path = "../../serde" }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
