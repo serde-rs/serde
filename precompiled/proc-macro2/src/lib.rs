@@ -143,8 +143,9 @@ impl Group {
 
     pub fn delim_span(&self) -> DelimSpan {
         DelimSpan {
-            open: self.span_open(),
-            close: self.span_close(),
+            join: self.span,
+            open: self.span_open,
+            close: self.span_close,
         }
     }
 
@@ -793,16 +794,14 @@ pub mod extra {
 
     #[derive(Copy, Clone)]
     pub struct DelimSpan {
+        pub(crate) join: Span,
         pub(crate) open: Span,
         pub(crate) close: Span,
     }
 
     impl DelimSpan {
         pub fn join(&self) -> Span {
-            Span {
-                lo: self.open.lo,
-                hi: self.close.hi,
-            }
+            self.join
         }
 
         pub fn open(&self) -> Span {
