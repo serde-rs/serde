@@ -48,6 +48,14 @@ fn derive(select: u8, input: TokenStream) -> TokenStream {
     buf.clear();
     stdout.read_to_end(&mut buf).unwrap();
 
+    let success = match child.wait() {
+        Ok(exit_status) => exit_status.success(),
+        Err(_) => !buf.is_empty(),
+    };
+    if !success {
+        panic!();
+    }
+
     let mut buf = InputBuffer::new(&buf);
     memory.receive(&mut buf)
 }
