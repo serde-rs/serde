@@ -2,6 +2,8 @@
 
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null
 
+# TODO: Sanitize host filesystem paths. https://github.com/rust-lang/cargo/issues/12137
+
 cargo +nightly build \
     --manifest-path serde_derive/Cargo.toml \
     --bin serde_derive \
