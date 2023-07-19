@@ -36,7 +36,11 @@ fn derive(select: u8, input: TokenStream) -> TokenStream {
         memory.linearize_token(token, &mut buf);
     }
 
-    let mut child = Command::new(concat!(env!("CARGO_MANIFEST_DIR"), "/serde_derive"))
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/serde_derive-x86_64-unknown-linux-gnu",
+    );
+    let mut child = Command::new(path)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()

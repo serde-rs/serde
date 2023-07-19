@@ -1,5 +1,5 @@
 [workspace]
-members = ["proc-macro2", "serde_derive"]
+members = ["bin", "proc-macro2"]
 resolver = "2"
 
 [patch.crates-io]
