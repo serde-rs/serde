@@ -1,6 +1,6 @@
 [package]
 name = "serde_derive-x86_64-unknown-linux-gnu"
-version = "1.0.171-alpha.1"
+version = "1.0.171-alpha.2"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 categories = ["no-std", "no-std::no-alloc"]
 description = "Precompiled implementation of #[derive(Serialize, Deserialize)]"
