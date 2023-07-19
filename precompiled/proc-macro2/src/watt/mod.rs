@@ -35,7 +35,7 @@ fn post_increment(counter: &mut u32) -> impl FnMut() -> u32 + '_ {
 }
 
 pub fn load(buf: &mut InputBuffer) -> TokenStream {
-    let mut span_counter = 0;
+    let mut span_counter = 1;
     let mut next_span = post_increment(&mut span_counter);
     let mut next_span = || {
         let next = next_span();
