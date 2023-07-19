@@ -2966,7 +2966,9 @@ fn test_expecting_message() {
     #[derive(Deserialize)]
     #[serde(expecting = "something strange...")]
     struct Struct {
+        #[allow(dead_code)]
         question: String,
+        #[allow(dead_code)]
         answer: u32,
     }
 
