@@ -76,8 +76,13 @@ pub fn load(buf: &mut InputBuffer) -> TokenStream {
             Kind::Ident => {
                 let len = buf.read_u16();
                 let repr = buf.read_str(len as usize);
+                let ident = if let Some(repr) = repr.strip_prefix("r#") {
+                    proc_macro2::Ident::new_raw(repr, proc_macro2::Span::call_site())
+                } else {
+                    proc_macro2::Ident::new(repr, proc_macro2::Span::call_site())
+                };
                 trees.push(TokenTree::Ident(Ident {
-                    fallback: proc_macro2::Ident::new(repr, proc_macro2::Span::call_site()),
+                    fallback: ident,
                     span: next_span(),
                     identity: next_ident(),
                 }));
@@ -85,8 +90,9 @@ pub fn load(buf: &mut InputBuffer) -> TokenStream {
             Kind::Punct(spacing) => {
                 let ch = buf.read_u8();
                 assert!(ch.is_ascii());
+                let punct = proc_macro2::Punct::new(ch as char, spacing);
                 trees.push(TokenTree::Punct(Punct {
-                    fallback: proc_macro2::Punct::new(ch as char, spacing),
+                    fallback: punct,
                     span: next_span(),
                     identity: next_punct(),
                 }));
@@ -94,8 +100,9 @@ pub fn load(buf: &mut InputBuffer) -> TokenStream {
             Kind::Literal => {
                 let len = buf.read_u16();
                 let repr = buf.read_str(len as usize);
+                let literal = proc_macro2::Literal::from_str(repr).unwrap();
                 trees.push(TokenTree::Literal(Literal {
-                    fallback: proc_macro2::Literal::from_str(repr).unwrap(),
+                    fallback: literal,
                     span: next_span(),
                     identity: next_literal(),
                 }));

@@ -177,7 +177,11 @@ impl TokenMemory {
                     let len = buf.read_u16();
                     let repr = buf.read_str(len as usize);
                     let span = self.read_span(buf);
-                    let ident = Ident::new(repr, span);
+                    let ident = if let Some(repr) = repr.strip_prefix("r#") {
+                        Ident::new_raw(repr, span)
+                    } else {
+                        Ident::new(repr, span)
+                    };
                     trees.push(TokenTree::Ident(ident));
                 }
                 Kind::Punct(spacing) => {
