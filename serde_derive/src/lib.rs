@@ -13,7 +13,7 @@
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
-#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.171")]
+#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.172-alpha.0")]
 #![allow(unknown_lints, bare_trait_objects)]
 // Ignored clippy lints
 #![allow(
