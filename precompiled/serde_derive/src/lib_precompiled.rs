@@ -6,7 +6,7 @@ use crate::bytecode::Bytecode;
 use proc_macro::{Delimiter, Group, Ident, Literal, Punct, Spacing, Span, TokenStream, TokenTree};
 use std::io::{Read, Write};
 use std::iter::FromIterator;
-use std::process::{Command, Stdio};
+use std::process::{Command, ExitStatus, Stdio};
 use std::str::FromStr;
 
 #[proc_macro_derive(Serialize, attributes(serde))]
@@ -48,11 +48,8 @@ fn derive(select: u8, input: TokenStream) -> TokenStream {
     buf.clear();
     stdout.read_to_end(&mut buf).unwrap();
 
-    let success = match child.wait() {
-        Ok(exit_status) => exit_status.success(),
-        Err(_) => !buf.is_empty(),
-    };
-    if !success {
+    let success = child.wait().as_ref().map_or(true, ExitStatus::success);
+    if !success || buf.is_empty() {
         panic!();
     }
 
