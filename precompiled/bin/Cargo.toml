@@ -14,4 +14,4 @@ path = "main.rs"
 [dependencies]
 proc-macro2 = "1"
 quote = { version = "1", default-features = false }
-syn = { version = "2.0.25", default-features = false, features = ["clone-impls", "derive", "parsing", "printing"] }
+syn = { version = "2.0.25", default-features = false, features = ["clone-impls", "derive", "full", "parsing", "printing"] }
