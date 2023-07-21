@@ -13,7 +13,7 @@
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
-#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.173")]
+#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.174")]
 #![allow(unknown_lints, bare_trait_objects)]
 
 extern crate proc_macro;
