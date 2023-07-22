@@ -67,7 +67,7 @@ pub(super) fn deserialize_variant(
 ) -> Fragment {
     // Feature https://github.com/serde-rs/serde/issues/1013
     if let Some(path) = variant.attrs.deserialize_with() {
-        let unwrap_fn = unwrap_to_variant_closure(params, variant, false);
+        let unwrap_fn = unwrap_to_variant_closure(params, variant, cattrs, false);
         return quote_block! {
             _serde::#private::Result::map(#path(__deserializer), #unwrap_fn)
         };

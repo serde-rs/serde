@@ -120,10 +120,16 @@ fn deserialize_externally_tagged_variant(
 ) -> Fragment {
     // Feature https://github.com/serde-rs/serde/issues/1013
     if let Some(path) = variant.attrs.deserialize_with() {
-        let field_tys = variant.fields.iter().map(|field| field.ty);
+        let field_tys = variant.fields.iter().filter_map(|field| {
+            if field.attrs.skip_deserializing() {
+                None
+            } else {
+                Some(field.ty)
+            }
+        });
         let (wrapper, wrapper_ty) = wrap_deserialize_with(params, &quote!((#(#field_tys),*)), path);
 
-        let unwrap_fn = unwrap_to_variant_closure(params, variant, true);
+        let unwrap_fn = unwrap_to_variant_closure(params, variant, cattrs, true);
 
         return quote_block! {
             #wrapper

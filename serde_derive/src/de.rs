@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 use std::ptr;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{parse_quote, Ident, Index, Member};
+use syn::{parse_quote, Ident, Index};
 
 mod enum_;
 mod enum_adjacently;
@@ -737,26 +737,24 @@ fn wrap_deserialize_field_with(
 fn unwrap_to_variant_closure(
     params: &Parameters,
     variant: &Variant,
+    cattrs: &attr::Container,
     with_wrapper: bool,
 ) -> TokenStream {
     let this_value = &params.this_value;
     let variant_ident = &variant.ident;
 
+    let fields = variant
+        .fields
+        .iter()
+        .filter(|field| !field.attrs.skip_deserializing());
     let (arg, wrapper) = if with_wrapper {
         (quote! { __wrap }, quote! { __wrap.value })
     } else {
-        let field_tys = variant.fields.iter().map(|field| field.ty);
+        let field_tys = fields.clone().map(|field| field.ty);
         (quote! { __wrap: (#(#field_tys),*) }, quote! { __wrap })
     };
 
-    let field_access = (0..variant.fields.len()).map(|n| {
-        Member::Unnamed(Index {
-            index: n as u32,
-            span: Span::call_site(),
-        })
-    });
-
-    match variant.style {
+    match variant.de_style() {
         Style::Struct if variant.fields.len() == 1 => {
             let member = &variant.fields[0].member;
             quote! {
@@ -764,14 +762,40 @@ fn unwrap_to_variant_closure(
             }
         }
         Style::Struct => {
-            let members = variant.fields.iter().map(|field| &field.member);
+            let mut i = 0;
+            let members = variant.fields.iter().map(|field| {
+                let name = &field.member;
+                let index = Index::from(i);
+                i += 1;
+
+                if field.attrs.skip_deserializing() {
+                    let expr = Expr(expr_is_missing(&field, cattrs));
+                    quote!(#name: #expr)
+                } else {
+                    quote!(#name: #wrapper.#index)
+                }
+            });
             quote! {
-                |#arg| #this_value::#variant_ident { #(#members: #wrapper.#field_access),* }
+                |#arg| #this_value::#variant_ident { #(#members),* }
             }
         }
-        Style::Tuple => quote! {
-            |#arg| #this_value::#variant_ident(#(#wrapper.#field_access),*)
-        },
+        Style::Tuple => {
+            let mut i = 0;
+            let members = variant.fields.iter().map(|field| {
+                let index = Index::from(i);
+                i += 1;
+
+                if field.attrs.skip_deserializing() {
+                    let expr = Expr(expr_is_missing(&field, cattrs));
+                    quote!(#expr)
+                } else {
+                    quote!(#wrapper.#index)
+                }
+            });
+            quote! {
+                |#arg| #this_value::#variant_ident(#(#members),*)
+            }
+        }
         Style::Newtype => quote! {
             |#arg| #this_value::#variant_ident(#wrapper)
         },
