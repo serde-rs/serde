@@ -36,10 +36,14 @@ fn derive(select: u8, input: TokenStream) -> TokenStream {
 
     let mut process = PROCESS.lock().unwrap();
     if process.is_none() {
-        let path = concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/serde_derive-x86_64-unknown-linux-gnu",
-        );
+        let path = if cfg!(feature = "wasm_precomp") {
+            concat!(env!("CARGO_MANIFEST_DIR"), "/serde_derive-wasm32-wasi",)
+        } else {
+            concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/serde_derive-x86_64-unknown-linux-gnu",
+            )
+        };
         *process = Some(
             Command::new(path)
                 .stdin(Stdio::piped())

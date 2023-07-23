@@ -18,8 +18,8 @@
 
 extern crate proc_macro;
 
-#[cfg(not(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")))]
+#[cfg(not(any(feature = "wasm_precomp", all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))))]
 include!("lib_from_source.rs");
 
-#[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
+#[cfg(any(feature = "wasm_precomp", all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")))]
 include!("lib_precompiled.rs");
