@@ -6,8 +6,10 @@ use crate::bytecode::Bytecode;
 use proc_macro::{Delimiter, Group, Ident, Literal, Punct, Spacing, Span, TokenStream, TokenTree};
 use std::io::{Read, Write};
 use std::iter::FromIterator;
-use std::process::{Command, ExitStatus, Stdio};
+use std::process::Child;
+use std::process::{Command, Stdio};
 use std::str::FromStr;
+use std::sync::Mutex;
 
 #[proc_macro_derive(Serialize, attributes(serde))]
 pub fn derive_serialize(input: TokenStream) -> TokenStream {
@@ -19,6 +21,9 @@ pub fn derive_deserialize(input: TokenStream) -> TokenStream {
     derive(1 + cfg!(feature = "deserialize_in_place") as u8, input)
 }
 
+// Persistent process
+static PROCESS: Mutex<Option<Child>> = Mutex::new(None);
+
 fn derive(select: u8, input: TokenStream) -> TokenStream {
     let mut memory = TokenMemory::default();
     let mut buf = OutputBuffer::new();
@@ -29,29 +34,34 @@ fn derive(select: u8, input: TokenStream) -> TokenStream {
         memory.linearize_token(token, &mut buf);
     }
 
-    let path = concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/serde_derive-x86_64-unknown-linux-gnu",
-    );
-    let mut child = Command::new(path)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn()
-        .expect("failed to spawn process");
-
-    let mut stdin = child.stdin.take().unwrap();
-    let mut buf = buf.into_bytes();
-    stdin.write_all(&buf).unwrap();
-    drop(stdin);
-
-    let mut stdout = child.stdout.take().unwrap();
-    buf.clear();
-    stdout.read_to_end(&mut buf).unwrap();
-
-    let success = child.wait().as_ref().map_or(true, ExitStatus::success);
-    if !success || buf.is_empty() {
-        panic!();
+    let mut process = PROCESS.lock().unwrap();
+    if process.is_none() {
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/serde_derive-x86_64-unknown-linux-gnu",
+        );
+        *process = Some(
+            Command::new(path)
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .spawn()
+                .expect("failed to spawn process"),
+        );
     }
+    let child = process.as_mut().unwrap();
+
+    let stdin = child.stdin.as_mut().unwrap();
+    let mut buf = buf.into_bytes();
+    let size = (buf.len() as u32).to_le_bytes();
+    stdin.write_all(&size).unwrap();
+    stdin.write_all(&buf).unwrap();
+
+    let stdout = child.stdout.as_mut().unwrap();
+    let mut len_le32 = [0u8; 4];
+    stdout.read_exact(&mut len_le32).unwrap();
+    let len = u32::from_le_bytes(len_le32) as usize;
+    buf.resize(len, 0);
+    stdout.read_exact(&mut buf).unwrap();
 
     let mut buf = InputBuffer::new(&buf);
     memory.receive(&mut buf)
