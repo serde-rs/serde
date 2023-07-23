@@ -1,0 +1,8 @@
+[package]
+name = "proc-macro2"
+version = "1.0.66"
+edition = "2021"
+publish = false
+
+[dependencies]
+proc-macro2 = { package = "proc-macro2-fallback", version = "1" }

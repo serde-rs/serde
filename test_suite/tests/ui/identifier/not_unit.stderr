@@ -1,5 +1,5 @@
 error: #[serde(other)] must be on a unit variant
- --> $DIR/not_unit.rs:7:5
+ --> tests/ui/identifier/not_unit.rs:7:5
   |
 7 | /     #[serde(other)]
 8 | |     Other(u8, u8),

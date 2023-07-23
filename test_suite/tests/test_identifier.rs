@@ -1,5 +1,8 @@
 //! Tests for `#[serde(field_identifier)]` and `#[serde(variant_identifier)]`
-use serde::Deserialize;
+
+#![allow(clippy::derive_partial_eq_without_eq)]
+
+use serde_derive::Deserialize;
 use serde_test::{assert_de_tokens, Token};
 
 #[test]

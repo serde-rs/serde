@@ -10,13 +10,12 @@ use de::{
 /// any type, except that it does not store any information about the data that
 /// gets deserialized.
 ///
-/// ```edition2018
-/// use std::fmt;
-/// use std::marker::PhantomData;
-///
+/// ```edition2021
 /// use serde::de::{
 ///     self, Deserialize, DeserializeSeed, Deserializer, IgnoredAny, SeqAccess, Visitor,
 /// };
+/// use std::fmt;
+/// use std::marker::PhantomData;
 ///
 /// /// A seed that can be used to deserialize only the `n`th element of a sequence
 /// /// while efficiently discarding elements of any type before or after index `n`.
@@ -108,7 +107,7 @@ use de::{
 /// #     Ok(())
 /// # }
 /// ```
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct IgnoredAny;
 
 impl<'de> Visitor<'de> for IgnoredAny {
@@ -228,7 +227,7 @@ impl<'de> Visitor<'de> for IgnoredAny {
     where
         A: EnumAccess<'de>,
     {
-        data.variant::<IgnoredAny>()?.1.newtype_variant()
+        try!(data.variant::<IgnoredAny>()).1.newtype_variant()
     }
 }
 

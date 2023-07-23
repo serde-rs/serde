@@ -1,8 +1,8 @@
 //! This crate provides a convenient concise way to write unit tests for
 //! implementations of [`Serialize`] and [`Deserialize`].
 //!
-//! [`Serialize`]: https://docs.serde.rs/serde/ser/trait.Serialize.html
-//! [`Deserialize`]: https://docs.serde.rs/serde/de/trait.Deserialize.html
+//! [`Serialize`]: serde::ser::Serialize
+//! [`Deserialize`]: serde::de::Deserialize
 //!
 //! The `Serialize` impl for a value can be characterized by the sequence of
 //! [`Serializer`] calls that are made in the course of serializing the value,
@@ -14,21 +14,17 @@
 //! test both directions. There are also functions to test expected failure
 //! conditions.
 //!
-//! [`Serializer`]: https://docs.serde.rs/serde/ser/trait.Serializer.html
-//! [`Token`]: https://docs.serde.rs/serde_test/enum.Token.html
-//! [`assert_ser_tokens`]: https://docs.serde.rs/serde_test/fn.assert_ser_tokens.html
-//! [`assert_de_tokens`]: https://docs.serde.rs/serde_test/fn.assert_de_tokens.html
-//! [`assert_tokens`]: https://docs.serde.rs/serde_test/fn.assert_tokens.html
+//! [`Serializer`]: serde::ser::Serializer
 //!
 //! Here is an example from the [`linked-hash-map`] crate.
 //!
 //! [`linked-hash-map`]: https://github.com/contain-rs/linked-hash-map
 //!
-//! ```edition2018
+//! ```edition2021
 //! # const IGNORE: &str = stringify! {
 //! use linked_hash_map::LinkedHashMap;
 //! # };
-//! use serde_test::{Token, assert_tokens};
+//! use serde_test::{assert_tokens, Token};
 //!
 //! # use std::fmt;
 //! # use std::marker::PhantomData;
@@ -110,10 +106,13 @@
 //! fn test_ser_de_empty() {
 //!     let map = LinkedHashMap::<char, u32>::new();
 //!
-//!     assert_tokens(&map, &[
-//!         Token::Map { len: Some(0) },
-//!         Token::MapEnd,
-//!     ]);
+//!     assert_tokens(
+//!         &map,
+//!         &[
+//!             Token::Map { len: Some(0) },
+//!             Token::MapEnd,
+//!         ],
+//!     );
 //! }
 //!
 //! #[test]
@@ -124,18 +123,19 @@
 //!     map.insert('a', 10);
 //!     map.insert('c', 30);
 //!
-//!     assert_tokens(&map, &[
-//!         Token::Map { len: Some(3) },
-//!         Token::Char('b'),
-//!         Token::I32(20),
-//!
-//!         Token::Char('a'),
-//!         Token::I32(10),
-//!
-//!         Token::Char('c'),
-//!         Token::I32(30),
-//!         Token::MapEnd,
-//!     ]);
+//!     assert_tokens(
+//!         &map,
+//!         &[
+//!             Token::Map { len: Some(3) },
+//!             Token::Char('b'),
+//!             Token::I32(20),
+//!             Token::Char('a'),
+//!             Token::I32(10),
+//!             Token::Char('c'),
+//!             Token::I32(30),
+//!             Token::MapEnd,
+//!         ],
+//!     );
 //! }
 //! #
 //! # fn main() {
@@ -144,9 +144,8 @@
 //! # }
 //! ```
 
-#![doc(html_root_url = "https://docs.rs/serde_test/1.0.126")]
+#![doc(html_root_url = "https://docs.rs/serde_test/1.0.174")]
 #![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
-#![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 // Ignored clippy lints
 #![cfg_attr(feature = "cargo-clippy", allow(float_cmp, needless_doctest_main))]
 // Ignored clippy_pedantic lints
@@ -154,13 +153,16 @@
     feature = "cargo-clippy",
     allow(
         cloned_instead_of_copied,
+        doc_link_with_quotes, // https://github.com/rust-lang/rust-clippy/issues/8961
         empty_line_after_outer_attr,
+        manual_assert,
         missing_docs_in_private_items,
         missing_panics_doc,
         module_name_repetitions,
         must_use_candidate,
         redundant_field_names,
         too_many_lines,
+        type_repetition_in_bounds, // https://github.com/rust-lang/rust-clippy/issues/8772
         use_debug,
         use_self
     )
@@ -184,7 +186,3 @@ pub use assert::{
 pub use token::Token;
 
 pub use configure::{Compact, Configure, Readable};
-
-// Not public API.
-#[doc(hidden)]
-pub use de::Deserializer;

@@ -1,9 +1,14 @@
 #![deny(trivial_numeric_casts)]
-#![allow(clippy::redundant_field_names)]
+#![allow(
+    clippy::derive_partial_eq_without_eq,
+    clippy::enum_variant_names,
+    clippy::redundant_field_names,
+    clippy::too_many_lines
+)]
 
 mod bytes;
 
-use serde::{Deserialize, Serialize};
+use serde_derive::{Deserialize, Serialize};
 use serde_test::{
     assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_tokens, Token,
 };
@@ -1262,6 +1267,38 @@ fn test_adjacently_tagged_enum() {
             Token::StructEnd,
         ],
     );
+
+    // integer field keys
+    assert_de_tokens(
+        &AdjacentlyTagged::Newtype::<u8>(1),
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::U64(1), // content field
+            Token::U8(1),
+            Token::U64(0), // tag field
+            Token::Str("Newtype"),
+            Token::StructEnd,
+        ],
+    );
+
+    // byte-array field keys
+    assert_de_tokens(
+        &AdjacentlyTagged::Newtype::<u8>(1),
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Bytes(b"c"),
+            Token::U8(1),
+            Token::Bytes(b"t"),
+            Token::Str("Newtype"),
+            Token::StructEnd,
+        ],
+    );
 }
 
 #[test]
@@ -1324,6 +1361,32 @@ fn test_adjacently_tagged_enum_deny_unknown_fields() {
             Token::Str("h"),
         ],
         r#"invalid value: string "h", expected "t" or "c""#,
+    );
+
+    assert_de_tokens_error::<AdjacentlyTagged>(
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::U64(0), // tag field
+            Token::Str("Unit"),
+            Token::U64(3),
+        ],
+        r#"invalid value: integer `3`, expected "t" or "c""#,
+    );
+
+    assert_de_tokens_error::<AdjacentlyTagged>(
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Bytes(b"c"),
+            Token::Unit,
+            Token::Bytes(b"h"),
+        ],
+        r#"invalid value: byte array, expected "t" or "c""#,
     );
 }
 
@@ -1923,7 +1986,6 @@ fn test_internally_tagged_newtype_variant_containing_unit_struct() {
     );
 }
 
-#[deny(unaligned_references)]
 #[test]
 fn test_packed_struct_can_derive_serialize() {
     #[derive(Copy, Clone, Serialize)]

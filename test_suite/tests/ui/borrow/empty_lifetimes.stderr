@@ -1,5 +1,11 @@
 error: at least one lifetime must be borrowed
- --> $DIR/empty_lifetimes.rs:5:22
+ --> tests/ui/borrow/empty_lifetimes.rs:5:22
   |
 5 |     #[serde(borrow = "")]
   |                      ^^
+
+error: at least one lifetime must be borrowed
+ --> tests/ui/borrow/empty_lifetimes.rs:7:22
+  |
+7 |     #[serde(borrow = "  ")]
+  |                      ^^^^

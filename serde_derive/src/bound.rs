@@ -50,7 +50,7 @@ pub fn with_where_predicates_from_fields(
         .data
         .all_fields()
         .filter_map(|field| from_field(&field.attrs))
-        .flat_map(|predicates| predicates.to_vec());
+        .flat_map(<[syn::WherePredicate]>::to_vec);
 
     let mut generics = generics.clone();
     generics.make_where_clause().predicates.extend(predicates);
@@ -72,7 +72,7 @@ pub fn with_where_predicates_from_variants(
     let predicates = variants
         .iter()
         .filter_map(|variant| from_variant(&variant.attrs))
-        .flat_map(|predicates| predicates.to_vec());
+        .flat_map(<[syn::WherePredicate]>::to_vec);
 
     let mut generics = generics.clone();
     generics.make_where_clause().predicates.extend(predicates);
@@ -184,9 +184,7 @@ pub fn with_bound(
 
                 syn::Type::Infer(_) | syn::Type::Never(_) | syn::Type::Verbatim(_) => {}
 
-                #[cfg(test)]
-                syn::Type::__TestExhaustive(_) => unimplemented!(),
-                #[cfg(not(test))]
+                #[cfg_attr(all(test, exhaustive), deny(non_exhaustive_omitted_patterns))]
                 _ => {}
             }
         }
@@ -202,10 +200,16 @@ pub fn with_bound(
                     for arg in &arguments.args {
                         match arg {
                             syn::GenericArgument::Type(arg) => self.visit_type(arg),
-                            syn::GenericArgument::Binding(arg) => self.visit_type(&arg.ty),
+                            syn::GenericArgument::AssocType(arg) => self.visit_type(&arg.ty),
                             syn::GenericArgument::Lifetime(_)
-                            | syn::GenericArgument::Constraint(_)
-                            | syn::GenericArgument::Const(_) => {}
+                            | syn::GenericArgument::Const(_)
+                            | syn::GenericArgument::AssocConst(_)
+                            | syn::GenericArgument::Constraint(_) => {}
+                            #[cfg_attr(
+                                all(test, exhaustive),
+                                deny(non_exhaustive_omitted_patterns)
+                            )]
+                            _ => {}
                         }
                     }
                 }
@@ -228,7 +232,9 @@ pub fn with_bound(
         fn visit_type_param_bound(&mut self, bound: &'ast syn::TypeParamBound) {
             match bound {
                 syn::TypeParamBound::Trait(bound) => self.visit_path(&bound.path),
-                syn::TypeParamBound::Lifetime(_) => {}
+                syn::TypeParamBound::Lifetime(_) | syn::TypeParamBound::Verbatim(_) => {}
+                #[cfg_attr(all(test, exhaustive), deny(non_exhaustive_omitted_patterns))]
+                _ => {}
             }
         }
 
@@ -253,7 +259,7 @@ pub fn with_bound(
     };
     match &cont.data {
         Data::Enum(variants) => {
-            for variant in variants.iter() {
+            for variant in variants {
                 let relevant_fields = variant
                     .fields
                     .iter()
@@ -336,7 +342,7 @@ pub fn with_self_bound(
 
 pub fn with_lifetime_bound(generics: &syn::Generics, lifetime: &str) -> syn::Generics {
     let bound = syn::Lifetime::new(lifetime, Span::call_site());
-    let def = syn::LifetimeDef {
+    let def = syn::LifetimeParam {
         attrs: Vec::new(),
         lifetime: bound.clone(),
         colon_token: None,

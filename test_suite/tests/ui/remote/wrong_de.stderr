@@ -1,10 +1,18 @@
 error[E0308]: mismatched types
- --> $DIR/wrong_de.rs:7:10
+ --> tests/ui/remote/wrong_de.rs:7:10
   |
 7 | #[derive(Deserialize)]
-  |          ^^^^^^^^^^^
-  |          |
-  |          expected `u16`, found `u8`
-  |          help: you can convert a `u8` to a `u16`: `Deserialize.into()`
+  |          ^^^^^^^^^^^ expected `u16`, found `u8`
+8 | #[serde(remote = "remote::S")]
+  |                  ----------- arguments to this struct are incorrect
   |
+note: tuple struct defined here
+ --> tests/ui/remote/wrong_de.rs:4:16
+  |
+4 |     pub struct S(pub u16);
+  |                ^
   = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: you can convert a `u8` to a `u16`
+  |
+7 | #[derive(Deserialize.into())]
+  |                     +++++++

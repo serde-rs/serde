@@ -4,7 +4,7 @@ use std::fmt::{self, Debug, Display};
 pub enum Token {
     /// A serialized `bool`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&true, &[Token::Bool(true)]);
@@ -13,7 +13,7 @@ pub enum Token {
 
     /// A serialized `i8`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0i8, &[Token::I8(0)]);
@@ -22,7 +22,7 @@ pub enum Token {
 
     /// A serialized `i16`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0i16, &[Token::I16(0)]);
@@ -31,7 +31,7 @@ pub enum Token {
 
     /// A serialized `i32`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0i32, &[Token::I32(0)]);
@@ -40,7 +40,7 @@ pub enum Token {
 
     /// A serialized `i64`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0i64, &[Token::I64(0)]);
@@ -49,7 +49,7 @@ pub enum Token {
 
     /// A serialized `u8`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0u8, &[Token::U8(0)]);
@@ -58,7 +58,7 @@ pub enum Token {
 
     /// A serialized `u16`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0u16, &[Token::U16(0)]);
@@ -67,7 +67,7 @@ pub enum Token {
 
     /// A serialized `u32`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0u32, &[Token::U32(0)]);
@@ -76,7 +76,7 @@ pub enum Token {
 
     /// A serialized `u64`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0u64, &[Token::U64(0)]);
@@ -85,7 +85,7 @@ pub enum Token {
 
     /// A serialized `f32`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0f32, &[Token::F32(0.0)]);
@@ -94,7 +94,7 @@ pub enum Token {
 
     /// A serialized `f64`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&0f64, &[Token::F64(0.0)]);
@@ -103,7 +103,7 @@ pub enum Token {
 
     /// A serialized `char`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&'\n', &[Token::Char('\n')]);
@@ -112,7 +112,7 @@ pub enum Token {
 
     /// A serialized `str`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// let s = String::from("transient");
@@ -122,7 +122,7 @@ pub enum Token {
 
     /// A borrowed `str`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// let s: &str = "borrowed";
@@ -132,7 +132,7 @@ pub enum Token {
 
     /// A serialized `String`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// let s = String::from("owned");
@@ -151,7 +151,7 @@ pub enum Token {
 
     /// A serialized `Option<T>` containing none.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// let opt = None::<char>;
@@ -163,20 +163,17 @@ pub enum Token {
     ///
     /// The tokens of the value follow after this header.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// let opt = Some('c');
-    /// assert_tokens(&opt, &[
-    ///     Token::Some,
-    ///     Token::Char('c'),
-    /// ]);
+    /// assert_tokens(&opt, &[Token::Some, Token::Char('c')]);
     /// ```
     Some,
 
     /// A serialized `()`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// assert_tokens(&(), &[Token::Unit]);
@@ -185,8 +182,8 @@ pub enum Token {
 
     /// A serialized unit struct of the given name.
     ///
-    /// ```edition2018
-    /// # use serde::{Serialize, Deserialize};
+    /// ```edition2021
+    /// # use serde_derive::{Deserialize, Serialize};
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// # fn main() {
@@ -200,8 +197,8 @@ pub enum Token {
 
     /// A unit variant of an enum.
     ///
-    /// ```edition2018
-    /// # use serde::{Serialize, Deserialize};
+    /// ```edition2021
+    /// # use serde_derive::{Deserialize, Serialize};
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// # fn main() {
@@ -211,7 +208,13 @@ pub enum Token {
     /// }
     ///
     /// let a = E::A;
-    /// assert_tokens(&a, &[Token::UnitVariant { name: "E", variant: "A" }]);
+    /// assert_tokens(
+    ///     &a,
+    ///     &[Token::UnitVariant {
+    ///         name: "E",
+    ///         variant: "A",
+    ///     }],
+    /// );
     /// # }
     /// ```
     UnitVariant {
@@ -223,8 +226,8 @@ pub enum Token {
     ///
     /// After this header is the value contained in the newtype struct.
     ///
-    /// ```edition2018
-    /// # use serde::{Serialize, Deserialize};
+    /// ```edition2021
+    /// # use serde_derive::{Deserialize, Serialize};
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// # fn main() {
@@ -232,10 +235,10 @@ pub enum Token {
     /// struct N(String);
     ///
     /// let n = N("newtype".to_owned());
-    /// assert_tokens(&n, &[
-    ///     Token::NewtypeStruct { name: "N" },
-    ///     Token::String("newtype"),
-    /// ]);
+    /// assert_tokens(
+    ///     &n,
+    ///     &[Token::NewtypeStruct { name: "N" }, Token::String("newtype")],
+    /// );
     /// # }
     /// ```
     NewtypeStruct { name: &'static str },
@@ -244,8 +247,8 @@ pub enum Token {
     ///
     /// After this header is the value contained in the newtype variant.
     ///
-    /// ```edition2018
-    /// # use serde::{Serialize, Deserialize};
+    /// ```edition2021
+    /// # use serde_derive::{Deserialize, Serialize};
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// # fn main() {
@@ -255,10 +258,16 @@ pub enum Token {
     /// }
     ///
     /// let b = E::B(0);
-    /// assert_tokens(&b, &[
-    ///     Token::NewtypeVariant { name: "E", variant: "B" },
-    ///     Token::U8(0),
-    /// ]);
+    /// assert_tokens(
+    ///     &b,
+    ///     &[
+    ///         Token::NewtypeVariant {
+    ///             name: "E",
+    ///             variant: "B",
+    ///         },
+    ///         Token::U8(0),
+    ///     ],
+    /// );
     /// # }
     /// ```
     NewtypeVariant {
@@ -271,17 +280,20 @@ pub enum Token {
     /// After this header are the elements of the sequence, followed by
     /// `SeqEnd`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// let vec = vec!['a', 'b', 'c'];
-    /// assert_tokens(&vec, &[
-    ///     Token::Seq { len: Some(3) },
-    ///     Token::Char('a'),
-    ///     Token::Char('b'),
-    ///     Token::Char('c'),
-    ///     Token::SeqEnd,
-    /// ]);
+    /// assert_tokens(
+    ///     &vec,
+    ///     &[
+    ///         Token::Seq { len: Some(3) },
+    ///         Token::Char('a'),
+    ///         Token::Char('b'),
+    ///         Token::Char('c'),
+    ///         Token::SeqEnd,
+    ///     ],
+    /// );
     /// ```
     Seq { len: Option<usize> },
 
@@ -292,16 +304,19 @@ pub enum Token {
     ///
     /// After this header are the elements of the tuple, followed by `TupleEnd`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// let tuple = ('a', 100);
-    /// assert_tokens(&tuple, &[
-    ///     Token::Tuple { len: 2 },
-    ///     Token::Char('a'),
-    ///     Token::I32(100),
-    ///     Token::TupleEnd,
-    /// ]);
+    /// assert_tokens(
+    ///     &tuple,
+    ///     &[
+    ///         Token::Tuple { len: 2 },
+    ///         Token::Char('a'),
+    ///         Token::I32(100),
+    ///         Token::TupleEnd,
+    ///     ],
+    /// );
     /// ```
     Tuple { len: usize },
 
@@ -313,8 +328,8 @@ pub enum Token {
     /// After this header are the fields of the tuple struct, followed by
     /// `TupleStructEnd`.
     ///
-    /// ```edition2018
-    /// # use serde::{Serialize, Deserialize};
+    /// ```edition2021
+    /// # use serde_derive::{Deserialize, Serialize};
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// # fn main() {
@@ -322,12 +337,15 @@ pub enum Token {
     /// struct T(u8, u8);
     ///
     /// let t = T(0, 0);
-    /// assert_tokens(&t, &[
-    ///     Token::TupleStruct { name: "T", len: 2 },
-    ///     Token::U8(0),
-    ///     Token::U8(0),
-    ///     Token::TupleStructEnd,
-    /// ]);
+    /// assert_tokens(
+    ///     &t,
+    ///     &[
+    ///         Token::TupleStruct { name: "T", len: 2 },
+    ///         Token::U8(0),
+    ///         Token::U8(0),
+    ///         Token::TupleStructEnd,
+    ///     ],
+    /// );
     /// # }
     /// ```
     TupleStruct { name: &'static str, len: usize },
@@ -340,8 +358,8 @@ pub enum Token {
     /// After this header are the fields of the tuple variant, followed by
     /// `TupleVariantEnd`.
     ///
-    /// ```edition2018
-    /// # use serde::{Serialize, Deserialize};
+    /// ```edition2021
+    /// # use serde_derive::{Deserialize, Serialize};
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// # fn main() {
@@ -351,12 +369,19 @@ pub enum Token {
     /// }
     ///
     /// let c = E::C(0, 0);
-    /// assert_tokens(&c, &[
-    ///     Token::TupleVariant { name: "E", variant: "C", len: 2 },
-    ///     Token::U8(0),
-    ///     Token::U8(0),
-    ///     Token::TupleVariantEnd,
-    /// ]);
+    /// assert_tokens(
+    ///     &c,
+    ///     &[
+    ///         Token::TupleVariant {
+    ///             name: "E",
+    ///             variant: "C",
+    ///             len: 2,
+    ///         },
+    ///         Token::U8(0),
+    ///         Token::U8(0),
+    ///         Token::TupleVariantEnd,
+    ///     ],
+    /// );
     /// # }
     /// ```
     TupleVariant {
@@ -372,7 +397,7 @@ pub enum Token {
     ///
     /// After this header are the entries of the map, followed by `MapEnd`.
     ///
-    /// ```edition2018
+    /// ```edition2021
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// use std::collections::BTreeMap;
@@ -381,14 +406,17 @@ pub enum Token {
     /// map.insert('A', 65);
     /// map.insert('Z', 90);
     ///
-    /// assert_tokens(&map, &[
-    ///     Token::Map { len: Some(2) },
-    ///     Token::Char('A'),
-    ///     Token::I32(65),
-    ///     Token::Char('Z'),
-    ///     Token::I32(90),
-    ///     Token::MapEnd,
-    /// ]);
+    /// assert_tokens(
+    ///     &map,
+    ///     &[
+    ///         Token::Map { len: Some(2) },
+    ///         Token::Char('A'),
+    ///         Token::I32(65),
+    ///         Token::Char('Z'),
+    ///         Token::I32(90),
+    ///         Token::MapEnd,
+    ///     ],
+    /// );
     /// ```
     Map { len: Option<usize> },
 
@@ -399,8 +427,8 @@ pub enum Token {
     ///
     /// After this header are the fields of the struct, followed by `StructEnd`.
     ///
-    /// ```edition2018
-    /// # use serde::{Serialize, Deserialize};
+    /// ```edition2021
+    /// # use serde_derive::{Deserialize, Serialize};
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// # fn main() {
@@ -411,14 +439,17 @@ pub enum Token {
     /// }
     ///
     /// let s = S { a: 0, b: 0 };
-    /// assert_tokens(&s, &[
-    ///     Token::Struct { name: "S", len: 2 },
-    ///     Token::Str("a"),
-    ///     Token::U8(0),
-    ///     Token::Str("b"),
-    ///     Token::U8(0),
-    ///     Token::StructEnd,
-    /// ]);
+    /// assert_tokens(
+    ///     &s,
+    ///     &[
+    ///         Token::Struct { name: "S", len: 2 },
+    ///         Token::Str("a"),
+    ///         Token::U8(0),
+    ///         Token::Str("b"),
+    ///         Token::U8(0),
+    ///         Token::StructEnd,
+    ///     ],
+    /// );
     /// # }
     /// ```
     Struct { name: &'static str, len: usize },
@@ -431,8 +462,8 @@ pub enum Token {
     /// After this header are the fields of the struct variant, followed by
     /// `StructVariantEnd`.
     ///
-    /// ```edition2018
-    /// # use serde::{Serialize, Deserialize};
+    /// ```edition2021
+    /// # use serde_derive::{Deserialize, Serialize};
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// # fn main() {
@@ -442,12 +473,19 @@ pub enum Token {
     /// }
     ///
     /// let d = E::D { d: 0 };
-    /// assert_tokens(&d, &[
-    ///     Token::StructVariant { name: "E", variant: "D", len: 1 },
-    ///     Token::Str("d"),
-    ///     Token::U8(0),
-    ///     Token::StructVariantEnd,
-    /// ]);
+    /// assert_tokens(
+    ///     &d,
+    ///     &[
+    ///         Token::StructVariant {
+    ///             name: "E",
+    ///             variant: "D",
+    ///             len: 1,
+    ///         },
+    ///         Token::Str("d"),
+    ///         Token::U8(0),
+    ///         Token::StructVariantEnd,
+    ///     ],
+    /// );
     /// # }
     /// ```
     StructVariant {
@@ -461,8 +499,8 @@ pub enum Token {
 
     /// The header to an enum of the given name.
     ///
-    /// ```edition2018
-    /// # use serde::{Serialize, Deserialize};
+    /// ```edition2021
+    /// # use serde_derive::{Deserialize, Serialize};
     /// # use serde_test::{assert_tokens, Token};
     /// #
     /// # fn main() {
@@ -475,38 +513,42 @@ pub enum Token {
     /// }
     ///
     /// let a = E::A;
-    /// assert_tokens(&a, &[
-    ///     Token::Enum { name: "E" },
-    ///     Token::Str("A"),
-    ///     Token::Unit,
-    /// ]);
+    /// assert_tokens(
+    ///     &a,
+    ///     &[Token::Enum { name: "E" }, Token::Str("A"), Token::Unit],
+    /// );
     ///
     /// let b = E::B(0);
-    /// assert_tokens(&b, &[
-    ///     Token::Enum { name: "E" },
-    ///     Token::Str("B"),
-    ///     Token::U8(0),
-    /// ]);
+    /// assert_tokens(
+    ///     &b,
+    ///     &[Token::Enum { name: "E" }, Token::Str("B"), Token::U8(0)],
+    /// );
     ///
     /// let c = E::C(0, 0);
-    /// assert_tokens(&c, &[
-    ///     Token::Enum { name: "E" },
-    ///     Token::Str("C"),
-    ///     Token::Seq { len: Some(2) },
-    ///     Token::U8(0),
-    ///     Token::U8(0),
-    ///     Token::SeqEnd,
-    /// ]);
+    /// assert_tokens(
+    ///     &c,
+    ///     &[
+    ///         Token::Enum { name: "E" },
+    ///         Token::Str("C"),
+    ///         Token::Seq { len: Some(2) },
+    ///         Token::U8(0),
+    ///         Token::U8(0),
+    ///         Token::SeqEnd,
+    ///     ],
+    /// );
     ///
     /// let d = E::D { d: 0 };
-    /// assert_tokens(&d, &[
-    ///     Token::Enum { name: "E" },
-    ///     Token::Str("D"),
-    ///     Token::Map { len: Some(1) },
-    ///     Token::Str("d"),
-    ///     Token::U8(0),
-    ///     Token::MapEnd,
-    /// ]);
+    /// assert_tokens(
+    ///     &d,
+    ///     &[
+    ///         Token::Enum { name: "E" },
+    ///         Token::Str("D"),
+    ///         Token::Map { len: Some(1) },
+    ///         Token::Str("d"),
+    ///         Token::U8(0),
+    ///         Token::MapEnd,
+    ///     ],
+    /// );
     /// # }
     /// ```
     Enum { name: &'static str },

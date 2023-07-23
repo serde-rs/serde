@@ -147,9 +147,7 @@ impl ReplaceReceiver<'_> {
 
             Type::Infer(_) | Type::Never(_) | Type::Verbatim(_) => {}
 
-            #[cfg(test)]
-            Type::__TestExhaustive(_) => unimplemented!(),
-            #[cfg(not(test))]
+            #[cfg_attr(all(test, exhaustive), deny(non_exhaustive_omitted_patterns))]
             _ => {}
         }
     }
@@ -181,10 +179,13 @@ impl ReplaceReceiver<'_> {
                 for arg in &mut arguments.args {
                     match arg {
                         GenericArgument::Type(arg) => self.visit_type_mut(arg),
-                        GenericArgument::Binding(arg) => self.visit_type_mut(&mut arg.ty),
+                        GenericArgument::AssocType(arg) => self.visit_type_mut(&mut arg.ty),
                         GenericArgument::Lifetime(_)
-                        | GenericArgument::Constraint(_)
-                        | GenericArgument::Const(_) => {}
+                        | GenericArgument::Const(_)
+                        | GenericArgument::AssocConst(_)
+                        | GenericArgument::Constraint(_) => {}
+                        #[cfg_attr(all(test, exhaustive), deny(non_exhaustive_omitted_patterns))]
+                        _ => {}
                     }
                 }
             }
@@ -207,7 +208,9 @@ impl ReplaceReceiver<'_> {
     fn visit_type_param_bound_mut(&mut self, bound: &mut TypeParamBound) {
         match bound {
             TypeParamBound::Trait(bound) => self.visit_path_mut(&mut bound.path),
-            TypeParamBound::Lifetime(_) => {}
+            TypeParamBound::Lifetime(_) | TypeParamBound::Verbatim(_) => {}
+            #[cfg_attr(all(test, exhaustive), deny(non_exhaustive_omitted_patterns))]
+            _ => {}
         }
     }
 
@@ -231,7 +234,9 @@ impl ReplaceReceiver<'_> {
                             self.visit_type_param_bound_mut(bound);
                         }
                     }
-                    WherePredicate::Lifetime(_) | WherePredicate::Eq(_) => {}
+                    WherePredicate::Lifetime(_) => {}
+                    #[cfg_attr(all(test, exhaustive), deny(non_exhaustive_omitted_patterns))]
+                    _ => {}
                 }
             }
         }

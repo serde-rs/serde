@@ -1,5 +1,5 @@
 error: field identifiers cannot be serialized
- --> $DIR/serialize_field_identifier.rs:4:1
+ --> tests/ui/precondition/serialize_field_identifier.rs:4:1
   |
 4 | / #[serde(field_identifier)]
 5 | | enum F {

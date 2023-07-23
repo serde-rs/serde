@@ -32,18 +32,18 @@ impl<'a> Serializer<'a> {
 }
 
 macro_rules! assert_next_token {
-    ($ser:expr, $actual:ident) => {
+    ($ser:expr, $actual:ident) => {{
         assert_next_token!($ser, stringify!($actual), Token::$actual, true);
-    };
-    ($ser:expr, $actual:ident($v:expr)) => {
+    }};
+    ($ser:expr, $actual:ident($v:expr)) => {{
         assert_next_token!(
             $ser,
             format_args!(concat!(stringify!($actual), "({:?})"), $v),
             Token::$actual(v),
             v == $v
         );
-    };
-    ($ser:expr, $actual:ident { $($k:ident),* }) => {
+    }};
+    ($ser:expr, $actual:ident { $($k:ident),* }) => {{
         let compare = ($($k,)*);
         let field_format = || {
             use std::fmt::Write;
@@ -59,18 +59,16 @@ macro_rules! assert_next_token {
             Token::$actual { $($k),* },
             ($($k,)*) == compare
         );
-    };
+    }};
     ($ser:expr, $actual:expr, $pat:pat, $guard:expr) => {
         match $ser.next_token() {
             Some($pat) if $guard => {}
-            Some(expected) => {
-                panic!("expected Token::{} but serialized as {}",
-                       expected, $actual);
-            }
-            None => {
-                panic!("expected end of tokens, but {} was serialized",
-                       $actual);
-            }
+            Some(expected) => return Err(ser::Error::custom(
+                format!("expected Token::{} but serialized as {}", expected, $actual)
+            )),
+            None => return Err(ser::Error::custom(
+                format!("expected end of tokens, but {} was serialized", $actual)
+            )),
         }
     };
 }

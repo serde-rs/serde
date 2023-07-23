@@ -6,14 +6,23 @@
 #![allow(
     unknown_lints,
     mixed_script_confusables,
+    clippy::derive_partial_eq_without_eq,
+    clippy::extra_unused_type_parameters,
+    clippy::items_after_statements,
+    clippy::missing_errors_doc,
+    clippy::missing_panics_doc,
+    clippy::must_use_candidate,
     // Clippy bug: https://github.com/rust-lang/rust-clippy/issues/7422
     clippy::nonstandard_macro_braces,
     clippy::ptr_arg,
-    clippy::trivially_copy_pass_by_ref
+    clippy::too_many_lines,
+    clippy::trivially_copy_pass_by_ref,
+    clippy::type_repetition_in_bounds
 )]
 
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::de::{Deserialize, DeserializeOwned, Deserializer};
+use serde::ser::{Serialize, Serializer};
+use serde_derive::{Deserialize, Serialize};
 
 use std::borrow::Cow;
 use std::marker::PhantomData;
@@ -249,6 +258,16 @@ fn test_gen() {
     }
     assert::<VariantWithTraits2<X, X>>();
 
+    type PhantomDataAlias<T> = PhantomData<T>;
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(bound = "")]
+    struct PhantomDataWrapper<T> {
+        #[serde(default)]
+        field: PhantomDataAlias<T>,
+    }
+    assert::<PhantomDataWrapper<X>>();
+
     #[derive(Serialize, Deserialize)]
     struct CowStr<'a>(Cow<'a, str>);
     assert::<CowStr>();
@@ -386,7 +405,7 @@ fn test_gen() {
     }
 
     mod vis {
-        use serde::{Deserialize, Serialize};
+        use serde_derive::{Deserialize, Serialize};
 
         pub struct S;
 
@@ -618,7 +637,7 @@ fn test_gen() {
 
     mod restricted {
         mod inner {
-            use serde::{Deserialize, Serialize};
+            use serde_derive::{Deserialize, Serialize};
 
             #[derive(Serialize, Deserialize)]
             struct Restricted {
@@ -644,6 +663,7 @@ fn test_gen() {
 
     #[derive(Deserialize)]
     struct ImplicitlyBorrowedOption<'a> {
+        #[allow(dead_code)]
         option: std::option::Option<&'a str>,
     }
 
@@ -674,7 +694,9 @@ fn test_gen() {
 
     #[derive(Deserialize)]
     struct RelObject<'a> {
+        #[allow(dead_code)]
         ty: &'a str,
+        #[allow(dead_code)]
         id: String,
     }
 
@@ -718,6 +740,7 @@ fn test_gen() {
         ($field:ty) => {
             #[derive(Deserialize)]
             struct MacroRules<'a> {
+                #[allow(dead_code)]
                 field: $field,
             }
         };
@@ -734,6 +757,7 @@ fn test_gen() {
     #[derive(Deserialize)]
     struct BorrowLifetimeInsideMacro<'a> {
         #[serde(borrow = "'a")]
+        #[allow(dead_code)]
         f: mac!(Cow<'a, str>),
     }
 
@@ -742,6 +766,10 @@ fn test_gen() {
         #[serde(serialize_with = "vec_first_element")]
         vec: Vec<Self>,
     }
+
+    #[derive(Deserialize)]
+    #[serde(bound(deserialize = "[&'de str; N]: Copy"))]
+    struct GenericUnitStruct<const N: usize>;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -822,4 +850,65 @@ where
     S: Serializer,
 {
     vec.first().serialize(serializer)
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(tag = "tag")]
+enum InternallyTagged {
+    #[serde(deserialize_with = "deserialize_generic")]
+    Unit,
+
+    #[serde(deserialize_with = "deserialize_generic")]
+    Newtype(i32),
+
+    #[serde(deserialize_with = "deserialize_generic")]
+    Struct { f1: String, f2: u8 },
+}
+
+fn deserialize_generic<'de, T, D>(deserializer: D) -> StdResult<T, D::Error>
+where
+    T: Deserialize<'de>,
+    D: Deserializer<'de>,
+{
+    T::deserialize(deserializer)
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+#[repr(packed)]
+pub struct RemotePacked {
+    pub a: u16,
+    pub b: u32,
+}
+
+#[derive(Serialize)]
+#[repr(packed)]
+#[serde(remote = "RemotePacked")]
+pub struct RemotePackedDef {
+    a: u16,
+    b: u32,
+}
+
+impl Drop for RemotePackedDef {
+    fn drop(&mut self) {}
+}
+
+#[repr(packed)]
+pub struct RemotePackedNonCopy {
+    pub a: u16,
+    pub b: String,
+}
+
+#[derive(Deserialize)]
+#[repr(packed)]
+#[serde(remote = "RemotePackedNonCopy")]
+pub struct RemotePackedNonCopyDef {
+    a: u16,
+    b: String,
+}
+
+impl Drop for RemotePackedNonCopyDef {
+    fn drop(&mut self) {}
 }

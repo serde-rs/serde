@@ -3,9 +3,10 @@ use internals::attr::{Identifier, TagType, VariantName};
 use internals::{ungroup, Ctxt, Derive};
 use syn::{Member, Type};
 
-/// Cross-cutting checks that require looking at more than a single attrs
-/// object. Simpler checks should happen when parsing and building the attrs.
+// Cross-cutting checks that require looking at more than a single attrs object.
+// Simpler checks should happen when parsing and building the attrs.
 pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
+    check_remote_generic(cx, cont);
     check_getter(cx, cont);
     check_flatten(cx, cont);
     check_identifier(cx, cont);
@@ -17,8 +18,30 @@ pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     check_non_string_renames(cx, cont);
 }
 
-/// Getters are only allowed inside structs (not enums) with the `remote`
-/// attribute.
+// Remote derive definition type must have either all of the generics of the
+// remote type:
+//
+//     #[serde(remote = "Generic")]
+//     struct Generic<T> {…}
+//
+// or none of them, i.e. defining impls for one concrete instantiation of the
+// remote type only:
+//
+//     #[serde(remote = "Generic<T>")]
+//     struct ConcreteDef {…}
+//
+fn check_remote_generic(cx: &Ctxt, cont: &Container) {
+    if let Some(remote) = cont.attrs.remote() {
+        let local_has_generic = !cont.generics.params.is_empty();
+        let remote_has_generic = !remote.segments.last().unwrap().arguments.is_none();
+        if local_has_generic && remote_has_generic {
+            cx.error_spanned_by(remote, "remove generic parameters from this path");
+        }
+    }
+}
+
+// Getters are only allowed inside structs (not enums) with the `remote`
+// attribute.
 fn check_getter(cx: &Ctxt, cont: &Container) {
     match cont.data {
         Data::Enum(_) => {
@@ -40,7 +63,7 @@ fn check_getter(cx: &Ctxt, cont: &Container) {
     }
 }
 
-/// Flattening has some restrictions we can test.
+// Flattening has some restrictions we can test.
 fn check_flatten(cx: &Ctxt, cont: &Container) {
     match &cont.data {
         Data::Enum(variants) => {
@@ -79,18 +102,16 @@ fn check_flatten_field(cx: &Ctxt, style: Style, field: &Field) {
     }
 }
 
-/// The `other` attribute must be used at most once and it must be the last
-/// variant of an enum.
-///
-/// Inside a `variant_identifier` all variants must be unit variants. Inside a
-/// `field_identifier` all but possibly one variant must be unit variants. The
-/// last variant may be a newtype variant which is an implicit "other" case.
+// The `other` attribute must be used at most once and it must be the last
+// variant of an enum.
+//
+// Inside a `variant_identifier` all variants must be unit variants. Inside a
+// `field_identifier` all but possibly one variant must be unit variants. The
+// last variant may be a newtype variant which is an implicit "other" case.
 fn check_identifier(cx: &Ctxt, cont: &Container) {
     let variants = match &cont.data {
         Data::Enum(variants) => variants,
-        Data::Struct(_, _) => {
-            return;
-        }
+        Data::Struct(_, _) => return,
     };
 
     for (i, variant) in variants.iter().enumerate() {
@@ -167,17 +188,15 @@ fn check_identifier(cx: &Ctxt, cont: &Container) {
     }
 }
 
-/// Skip-(de)serializing attributes are not allowed on variants marked
-/// (de)serialize_with.
+// Skip-(de)serializing attributes are not allowed on variants marked
+// (de)serialize_with.
 fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
     let variants = match &cont.data {
         Data::Enum(variants) => variants,
-        Data::Struct(_, _) => {
-            return;
-        }
+        Data::Struct(_, _) => return,
     };
 
-    for variant in variants.iter() {
+    for variant in variants {
         if variant.attrs.serialize_with().is_some() {
             if variant.attrs.skip_serializing() {
                 cx.error_spanned_by(
@@ -242,10 +261,9 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
     }
 }
 
-/// The tag of an internally-tagged struct variant must not be
-/// the same as either one of its fields, as this would result in
-/// duplicate keys in the serialized output and/or ambiguity in
-/// the to-be-deserialized input.
+// The tag of an internally-tagged struct variant must not be the same as either
+// one of its fields, as this would result in duplicate keys in the serialized
+// output and/or ambiguity in the to-be-deserialized input.
 fn check_internal_tag_field_name_conflict(cx: &Ctxt, cont: &Container) {
     let variants = match &cont.data {
         Data::Enum(variants) => variants,
@@ -291,8 +309,8 @@ fn check_internal_tag_field_name_conflict(cx: &Ctxt, cont: &Container) {
     }
 }
 
-/// In the case of adjacently-tagged enums, the type and the
-/// contents tag must differ, for the same reason.
+// In the case of adjacently-tagged enums, the type and the contents tag must
+// differ, for the same reason.
 fn check_adjacent_tag_conflict(cx: &Ctxt, cont: &Container) {
     let (type_tag, content_tag) = match cont.attrs.tag() {
         TagType::Adjacent { tag, content } => (tag, content),
@@ -310,7 +328,7 @@ fn check_adjacent_tag_conflict(cx: &Ctxt, cont: &Container) {
     }
 }
 
-/// Enums and unit structs cannot be transparent.
+// Enums and unit structs cannot be transparent.
 fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     if !cont.attrs.transparent() {
         return;

@@ -1,7 +1,7 @@
 //! This crate provides Serde's two derive macros.
 //!
-//! ```edition2018
-//! # use serde_derive::{Serialize, Deserialize};
+//! ```edition2021
+//! # use serde_derive::{Deserialize, Serialize};
 //! #
 //! #[derive(Serialize, Deserialize)]
 //! # struct S;
@@ -13,14 +13,16 @@
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
-#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.126")]
+#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.174")]
 #![allow(unknown_lints, bare_trait_objects)]
-#![deny(clippy::all, clippy::pedantic)]
 // Ignored clippy lints
 #![allow(
     // clippy false positive: https://github.com/rust-lang/rust-clippy/issues/7054
     clippy::branches_sharing_code,
     clippy::cognitive_complexity,
+    // clippy bug: https://github.com/rust-lang/rust-clippy/issues/7575
+    clippy::collapsible_match,
+    clippy::derive_partial_eq_without_eq,
     clippy::enum_variant_names,
     // clippy bug: https://github.com/rust-lang/rust-clippy/issues/6797
     clippy::manual_map,
@@ -41,7 +43,8 @@
     clippy::enum_glob_use,
     clippy::indexing_slicing,
     clippy::items_after_statements,
-    clippy::let_underscore_drop,
+    clippy::let_underscore_untyped,
+    clippy::manual_assert,
     clippy::map_err_ignore,
     clippy::match_same_arms,
     // clippy bug: https://github.com/rust-lang/rust-clippy/issues/6984
@@ -58,18 +61,25 @@
     clippy::use_self,
     clippy::wildcard_imports
 )]
+#![cfg_attr(all(test, exhaustive), feature(non_exhaustive_omitted_patterns_lint))]
 
 #[macro_use]
 extern crate quote;
 #[macro_use]
 extern crate syn;
 
+#[cfg(not(precompiled))]
 extern crate proc_macro;
 extern crate proc_macro2;
+
+#[cfg(precompiled)]
+extern crate proc_macro2 as proc_macro;
 
 mod internals;
 
 use proc_macro::TokenStream;
+#[cfg(precompiled)]
+use std::sync::atomic::AtomicBool;
 use syn::DeriveInput;
 
 #[macro_use]
@@ -81,25 +91,34 @@ mod de;
 mod dummy;
 mod pretend;
 mod ser;
+mod this;
 mod try;
 
-#[proc_macro_derive(Serialize, attributes(serde))]
+#[cfg(precompiled)]
+macro_rules! parse_macro_input {
+    ($tokenstream:ident as $ty:ty) => {
+        match syn::parse2::<$ty>($tokenstream) {
+            Ok(data) => data,
+            Err(err) => return err.to_compile_error(),
+        }
+    };
+}
+
+#[cfg(precompiled)]
+pub static DESERIALIZE_IN_PLACE: AtomicBool = AtomicBool::new(false);
+
+#[cfg_attr(not(precompiled), proc_macro_derive(Serialize, attributes(serde)))]
 pub fn derive_serialize(input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as DeriveInput);
     ser::expand_derive_serialize(&mut input)
-        .unwrap_or_else(to_compile_errors)
+        .unwrap_or_else(syn::Error::into_compile_error)
         .into()
 }
 
-#[proc_macro_derive(Deserialize, attributes(serde))]
+#[cfg_attr(not(precompiled), proc_macro_derive(Deserialize, attributes(serde)))]
 pub fn derive_deserialize(input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as DeriveInput);
     de::expand_derive_deserialize(&mut input)
-        .unwrap_or_else(to_compile_errors)
+        .unwrap_or_else(syn::Error::into_compile_error)
         .into()
-}
-
-fn to_compile_errors(errors: Vec<syn::Error>) -> proc_macro2::TokenStream {
-    let compile_errors = errors.iter().map(syn::Error::to_compile_error);
-    quote!(#(#compile_errors)*)
 }

@@ -1,13 +1,18 @@
 #![allow(
     clippy::cast_lossless,
+    clippy::derive_partial_eq_without_eq,
     clippy::from_over_into,
     // Clippy bug: https://github.com/rust-lang/rust-clippy/issues/7422
     clippy::nonstandard_macro_braces,
-    clippy::trivially_copy_pass_by_ref
+    clippy::too_many_lines,
+    clippy::trivially_copy_pass_by_ref,
+    clippy::type_repetition_in_bounds,
+    clippy::uninlined_format_args,
 )]
 
-use serde::de::{self, MapAccess, Unexpected, Visitor};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::de::{self, Deserialize, Deserializer, IgnoredAny, MapAccess, Unexpected, Visitor};
+use serde::ser::{Serialize, Serializer};
+use serde_derive::{Deserialize, Serialize};
 
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
@@ -638,7 +643,7 @@ fn test_unknown_field_rename_struct() {
             Token::Str("a4"),
             Token::I32(3),
         ],
-        "unknown field `a4`, expected one of `a1`, `a2`, `a6`",
+        "unknown field `a4`, expected one of `a1`, `a3`, `a2`, `a5`, `a6`",
     );
 }
 
@@ -776,7 +781,7 @@ fn test_rename_enum() {
             Token::StructVariant {
                 name: "AliasEnum",
                 variant: "sailor_moon",
-                len: 3,
+                len: 5,
             },
             Token::Str("a"),
             Token::I8(0),
@@ -794,7 +799,7 @@ fn test_rename_enum() {
             Token::StructVariant {
                 name: "AliasEnum",
                 variant: "usagi_tsukino",
-                len: 3,
+                len: 5,
             },
             Token::Str("a"),
             Token::I8(0),
@@ -823,7 +828,7 @@ fn test_unknown_field_rename_enum() {
             Token::StructVariant {
                 name: "AliasEnum",
                 variant: "usagi_tsukino",
-                len: 3,
+                len: 5,
             },
             Token::Str("a"),
             Token::I8(0),
@@ -832,7 +837,7 @@ fn test_unknown_field_rename_enum() {
             Token::Str("d"),
             Token::I8(2),
         ],
-        "unknown field `d`, expected one of `a`, `b`, `f`",
+        "unknown field `d`, expected one of `a`, `c`, `b`, `e`, `f`",
     );
 }
 
@@ -1232,7 +1237,7 @@ fn serialize_variant_as_string<S>(f1: &str, f2: &u8, serializer: S) -> Result<S:
 where
     S: Serializer,
 {
-    serializer.serialize_str(format!("{};{:?}", f1, f2).as_str())
+    serializer.collect_str(&format_args!("{};{:?}", f1, f2))
 }
 
 fn deserialize_string_as_variant<'de, D>(deserializer: D) -> Result<(String, u8), D::Error>
@@ -1241,22 +1246,17 @@ where
 {
     let s = String::deserialize(deserializer)?;
     let mut pieces = s.split(';');
-    let f1 = match pieces.next() {
-        Some(x) => x,
-        None => return Err(de::Error::invalid_length(0, &"2")),
+    let Some(f1) = pieces.next() else {
+        return Err(de::Error::invalid_length(0, &"2"));
     };
-    let f2 = match pieces.next() {
-        Some(x) => x,
-        None => return Err(de::Error::invalid_length(1, &"2")),
+    let Some(f2) = pieces.next() else {
+        return Err(de::Error::invalid_length(1, &"2"));
     };
-    let f2 = match f2.parse() {
-        Ok(n) => n,
-        Err(_) => {
-            return Err(de::Error::invalid_value(
-                Unexpected::Str(f2),
-                &"an 8-bit signed integer",
-            ));
-        }
+    let Ok(f2) = f2.parse() else {
+        return Err(de::Error::invalid_value(
+            Unexpected::Str(f2),
+            &"an 8-bit signed integer",
+        ));
     };
     Ok((f1.into(), f2))
 }
@@ -1534,7 +1534,7 @@ fn test_invalid_length_enum() {
             Token::TupleVariant {
                 name: "InvalidLengthEnum",
                 variant: "B",
-                len: 3,
+                len: 2,
             },
             Token::I32(1),
             Token::TupleVariantEnd,
@@ -2300,6 +2300,72 @@ fn test_internally_tagged_enum_containing_flatten() {
 }
 
 #[test]
+fn test_internally_tagged_enum_new_type_with_unit() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(tag = "t")]
+    enum Data {
+        A(()),
+    }
+
+    assert_tokens(
+        &Data::A(()),
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("t"),
+            Token::Str("A"),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_adjacently_tagged_enum_bytes() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(tag = "t", content = "c")]
+    enum Data {
+        A { a: i32 },
+    }
+
+    let data = Data::A { a: 0 };
+
+    assert_tokens(
+        &data,
+        &[
+            Token::Struct {
+                name: "Data",
+                len: 2,
+            },
+            Token::Str("t"),
+            Token::Str("A"),
+            Token::Str("c"),
+            Token::Struct { name: "A", len: 1 },
+            Token::Str("a"),
+            Token::I32(0),
+            Token::StructEnd,
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &data,
+        &[
+            Token::Struct {
+                name: "Data",
+                len: 2,
+            },
+            Token::Bytes(b"t"),
+            Token::Str("A"),
+            Token::Bytes(b"c"),
+            Token::Struct { name: "A", len: 1 },
+            Token::Str("a"),
+            Token::I32(0),
+            Token::StructEnd,
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_adjacently_tagged_enum_containing_flatten() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     #[serde(tag = "t", content = "c")]
@@ -2373,6 +2439,162 @@ fn test_untagged_enum_containing_flatten() {
             Token::Str("b"),
             Token::I32(0),
             Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_partially_untagged_enum() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    enum Exp {
+        Lambda(u32, Box<Exp>),
+        #[serde(untagged)]
+        App(Box<Exp>, Box<Exp>),
+        #[serde(untagged)]
+        Var(u32),
+    }
+    use Exp::*;
+
+    let data = Lambda(0, Box::new(App(Box::new(Var(0)), Box::new(Var(0)))));
+    assert_tokens(
+        &data,
+        &[
+            Token::TupleVariant {
+                name: "Exp",
+                variant: "Lambda",
+                len: 2,
+            },
+            Token::U32(0),
+            Token::Tuple { len: 2 },
+            Token::U32(0),
+            Token::U32(0),
+            Token::TupleEnd,
+            Token::TupleVariantEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_partially_untagged_enum_generic() {
+    trait Trait<T> {
+        type Assoc;
+        type Assoc2;
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    enum E<A, B, C>
+    where
+        A: Trait<C, Assoc2 = B>,
+    {
+        A(A::Assoc),
+        #[serde(untagged)]
+        B(A::Assoc2),
+    }
+
+    impl<T> Trait<T> for () {
+        type Assoc = T;
+        type Assoc2 = bool;
+    }
+
+    type MyE = E<(), bool, u32>;
+    use E::*;
+
+    assert_tokens::<MyE>(&B(true), &[Token::Bool(true)]);
+
+    assert_tokens::<MyE>(
+        &A(5),
+        &[
+            Token::NewtypeVariant {
+                name: "E",
+                variant: "A",
+            },
+            Token::U32(5),
+        ],
+    );
+}
+
+#[test]
+fn test_partially_untagged_enum_desugared() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    enum Test {
+        A(u32, u32),
+        B(u32),
+        #[serde(untagged)]
+        C(u32),
+        #[serde(untagged)]
+        D(u32, u32),
+    }
+    use Test::*;
+
+    mod desugared {
+        use super::*;
+        #[derive(Serialize, Deserialize, PartialEq, Debug)]
+        pub(super) enum Test {
+            A(u32, u32),
+            B(u32),
+        }
+    }
+    use desugared::Test as TestTagged;
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(untagged)]
+    enum TestUntagged {
+        Tagged(TestTagged),
+        C(u32),
+        D(u32, u32),
+    }
+
+    impl From<Test> for TestUntagged {
+        fn from(test: Test) -> Self {
+            match test {
+                A(x, y) => TestUntagged::Tagged(TestTagged::A(x, y)),
+                B(x) => TestUntagged::Tagged(TestTagged::B(x)),
+                C(x) => TestUntagged::C(x),
+                D(x, y) => TestUntagged::D(x, y),
+            }
+        }
+    }
+
+    fn assert_tokens_desugared(value: Test, tokens: &[Token]) {
+        assert_tokens(&value, tokens);
+        let desugared: TestUntagged = value.into();
+        assert_tokens(&desugared, tokens);
+    }
+
+    assert_tokens_desugared(
+        A(0, 1),
+        &[
+            Token::TupleVariant {
+                name: "Test",
+                variant: "A",
+                len: 2,
+            },
+            Token::U32(0),
+            Token::U32(1),
+            Token::TupleVariantEnd,
+        ],
+    );
+
+    assert_tokens_desugared(
+        B(1),
+        &[
+            Token::NewtypeVariant {
+                name: "Test",
+                variant: "B",
+            },
+            Token::U32(1),
+        ],
+    );
+
+    assert_tokens_desugared(C(2), &[Token::U32(2)]);
+
+    assert_tokens_desugared(
+        D(3, 5),
+        &[
+            Token::Tuple { len: 2 },
+            Token::U32(3),
+            Token::U32(5),
+            Token::TupleEnd,
         ],
     );
 }
@@ -2473,6 +2695,31 @@ fn test_flatten_option() {
             inner2: None,
         },
         &[Token::Map { len: None }, Token::MapEnd],
+    );
+}
+
+#[test]
+fn test_flatten_ignored_any() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct Outer {
+        #[serde(flatten)]
+        inner: IgnoredAny,
+    }
+
+    assert_de_tokens(
+        &Outer { inner: IgnoredAny },
+        &[Token::Map { len: None }, Token::MapEnd],
+    );
+
+    assert_de_tokens(
+        &Outer { inner: IgnoredAny },
+        &[
+            Token::Struct {
+                name: "DoNotMatter",
+                len: 0,
+            },
+            Token::StructEnd,
+        ],
     );
 }
 
@@ -2641,6 +2888,68 @@ fn test_flatten_any_after_flatten_struct() {
 }
 
 #[test]
+fn test_alias_in_flatten_context() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    struct Outer {
+        #[serde(flatten)]
+        a: AliasStruct,
+        b: i32,
+    }
+
+    assert_de_tokens(
+        &Outer {
+            a: AliasStruct {
+                a1: 1,
+                a2: 2,
+                a4: 4,
+            },
+            b: 7,
+        },
+        &[
+            Token::Struct {
+                name: "Outer",
+                len: 4,
+            },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::Str("a2"),
+            Token::I32(2),
+            Token::Str("a5"),
+            Token::I32(4),
+            Token::Str("b"),
+            Token::I32(7),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &Outer {
+            a: AliasStruct {
+                a1: 1,
+                a2: 2,
+                a4: 4,
+            },
+            b: 7,
+        },
+        &[
+            Token::Struct {
+                name: "Outer",
+                len: 4,
+            },
+            Token::Str("a1"),
+            Token::I32(1),
+            Token::Str("a2"),
+            Token::I32(2),
+            Token::Str("a6"),
+            Token::I32(4),
+            Token::Str("b"),
+            Token::I32(7),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_expecting_message() {
     #[derive(Deserialize, PartialEq, Debug)]
     #[serde(expecting = "something strange...")]
@@ -2657,7 +2966,9 @@ fn test_expecting_message() {
     #[derive(Deserialize)]
     #[serde(expecting = "something strange...")]
     struct Struct {
+        #[allow(dead_code)]
         question: String,
+        #[allow(dead_code)]
         answer: u32,
     }
 

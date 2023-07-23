@@ -1,4 +1,6 @@
-use serde::{Deserialize, Serialize};
+#![allow(clippy::used_underscore_binding)]
+
+use serde_derive::{Deserialize, Serialize};
 
 #[test]
 fn test_self() {

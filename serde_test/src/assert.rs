@@ -8,8 +8,8 @@ use std::fmt::Debug;
 
 /// Runs both `assert_ser_tokens` and `assert_de_tokens`.
 ///
-/// ```edition2018
-/// # use serde::{Serialize, Deserialize};
+/// ```edition2021
+/// # use serde_derive::{Deserialize, Serialize};
 /// # use serde_test::{assert_tokens, Token};
 /// #
 /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -19,16 +19,19 @@ use std::fmt::Debug;
 /// }
 ///
 /// let s = S { a: 0, b: 0 };
-/// assert_tokens(&s, &[
-///     Token::Struct { name: "S", len: 2 },
-///     Token::Str("a"),
-///     Token::U8(0),
-///     Token::Str("b"),
-///     Token::U8(0),
-///     Token::StructEnd,
-/// ]);
+/// assert_tokens(
+///     &s,
+///     &[
+///         Token::Struct { name: "S", len: 2 },
+///         Token::Str("a"),
+///         Token::U8(0),
+///         Token::Str("b"),
+///         Token::U8(0),
+///         Token::StructEnd,
+///     ],
+/// );
 /// ```
-#[cfg_attr(track_caller, track_caller)]
+#[cfg_attr(not(no_track_caller), track_caller)]
 pub fn assert_tokens<'de, T>(value: &T, tokens: &'de [Token])
 where
     T: Serialize + Deserialize<'de> + PartialEq + Debug,
@@ -39,8 +42,8 @@ where
 
 /// Asserts that `value` serializes to the given `tokens`.
 ///
-/// ```edition2018
-/// # use serde::{Serialize, Deserialize};
+/// ```edition2021
+/// # use serde_derive::{Deserialize, Serialize};
 /// # use serde_test::{assert_ser_tokens, Token};
 /// #
 /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -50,17 +53,20 @@ where
 /// }
 ///
 /// let s = S { a: 0, b: 0 };
-/// assert_ser_tokens(&s, &[
-///     Token::Struct { name: "S", len: 2 },
-///     Token::Str("a"),
-///     Token::U8(0),
-///     Token::Str("b"),
-///     Token::U8(0),
-///     Token::StructEnd,
-/// ]);
+/// assert_ser_tokens(
+///     &s,
+///     &[
+///         Token::Struct { name: "S", len: 2 },
+///         Token::Str("a"),
+///         Token::U8(0),
+///         Token::Str("b"),
+///         Token::U8(0),
+///         Token::StructEnd,
+///     ],
+/// );
 /// ```
-#[cfg_attr(track_caller, track_caller)]
-pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token])
+#[cfg_attr(not(no_track_caller), track_caller)]
+pub fn assert_ser_tokens<T: ?Sized>(value: &T, tokens: &[Token])
 where
     T: Serialize,
 {
@@ -78,12 +84,11 @@ where
 /// Asserts that `value` serializes to the given `tokens`, and then yields
 /// `error`.
 ///
-/// ```edition2018
+/// ```edition2021
+/// use serde_derive::Serialize;
+/// use serde_test::{assert_ser_tokens_error, Token};
 /// use std::sync::{Arc, Mutex};
 /// use std::thread;
-///
-/// use serde::Serialize;
-/// use serde_test::{assert_ser_tokens_error, Token};
 ///
 /// #[derive(Serialize)]
 /// struct Example {
@@ -91,10 +96,12 @@ where
 /// }
 ///
 /// fn main() {
-///     let example = Example { lock: Arc::new(Mutex::new(0)) };
+///     let example = Example {
+///         lock: Arc::new(Mutex::new(0)),
+///     };
 ///     let lock = example.lock.clone();
 ///
-///     let _ = thread::spawn(move || {
+///     let thread = thread::spawn(move || {
 ///         // This thread will acquire the mutex first, unwrapping the result
 ///         // of `lock` because the lock has not been poisoned.
 ///         let _guard = lock.lock().unwrap();
@@ -102,18 +109,22 @@ where
 ///         // This panic while holding the lock (`_guard` is in scope) will
 ///         // poison the mutex.
 ///         panic!()
-///     }).join();
+///     });
+///     thread.join();
 ///
 ///     let expected = &[
-///         Token::Struct { name: "Example", len: 1 },
+///         Token::Struct {
+///             name: "Example",
+///             len: 1,
+///         },
 ///         Token::Str("lock"),
 ///     ];
 ///     let error = "lock poison error while serializing";
 ///     assert_ser_tokens_error(&example, expected, error);
 /// }
 /// ```
-#[cfg_attr(track_caller, track_caller)]
-pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token], error: &str)
+#[cfg_attr(not(no_track_caller), track_caller)]
+pub fn assert_ser_tokens_error<T: ?Sized>(value: &T, tokens: &[Token], error: &str)
 where
     T: Serialize,
 {
@@ -130,8 +141,8 @@ where
 
 /// Asserts that the given `tokens` deserialize into `value`.
 ///
-/// ```edition2018
-/// # use serde::{Serialize, Deserialize};
+/// ```edition2021
+/// # use serde_derive::{Deserialize, Serialize};
 /// # use serde_test::{assert_de_tokens, Token};
 /// #
 /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -141,16 +152,19 @@ where
 /// }
 ///
 /// let s = S { a: 0, b: 0 };
-/// assert_de_tokens(&s, &[
-///     Token::Struct { name: "S", len: 2 },
-///     Token::Str("a"),
-///     Token::U8(0),
-///     Token::Str("b"),
-///     Token::U8(0),
-///     Token::StructEnd,
-/// ]);
+/// assert_de_tokens(
+///     &s,
+///     &[
+///         Token::Struct { name: "S", len: 2 },
+///         Token::Str("a"),
+///         Token::U8(0),
+///         Token::Str("b"),
+///         Token::U8(0),
+///         Token::StructEnd,
+///     ],
+/// );
 /// ```
-#[cfg_attr(track_caller, track_caller)]
+#[cfg_attr(not(no_track_caller), track_caller)]
 pub fn assert_de_tokens<'de, T>(value: &T, tokens: &'de [Token])
 where
     T: Deserialize<'de> + PartialEq + Debug,
@@ -184,8 +198,8 @@ where
 
 /// Asserts that the given `tokens` yield `error` when deserializing.
 ///
-/// ```edition2018
-/// # use serde::{Serialize, Deserialize};
+/// ```edition2021
+/// # use serde_derive::{Deserialize, Serialize};
 /// # use serde_test::{assert_de_tokens_error, Token};
 /// #
 /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -203,7 +217,7 @@ where
 ///     "unknown field `x`, expected `a` or `b`",
 /// );
 /// ```
-#[cfg_attr(track_caller, track_caller)]
+#[cfg_attr(not(no_track_caller), track_caller)]
 pub fn assert_de_tokens_error<'de, T>(tokens: &'de [Token], error: &str)
 where
     T: Deserialize<'de>,
