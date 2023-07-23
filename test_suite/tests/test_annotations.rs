@@ -3147,13 +3147,16 @@ fn test_non_string_renames() {
             Token::Str("op"),
             Token::Bool(true),
             Token::MapEnd,
-        ]
+        ],
     );
 
     assert_ser_tokens(
         &SpecialEnum::A,
         &[
-            Token::Struct { name: "SpecialEnum", len: 1 },
+            Token::Struct {
+                name: "SpecialEnum",
+                len: 1,
+            },
             Token::Str("op"),
             Token::I64(1),
             Token::StructEnd,
@@ -3163,7 +3166,10 @@ fn test_non_string_renames() {
     assert_ser_tokens(
         &SpecialEnum::B,
         &[
-            Token::Struct { name: "SpecialEnum", len: 1 },
+            Token::Struct {
+                name: "SpecialEnum",
+                len: 1,
+            },
             Token::Str("op"),
             Token::Bool(true),
             Token::StructEnd,
@@ -3201,13 +3207,16 @@ fn test_non_string_renames() {
             Token::Str("op"),
             Token::Bool(true),
             Token::MapEnd,
-        ]
+        ],
     );
 
     assert_ser_tokens(
         &AdjacentEnum::A { a: 1 },
         &[
-            Token::Struct { name: "AdjacentEnum", len: 2 },
+            Token::Struct {
+                name: "AdjacentEnum",
+                len: 2,
+            },
             Token::Str("op"),
             Token::I64(1),
             Token::Str("d"),
@@ -3222,7 +3231,10 @@ fn test_non_string_renames() {
     assert_ser_tokens(
         &AdjacentEnum::B,
         &[
-            Token::Struct { name: "AdjacentEnum", len: 1 },
+            Token::Struct {
+                name: "AdjacentEnum",
+                len: 1,
+            },
             Token::Str("op"),
             Token::Bool(true),
             Token::StructEnd,
@@ -3248,7 +3260,7 @@ fn test_non_string_aliases() {
             Token::Str("op"),
             Token::I64(1),
             Token::MapEnd,
-        ]
+        ],
     );
 
     assert_de_tokens(
@@ -3258,7 +3270,7 @@ fn test_non_string_aliases() {
             Token::Str("op"),
             Token::I64(2),
             Token::MapEnd,
-        ]
+        ],
     );
 
     assert_de_tokens(
@@ -3268,7 +3280,7 @@ fn test_non_string_aliases() {
             Token::Str("op"),
             Token::Str("foo"),
             Token::MapEnd,
-        ]
+        ],
     );
 
     assert_de_tokens(
@@ -3278,7 +3290,7 @@ fn test_non_string_aliases() {
             Token::Str("op"),
             Token::I64(3),
             Token::MapEnd,
-        ]
+        ],
     );
 
     assert_de_tokens(
@@ -3288,7 +3300,7 @@ fn test_non_string_aliases() {
             Token::Str("op"),
             Token::Str("bar"),
             Token::MapEnd,
-        ]
+        ],
     );
 
     assert_de_tokens(
@@ -3298,6 +3310,6 @@ fn test_non_string_aliases() {
             Token::Str("op"),
             Token::Bool(false),
             Token::MapEnd,
-        ]
+        ],
     );
 }

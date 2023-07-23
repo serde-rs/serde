@@ -1318,7 +1318,7 @@ pub enum VariantName {
 impl Serialize for VariantName {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: Serializer
+        S: Serializer,
     {
         match self {
             VariantName::String(s) => serializer.serialize_str(s),

@@ -424,14 +424,20 @@ fn check_non_string_renames(cx: &Ctxt, cont: &mut Container) {
             let ser_name = name.serialize_name();
 
             match ser_name {
-                VariantName::String(_) => {},
-                _ => cx.error_spanned_by(v.original, format!("#[serde(rename)] must use a string name in {}", details)),
+                VariantName::String(_) => {}
+                _ => cx.error_spanned_by(
+                    v.original,
+                    format!("#[serde(rename)] must use a string name in {}", details),
+                ),
             }
 
             for alias in v.attrs.aliases() {
                 match alias {
-                    VariantName::String(_) => {},
-                    _ => cx.error_spanned_by(v.original, format!("#[serde(rename)] must use a string name in {}", details)),
+                    VariantName::String(_) => {}
+                    _ => cx.error_spanned_by(
+                        v.original,
+                        format!("#[serde(rename)] must use a string name in {}", details),
+                    ),
                 }
             }
         }

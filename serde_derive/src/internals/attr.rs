@@ -949,7 +949,12 @@ impl Variant {
         }
 
         Variant {
-            name: VariantNames::from_attrs(VariantName::String(unraw(&variant.ident)), ser_name, de_name, Some(de_aliases)),
+            name: VariantNames::from_attrs(
+                VariantName::String(unraw(&variant.ident)),
+                ser_name,
+                de_name,
+                Some(de_aliases),
+            ),
             rename_all_rules: RenameAllRules {
                 serialize: rename_all_ser_rule.get().unwrap_or(RenameRule::None),
                 deserialize: rename_all_de_rule.get().unwrap_or(RenameRule::None),
@@ -1467,7 +1472,8 @@ fn try_get_lit_str(lit: &syn::Expr) -> Result<&syn::LitStr, ()> {
     if let syn::Expr::Lit(syn::ExprLit {
         lit: syn::Lit::Str(lit),
         ..
-    }) = lit {
+    }) = lit
+    {
         Ok(lit)
     } else {
         Err(())
@@ -1478,7 +1484,8 @@ fn try_get_lit_int(lit: &syn::Expr) -> Result<&syn::LitInt, ()> {
     if let syn::Expr::Lit(syn::ExprLit {
         lit: syn::Lit::Int(lit),
         ..
-    }) = lit {
+    }) = lit
+    {
         Ok(lit)
     } else {
         Err(())
@@ -1489,7 +1496,8 @@ fn try_get_lit_bool(lit: &syn::Expr) -> Result<&syn::LitBool, ()> {
     if let syn::Expr::Lit(syn::ExprLit {
         lit: syn::Lit::Bool(lit),
         ..
-    }) = lit {
+    }) = lit
+    {
         Ok(lit)
     } else {
         Err(())
@@ -1519,18 +1527,22 @@ fn get_variant_name2(
     }
     if let Ok(lit) = try_get_lit_str(value) {
         Ok(Some(VariantName::String(lit.value())))
-    }
-    else if let Ok(lit) = try_get_lit_int(value) {
+    } else if let Ok(lit) = try_get_lit_int(value) {
         let parse_result = lit.base10_parse();
 
         if let Ok(i) = parse_result {
             Ok(Some(VariantName::Integer(i)))
         } else {
-            cx.error_spanned_by(lit, format!("serde {} attribute has an integer value that cannot be represented as an i64", attr_name));
+            cx.error_spanned_by(
+                lit,
+                format!(
+                    "serde {} attribute has an integer value that cannot be represented as an i64",
+                    attr_name
+                ),
+            );
             Ok(None)
         }
-    }
-    else if let Ok(lit) = try_get_lit_bool(value) {
+    } else if let Ok(lit) = try_get_lit_bool(value) {
         Ok(Some(VariantName::Boolean(lit.value())))
     } else {
         cx.error_spanned_by(expr, format!("expected serde {} attribute to be a string, integer, or boolean literal: `{} = \"...\"`", attr_name, meta_item_name));
@@ -1549,8 +1561,7 @@ fn get_lit_str2(
     while let syn::Expr::Group(e) = value {
         value = &e.expr;
     }
-    if let Ok(lit) = try_get_lit_str(value)
-    {
+    if let Ok(lit) = try_get_lit_str(value) {
         let suffix = lit.suffix();
         if !suffix.is_empty() {
             cx.error_spanned_by(

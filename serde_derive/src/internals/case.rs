@@ -87,7 +87,9 @@ impl RenameRule {
     /// Apply a renaming rule to an enum variant, returning the version expected in the source.
     pub fn apply_to_variant(&self, variant: &VariantName) -> VariantName {
         match variant {
-            VariantName::String(variant) => VariantName::String(self.apply_to_variant_str(&variant)),
+            VariantName::String(variant) => {
+                VariantName::String(self.apply_to_variant_str(&variant))
+            }
             _ => variant.clone(),
         }
     }

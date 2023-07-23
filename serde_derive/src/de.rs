@@ -1004,7 +1004,12 @@ fn deserialize_struct(
             (
                 VariantName::String(field.attrs.name().deserialize_name()),
                 field_i(i),
-                field.attrs.aliases().iter().map(|a| VariantName::String(a.clone())).collect(),
+                field
+                    .attrs
+                    .aliases()
+                    .iter()
+                    .map(|a| VariantName::String(a.clone()))
+                    .collect(),
             )
         })
         .collect();
@@ -1305,7 +1310,9 @@ fn prepare_enum_variant_enum(
     let other_idx = deserialized_variants.position(|(_, variant)| variant.attrs.other());
 
     let variants_stmt = {
-        let variant_names = variant_names_idents.iter().map(|(name, _, _)| name.to_string());
+        let variant_names = variant_names_idents
+            .iter()
+            .map(|(name, _, _)| name.to_string());
         quote! {
             #[doc(hidden)]
             const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
@@ -2082,9 +2089,15 @@ fn deserialize_generated_identifier(
 
         if all_same {
             match first_field.0 {
-                VariantName::String(_) => quote! { _serde::Deserializer::deserialize_string(__deserializer, __FieldVisitor) },
-                VariantName::Integer(_) => quote! { _serde::Deserializer::deserialize_i64(__deserializer, __FieldVisitor) },
-                VariantName::Boolean(_) => quote! { _serde::Deserializer::deserialize_bool(__deserializer, __FieldVisitor) },
+                VariantName::String(_) => {
+                    quote! { _serde::Deserializer::deserialize_string(__deserializer, __FieldVisitor) }
+                }
+                VariantName::Integer(_) => {
+                    quote! { _serde::Deserializer::deserialize_i64(__deserializer, __FieldVisitor) }
+                }
+                VariantName::Boolean(_) => {
+                    quote! { _serde::Deserializer::deserialize_bool(__deserializer, __FieldVisitor) }
+                }
             }
         } else {
             quote! {
@@ -2255,9 +2268,18 @@ fn deserialize_identifier(
         flat_fields.extend(aliases.iter().map(|alias| (alias, ident)));
     }
 
-    let field_strs: &Vec<_> = &flat_fields.iter().filter_map(|(name, _)| name.as_string()).collect();
-    let field_ints: &Vec<_> = &flat_fields.iter().filter_map(|(name, _)| name.as_int().map(Literal::i64_unsuffixed)).collect();
-    let field_bools: &Vec<_> = &flat_fields.iter().filter_map(|(name, _)| name.as_bool()).collect();
+    let field_strs: &Vec<_> = &flat_fields
+        .iter()
+        .filter_map(|(name, _)| name.as_string())
+        .collect();
+    let field_ints: &Vec<_> = &flat_fields
+        .iter()
+        .filter_map(|(name, _)| name.as_int().map(Literal::i64_unsuffixed))
+        .collect();
+    let field_bools: &Vec<_> = &flat_fields
+        .iter()
+        .filter_map(|(name, _)| name.as_bool())
+        .collect();
     let field_bytes: &Vec<_> = &flat_fields
         .iter()
         .filter_map(|(name, _)| name.as_string().map(|s| Literal::byte_string(s.as_bytes())))
@@ -2287,7 +2309,8 @@ fn deserialize_identifier(
         "field identifier"
     });
 
-    let (bytes_to_str, int_to_bytes, bool_to_str) = if fallthrough.is_some() || collect_other_fields {
+    let (bytes_to_str, int_to_bytes, bool_to_str) = if fallthrough.is_some() || collect_other_fields
+    {
         (None, None, None)
     } else {
         (
@@ -2299,7 +2322,7 @@ fn deserialize_identifier(
             }),
             Some(quote! {
                 let __value = if __value { "true" } else { "false" };
-            })
+            }),
         )
     };
 
@@ -2873,7 +2896,12 @@ fn deserialize_struct_as_struct_in_place_visitor(
             (
                 VariantName::String(field.attrs.name().deserialize_name()),
                 field_i(i),
-                field.attrs.aliases().iter().map(|a| VariantName::String(a.clone())).collect(),
+                field
+                    .attrs
+                    .aliases()
+                    .iter()
+                    .map(|a| VariantName::String(a.clone()))
+                    .collect(),
             )
         })
         .collect();

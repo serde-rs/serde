@@ -2724,7 +2724,7 @@ where
 
 impl<'de, E> IdentifierDeserializer<'de, E> for i64
 where
-    E: Error
+    E: Error,
 {
     type Deserializer = <i64 as IntoDeserializer<'de, E>>::Deserializer;
 
@@ -2735,7 +2735,7 @@ where
 
 impl<'de, E> IdentifierDeserializer<'de, E> for bool
 where
-    E: Error
+    E: Error,
 {
     type Deserializer = <bool as IntoDeserializer<'de, E>>::Deserializer;
 
