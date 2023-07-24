@@ -723,19 +723,11 @@ fn deserialize_seq(
                     })
                 }
             };
-            let value_if_none = match field.attrs.default() {
-                attr::Default::Default => quote!(_serde::__private::Default::default()),
-                attr::Default::Path(path) => quote!(#path()),
-                attr::Default::None => quote!(
-                    return _serde::__private::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
-                ),
-            };
+            let value_if_none = expr_is_missing_seq(None, index_in_seq, field, cattrs, expecting);
             let assign = quote! {
                 let #var = match #visit {
                     _serde::__private::Some(__value) => __value,
-                    _serde::__private::None => {
-                        #value_if_none
-                    }
+                    _serde::__private::None => #value_if_none,
                 };
             };
             index_in_seq += 1;
@@ -811,24 +803,14 @@ fn deserialize_seq_in_place(
                 self.place.#member = #default;
             }
         } else {
-            let value_if_none = match field.attrs.default() {
-                attr::Default::Default => quote!(
-                    self.place.#member = _serde::__private::Default::default();
-                ),
-                attr::Default::Path(path) => quote!(
-                    self.place.#member = #path();
-                ),
-                attr::Default::None => quote!(
-                    return _serde::__private::Err(_serde::de::Error::invalid_length(#index_in_seq, &#expecting));
-                ),
-            };
+            let value_if_none = expr_is_missing_seq(Some(quote!(self.place.#member = )), index_in_seq, field, cattrs, expecting);
             let write = match field.attrs.deserialize_with() {
                 None => {
                     quote! {
                         if let _serde::__private::None = _serde::de::SeqAccess::next_element_seed(&mut __seq,
                             _serde::__private::de::InPlaceSeed(&mut self.place.#member))?
                         {
-                            #value_if_none
+                            #value_if_none;
                         }
                     }
                 }
@@ -841,7 +823,7 @@ fn deserialize_seq_in_place(
                                 self.place.#member = __wrap.value;
                             }
                             _serde::__private::None => {
-                                #value_if_none
+                                #value_if_none;
                             }
                         }
                     })
@@ -2990,6 +2972,35 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
                 return _serde::__private::Err(<__A::Error as _serde::de::Error>::missing_field(#name))
             }
         }
+    }
+}
+
+fn expr_is_missing_seq(
+    assign_to: Option<TokenStream>,
+    index: usize,
+    field: &Field,
+    cattrs: &attr::Container,
+    expecting: &str,
+) -> TokenStream {
+    match field.attrs.default() {
+        attr::Default::Default => {
+            let span = field.original.span();
+            return quote_spanned!(span=> #assign_to _serde::__private::Default::default());
+        }
+        attr::Default::Path(path) => {
+            return quote_spanned!(path.span()=> #assign_to #path());
+        }
+        attr::Default::None => { /* below */ }
+    }
+
+    match *cattrs.default() {
+        attr::Default::Default | attr::Default::Path(_) => {
+            let member = &field.member;
+            return quote!(#assign_to __default.#member);
+        }
+        attr::Default::None => quote!(
+            return _serde::__private::Err(_serde::de::Error::invalid_length(#index, &#expecting))
+        ),
     }
 }
 

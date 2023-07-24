@@ -1,11 +1,12 @@
 use crate::internals::ast::{Container, Data, Field, Style};
-use crate::internals::attr::{Identifier, TagType};
+use crate::internals::attr::{Default, Identifier, TagType};
 use crate::internals::{ungroup, Ctxt, Derive};
 use syn::{Member, Type};
 
 // Cross-cutting checks that require looking at more than a single attrs object.
 // Simpler checks should happen when parsing and building the attrs.
 pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
+    check_default_on_tuple(cx, cont);
     check_remote_generic(cx, cont);
     check_getter(cx, cont);
     check_flatten(cx, cont);
@@ -15,6 +16,41 @@ pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     check_adjacent_tag_conflict(cx, cont);
     check_transparent(cx, cont, derive);
     check_from_and_try_from(cx, cont);
+}
+
+/// If some field of tuple is marked as `#[serde(default)]` then all subsequent
+/// fields also should be marked with that attribute or the struct itself should
+/// have this attribute. This is because using default value for a field is
+/// possible only if the sequence is exhausted that means that all subsequent
+/// fields will fail to deserialize and should provide a default value if we want
+/// the successful deserialization.
+fn check_default_on_tuple(cx: &Ctxt, cont: &Container) {
+    if let Default::None = cont.attrs.default() {
+        if let Data::Struct(Style::Tuple, fields) = &cont.data {
+            let mut first_default_index = None;
+            for (i, field) in fields.iter().enumerate() {
+                // Skipped fields automatically get the #[serde(default)] attribute
+                // We interested only on non-skipped fields here
+                if field.attrs.skip_deserializing() {
+                    continue;
+                }
+                if let Default::None = field.attrs.default() {
+                    if let Some(first) = first_default_index {
+                        cx.error_spanned_by(
+                            field.ty,
+                            format!("struct or field must have #[serde(default)] because previous field {} have #[serde(default)]", first),
+                        );
+                    }
+                    continue;
+                }
+                if let None = first_default_index {
+                    first_default_index = Some(i);
+                }
+            }
+        }
+    }
+    // TODO: Warn if container has default and all fields also marked with default
+    // when warnings in proc-macro become available
 }
 
 // Remote derive definition type must have either all of the generics of the
