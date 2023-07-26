@@ -77,7 +77,9 @@ mod internals;
 use proc_macro::TokenStream;
 #[cfg(precompiled)]
 use std::sync::atomic::AtomicBool;
-use syn::{parse_macro_input, DeriveInput};
+#[cfg(not(precompiled))]
+use syn::parse_macro_input;
+use syn::DeriveInput;
 
 #[macro_use]
 mod bound;
