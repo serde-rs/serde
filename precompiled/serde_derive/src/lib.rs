@@ -13,7 +13,7 @@
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
-#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.175")]
+#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.176")]
 #![allow(unknown_lints, bare_trait_objects)]
 
 #[cfg(not(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")))]
