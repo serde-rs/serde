@@ -8,6 +8,7 @@ use crate::bytecode::Bytecode;
 use proc_macro::{Delimiter, Group, Ident, Literal, Punct, Spacing, Span, TokenStream, TokenTree};
 use std::io::{Read, Write};
 use std::iter::FromIterator;
+use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 use std::str::FromStr;
 
@@ -31,11 +32,17 @@ fn derive(select: u8, input: TokenStream) -> TokenStream {
         memory.linearize_token(token, &mut buf);
     }
 
-    let path = concat!(
+    let exe_path = Path::new(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/serde_derive-x86_64-unknown-linux-gnu",
-    );
-    let mut child = Command::new(path)
+    ));
+    if !exe_path.exists() {
+        panic!(
+            "file missing from serde_derive manifest directory during macro expansion: {}",
+            exe_path.display(),
+        );
+    }
+    let mut child = Command::new(exe_path)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
