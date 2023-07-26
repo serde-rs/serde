@@ -335,8 +335,6 @@ mod std_error;
 // be annoying for crates that provide handwritten impls or data formats. They
 // would need to disable default features and then explicitly re-enable std.
 #[cfg(feature = "serde_derive")]
-#[allow(unused_imports)]
-#[macro_use]
 extern crate serde_derive;
 
 /// Derive macro available if serde is built with `features = ["derive"]`.
