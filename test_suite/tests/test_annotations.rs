@@ -2266,14 +2266,14 @@ fn test_internally_tagged_enum_with_skipped_conflict() {
     #[serde(tag = "t")]
     enum Data {
         A,
-	#[serde(skip)]
-	B {
-	    t: String
-	},
-	C {
-	    #[serde(default, skip)]
-	    t: String
-	},
+        #[serde(skip)]
+        B {
+            t: String,
+        },
+        C {
+            #[serde(default, skip)]
+            t: String,
+        },
     }
 
     let _data = Data::B { t: "".to_string() };
@@ -2283,7 +2283,10 @@ fn test_internally_tagged_enum_with_skipped_conflict() {
     assert_tokens(
         &data,
         &[
-            Token::Struct { name: "Data", len: 1 },
+            Token::Struct {
+                name: "Data",
+                len: 1,
+            },
             Token::Str("t"),
             Token::Str("C"),
             Token::StructEnd,
