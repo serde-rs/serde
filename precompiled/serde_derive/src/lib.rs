@@ -16,8 +16,6 @@
 #![doc(html_root_url = "https://docs.rs/serde_derive/1.0.175")]
 #![allow(unknown_lints, bare_trait_objects)]
 
-extern crate proc_macro;
-
 #[cfg(not(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")))]
 include!("lib_from_source.rs");
 

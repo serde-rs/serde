@@ -1,3 +1,5 @@
+extern crate proc_macro;
+
 mod buffer;
 mod bytecode;
 
