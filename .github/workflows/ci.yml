@@ -46,8 +46,6 @@ jobs:
           toolchain: ${{matrix.rust}}
       - run: cd serde && cargo build --features rc
       - run: cd serde && cargo build --no-default-features
-      - run: cd serde_test && cargo build
-      - run: cd serde_test && cargo test --features serde/derive,serde/rc
 
   nightly:
     name: Rust nightly ${{matrix.os == 'windows' && '(windows)' || ''}}
@@ -88,7 +86,6 @@ jobs:
       - run: cd serde && cargo build --features rc
       - run: cd serde && cargo build --no-default-features
       - run: cd serde && cargo build
-      - run: cd serde_test && cargo build
 
   more:
     name: Rust ${{matrix.rust}}
@@ -149,7 +146,6 @@ jobs:
       - run: cd serde && cargo clippy --features rc,unstable -- -Dclippy::all -Dclippy::pedantic
       - run: cd serde_derive && cargo clippy -- -Dclippy::all -Dclippy::pedantic
       - run: cd serde_derive_internals && cargo clippy -- -Dclippy::all -Dclippy::pedantic
-      - run: cd serde_test && cargo clippy -- -Dclippy::all -Dclippy::pedantic
       - run: cd test_suite && cargo clippy --tests --features unstable -- -Dclippy::all -Dclippy::pedantic
       - run: cd test_suite/no_std && cargo clippy -- -Dclippy::all -Dclippy::pedantic
 
