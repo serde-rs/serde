@@ -1,13 +1,13 @@
 [package]
 name = "serde_derive"
-version = "1.0.174"
+version = "1.0.175"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 categories = ["no-std", "no-std::no-alloc"]
 description = "Implementation of #[derive(Serialize, Deserialize)]"
 documentation = "https://serde.rs/derive.html"
 edition = "2015"
 homepage = "https://serde.rs"
-include = ["serde_derive-x86_64-unknown-linux-gnu", "src"]
+include = ["serde_derive-x86_64-unknown-linux-gnu", "src", "LICENSE-APACHE", "LICENSE-MIT"]
 keywords = ["serde", "serialization", "no_std", "derive"]
 license = "MIT OR Apache-2.0"
 readme = "crates-io.md"

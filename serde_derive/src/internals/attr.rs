@@ -1,15 +1,14 @@
-use internals::symbol::*;
-use internals::{ungroup, Ctxt};
+use crate::internals::symbol::*;
+use crate::internals::{ungroup, Ctxt};
 use proc_macro2::{Spacing, Span, TokenStream, TokenTree};
 use quote::ToTokens;
 use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::iter::FromIterator;
-use syn;
 use syn::meta::ParseNestedMeta;
 use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
-use syn::{token, Ident, Lifetime};
+use syn::{parse_quote, token, Ident, Lifetime, Token};
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
 // are `attr::Container::from_ast`, `attr::Variant::from_ast`, and
@@ -19,7 +18,7 @@ use syn::{token, Ident, Lifetime};
 // user will see errors simultaneously for all bad attributes in the crate
 // rather than just the first.
 
-pub use internals::case::RenameRule;
+pub use crate::internals::case::RenameRule;
 
 struct Attr<'c, T> {
     cx: &'c Ctxt,

@@ -13,7 +13,7 @@
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
-#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.174")]
+#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.175")]
 #![allow(unknown_lints, bare_trait_objects)]
 // Ignored clippy lints
 #![allow(
@@ -63,15 +63,12 @@
 )]
 #![cfg_attr(all(test, exhaustive), feature(non_exhaustive_omitted_patterns_lint))]
 
-#[macro_use]
+extern crate proc_macro2;
 extern crate quote;
-#[macro_use]
 extern crate syn;
 
 #[cfg(not(precompiled))]
 extern crate proc_macro;
-extern crate proc_macro2;
-
 #[cfg(precompiled)]
 extern crate proc_macro2 as proc_macro;
 
@@ -80,6 +77,8 @@ mod internals;
 use proc_macro::TokenStream;
 #[cfg(precompiled)]
 use std::sync::atomic::AtomicBool;
+#[cfg(not(precompiled))]
+use syn::parse_macro_input;
 use syn::DeriveInput;
 
 #[macro_use]

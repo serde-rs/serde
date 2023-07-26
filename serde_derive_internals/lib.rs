@@ -38,11 +38,9 @@
     clippy::wildcard_imports
 )]
 
-#[macro_use]
-extern crate syn;
-
 extern crate proc_macro2;
 extern crate quote;
+extern crate syn;
 
 #[cfg_attr(serde_build_from_git, path = "../serde_derive/src/internals/mod.rs")]
 #[cfg_attr(not(serde_build_from_git), path = "src/mod.rs")]

@@ -1,5 +1,5 @@
 error: #[serde(flatten)] cannot be used on tuple structs
- --> tests/ui/conflict/flatten-tuple-struct.rs:6:17
+ --> tests/ui/conflict/flatten-tuple-struct.rs:5:17
   |
-6 | struct Foo(u32, #[serde(flatten)] HashMap<String, String>);
+5 | struct Foo(u32, #[serde(flatten)] HashMap<String, String>);
   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

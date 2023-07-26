@@ -1,6 +1,6 @@
-use internals::ast::{Container, Data, Field, Style};
-use internals::attr::{Identifier, TagType, VariantName};
-use internals::{ungroup, Ctxt, Derive};
+use crate::internals::ast::{Container, Data, Field, Style};
+use crate::internals::attr::{Identifier, TagType, VariantName};
+use crate::internals::{ungroup, Ctxt, Derive};
 use syn::{Member, Type};
 
 // Cross-cutting checks that require looking at more than a single attrs object.

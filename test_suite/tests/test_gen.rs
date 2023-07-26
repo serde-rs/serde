@@ -23,7 +23,6 @@
 use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 use serde::ser::{Serialize, Serializer};
 use serde_derive::{Deserialize, Serialize};
-
 use std::borrow::Cow;
 use std::marker::PhantomData;
 use std::option::Option as StdOption;

@@ -17,5 +17,5 @@ fnv = "1.0"
 rustversion = "1.0"
 serde = { path = "../serde", features = ["rc"] }
 serde_derive = { path = "../serde_derive", features = ["deserialize_in_place"] }
-serde_test = { path = "../serde_test" }
+serde_test = "1.0.176"
 trybuild = { version = "1.0.66", features = ["diff"] }

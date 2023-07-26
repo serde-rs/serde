@@ -1,14 +1,11 @@
+use crate::fragment::{Fragment, Match, Stmts};
+use crate::internals::ast::{Container, Data, Field, Style, Variant};
+use crate::internals::{attr, replace_receiver, Ctxt, Derive};
+use crate::{bound, dummy, pretend, this};
 use proc_macro2::{Span, TokenStream};
+use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
-use syn::{self, Ident, Index, Member};
-
-use bound;
-use dummy;
-use fragment::{Fragment, Match, Stmts};
-use internals::ast::{Container, Data, Field, Style, Variant};
-use internals::{attr, replace_receiver, Ctxt, Derive};
-use pretend;
-use this;
+use syn::{parse_quote, Ident, Index, Member};
 
 use crate::internals::attr::VariantName;
 

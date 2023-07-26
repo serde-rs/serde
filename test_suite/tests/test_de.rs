@@ -10,6 +10,10 @@
 )]
 #![cfg_attr(feature = "unstable", feature(never_type))]
 
+use fnv::FnvHasher;
+use serde::de::{Deserialize, DeserializeOwned, Deserializer, IntoDeserializer};
+use serde_derive::Deserialize;
+use serde_test::{assert_de_tokens, Configure, Token};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::default::Default;
 use std::ffi::{CStr, CString, OsString};
@@ -27,16 +31,10 @@ use std::sync::atomic::{
     AtomicBool, AtomicI16, AtomicI32, AtomicI8, AtomicIsize, AtomicU16, AtomicU32, AtomicU8,
     AtomicUsize, Ordering,
 };
-use std::sync::{Arc, Weak as ArcWeak};
-use std::time::{Duration, UNIX_EPOCH};
-
 #[cfg(target_arch = "x86_64")]
 use std::sync::atomic::{AtomicI64, AtomicU64};
-
-use fnv::FnvHasher;
-use serde::de::{Deserialize, DeserializeOwned, Deserializer, IntoDeserializer};
-use serde_derive::Deserialize;
-use serde_test::{assert_de_tokens, Configure, Token};
+use std::sync::{Arc, Weak as ArcWeak};
+use std::time::{Duration, UNIX_EPOCH};
 
 #[macro_use]
 mod macros;

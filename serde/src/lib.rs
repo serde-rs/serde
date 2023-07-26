@@ -93,7 +93,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Serde types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/serde/1.0.174")]
+#![doc(html_root_url = "https://docs.rs/serde/1.0.175")]
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
 // Unstable functionality only if the user asks for it. For tracking and
@@ -335,8 +335,6 @@ mod std_error;
 // be annoying for crates that provide handwritten impls or data formats. They
 // would need to disable default features and then explicitly re-enable std.
 #[cfg(feature = "serde_derive")]
-#[allow(unused_imports)]
-#[macro_use]
 extern crate serde_derive;
 
 /// Derive macro available if serde is built with `features = ["derive"]`.
