@@ -1547,9 +1547,21 @@ where
         visitor.visit_enum(self)
     }
 
+    fn deserialize_newtype_struct<V>(
+        self,
+        _name: &'static str,
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        // For test_internally_tagged_enum
+        visitor.visit_newtype_struct(self)
+    }
+
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option newtype_struct seq tuple
+        bytes byte_buf option seq tuple
         tuple_struct map struct identifier ignored_any
     }
 }
