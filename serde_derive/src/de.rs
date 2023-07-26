@@ -6,13 +6,10 @@ use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::{self, Ident, Index, Member};
 
-use bound;
-use dummy;
-use fragment::{Expr, Fragment, Match, Stmts};
-use internals::ast::{Container, Data, Field, Style, Variant};
-use internals::{attr, replace_receiver, ungroup, Ctxt, Derive};
-use pretend;
-use this;
+use crate::fragment::{Expr, Fragment, Match, Stmts};
+use crate::internals::ast::{Container, Data, Field, Style, Variant};
+use crate::internals::{attr, replace_receiver, ungroup, Ctxt, Derive};
+use crate::{bound, dummy, pretend, this};
 
 use std::collections::BTreeSet;
 use std::ptr;

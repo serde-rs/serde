@@ -1,7 +1,6 @@
 use proc_macro2::TokenStream;
 
-use syn;
-use try;
+use crate::try;
 
 pub fn wrap_in_const(serde_path: Option<&syn::Path>, code: TokenStream) -> TokenStream {
     let try_replacement = try::replacement();

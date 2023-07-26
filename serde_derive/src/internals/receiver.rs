@@ -1,4 +1,4 @@
-use internals::respan::respan;
+use crate::internals::respan::respan;
 use proc_macro2::Span;
 use quote::ToTokens;
 use std::mem;
