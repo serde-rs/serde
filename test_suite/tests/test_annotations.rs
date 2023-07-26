@@ -2267,6 +2267,7 @@ fn test_internally_tagged_enum_with_skipped_conflict() {
     enum Data {
         A,
         #[serde(skip)]
+        #[allow(dead_code)]
         B {
             t: String,
         },
@@ -2275,8 +2276,6 @@ fn test_internally_tagged_enum_with_skipped_conflict() {
             t: String,
         },
     }
-
-    let _data = Data::B { t: "".to_string() };
 
     let data = Data::C { t: "".to_string() };
 
