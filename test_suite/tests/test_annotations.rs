@@ -2277,7 +2277,7 @@ fn test_internally_tagged_enum_with_skipped_conflict() {
         },
     }
 
-    let data = Data::C { t: "".to_string() };
+    let data = Data::C { t: String::new() };
 
     assert_tokens(
         &data,
