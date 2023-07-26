@@ -6,7 +6,7 @@ mod bytecode;
 use crate::buffer::{InputBuffer, OutputBuffer};
 use crate::bytecode::Bytecode;
 use proc_macro::{Delimiter, Group, Ident, Literal, Punct, Spacing, Span, TokenStream, TokenTree};
-use std::io::{Read, Write};
+use std::io::{ErrorKind, Read, Write};
 use std::iter::FromIterator;
 use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
@@ -36,17 +36,23 @@ fn derive(select: u8, input: TokenStream) -> TokenStream {
         env!("CARGO_MANIFEST_DIR"),
         "/serde_derive-x86_64-unknown-linux-gnu",
     ));
-    if !exe_path.exists() {
-        panic!(
-            "file missing from serde_derive manifest directory during macro expansion: {}",
-            exe_path.display(),
-        );
-    }
-    let mut child = Command::new(exe_path)
+    let mut child = match Command::new(exe_path)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
-        .expect("failed to spawn process");
+    {
+        Ok(child) => child,
+        Err(io_error) => {
+            if io_error.kind() == ErrorKind::NotFound {
+                panic!(
+                    "file missing from serde_derive manifest directory during macro expansion: {}",
+                    exe_path.display(),
+                );
+            } else {
+                panic!("failed to spawn process: {}", io_error);
+            }
+        }
+    };
 
     let mut stdin = child.stdin.take().unwrap();
     let mut buf = buf.into_bytes();
