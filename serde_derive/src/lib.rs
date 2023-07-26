@@ -63,15 +63,12 @@
 )]
 #![cfg_attr(all(test, exhaustive), feature(non_exhaustive_omitted_patterns_lint))]
 
-#[macro_use]
+extern crate proc_macro2;
 extern crate quote;
-#[macro_use]
 extern crate syn;
 
 #[cfg(not(precompiled))]
 extern crate proc_macro;
-extern crate proc_macro2;
-
 #[cfg(precompiled)]
 extern crate proc_macro2 as proc_macro;
 
@@ -80,7 +77,7 @@ mod internals;
 use proc_macro::TokenStream;
 #[cfg(precompiled)]
 use std::sync::atomic::AtomicBool;
-use syn::DeriveInput;
+use syn::{parse_macro_input, DeriveInput};
 
 #[macro_use]
 mod bound;

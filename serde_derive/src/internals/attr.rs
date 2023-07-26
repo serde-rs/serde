@@ -8,7 +8,7 @@ use std::iter::FromIterator;
 use syn::meta::ParseNestedMeta;
 use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
-use syn::{token, Ident, Lifetime};
+use syn::{parse_quote, token, Ident, Lifetime, Token};
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
 // are `attr::Container::from_ast`, `attr::Variant::from_ast`, and

@@ -3,8 +3,9 @@ use crate::internals::ast::{Container, Data, Field, Style, Variant};
 use crate::internals::{attr, replace_receiver, Ctxt, Derive};
 use crate::{bound, dummy, pretend, this};
 use proc_macro2::{Span, TokenStream};
+use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
-use syn::{self, Ident, Index, Member};
+use syn::{parse_quote, Ident, Index, Member};
 
 pub fn expand_derive_serialize(input: &mut syn::DeriveInput) -> syn::Result<TokenStream> {
     replace_receiver(input);

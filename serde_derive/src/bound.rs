@@ -3,6 +3,7 @@ use crate::internals::{attr, ungroup};
 use proc_macro2::Span;
 use std::collections::HashSet;
 use syn::punctuated::{Pair, Punctuated};
+use syn::Token;
 
 // Remove the default from every type parameter because in the generated impls
 // they look like associated types: "error: associated type bindings are not
