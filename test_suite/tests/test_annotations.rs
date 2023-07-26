@@ -13,16 +13,14 @@
 use serde::de::{self, Deserialize, Deserializer, IgnoredAny, MapAccess, Unexpected, Visitor};
 use serde::ser::{Serialize, Serializer};
 use serde_derive::{Deserialize, Serialize};
-
-use std::collections::{BTreeMap, HashMap};
-use std::convert::TryFrom;
-use std::fmt;
-use std::marker::PhantomData;
-
 use serde_test::{
     assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_ser_tokens_error,
     assert_tokens, Token,
 };
+use std::collections::{BTreeMap, HashMap};
+use std::convert::TryFrom;
+use std::fmt;
+use std::marker::PhantomData;
 
 trait MyDefault: Sized {
     fn my_default() -> Self;

@@ -1,5 +1,5 @@
 error: #[serde(flatten)] cannot be used on newtype structs
- --> tests/ui/conflict/flatten-newtype-struct.rs:6:12
+ --> tests/ui/conflict/flatten-newtype-struct.rs:5:12
   |
-6 | struct Foo(#[serde(flatten)] HashMap<String, String>);
+5 | struct Foo(#[serde(flatten)] HashMap<String, String>);
   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

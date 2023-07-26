@@ -1,18 +1,16 @@
+use crate::fragment::{Expr, Fragment, Match, Stmts};
+use crate::internals::ast::{Container, Data, Field, Style, Variant};
+use crate::internals::{attr, replace_receiver, ungroup, Ctxt, Derive};
+use crate::{bound, dummy, pretend, this};
 use proc_macro2::{Literal, Span, TokenStream};
 use quote::ToTokens;
+use std::collections::BTreeSet;
+use std::ptr;
 #[cfg(precompiled)]
 use std::sync::atomic::Ordering;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::{self, Ident, Index, Member};
-
-use crate::fragment::{Expr, Fragment, Match, Stmts};
-use crate::internals::ast::{Container, Data, Field, Style, Variant};
-use crate::internals::{attr, replace_receiver, ungroup, Ctxt, Derive};
-use crate::{bound, dummy, pretend, this};
-
-use std::collections::BTreeSet;
-use std::ptr;
 
 pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<TokenStream> {
     replace_receiver(input);

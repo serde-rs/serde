@@ -1,9 +1,8 @@
 //! Code to convert the Rust-styled field/variant (e.g. `my_field`, `MyType`) to the
 //! case of the source (e.g. `my-field`, `MY_FIELD`).
 
-use std::fmt::{self, Debug, Display};
-
 use self::RenameRule::*;
+use std::fmt::{self, Debug, Display};
 
 /// The different possible ways to change case of fields in a struct, or variants in an enum.
 #[derive(Copy, Clone, PartialEq)]

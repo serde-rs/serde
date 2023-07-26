@@ -1,6 +1,9 @@
 #![allow(clippy::derive_partial_eq_without_eq, clippy::unreadable_literal)]
 #![cfg_attr(feature = "unstable", feature(never_type))]
 
+use fnv::FnvHasher;
+use serde_derive::Serialize;
+use serde_test::{assert_ser_tokens, assert_ser_tokens_error, Configure, Token};
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ffi::CString;
@@ -9,21 +12,16 @@ use std::num::Wrapping;
 use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak as RcWeak};
+#[cfg(unix)]
+use std::str;
 use std::sync::atomic::{
     AtomicBool, AtomicI16, AtomicI32, AtomicI8, AtomicIsize, AtomicU16, AtomicU32, AtomicU8,
     AtomicUsize,
 };
-use std::sync::{Arc, Mutex, RwLock, Weak as ArcWeak};
-use std::time::{Duration, UNIX_EPOCH};
-
-#[cfg(unix)]
-use std::str;
 #[cfg(target_arch = "x86_64")]
 use std::sync::atomic::{AtomicI64, AtomicU64};
-
-use fnv::FnvHasher;
-use serde_derive::Serialize;
-use serde_test::{assert_ser_tokens, assert_ser_tokens_error, Configure, Token};
+use std::sync::{Arc, Mutex, RwLock, Weak as ArcWeak};
+use std::time::{Duration, UNIX_EPOCH};
 
 #[macro_use]
 mod macros;
