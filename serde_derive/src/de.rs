@@ -1527,10 +1527,23 @@ fn deserialize_adjacently_tagged_enum(
                     _serde::__private::Ok(#this_value::#variant_ident)
                 },
                 Style::Newtype if variant.attrs.deserialize_with().is_none() => {
-                    let span = variant.original.span();
-                    let func = quote_spanned!(span=> _serde::__private::de::missing_field);
-                    quote! {
-                        #func(#content).map(#this_value::#variant_ident)
+                    let field = &variant.fields[0];
+                    match field.attrs.default() {
+                        attr::Default::Default => {
+                            let span = field.original.span();
+                            let func = quote_spanned!(span=> _serde::__private::Default::default);
+                            quote!(Ok(#this_value::#variant_ident(#func())))
+                        }
+                        attr::Default::Path(path) => {
+                            quote!(Ok(#this_value::#variant_ident(#path())))
+                        }
+                        attr::Default::None => {
+                            let span = variant.original.span();
+                            let func = quote_spanned!(span=> _serde::__private::de::missing_field);
+                            quote! {
+                                #func(#content).map(#this_value::#variant_ident)
+                            }
+                        }
                     }
                 }
                 _ => {
