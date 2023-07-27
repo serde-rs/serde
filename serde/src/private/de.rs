@@ -203,13 +203,16 @@ mod content {
     // This issue is tracking making some of this stuff public:
     // https://github.com/serde-rs/serde/issues/741
 
+    #[cfg(feature = "alloc")]
+    use alloc::vec;
+
     use lib::*;
 
     use __private::size_hint;
     use actually_private;
     use de::{
         self, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected, IgnoredAny,
-        MapAccess, SeqAccess, Unexpected, Visitor,
+        MapAccess, SeqAccess, Unexpected, VariantAccess, Visitor
     };
 
     /// Used from generated code to buffer the contents of the Deserializer when
@@ -496,13 +499,17 @@ mod content {
             Ok(Content::Map(vec))
         }
 
-        fn visit_enum<V>(self, _visitor: V) -> Result<Self::Value, V::Error>
+        fn visit_enum<V>(self, visitor: V) -> Result<Self::Value, V::Error>
         where
             V: EnumAccess<'de>,
         {
-            Err(de::Error::custom(
-                "untagged and internally tagged enums do not support enum input",
-            ))
+            // While untagged and internally tagged enums do not support enum input,
+            // untagged enums can contain externally tagged enums
+            let (key, value) = visitor.variant()?;
+            let value = value
+                .newtype_variant()
+                .unwrap_or(Content::Unit);
+            Ok(Content::Map(vec![(key, value)]))
         }
     }
 
