@@ -1,5 +1,5 @@
 error: #[serde(default)] can only be used on structs with named fields
- --> tests/ui/default-attribute/enum.rs:5:1
+ --> tests/ui/default-attribute/enum.rs:4:9
   |
-5 | enum E {
-  | ^^^^
+4 | #[serde(default)]
+  |         ^^^^^^^

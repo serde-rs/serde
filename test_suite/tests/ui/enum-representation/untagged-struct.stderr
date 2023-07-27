@@ -1,5 +1,5 @@
 error: #[serde(untagged)] can only be used on enums
- --> tests/ui/enum-representation/untagged-struct.rs:5:1
+ --> tests/ui/enum-representation/untagged-struct.rs:4:9
   |
-5 | struct S;
-  | ^^^^^^
+4 | #[serde(untagged)]
+  |         ^^^^^^^^

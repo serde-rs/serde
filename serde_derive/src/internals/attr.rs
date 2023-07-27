@@ -386,11 +386,11 @@ impl Container {
                         }
                         syn::Data::Struct(_) => {
                             let msg = "#[serde(rename_all_fields)] can only be used on enums";
-                            cx.error_spanned_by(&meta.path, msg);
+                            cx.syn_error(meta.error(msg));
                         }
                         syn::Data::Union(_) => {
                             let msg = "#[serde(rename_all_fields)] can only be used on enums";
-                            cx.error_spanned_by(&meta.path, msg);
+                            cx.syn_error(meta.error(msg));
                         }
                     }
                 } else if meta.path == TRANSPARENT {
@@ -410,16 +410,16 @@ impl Container {
                                     }
                                     syn::Fields::Unnamed(_) | syn::Fields::Unit => {
                                         let msg = "#[serde(default = \"...\")] can only be used on structs with named fields";
-                                        cx.error_spanned_by(fields, msg);
+                                        cx.syn_error(meta.error(msg));
                                     }
                                 },
-                                syn::Data::Enum(syn::DataEnum { enum_token, .. }) => {
+                                syn::Data::Enum(_) => {
                                     let msg = "#[serde(default = \"...\")] can only be used on structs with named fields";
-                                    cx.error_spanned_by(enum_token, msg);
+                                    cx.syn_error(meta.error(msg));
                                 }
-                                syn::Data::Union(syn::DataUnion { union_token, .. }) => {
+                                syn::Data::Union(_) => {
                                     let msg = "#[serde(default = \"...\")] can only be used on structs with named fields";
-                                    cx.error_spanned_by(union_token, msg);
+                                    cx.syn_error(meta.error(msg));
                                 }
                             }
                         }
@@ -435,13 +435,13 @@ impl Container {
                                     cx.error_spanned_by(fields, msg);
                                 }
                             },
-                            syn::Data::Enum(syn::DataEnum { enum_token, .. }) => {
+                            syn::Data::Enum(_) => {
                                 let msg = "#[serde(default)] can only be used on structs with named fields";
-                                cx.error_spanned_by(enum_token, msg);
+                                cx.syn_error(meta.error(msg));
                             }
-                            syn::Data::Union(syn::DataUnion { union_token, .. }) => {
+                            syn::Data::Union(_) => {
                                 let msg = "#[serde(default)] can only be used on structs with named fields";
-                                cx.error_spanned_by(union_token, msg);
+                                cx.syn_error(meta.error(msg));
                             }
                         }
                     }
@@ -457,13 +457,13 @@ impl Container {
                         syn::Data::Enum(_) => {
                             untagged.set_true(&meta.path);
                         }
-                        syn::Data::Struct(syn::DataStruct { struct_token, .. }) => {
+                        syn::Data::Struct(_) => {
                             let msg = "#[serde(untagged)] can only be used on enums";
-                            cx.error_spanned_by(struct_token, msg);
+                            cx.syn_error(meta.error(msg));
                         }
-                        syn::Data::Union(syn::DataUnion { union_token, .. }) => {
+                        syn::Data::Union(_) => {
                             let msg = "#[serde(untagged)] can only be used on enums";
-                            cx.error_spanned_by(union_token, msg);
+                            cx.syn_error(meta.error(msg));
                         }
                     }
                 } else if meta.path == TAG {
@@ -479,12 +479,12 @@ impl Container {
                                 }
                                 syn::Fields::Unnamed(_) | syn::Fields::Unit => {
                                     let msg = "#[serde(tag = \"...\")] can only be used on enums and structs with named fields";
-                                    cx.error_spanned_by(fields, msg);
+                                    cx.syn_error(meta.error(msg));
                                 }
                             },
-                            syn::Data::Union(syn::DataUnion { union_token, .. }) => {
+                            syn::Data::Union(_) => {
                                 let msg = "#[serde(tag = \"...\")] can only be used on enums and structs with named fields";
-                                cx.error_spanned_by(union_token, msg);
+                                cx.syn_error(meta.error(msg));
                             }
                         }
                     }
@@ -495,13 +495,13 @@ impl Container {
                             syn::Data::Enum(_) => {
                                 content.set(&meta.path, s.value());
                             }
-                            syn::Data::Struct(syn::DataStruct { struct_token, .. }) => {
+                            syn::Data::Struct(_) => {
                                 let msg = "#[serde(content = \"...\")] can only be used on enums";
-                                cx.error_spanned_by(struct_token, msg);
+                                cx.syn_error(meta.error(msg));
                             }
-                            syn::Data::Union(syn::DataUnion { union_token, .. }) => {
+                            syn::Data::Union(_) => {
                                 let msg = "#[serde(content = \"...\")] can only be used on enums";
-                                cx.error_spanned_by(union_token, msg);
+                                cx.syn_error(meta.error(msg));
                             }
                         }
                     }
