@@ -669,3 +669,136 @@ fn newtype_variant_containing_unit_struct() {
         ],
     );
 }
+
+#[test]
+fn with_skipped_conflict() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(tag = "t")]
+    enum Data {
+        A,
+        #[serde(skip)]
+        #[allow(dead_code)]
+        B {
+            t: String,
+        },
+        C {
+            #[serde(default, skip)]
+            t: String,
+        },
+    }
+
+    let data = Data::C { t: String::new() };
+
+    assert_tokens(
+        &data,
+        &[
+            Token::Struct {
+                name: "Data",
+                len: 1,
+            },
+            Token::Str("t"),
+            Token::Str("C"),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
+fn containing_flatten() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(tag = "t")]
+    enum Data {
+        A {
+            a: i32,
+            #[serde(flatten)]
+            flat: Flat,
+        },
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct Flat {
+        b: i32,
+    }
+
+    let data = Data::A {
+        a: 0,
+        flat: Flat { b: 0 },
+    };
+
+    assert_tokens(
+        &data,
+        &[
+            Token::Map { len: None },
+            Token::Str("t"),
+            Token::Str("A"),
+            Token::Str("a"),
+            Token::I32(0),
+            Token::Str("b"),
+            Token::I32(0),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn newtype_variant_containing_unit() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(tag = "t")]
+    enum Data {
+        A(()),
+    }
+
+    assert_tokens(
+        &Data::A(()),
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("t"),
+            Token::Str("A"),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn unit_variant_with_unknown_fields() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    #[serde(tag = "t")]
+    enum Data {
+        A,
+    }
+
+    let data = Data::A;
+
+    assert_de_tokens(
+        &data,
+        &[
+            Token::Map { len: None },
+            Token::Str("t"),
+            Token::Str("A"),
+            Token::Str("b"),
+            Token::I32(0),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn expecting_message() {
+    #[derive(Deserialize)]
+    #[serde(tag = "tag")]
+    #[serde(expecting = "something strange...")]
+    enum Enum {
+        InternallyTagged,
+    }
+
+    assert_de_tokens_error::<Enum>(
+        &[Token::Str("InternallyTagged")],
+        r#"invalid type: string "InternallyTagged", expected something strange..."#,
+    );
+
+    // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
+    assert_de_tokens_error::<Enum>(
+        &[Token::Map { len: None }, Token::Str("tag"), Token::Unit],
+        "invalid type: unit value, expected variant identifier",
+    );
+}
