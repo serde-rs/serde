@@ -1924,6 +1924,62 @@ fn test_rename_all() {
 }
 
 #[test]
+fn test_rename_all_fields() {
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(rename_all_fields = "kebab-case")]
+    enum E {
+        V1,
+        V2(bool),
+        V3 {
+            a_field: bool,
+            another_field: bool,
+            #[serde(rename = "last-field")]
+            yet_another_field: bool,
+        },
+        #[serde(rename_all = "snake_case")]
+        V4 {
+            a_field: bool,
+        },
+    }
+
+    assert_tokens(
+        &E::V3 {
+            a_field: true,
+            another_field: true,
+            yet_another_field: true,
+        },
+        &[
+            Token::StructVariant {
+                name: "E",
+                variant: "V3",
+                len: 3,
+            },
+            Token::Str("a-field"),
+            Token::Bool(true),
+            Token::Str("another-field"),
+            Token::Bool(true),
+            Token::Str("last-field"),
+            Token::Bool(true),
+            Token::StructVariantEnd,
+        ],
+    );
+
+    assert_tokens(
+        &E::V4 { a_field: true },
+        &[
+            Token::StructVariant {
+                name: "E",
+                variant: "V4",
+                len: 1,
+            },
+            Token::Str("a_field"),
+            Token::Bool(true),
+            Token::StructVariantEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_untagged_newtype_variant_containing_unit_struct_not_map() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     struct Unit;

@@ -1,5 +1,4 @@
 #![doc(html_root_url = "https://docs.rs/serde_derive_internals/0.28.0")]
-#![allow(unknown_lints, bare_trait_objects)]
 // Ignored clippy lints
 #![allow(
     clippy::cognitive_complexity,
@@ -30,6 +29,7 @@
     clippy::missing_errors_doc,
     clippy::module_name_repetitions,
     clippy::must_use_candidate,
+    clippy::return_self_not_must_use,
     clippy::similar_names,
     clippy::single_match_else,
     clippy::struct_excessive_bools,

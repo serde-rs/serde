@@ -86,9 +86,12 @@ impl<'a> Container<'a> {
                         if field.attrs.flatten() {
                             has_flatten = true;
                         }
-                        field
-                            .attrs
-                            .rename_by_rules(variant.attrs.rename_all_rules());
+                        field.attrs.rename_by_rules(
+                            variant
+                                .attrs
+                                .rename_all_rules()
+                                .or(attrs.rename_all_fields_rules()),
+                        );
                     }
                 }
             }
@@ -119,7 +122,7 @@ impl<'a> Container<'a> {
 }
 
 impl<'a> Data<'a> {
-    pub fn all_fields(&'a self) -> Box<Iterator<Item = &'a Field<'a>> + 'a> {
+    pub fn all_fields(&'a self) -> Box<dyn Iterator<Item = &'a Field<'a>> + 'a> {
         match self {
             Data::Enum(variants) => {
                 Box::new(variants.iter().flat_map(|variant| variant.fields.iter()))

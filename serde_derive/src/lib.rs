@@ -13,8 +13,7 @@
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
-#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.175")]
-#![allow(unknown_lints, bare_trait_objects)]
+#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.177")]
 // Ignored clippy lints
 #![allow(
     // clippy false positive: https://github.com/rust-lang/rust-clippy/issues/7054
@@ -91,7 +90,6 @@ mod dummy;
 mod pretend;
 mod ser;
 mod this;
-mod try;
 
 #[cfg(precompiled)]
 macro_rules! parse_macro_input {

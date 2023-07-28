@@ -1,5 +1,5 @@
 error: #[serde(default = "...")] can only be used on structs with named fields
- --> tests/ui/default-attribute/nameless_struct_fields_path.rs:5:9
+ --> tests/ui/default-attribute/nameless_struct_fields_path.rs:4:9
   |
-5 | struct T(u8, u8);
-  |         ^^^^^^^^
+4 | #[serde(default = "default_t")]
+  |         ^^^^^^^^^^^^^^^^^^^^^
