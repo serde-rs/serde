@@ -116,7 +116,7 @@ mod impossible;
 pub use self::impossible::Impossible;
 
 #[cfg(all(feature = "unstable", not(feature = "std")))]
-#[doc(inline)]
+#[doc(no_inline)]
 pub use core::error::Error as StdError;
 #[cfg(feature = "std")]
 #[doc(no_inline)]
