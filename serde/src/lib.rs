@@ -149,6 +149,8 @@
         must_use_candidate,
     )
 )]
+// Restrictions
+#![cfg_attr(feature = "cargo-clippy", deny(question_mark_used))]
 // Rustc lints.
 #![deny(missing_docs, unused_imports)]
 
