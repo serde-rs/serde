@@ -16,12 +16,6 @@ fn main() {
     let target = env::var("TARGET").unwrap();
     let emscripten = target == "asmjs-unknown-emscripten" || target == "wasm32-unknown-emscripten";
 
-    // PathBuf::into_boxed_path stabilized in Rust 1.20:
-    // https://doc.rust-lang.org/std/path/struct.PathBuf.html#method.into_boxed_path
-    if minor < 20 {
-        println!("cargo:rustc-cfg=no_de_boxed_path");
-    }
-
     // From<Box<T>> for Rc<T> / Arc<T> stabilized in Rust 1.21:
     // https://doc.rust-lang.org/std/rc/struct.Rc.html#impl-From<Box<T>>
     // https://doc.rust-lang.org/std/sync/struct.Arc.html#impl-From<Box<T>>

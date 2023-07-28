@@ -1710,7 +1710,7 @@ impl<'de> Deserialize<'de> for PathBuf {
     }
 }
 
-#[cfg(all(feature = "std", not(no_de_boxed_path)))]
+#[cfg(feature = "std")]
 forwarded_impl!((), Box<Path>, PathBuf::into_boxed_path);
 
 ////////////////////////////////////////////////////////////////////////////////
