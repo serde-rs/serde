@@ -62,6 +62,7 @@ jobs:
       - run: cd serde && cargo build --no-default-features
       - run: cd serde && cargo build --no-default-features --features alloc
       - run: cd serde && cargo build --no-default-features --features rc,alloc
+      - run: cd serde && cargo build --no-default-features --features unstable
       - run: cd serde && cargo test --features derive,rc,unstable
       - run: cd test_suite/no_std && cargo build
         if: matrix.os != 'windows'
