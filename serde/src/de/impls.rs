@@ -1791,30 +1791,6 @@ forwarded_impl!((T), Box<[T]>, Vec::into_boxed_slice);
 #[cfg(any(feature = "std", feature = "alloc"))]
 forwarded_impl!((), Box<str>, String::into_boxed_str);
 
-#[cfg(all(no_de_rc_dst, feature = "rc", any(feature = "std", feature = "alloc")))]
-forwarded_impl! {
-    /// This impl requires the [`"rc"`] Cargo feature of Serde.
-    ///
-    /// Deserializing a data structure containing `Arc` will not attempt to
-    /// deduplicate `Arc` references to the same data. Every deserialized `Arc`
-    /// will end up with a strong count of 1.
-    ///
-    /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
-    (T), Arc<T>, Arc::new
-}
-
-#[cfg(all(no_de_rc_dst, feature = "rc", any(feature = "std", feature = "alloc")))]
-forwarded_impl! {
-    /// This impl requires the [`"rc"`] Cargo feature of Serde.
-    ///
-    /// Deserializing a data structure containing `Rc` will not attempt to
-    /// deduplicate `Rc` references to the same data. Every deserialized `Rc`
-    /// will end up with a strong count of 1.
-    ///
-    /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
-    (T), Rc<T>, Rc::new
-}
-
 #[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de, 'a, T: ?Sized> Deserialize<'de> for Cow<'a, T>
 where
@@ -1870,11 +1846,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(all(
-    not(no_de_rc_dst),
-    feature = "rc",
-    any(feature = "std", feature = "alloc")
-))]
+#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
 macro_rules! box_forwarded_impl {
     (
         $(#[doc = $doc:tt])*
@@ -1895,11 +1867,7 @@ macro_rules! box_forwarded_impl {
     };
 }
 
-#[cfg(all(
-    not(no_de_rc_dst),
-    feature = "rc",
-    any(feature = "std", feature = "alloc")
-))]
+#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
 box_forwarded_impl! {
     /// This impl requires the [`"rc"`] Cargo feature of Serde.
     ///
@@ -1911,11 +1879,7 @@ box_forwarded_impl! {
     Rc
 }
 
-#[cfg(all(
-    not(no_de_rc_dst),
-    feature = "rc",
-    any(feature = "std", feature = "alloc")
-))]
+#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
 box_forwarded_impl! {
     /// This impl requires the [`"rc"`] Cargo feature of Serde.
     ///
