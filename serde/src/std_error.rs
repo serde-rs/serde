@@ -1,4 +1,13 @@
+#[cfg(not(any(feature = "std", feature = "unstable")))]
 use lib::{Debug, Display};
+
+#[cfg(all(feature = "unstable", not(feature = "std")))]
+#[doc(no_inline)]
+pub use core::error::Error;
+
+#[cfg(feature = "std")]
+#[doc(no_inline)]
+pub use std::error::Error;
 
 /// Either a re-export of std::error::Error or a new identical trait, depending
 /// on whether Serde's "std" feature is enabled.
@@ -40,6 +49,7 @@ use lib::{Debug, Display};
 /// ```edition2021
 /// impl serde::ser::StdError for MySerError {}
 /// ```
+#[cfg(not(any(feature = "std", feature = "unstable")))]
 pub trait Error: Debug + Display {
     /// The underlying cause of this error, if any.
     fn source(&self) -> Option<&(Error + 'static)> {

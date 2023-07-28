@@ -126,10 +126,6 @@ mod utf8;
 
 pub use self::ignored_any::IgnoredAny;
 
-#[cfg(feature = "std")]
-#[doc(no_inline)]
-pub use std::error::Error as StdError;
-#[cfg(not(feature = "std"))]
 #[doc(no_inline)]
 pub use std_error::Error as StdError;
 

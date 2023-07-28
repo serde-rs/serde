@@ -328,7 +328,6 @@ use self::__private as private;
 #[path = "de/seed.rs"]
 mod seed;
 
-#[cfg(not(any(feature = "std", feature = "unstable")))]
 mod std_error;
 
 // Re-export #[derive(Serialize, Deserialize)].
