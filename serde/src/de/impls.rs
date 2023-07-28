@@ -747,10 +747,7 @@ macro_rules! forwarded_impl {
     }
 }
 
-#[cfg(all(
-    any(feature = "std", all(not(no_core_cstr), feature = "alloc")),
-    not(no_de_boxed_c_str)
-))]
+#[cfg(any(feature = "std", all(not(no_core_cstr), feature = "alloc")))]
 forwarded_impl!((), Box<CStr>, CString::into_boxed_c_str);
 
 forwarded_impl!((T), Reverse<T>, Reverse);

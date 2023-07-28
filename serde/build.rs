@@ -16,11 +16,9 @@ fn main() {
     let target = env::var("TARGET").unwrap();
     let emscripten = target == "asmjs-unknown-emscripten" || target == "wasm32-unknown-emscripten";
 
-    // CString::into_boxed_c_str and PathBuf::into_boxed_path stabilized in Rust 1.20:
-    // https://doc.rust-lang.org/std/ffi/struct.CString.html#method.into_boxed_c_str
+    // PathBuf::into_boxed_path stabilized in Rust 1.20:
     // https://doc.rust-lang.org/std/path/struct.PathBuf.html#method.into_boxed_path
     if minor < 20 {
-        println!("cargo:rustc-cfg=no_de_boxed_c_str");
         println!("cargo:rustc-cfg=no_de_boxed_path");
     }
 
