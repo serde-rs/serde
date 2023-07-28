@@ -963,7 +963,6 @@ where
     }
 }
 
-#[cfg(not(no_core_reverse))]
 impl<T> Serialize for Reverse<T>
 where
     T: Serialize,

@@ -177,6 +177,7 @@ mod lib {
 
     pub use self::core::cell::{Cell, RefCell};
     pub use self::core::clone::{self, Clone};
+    pub use self::core::cmp::Reverse;
     pub use self::core::convert::{self, From, Into};
     pub use self::core::default::{self, Default};
     pub use self::core::fmt::{self, Debug, Display};
@@ -251,9 +252,6 @@ mod lib {
 
     #[cfg(all(feature = "std", no_ops_bound))]
     pub use std::collections::Bound;
-
-    #[cfg(not(no_core_reverse))]
-    pub use self::core::cmp::Reverse;
 
     #[cfg(not(no_ops_bound))]
     pub use self::core::ops::Bound;

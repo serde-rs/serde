@@ -753,7 +753,6 @@ macro_rules! forwarded_impl {
 ))]
 forwarded_impl!((), Box<CStr>, CString::into_boxed_c_str);
 
-#[cfg(not(no_core_reverse))]
 forwarded_impl!((T), Reverse<T>, Reverse);
 
 ////////////////////////////////////////////////////////////////////////////////

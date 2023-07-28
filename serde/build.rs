@@ -16,12 +16,6 @@ fn main() {
     let target = env::var("TARGET").unwrap();
     let emscripten = target == "asmjs-unknown-emscripten" || target == "wasm32-unknown-emscripten";
 
-    // core::cmp::Reverse stabilized in Rust 1.19:
-    // https://doc.rust-lang.org/stable/core/cmp/struct.Reverse.html
-    if minor < 19 {
-        println!("cargo:rustc-cfg=no_core_reverse");
-    }
-
     // CString::into_boxed_c_str and PathBuf::into_boxed_path stabilized in Rust 1.20:
     // https://doc.rust-lang.org/std/ffi/struct.CString.html#method.into_boxed_c_str
     // https://doc.rust-lang.org/std/path/struct.PathBuf.html#method.into_boxed_path
