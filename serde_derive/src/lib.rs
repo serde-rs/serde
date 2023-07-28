@@ -90,7 +90,6 @@ mod dummy;
 mod pretend;
 mod ser;
 mod this;
-mod try;
 
 #[cfg(precompiled)]
 macro_rules! parse_macro_input {
