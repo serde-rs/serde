@@ -56,7 +56,7 @@ impl RenameRule {
     }
 
     /// Apply a renaming rule to an enum variant, returning the version expected in the source.
-    pub fn apply_to_variant(self, variant: &str) -> String {
+    fn apply_to_variant_str(self, variant: &str) -> String {
         match self {
             None | PascalCase => variant.to_owned(),
             LowerCase => variant.to_ascii_lowercase(),
