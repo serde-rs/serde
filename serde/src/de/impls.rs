@@ -2709,7 +2709,7 @@ mod range_to {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(not(no_ops_bound), all(feature = "std", not(no_collections_bound))))]
+#[cfg(any(not(no_ops_bound), feature = "std"))]
 impl<'de, T> Deserialize<'de> for Bound<T>
 where
     T: Deserialize<'de>,

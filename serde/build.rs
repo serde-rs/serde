@@ -21,9 +21,6 @@ fn main() {
     // https://doc.rust-lang.org/core/ops/enum.Bound.html
     if minor < 26 {
         println!("cargo:rustc-cfg=no_ops_bound");
-        if minor < 17 {
-            println!("cargo:rustc-cfg=no_collections_bound");
-        }
     }
 
     // core::cmp::Reverse stabilized in Rust 1.19:

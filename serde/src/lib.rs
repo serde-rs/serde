@@ -249,7 +249,7 @@ mod lib {
     #[cfg(feature = "std")]
     pub use std::time::{SystemTime, UNIX_EPOCH};
 
-    #[cfg(all(feature = "std", not(no_collections_bound), no_ops_bound))]
+    #[cfg(all(feature = "std", no_ops_bound))]
     pub use std::collections::Bound;
 
     #[cfg(not(no_core_reverse))]
