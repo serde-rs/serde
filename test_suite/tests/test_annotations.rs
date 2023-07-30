@@ -2867,9 +2867,9 @@ mod flatten {
                 );
             }
 
-            /// Reaches crate::private::de::content::VariantDeserializer::tuple_variant
-            /// Content::Seq case
-            /// via FlatMapDeserializer::deserialize_enum
+            // Reaches crate::private::de::content::VariantDeserializer::tuple_variant
+            // Content::Seq case
+            // via FlatMapDeserializer::deserialize_enum
             #[test]
             fn tuple() {
                 assert_tokens(
@@ -2891,9 +2891,9 @@ mod flatten {
                 );
             }
 
-            /// Reaches crate::private::de::content::VariantDeserializer::struct_variant
-            /// Content::Seq case
-            /// via FlatMapDeserializer::deserialize_enum
+            // Reaches crate::private::de::content::VariantDeserializer::struct_variant
+            // Content::Seq case
+            // via FlatMapDeserializer::deserialize_enum
             #[test]
             fn struct_from_seq() {
                 assert_de_tokens(
@@ -2918,9 +2918,9 @@ mod flatten {
                 );
             }
 
-            /// Reaches crate::private::de::content::VariantDeserializer::struct_variant
-            /// Content::Map case
-            /// via FlatMapDeserializer::deserialize_enum
+            // Reaches crate::private::de::content::VariantDeserializer::struct_variant
+            // Content::Map case
+            // via FlatMapDeserializer::deserialize_enum
             #[test]
             fn struct_from_map() {
                 assert_tokens(
