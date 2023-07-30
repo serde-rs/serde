@@ -1429,6 +1429,9 @@ fn test_enum_in_internally_tagged_enum() {
         ],
     );
 
+    // Reaches crate::private::de::content::VariantDeserializer::tuple_variant
+    // Content::Seq case
+    // via ContentDeserializer::deserialize_enum
     assert_tokens(
         &Outer::Inner(Inner::Tuple(1, 1)),
         &[
@@ -1447,6 +1450,9 @@ fn test_enum_in_internally_tagged_enum() {
         ],
     );
 
+    // Reaches crate::private::de::content::VariantDeserializer::struct_variant
+    // Content::Map case
+    // via ContentDeserializer::deserialize_enum
     assert_tokens(
         &Outer::Inner(Inner::Struct { f: 1 }),
         &[
@@ -1461,6 +1467,23 @@ fn test_enum_in_internally_tagged_enum() {
             Token::Str("f"),
             Token::U8(1),
             Token::StructEnd,
+            Token::MapEnd,
+        ],
+    );
+
+    // Reaches crate::private::de::content::VariantDeserializer::struct_variant
+    // Content::Seq case
+    // via ContentDeserializer::deserialize_enum
+    assert_de_tokens(
+        &Outer::Inner(Inner::Struct { f: 1 }),
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("type"),
+            Token::Str("Inner"),
+            Token::Str("Struct"),
+            Token::Seq { len: Some(1) },
+            Token::U8(1), // f
+            Token::SeqEnd,
             Token::MapEnd,
         ],
     );
