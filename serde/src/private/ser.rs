@@ -1275,7 +1275,7 @@ where
 {
     fn new(map: &'a mut M) -> Self {
         FlatMapSerializeTupleVariantAsMapValue {
-            map: map,
+            map,
             fields: Vec::new(),
         }
     }
