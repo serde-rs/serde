@@ -1,6 +1,6 @@
-use lib::*;
+use crate::lib::*;
 
-use de::{
+use crate::de::{
     Deserialize, Deserializer, EnumAccess, Error, MapAccess, SeqAccess, VariantAccess, Visitor,
 };
 
@@ -197,7 +197,7 @@ impl<'de> Visitor<'de> for IgnoredAny {
     where
         A: SeqAccess<'de>,
     {
-        while let Some(IgnoredAny) = try!(seq.next_element()) {
+        while let Some(IgnoredAny) = tri!(seq.next_element()) {
             // Gobble
         }
         Ok(IgnoredAny)
@@ -208,7 +208,7 @@ impl<'de> Visitor<'de> for IgnoredAny {
     where
         A: MapAccess<'de>,
     {
-        while let Some((IgnoredAny, IgnoredAny)) = try!(map.next_entry()) {
+        while let Some((IgnoredAny, IgnoredAny)) = tri!(map.next_entry()) {
             // Gobble
         }
         Ok(IgnoredAny)
@@ -227,7 +227,7 @@ impl<'de> Visitor<'de> for IgnoredAny {
     where
         A: EnumAccess<'de>,
     {
-        try!(data.variant::<IgnoredAny>()).1.newtype_variant()
+        tri!(data.variant::<IgnoredAny>()).1.newtype_variant()
     }
 }
 

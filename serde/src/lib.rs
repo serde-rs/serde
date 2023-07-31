@@ -93,7 +93,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Serde types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/serde/1.0.177")]
+#![doc(html_root_url = "https://docs.rs/serde/1.0.179")]
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
 // Unstable functionality only if the user asks for it. For tracking and
@@ -177,14 +177,16 @@ mod lib {
 
     pub use self::core::cell::{Cell, RefCell};
     pub use self::core::clone::{self, Clone};
+    pub use self::core::cmp::Reverse;
     pub use self::core::convert::{self, From, Into};
     pub use self::core::default::{self, Default};
     pub use self::core::fmt::{self, Debug, Display};
     pub use self::core::marker::{self, PhantomData};
     pub use self::core::num::Wrapping;
-    pub use self::core::ops::{Range, RangeFrom, RangeTo};
+    pub use self::core::ops::{Bound, Range, RangeFrom, RangeInclusive, RangeTo};
     pub use self::core::option::{self, Option};
     pub use self::core::result::{self, Result};
+    pub use self::core::time::Duration;
 
     #[cfg(all(feature = "alloc", not(feature = "std")))]
     pub use alloc::borrow::{Cow, ToOwned};
@@ -222,7 +224,7 @@ mod lib {
     pub use std::collections::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
 
     #[cfg(all(not(no_core_cstr), not(feature = "std")))]
-    pub use core::ffi::CStr;
+    pub use self::core::ffi::CStr;
     #[cfg(feature = "std")]
     pub use std::ffi::CStr;
 
@@ -249,18 +251,6 @@ mod lib {
     #[cfg(feature = "std")]
     pub use std::time::{SystemTime, UNIX_EPOCH};
 
-    #[cfg(all(feature = "std", not(no_collections_bound), no_ops_bound))]
-    pub use std::collections::Bound;
-
-    #[cfg(not(no_core_reverse))]
-    pub use self::core::cmp::Reverse;
-
-    #[cfg(not(no_ops_bound))]
-    pub use self::core::ops::Bound;
-
-    #[cfg(not(no_range_inclusive))]
-    pub use self::core::ops::RangeInclusive;
-
     #[cfg(all(feature = "std", no_target_has_atomic, not(no_std_atomic)))]
     pub use std::sync::atomic::{
         AtomicBool, AtomicI16, AtomicI32, AtomicI8, AtomicIsize, AtomicU16, AtomicU32, AtomicU8,
@@ -281,16 +271,13 @@ mod lib {
     pub use std::sync::atomic::{AtomicI64, AtomicU64};
     #[cfg(all(feature = "std", not(no_target_has_atomic), target_has_atomic = "ptr"))]
     pub use std::sync::atomic::{AtomicIsize, AtomicUsize};
-
-    #[cfg(any(feature = "std", not(no_core_duration)))]
-    pub use self::core::time::Duration;
 }
 
 // None of this crate's error handling needs the `From::from` error conversion
 // performed implicitly by the `?` operator or the standard library's `try!`
 // macro. This simplified macro gives a 5.5% improvement in compile time
 // compared to standard `try!`, and 9% improvement compared to `?`.
-macro_rules! try {
+macro_rules! tri {
     ($expr:expr) => {
         match $expr {
             Ok(val) => val,
@@ -311,19 +298,14 @@ pub mod de;
 pub mod ser;
 
 #[doc(inline)]
-pub use de::{Deserialize, Deserializer};
+pub use crate::de::{Deserialize, Deserializer};
 #[doc(inline)]
-pub use ser::{Serialize, Serializer};
+pub use crate::ser::{Serialize, Serializer};
 
 // Used by generated code and doc tests. Not public API.
 #[doc(hidden)]
 #[path = "private/mod.rs"]
 pub mod __private;
-
-#[allow(unused_imports)]
-use self::__private as export;
-#[allow(unused_imports)]
-use self::__private as private;
 
 #[path = "de/seed.rs"]
 mod seed;

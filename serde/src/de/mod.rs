@@ -112,7 +112,7 @@
 //! [derive section of the manual]: https://serde.rs/derive.html
 //! [data formats]: https://serde.rs/#data-formats
 
-use lib::*;
+use crate::lib::*;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -126,12 +126,15 @@ mod utf8;
 
 pub use self::ignored_any::IgnoredAny;
 
+#[cfg(not(any(feature = "std", feature = "unstable")))]
+#[doc(no_inline)]
+pub use crate::std_error::Error as StdError;
+#[cfg(all(feature = "unstable", not(feature = "std")))]
+#[doc(no_inline)]
+pub use core::error::Error as StdError;
 #[cfg(feature = "std")]
 #[doc(no_inline)]
 pub use std::error::Error as StdError;
-#[cfg(not(feature = "std"))]
-#[doc(no_inline)]
-pub use std_error::Error as StdError;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -566,7 +569,7 @@ pub trait Deserialize<'de>: Sized {
         D: Deserializer<'de>,
     {
         // Default implementation just delegates to `deserialize` impl.
-        *place = try!(Deserialize::deserialize(deserializer));
+        *place = tri!(Deserialize::deserialize(deserializer));
         Ok(())
     }
 }
@@ -1226,11 +1229,11 @@ pub trait Deserializer<'de>: Sized {
     #[doc(hidden)]
     fn __deserialize_content<V>(
         self,
-        _: ::actually_private::T,
+        _: crate::actually_private::T,
         visitor: V,
-    ) -> Result<::private::de::Content<'de>, Self::Error>
+    ) -> Result<crate::__private::de::Content<'de>, Self::Error>
     where
-        V: Visitor<'de, Value = ::private::de::Content<'de>>,
+        V: Visitor<'de, Value = crate::__private::de::Content<'de>>,
     {
         self.deserialize_any(visitor)
     }
@@ -1831,9 +1834,9 @@ pub trait MapAccess<'de> {
         K: DeserializeSeed<'de>,
         V: DeserializeSeed<'de>,
     {
-        match try!(self.next_key_seed(kseed)) {
+        match tri!(self.next_key_seed(kseed)) {
             Some(key) => {
-                let value = try!(self.next_value_seed(vseed));
+                let value = tri!(self.next_value_seed(vseed));
                 Ok(Some((key, value)))
             }
             None => Ok(None),
@@ -2281,12 +2284,12 @@ impl Display for OneOf {
             1 => write!(formatter, "`{}`", self.names[0]),
             2 => write!(formatter, "`{}` or `{}`", self.names[0], self.names[1]),
             _ => {
-                try!(write!(formatter, "one of "));
+                tri!(write!(formatter, "one of "));
                 for (i, alt) in self.names.iter().enumerate() {
                     if i > 0 {
-                        try!(write!(formatter, ", "));
+                        tri!(write!(formatter, ", "));
                     }
-                    try!(write!(formatter, "`{}`", alt));
+                    tri!(write!(formatter, "`{}`", alt));
                 }
                 Ok(())
             }

@@ -1,4 +1,4 @@
-use lib::*;
+use crate::lib::*;
 
 const TAG_CONT: u8 = 0b1000_0000;
 const TAG_TWO_B: u8 = 0b1100_0000;

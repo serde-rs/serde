@@ -1,6 +1,6 @@
-use lib::*;
+use crate::lib::*;
 
-use ser::{Error, Serialize, SerializeTuple, Serializer};
+use crate::ser::{Error, Serialize, SerializeTuple, Serializer};
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -133,7 +133,7 @@ impl<T> Serialize for [T; 0] {
     where
         S: Serializer,
     {
-        try!(serializer.serialize_tuple(0)).end()
+        tri!(serializer.serialize_tuple(0)).end()
     }
 }
 
@@ -149,9 +149,9 @@ macro_rules! array_impls {
                 where
                     S: Serializer,
                 {
-                    let mut seq = try!(serializer.serialize_tuple($len));
+                    let mut seq = tri!(serializer.serialize_tuple($len));
                     for e in self {
-                        try!(seq.serialize_element(e));
+                        tri!(seq.serialize_element(e));
                     }
                     seq.end()
                 }
@@ -248,9 +248,9 @@ where
         S: Serializer,
     {
         use super::SerializeStruct;
-        let mut state = try!(serializer.serialize_struct("Range", 2));
-        try!(state.serialize_field("start", &self.start));
-        try!(state.serialize_field("end", &self.end));
+        let mut state = tri!(serializer.serialize_struct("Range", 2));
+        tri!(state.serialize_field("start", &self.start));
+        tri!(state.serialize_field("end", &self.end));
         state.end()
     }
 }
@@ -266,15 +266,14 @@ where
         S: Serializer,
     {
         use super::SerializeStruct;
-        let mut state = try!(serializer.serialize_struct("RangeFrom", 1));
-        try!(state.serialize_field("start", &self.start));
+        let mut state = tri!(serializer.serialize_struct("RangeFrom", 1));
+        tri!(state.serialize_field("start", &self.start));
         state.end()
     }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(not(no_range_inclusive))]
 impl<Idx> Serialize for RangeInclusive<Idx>
 where
     Idx: Serialize,
@@ -284,9 +283,9 @@ where
         S: Serializer,
     {
         use super::SerializeStruct;
-        let mut state = try!(serializer.serialize_struct("RangeInclusive", 2));
-        try!(state.serialize_field("start", &self.start()));
-        try!(state.serialize_field("end", &self.end()));
+        let mut state = tri!(serializer.serialize_struct("RangeInclusive", 2));
+        tri!(state.serialize_field("start", &self.start()));
+        tri!(state.serialize_field("end", &self.end()));
         state.end()
     }
 }
@@ -302,15 +301,14 @@ where
         S: Serializer,
     {
         use super::SerializeStruct;
-        let mut state = try!(serializer.serialize_struct("RangeTo", 1));
-        try!(state.serialize_field("end", &self.end));
+        let mut state = tri!(serializer.serialize_struct("RangeTo", 1));
+        tri!(state.serialize_field("end", &self.end));
         state.end()
     }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(not(no_ops_bound), all(feature = "std", not(no_collections_bound))))]
 impl<T> Serialize for Bound<T>
 where
     T: Serialize,
@@ -367,9 +365,9 @@ macro_rules! tuple_impls {
                 where
                     S: Serializer,
                 {
-                    let mut tuple = try!(serializer.serialize_tuple($len));
+                    let mut tuple = tri!(serializer.serialize_tuple($len));
                     $(
-                        try!(tuple.serialize_element(&self.$n));
+                        tri!(tuple.serialize_element(&self.$n));
                     )+
                     tuple.end()
                 }
@@ -538,7 +536,6 @@ where
 macro_rules! nonzero_integers {
     ($($T:ident,)+) => {
         $(
-            #[cfg(not(no_num_nonzero))]
             impl Serialize for num::$T {
                 fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
                 where
@@ -662,16 +659,15 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(feature = "std", not(no_core_duration)))]
 impl Serialize for Duration {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         use super::SerializeStruct;
-        let mut state = try!(serializer.serialize_struct("Duration", 2));
-        try!(state.serialize_field("secs", &self.as_secs()));
-        try!(state.serialize_field("nanos", &self.subsec_nanos()));
+        let mut state = tri!(serializer.serialize_struct("Duration", 2));
+        tri!(state.serialize_field("secs", &self.as_secs()));
+        tri!(state.serialize_field("nanos", &self.subsec_nanos()));
         state.end()
     }
 }
@@ -689,9 +685,9 @@ impl Serialize for SystemTime {
             Ok(duration_since_epoch) => duration_since_epoch,
             Err(_) => return Err(S::Error::custom("SystemTime must be later than UNIX_EPOCH")),
         };
-        let mut state = try!(serializer.serialize_struct("SystemTime", 2));
-        try!(state.serialize_field("secs_since_epoch", &duration_since_epoch.as_secs()));
-        try!(state.serialize_field("nanos_since_epoch", &duration_since_epoch.subsec_nanos()));
+        let mut state = tri!(serializer.serialize_struct("SystemTime", 2));
+        tri!(state.serialize_field("secs_since_epoch", &duration_since_epoch.as_secs()));
+        tri!(state.serialize_field("nanos_since_epoch", &duration_since_epoch.subsec_nanos()));
         state.end()
     }
 }
@@ -963,7 +959,6 @@ where
     }
 }
 
-#[cfg(not(no_core_reverse))]
 impl<T> Serialize for Reverse<T>
 where
     T: Serialize,

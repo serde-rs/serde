@@ -1,6 +1,6 @@
 [package]
 name = "serde_derive"
-version = "1.0.177"
+version = "1.0.179"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 categories = ["no-std", "no-std::no-alloc"]
 description = "Implementation of #[derive(Serialize, Deserialize)]"
@@ -24,7 +24,7 @@ proc-macro = true
 [target.'cfg(not(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")))'.dependencies]
 proc-macro2 = "1"
 quote = "1"
-syn = "2.0.25"
+syn = "2.0.28"
 
 [dev-dependencies]
 serde = { version = "1", path = "../../serde" }
