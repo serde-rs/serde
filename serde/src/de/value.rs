@@ -21,12 +21,12 @@
 //! }
 //! ```
 
-use lib::*;
+use crate::lib::*;
 
 use self::private::{First, Second};
-use __private::size_hint;
-use de::{self, Deserializer, Expected, IntoDeserializer, SeqAccess, Visitor};
-use ser;
+use crate::__private::size_hint;
+use crate::de::{self, Deserializer, Expected, IntoDeserializer, SeqAccess, Visitor};
+use crate::ser;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1546,9 +1546,11 @@ where
 ////////////////////////////////////////////////////////////////////////////////
 
 mod private {
-    use lib::*;
+    use crate::lib::*;
 
-    use de::{self, DeserializeSeed, Deserializer, MapAccess, Unexpected, VariantAccess, Visitor};
+    use crate::de::{
+        self, DeserializeSeed, Deserializer, MapAccess, Unexpected, VariantAccess, Visitor,
+    };
 
     pub struct UnitOnly<E> {
         marker: PhantomData<E>,

@@ -107,7 +107,7 @@
 //! [derive section of the manual]: https://serde.rs/derive.html
 //! [data formats]: https://serde.rs/#data-formats
 
-use lib::*;
+use crate::lib::*;
 
 mod fmt;
 mod impls;
@@ -115,15 +115,15 @@ mod impossible;
 
 pub use self::impossible::Impossible;
 
+#[cfg(not(any(feature = "std", feature = "unstable")))]
+#[doc(no_inline)]
+pub use crate::std_error::Error as StdError;
 #[cfg(all(feature = "unstable", not(feature = "std")))]
 #[doc(no_inline)]
 pub use core::error::Error as StdError;
 #[cfg(feature = "std")]
 #[doc(no_inline)]
 pub use std::error::Error as StdError;
-#[cfg(not(any(feature = "std", feature = "unstable")))]
-#[doc(no_inline)]
-pub use std_error::Error as StdError;
 
 ////////////////////////////////////////////////////////////////////////////////
 

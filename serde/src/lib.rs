@@ -224,7 +224,7 @@ mod lib {
     pub use std::collections::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
 
     #[cfg(all(not(no_core_cstr), not(feature = "std")))]
-    pub use core::ffi::CStr;
+    pub use self::core::ffi::CStr;
     #[cfg(feature = "std")]
     pub use std::ffi::CStr;
 
@@ -298,9 +298,9 @@ pub mod de;
 pub mod ser;
 
 #[doc(inline)]
-pub use de::{Deserialize, Deserializer};
+pub use crate::de::{Deserialize, Deserializer};
 #[doc(inline)]
-pub use ser::{Serialize, Serializer};
+pub use crate::ser::{Serialize, Serializer};
 
 // Used by generated code and doc tests. Not public API.
 #[doc(hidden)]

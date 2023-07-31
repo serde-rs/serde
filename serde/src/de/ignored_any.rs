@@ -1,6 +1,6 @@
-use lib::*;
+use crate::lib::*;
 
-use de::{
+use crate::de::{
     Deserialize, Deserializer, EnumAccess, Error, MapAccess, SeqAccess, VariantAccess, Visitor,
 };
 
