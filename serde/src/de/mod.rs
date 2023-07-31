@@ -1231,9 +1231,9 @@ pub trait Deserializer<'de>: Sized {
         self,
         _: crate::actually_private::T,
         visitor: V,
-    ) -> Result<crate::private::de::Content<'de>, Self::Error>
+    ) -> Result<crate::__private::de::Content<'de>, Self::Error>
     where
-        V: Visitor<'de, Value = crate::private::de::Content<'de>>,
+        V: Visitor<'de, Value = crate::__private::de::Content<'de>>,
     {
         self.deserialize_any(visitor)
     }
