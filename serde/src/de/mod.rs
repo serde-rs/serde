@@ -122,6 +122,7 @@ pub mod value;
 mod format;
 mod ignored_any;
 mod impls;
+pub(crate) mod size_hint;
 mod utf8;
 
 pub use self::ignored_any::IgnoredAny;

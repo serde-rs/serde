@@ -208,12 +208,11 @@ mod content {
 
     use crate::lib::*;
 
-    use crate::__private::size_hint;
     use crate::actually_private;
     use crate::de::value::{MapDeserializer, SeqDeserializer};
     use crate::de::{
-        self, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected, IgnoredAny,
-        MapAccess, SeqAccess, Unexpected, Visitor,
+        self, size_hint, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected,
+        IgnoredAny, MapAccess, SeqAccess, Unexpected, Visitor,
     };
 
     /// Used from generated code to buffer the contents of the Deserializer when
