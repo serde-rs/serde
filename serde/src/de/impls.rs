@@ -682,7 +682,7 @@ impl<'de> Visitor<'de> for CStringVisitor {
         let capacity = size_hint::cautious::<u8>(seq.size_hint());
         let mut values = Vec::<u8>::with_capacity(capacity);
 
-        while let Some(value) = try!(seq.next_element()) {
+        while let Some(value) = tri!(seq.next_element()) {
             values.push(value);
         }
 
@@ -895,7 +895,7 @@ macro_rules! seq_impl {
                     {
                         let mut values = $with_capacity;
 
-                        while let Some(value) = try!($access.next_element()) {
+                        while let Some(value) = tri!($access.next_element()) {
                             $insert(&mut values, value);
                         }
 
@@ -933,7 +933,7 @@ macro_rules! seq_impl {
                         $reserve(&mut self.0, size_hint::cautious::<T>($access.size_hint()));
 
                         // FIXME: try to overwrite old values here? (Vec, VecDeque, LinkedList)
-                        while let Some(value) = try!($access.next_element()) {
+                        while let Some(value) = tri!($access.next_element()) {
                             $insert(&mut self.0, value);
                         }
 
@@ -1033,7 +1033,7 @@ where
                 let capacity = size_hint::cautious::<T>(seq.size_hint());
                 let mut values = Vec::<T>::with_capacity(capacity);
 
-                while let Some(value) = try!(seq.next_element()) {
+                while let Some(value) = tri!(seq.next_element()) {
                     values.push(value);
                 }
 
@@ -1075,7 +1075,7 @@ where
                 for i in 0..self.0.len() {
                     let next = {
                         let next_place = InPlaceSeed(&mut self.0[i]);
-                        try!(seq.next_element_seed(next_place))
+                        tri!(seq.next_element_seed(next_place))
                     };
                     if next.is_none() {
                         self.0.truncate(i);
@@ -1083,7 +1083,7 @@ where
                     }
                 }
 
-                while let Some(value) = try!(seq.next_element()) {
+                while let Some(value) = tri!(seq.next_element()) {
                     self.0.push(value);
                 }
 
@@ -1155,7 +1155,7 @@ macro_rules! array_impls {
                     A: SeqAccess<'de>,
                 {
                     Ok([$(
-                        match try!(seq.next_element()) {
+                        match tri!(seq.next_element()) {
                             Some(val) => val,
                             None => return Err(Error::invalid_length($n, &self)),
                         }
@@ -1180,7 +1180,7 @@ macro_rules! array_impls {
                 {
                     let mut fail_idx = None;
                     for (idx, dest) in self.0[..].iter_mut().enumerate() {
-                        if try!(seq.next_element_seed(InPlaceSeed(dest))).is_none() {
+                        if tri!(seq.next_element_seed(InPlaceSeed(dest))).is_none() {
                             fail_idx = Some(idx);
                             break;
                         }
@@ -1278,7 +1278,7 @@ macro_rules! tuple_impls {
                             A: SeqAccess<'de>,
                         {
                             $(
-                                let $name = match try!(seq.next_element()) {
+                                let $name = match tri!(seq.next_element()) {
                                     Some(value) => value,
                                     None => return Err(Error::invalid_length($n, &self)),
                                 };
@@ -1312,7 +1312,7 @@ macro_rules! tuple_impls {
                             A: SeqAccess<'de>,
                         {
                             $(
-                                if try!(seq.next_element_seed(InPlaceSeed(&mut (self.0).$n))).is_none() {
+                                if tri!(seq.next_element_seed(InPlaceSeed(&mut (self.0).$n))).is_none() {
                                     return Err(Error::invalid_length($n, &self));
                                 }
                             )+
@@ -1389,7 +1389,7 @@ macro_rules! map_impl {
                     {
                         let mut values = $with_capacity;
 
-                        while let Some((key, value)) = try!($access.next_entry()) {
+                        while let Some((key, value)) = tri!($access.next_entry()) {
                             values.insert(key, value);
                         }
 
@@ -1535,7 +1535,7 @@ macro_rules! deserialize_enum {
             where
                 A: EnumAccess<'de>,
             {
-                match try!(data.variant()) {
+                match tri!(data.variant()) {
                     $(
                         ($name_kind :: $variant, v) => v.newtype_variant().map($name :: $variant),
                     )*
@@ -1742,7 +1742,7 @@ impl<'de> Visitor<'de> for OsStringVisitor {
     {
         use std::os::unix::ffi::OsStringExt;
 
-        match try!(data.variant()) {
+        match tri!(data.variant()) {
             (OsStringKind::Unix, v) => v.newtype_variant().map(OsString::from_vec),
             (OsStringKind::Windows, _) => Err(Error::custom(
                 "cannot deserialize Windows OS string on Unix",
@@ -1757,7 +1757,7 @@ impl<'de> Visitor<'de> for OsStringVisitor {
     {
         use std::os::windows::ffi::OsStringExt;
 
-        match try!(data.variant()) {
+        match tri!(data.variant()) {
             (OsStringKind::Windows, v) => v
                 .newtype_variant::<Vec<u16>>()
                 .map(|vec| OsString::from_wide(&vec)),
@@ -1819,7 +1819,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        try!(Option::<T>::deserialize(deserializer));
+        tri!(Option::<T>::deserialize(deserializer));
         Ok(RcWeak::new())
     }
 }
@@ -1837,7 +1837,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        try!(Option::<T>::deserialize(deserializer));
+        tri!(Option::<T>::deserialize(deserializer));
         Ok(ArcWeak::new())
     }
 }
@@ -2003,19 +2003,19 @@ impl<'de> Deserialize<'de> for Duration {
             where
                 A: SeqAccess<'de>,
             {
-                let secs: u64 = match try!(seq.next_element()) {
+                let secs: u64 = match tri!(seq.next_element()) {
                     Some(value) => value,
                     None => {
                         return Err(Error::invalid_length(0, &self));
                     }
                 };
-                let nanos: u32 = match try!(seq.next_element()) {
+                let nanos: u32 = match tri!(seq.next_element()) {
                     Some(value) => value,
                     None => {
                         return Err(Error::invalid_length(1, &self));
                     }
                 };
-                try!(check_overflow(secs, nanos));
+                tri!(check_overflow(secs, nanos));
                 Ok(Duration::new(secs, nanos))
             }
 
@@ -2025,19 +2025,19 @@ impl<'de> Deserialize<'de> for Duration {
             {
                 let mut secs: Option<u64> = None;
                 let mut nanos: Option<u32> = None;
-                while let Some(key) = try!(map.next_key()) {
+                while let Some(key) = tri!(map.next_key()) {
                     match key {
                         Field::Secs => {
                             if secs.is_some() {
                                 return Err(<A::Error as Error>::duplicate_field("secs"));
                             }
-                            secs = Some(try!(map.next_value()));
+                            secs = Some(tri!(map.next_value()));
                         }
                         Field::Nanos => {
                             if nanos.is_some() {
                                 return Err(<A::Error as Error>::duplicate_field("nanos"));
                             }
-                            nanos = Some(try!(map.next_value()));
+                            nanos = Some(tri!(map.next_value()));
                         }
                     }
                 }
@@ -2049,7 +2049,7 @@ impl<'de> Deserialize<'de> for Duration {
                     Some(nanos) => nanos,
                     None => return Err(<A::Error as Error>::missing_field("nanos")),
                 };
-                try!(check_overflow(secs, nanos));
+                tri!(check_overflow(secs, nanos));
                 Ok(Duration::new(secs, nanos))
             }
         }
@@ -2141,19 +2141,19 @@ impl<'de> Deserialize<'de> for SystemTime {
             where
                 A: SeqAccess<'de>,
             {
-                let secs: u64 = match try!(seq.next_element()) {
+                let secs: u64 = match tri!(seq.next_element()) {
                     Some(value) => value,
                     None => {
                         return Err(Error::invalid_length(0, &self));
                     }
                 };
-                let nanos: u32 = match try!(seq.next_element()) {
+                let nanos: u32 = match tri!(seq.next_element()) {
                     Some(value) => value,
                     None => {
                         return Err(Error::invalid_length(1, &self));
                     }
                 };
-                try!(check_overflow(secs, nanos));
+                tri!(check_overflow(secs, nanos));
                 Ok(Duration::new(secs, nanos))
             }
 
@@ -2163,7 +2163,7 @@ impl<'de> Deserialize<'de> for SystemTime {
             {
                 let mut secs: Option<u64> = None;
                 let mut nanos: Option<u32> = None;
-                while let Some(key) = try!(map.next_key()) {
+                while let Some(key) = tri!(map.next_key()) {
                     match key {
                         Field::Secs => {
                             if secs.is_some() {
@@ -2171,7 +2171,7 @@ impl<'de> Deserialize<'de> for SystemTime {
                                     "secs_since_epoch",
                                 ));
                             }
-                            secs = Some(try!(map.next_value()));
+                            secs = Some(tri!(map.next_value()));
                         }
                         Field::Nanos => {
                             if nanos.is_some() {
@@ -2179,7 +2179,7 @@ impl<'de> Deserialize<'de> for SystemTime {
                                     "nanos_since_epoch",
                                 ));
                             }
-                            nanos = Some(try!(map.next_value()));
+                            nanos = Some(tri!(map.next_value()));
                         }
                     }
                 }
@@ -2191,13 +2191,13 @@ impl<'de> Deserialize<'de> for SystemTime {
                     Some(nanos) => nanos,
                     None => return Err(<A::Error as Error>::missing_field("nanos_since_epoch")),
                 };
-                try!(check_overflow(secs, nanos));
+                tri!(check_overflow(secs, nanos));
                 Ok(Duration::new(secs, nanos))
             }
         }
 
         const FIELDS: &[&str] = &["secs_since_epoch", "nanos_since_epoch"];
-        let duration = try!(deserializer.deserialize_struct("SystemTime", FIELDS, DurationVisitor));
+        let duration = tri!(deserializer.deserialize_struct("SystemTime", FIELDS, DurationVisitor));
         #[cfg(not(no_systemtime_checked_add))]
         let ret = UNIX_EPOCH
             .checked_add(duration)
@@ -2226,7 +2226,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        let (start, end) = try!(deserializer.deserialize_struct(
+        let (start, end) = tri!(deserializer.deserialize_struct(
             "Range",
             range::FIELDS,
             range::RangeVisitor {
@@ -2246,7 +2246,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        let (start, end) = try!(deserializer.deserialize_struct(
+        let (start, end) = tri!(deserializer.deserialize_struct(
             "RangeInclusive",
             range::FIELDS,
             range::RangeVisitor {
@@ -2337,13 +2337,13 @@ mod range {
         where
             A: SeqAccess<'de>,
         {
-            let start: Idx = match try!(seq.next_element()) {
+            let start: Idx = match tri!(seq.next_element()) {
                 Some(value) => value,
                 None => {
                     return Err(Error::invalid_length(0, &self));
                 }
             };
-            let end: Idx = match try!(seq.next_element()) {
+            let end: Idx = match tri!(seq.next_element()) {
                 Some(value) => value,
                 None => {
                     return Err(Error::invalid_length(1, &self));
@@ -2358,19 +2358,19 @@ mod range {
         {
             let mut start: Option<Idx> = None;
             let mut end: Option<Idx> = None;
-            while let Some(key) = try!(map.next_key()) {
+            while let Some(key) = tri!(map.next_key()) {
                 match key {
                     Field::Start => {
                         if start.is_some() {
                             return Err(<A::Error as Error>::duplicate_field("start"));
                         }
-                        start = Some(try!(map.next_value()));
+                        start = Some(tri!(map.next_value()));
                     }
                     Field::End => {
                         if end.is_some() {
                             return Err(<A::Error as Error>::duplicate_field("end"));
                         }
-                        end = Some(try!(map.next_value()));
+                        end = Some(tri!(map.next_value()));
                     }
                 }
             }
@@ -2404,7 +2404,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        let start = try!(deserializer.deserialize_struct(
+        let start = tri!(deserializer.deserialize_struct(
             "RangeFrom",
             range_from::FIELDS,
             range_from::RangeFromVisitor {
@@ -2492,7 +2492,7 @@ mod range_from {
         where
             A: SeqAccess<'de>,
         {
-            let end: Idx = match try!(seq.next_element()) {
+            let end: Idx = match tri!(seq.next_element()) {
                 Some(value) => value,
                 None => {
                     return Err(Error::invalid_length(0, &self));
@@ -2506,13 +2506,13 @@ mod range_from {
             A: MapAccess<'de>,
         {
             let mut end: Option<Idx> = None;
-            while let Some(key) = try!(map.next_key()) {
+            while let Some(key) = tri!(map.next_key()) {
                 match key {
                     Field::End => {
                         if end.is_some() {
                             return Err(<A::Error as Error>::duplicate_field("end"));
                         }
-                        end = Some(try!(map.next_value()));
+                        end = Some(tri!(map.next_value()));
                     }
                 }
             }
@@ -2542,7 +2542,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        let end = try!(deserializer.deserialize_struct(
+        let end = tri!(deserializer.deserialize_struct(
             "RangeTo",
             range_to::FIELDS,
             range_to::RangeToVisitor {
@@ -2630,7 +2630,7 @@ mod range_to {
         where
             A: SeqAccess<'de>,
         {
-            let start: Idx = match try!(seq.next_element()) {
+            let start: Idx = match tri!(seq.next_element()) {
                 Some(value) => value,
                 None => {
                     return Err(Error::invalid_length(0, &self));
@@ -2644,13 +2644,13 @@ mod range_to {
             A: MapAccess<'de>,
         {
             let mut start: Option<Idx> = None;
-            while let Some(key) = try!(map.next_key()) {
+            while let Some(key) = tri!(map.next_key()) {
                 match key {
                     Field::Start => {
                         if start.is_some() {
                             return Err(<A::Error as Error>::duplicate_field("start"));
                         }
-                        start = Some(try!(map.next_value()));
+                        start = Some(tri!(map.next_value()));
                     }
                 }
             }
@@ -2756,7 +2756,7 @@ where
             where
                 A: EnumAccess<'de>,
             {
-                match try!(data.variant()) {
+                match tri!(data.variant()) {
                     (Field::Unbounded, v) => v.unit_variant().map(|()| Bound::Unbounded),
                     (Field::Included, v) => v.newtype_variant().map(Bound::Included),
                     (Field::Excluded, v) => v.newtype_variant().map(Bound::Excluded),
@@ -2865,7 +2865,7 @@ where
             where
                 A: EnumAccess<'de>,
             {
-                match try!(data.variant()) {
+                match tri!(data.variant()) {
                     (Field::Ok, v) => v.newtype_variant().map(Ok),
                     (Field::Err, v) => v.newtype_variant().map(Err),
                 }

@@ -488,7 +488,7 @@ mod content {
         {
             let mut vec =
                 Vec::<Content>::with_capacity(size_hint::cautious::<Content>(visitor.size_hint()));
-            while let Some(e) = try!(visitor.next_element()) {
+            while let Some(e) = tri!(visitor.next_element()) {
                 vec.push(e);
             }
             Ok(Content::Seq(vec))
@@ -502,7 +502,7 @@ mod content {
                 Vec::<(Content, Content)>::with_capacity(
                     size_hint::cautious::<(Content, Content)>(visitor.size_hint()),
                 );
-            while let Some(kv) = try!(visitor.next_entry()) {
+            while let Some(kv) = tri!(visitor.next_entry()) {
                 vec.push(kv);
             }
             Ok(Content::Map(vec))
@@ -845,14 +845,14 @@ mod content {
         where
             S: SeqAccess<'de>,
         {
-            let tag = match try!(seq.next_element()) {
+            let tag = match tri!(seq.next_element()) {
                 Some(tag) => tag,
                 None => {
                     return Err(de::Error::missing_field(self.tag_name));
                 }
             };
             let rest = de::value::SeqAccessDeserializer::new(seq);
-            Ok((tag, try!(Content::deserialize(rest))))
+            Ok((tag, tri!(Content::deserialize(rest))))
         }
 
         fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
@@ -864,16 +864,16 @@ mod content {
                 Content,
                 Content,
             )>(map.size_hint()));
-            while let Some(k) = try!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
+            while let Some(k) = tri!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
                 match k {
                     TagOrContent::Tag => {
                         if tag.is_some() {
                             return Err(de::Error::duplicate_field(self.tag_name));
                         }
-                        tag = Some(try!(map.next_value()));
+                        tag = Some(tri!(map.next_value()));
                     }
                     TagOrContent::Content(k) => {
-                        let v = try!(map.next_value());
+                        let v = tri!(map.next_value());
                         vec.push((k, v));
                     }
                 }
@@ -1087,8 +1087,8 @@ mod content {
     {
         let seq = content.into_iter().map(ContentDeserializer::new);
         let mut seq_visitor = SeqDeserializer::new(seq);
-        let value = try!(visitor.visit_seq(&mut seq_visitor));
-        try!(seq_visitor.end());
+        let value = tri!(visitor.visit_seq(&mut seq_visitor));
+        tri!(seq_visitor.end());
         Ok(value)
     }
 
@@ -1104,8 +1104,8 @@ mod content {
             .into_iter()
             .map(|(k, v)| (ContentDeserializer::new(k), ContentDeserializer::new(v)));
         let mut map_visitor = MapDeserializer::new(map);
-        let value = try!(visitor.visit_map(&mut map_visitor));
-        try!(map_visitor.end());
+        let value = tri!(visitor.visit_map(&mut map_visitor));
+        tri!(map_visitor.end());
         Ok(value)
     }
 
@@ -1683,8 +1683,8 @@ mod content {
     {
         let seq = content.iter().map(ContentRefDeserializer::new);
         let mut seq_visitor = SeqDeserializer::new(seq);
-        let value = try!(visitor.visit_seq(&mut seq_visitor));
-        try!(seq_visitor.end());
+        let value = tri!(visitor.visit_seq(&mut seq_visitor));
+        tri!(seq_visitor.end());
         Ok(value)
     }
 
@@ -1703,8 +1703,8 @@ mod content {
             )
         });
         let mut map_visitor = MapDeserializer::new(map);
-        let value = try!(visitor.visit_map(&mut map_visitor));
-        try!(map_visitor.end());
+        let value = tri!(visitor.visit_map(&mut map_visitor));
+        tri!(map_visitor.end());
         Ok(value)
     }
 
@@ -2224,7 +2224,7 @@ mod content {
             if len == 0 {
                 visitor.visit_unit()
             } else {
-                let ret = try!(visitor.visit_seq(&mut self));
+                let ret = tri!(visitor.visit_seq(&mut self));
                 let remaining = self.iter.len();
                 if remaining == 0 {
                     Ok(ret)
@@ -2403,7 +2403,7 @@ mod content {
         where
             M: MapAccess<'de>,
         {
-            while try!(access.next_entry::<IgnoredAny, IgnoredAny>()).is_some() {}
+            while tri!(access.next_entry::<IgnoredAny, IgnoredAny>()).is_some() {}
             Ok(())
         }
     }

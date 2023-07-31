@@ -1280,8 +1280,8 @@ pub trait Serializer: Sized {
         <I as IntoIterator>::Item: Serialize,
     {
         let mut iter = iter.into_iter();
-        let mut serializer = try!(self.serialize_seq(iterator_len_hint(&iter)));
-        try!(iter.try_for_each(|item| serializer.serialize_element(&item)));
+        let mut serializer = tri!(self.serialize_seq(iterator_len_hint(&iter)));
+        tri!(iter.try_for_each(|item| serializer.serialize_element(&item)));
         serializer.end()
     }
 
@@ -1318,8 +1318,8 @@ pub trait Serializer: Sized {
         I: IntoIterator<Item = (K, V)>,
     {
         let mut iter = iter.into_iter();
-        let mut serializer = try!(self.serialize_map(iterator_len_hint(&iter)));
-        try!(iter.try_for_each(|(key, value)| serializer.serialize_entry(&key, &value)));
+        let mut serializer = tri!(self.serialize_map(iterator_len_hint(&iter)));
+        tri!(iter.try_for_each(|(key, value)| serializer.serialize_entry(&key, &value)));
         serializer.end()
     }
 
@@ -1813,7 +1813,7 @@ pub trait SerializeMap {
         K: Serialize,
         V: Serialize,
     {
-        try!(self.serialize_key(key));
+        tri!(self.serialize_key(key));
         self.serialize_value(value)
     }
 

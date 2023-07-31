@@ -569,7 +569,7 @@ pub trait Deserialize<'de>: Sized {
         D: Deserializer<'de>,
     {
         // Default implementation just delegates to `deserialize` impl.
-        *place = try!(Deserialize::deserialize(deserializer));
+        *place = tri!(Deserialize::deserialize(deserializer));
         Ok(())
     }
 }
@@ -1834,9 +1834,9 @@ pub trait MapAccess<'de> {
         K: DeserializeSeed<'de>,
         V: DeserializeSeed<'de>,
     {
-        match try!(self.next_key_seed(kseed)) {
+        match tri!(self.next_key_seed(kseed)) {
             Some(key) => {
-                let value = try!(self.next_value_seed(vseed));
+                let value = tri!(self.next_value_seed(vseed));
                 Ok(Some((key, value)))
             }
             None => Ok(None),
@@ -2284,12 +2284,12 @@ impl Display for OneOf {
             1 => write!(formatter, "`{}`", self.names[0]),
             2 => write!(formatter, "`{}` or `{}`", self.names[0], self.names[1]),
             _ => {
-                try!(write!(formatter, "one of "));
+                tri!(write!(formatter, "one of "));
                 for (i, alt) in self.names.iter().enumerate() {
                     if i > 0 {
-                        try!(write!(formatter, ", "));
+                        tri!(write!(formatter, ", "));
                     }
-                    try!(write!(formatter, "`{}`", alt));
+                    tri!(write!(formatter, "`{}`", alt));
                 }
                 Ok(())
             }

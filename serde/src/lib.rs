@@ -277,7 +277,7 @@ mod lib {
 // performed implicitly by the `?` operator or the standard library's `try!`
 // macro. This simplified macro gives a 5.5% improvement in compile time
 // compared to standard `try!`, and 9% improvement compared to `?`.
-macro_rules! try {
+macro_rules! tri {
     ($expr:expr) => {
         match $expr {
             Ok(val) => val,
