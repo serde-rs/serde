@@ -16,16 +16,6 @@ fn main() {
     let target = env::var("TARGET").unwrap();
     let emscripten = target == "asmjs-unknown-emscripten" || target == "wasm32-unknown-emscripten";
 
-    // 128-bit integers stabilized in Rust 1.26:
-    // https://blog.rust-lang.org/2018/05/10/Rust-1.26.html
-    //
-    // Disabled on Emscripten targets before Rust 1.40 since
-    // Emscripten did not support 128-bit integers until Rust 1.40
-    // (https://github.com/rust-lang/rust/pull/65251)
-    if minor < 26 || emscripten && minor < 40 {
-        println!("cargo:rustc-cfg=no_integer128");
-    }
-
     // Inclusive ranges methods stabilized in Rust 1.27:
     // https://github.com/rust-lang/rust/pull/50758
     // Also Iterator::try_for_each:
@@ -50,6 +40,13 @@ fn main() {
         println!("cargo:rustc-cfg=no_num_nonzero_signed");
         println!("cargo:rustc-cfg=no_systemtime_checked_add");
         println!("cargo:rustc-cfg=no_relaxed_trait_bounds");
+    }
+
+    // Disabled on Emscripten targets before Rust 1.40 since
+    // Emscripten did not support 128-bit integers until Rust 1.40
+    // (https://github.com/rust-lang/rust/pull/65251)
+    if emscripten && minor < 40 {
+        println!("cargo:rustc-cfg=no_integer128");
     }
 
     // Current minimum supported version of serde_derive crate is Rust 1.56.
