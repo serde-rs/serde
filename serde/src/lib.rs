@@ -224,7 +224,7 @@ mod lib {
     pub use std::collections::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
 
     #[cfg(all(not(no_core_cstr), not(feature = "std")))]
-    pub use core::ffi::CStr;
+    pub use self::core::ffi::CStr;
     #[cfg(feature = "std")]
     pub use std::ffi::CStr;
 
