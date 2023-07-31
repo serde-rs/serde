@@ -310,7 +310,6 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(not(no_ops_bound), feature = "std"))]
 impl<T> Serialize for Bound<T>
 where
     T: Serialize,

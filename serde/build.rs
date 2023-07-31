@@ -16,13 +16,6 @@ fn main() {
     let target = env::var("TARGET").unwrap();
     let emscripten = target == "asmjs-unknown-emscripten" || target == "wasm32-unknown-emscripten";
 
-    // std::collections::Bound was stabilized in Rust 1.17
-    // but it was moved to core::ops later in Rust 1.26:
-    // https://doc.rust-lang.org/core/ops/enum.Bound.html
-    if minor < 26 {
-        println!("cargo:rustc-cfg=no_ops_bound");
-    }
-
     // 128-bit integers stabilized in Rust 1.26:
     // https://blog.rust-lang.org/2018/05/10/Rust-1.26.html
     //
