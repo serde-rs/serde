@@ -274,7 +274,6 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(not(no_range_inclusive))]
 impl<Idx> Serialize for RangeInclusive<Idx>
 where
     Idx: Serialize,
@@ -310,7 +309,6 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(not(no_ops_bound), all(feature = "std", not(no_collections_bound))))]
 impl<T> Serialize for Bound<T>
 where
     T: Serialize,
@@ -538,7 +536,6 @@ where
 macro_rules! nonzero_integers {
     ($($T:ident,)+) => {
         $(
-            #[cfg(not(no_num_nonzero))]
             impl Serialize for num::$T {
                 fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
                 where
@@ -662,7 +659,6 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(feature = "std", not(no_core_duration)))]
 impl Serialize for Duration {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -963,7 +959,6 @@ where
     }
 }
 
-#[cfg(not(no_core_reverse))]
 impl<T> Serialize for Reverse<T>
 where
     T: Serialize,

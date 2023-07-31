@@ -177,14 +177,16 @@ mod lib {
 
     pub use self::core::cell::{Cell, RefCell};
     pub use self::core::clone::{self, Clone};
+    pub use self::core::cmp::Reverse;
     pub use self::core::convert::{self, From, Into};
     pub use self::core::default::{self, Default};
     pub use self::core::fmt::{self, Debug, Display};
     pub use self::core::marker::{self, PhantomData};
     pub use self::core::num::Wrapping;
-    pub use self::core::ops::{Range, RangeFrom, RangeTo};
+    pub use self::core::ops::{Bound, Range, RangeFrom, RangeInclusive, RangeTo};
     pub use self::core::option::{self, Option};
     pub use self::core::result::{self, Result};
+    pub use self::core::time::Duration;
 
     #[cfg(all(feature = "alloc", not(feature = "std")))]
     pub use alloc::borrow::{Cow, ToOwned};
@@ -249,18 +251,6 @@ mod lib {
     #[cfg(feature = "std")]
     pub use std::time::{SystemTime, UNIX_EPOCH};
 
-    #[cfg(all(feature = "std", not(no_collections_bound), no_ops_bound))]
-    pub use std::collections::Bound;
-
-    #[cfg(not(no_core_reverse))]
-    pub use self::core::cmp::Reverse;
-
-    #[cfg(not(no_ops_bound))]
-    pub use self::core::ops::Bound;
-
-    #[cfg(not(no_range_inclusive))]
-    pub use self::core::ops::RangeInclusive;
-
     #[cfg(all(feature = "std", no_target_has_atomic, not(no_std_atomic)))]
     pub use std::sync::atomic::{
         AtomicBool, AtomicI16, AtomicI32, AtomicI8, AtomicIsize, AtomicU16, AtomicU32, AtomicU8,
@@ -281,9 +271,6 @@ mod lib {
     pub use std::sync::atomic::{AtomicI64, AtomicU64};
     #[cfg(all(feature = "std", not(no_target_has_atomic), target_has_atomic = "ptr"))]
     pub use std::sync::atomic::{AtomicIsize, AtomicUsize};
-
-    #[cfg(any(feature = "std", not(no_core_duration)))]
-    pub use self::core::time::Duration;
 }
 
 // None of this crate's error handling needs the `From::from` error conversion

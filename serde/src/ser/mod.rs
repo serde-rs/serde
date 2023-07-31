@@ -1279,22 +1279,9 @@ pub trait Serializer: Sized {
         I: IntoIterator,
         <I as IntoIterator>::Item: Serialize,
     {
-        let iter = iter.into_iter();
+        let mut iter = iter.into_iter();
         let mut serializer = try!(self.serialize_seq(iterator_len_hint(&iter)));
-
-        #[cfg(not(no_iterator_try_fold))]
-        {
-            let mut iter = iter;
-            try!(iter.try_for_each(|item| serializer.serialize_element(&item)));
-        }
-
-        #[cfg(no_iterator_try_fold)]
-        {
-            for item in iter {
-                try!(serializer.serialize_element(&item));
-            }
-        }
-
+        try!(iter.try_for_each(|item| serializer.serialize_element(&item)));
         serializer.end()
     }
 
@@ -1330,22 +1317,9 @@ pub trait Serializer: Sized {
         V: Serialize,
         I: IntoIterator<Item = (K, V)>,
     {
-        let iter = iter.into_iter();
+        let mut iter = iter.into_iter();
         let mut serializer = try!(self.serialize_map(iterator_len_hint(&iter)));
-
-        #[cfg(not(no_iterator_try_fold))]
-        {
-            let mut iter = iter;
-            try!(iter.try_for_each(|(key, value)| serializer.serialize_entry(&key, &value)));
-        }
-
-        #[cfg(no_iterator_try_fold)]
-        {
-            for (key, value) in iter {
-                try!(serializer.serialize_entry(&key, &value));
-            }
-        }
-
+        try!(iter.try_for_each(|(key, value)| serializer.serialize_entry(&key, &value)));
         serializer.end()
     }
 
