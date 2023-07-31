@@ -127,6 +127,29 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.36.0
       - run: cd serde && cargo build --no-default-features --features alloc
 
+  precompiled:
+    name: Precompiled
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
+          targets: x86_64-unknown-linux-musl
+      - run: precompiled/build.sh
+      - name: replace serde_derive dependency with precompiled
+        run: |
+          # FIXME: consider using `cargo rm serde_derive` but it's currently broken
+          # https://github.com/rust-lang/cargo/issues/12419
+          sed -i '/serde_derive =/d' serde/Cargo.toml
+          sed -i '/derive = \["serde_derive"\]/d' serde/Cargo.toml
+          sed -i '/"serde_derive"/d' Cargo.toml
+          sed -i '/\[workspace\]/d' precompiled/serde_derive/Cargo.toml
+          cargo add --dev serde_derive --path precompiled/serde_derive --manifest-path test_suite/Cargo.toml
+          git diff
+      - run: cd test_suite && cargo test --features unstable -- --skip ui --exact
+
   macos:
     name: macOS
     runs-on: macos-latest
