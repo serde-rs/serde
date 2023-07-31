@@ -83,12 +83,12 @@ jobs:
       - run: cd serde && cargo build
 
   more:
-    name: Rust 1.28.0
+    name: Rust 1.30.0
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@1.28.0
+      - uses: dtolnay/rust-toolchain@1.30.0
         # Work around failing to parse manifest because editions are unstable.
       - run: sed -i /test_suite/d Cargo.toml
       - run: cd serde && cargo build --no-default-features
