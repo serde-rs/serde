@@ -72,18 +72,12 @@ jobs:
         if: matrix.os != 'windows'
 
   build:
-    name: Rust ${{matrix.rust}}
+    name: Rust 1.34.0
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        rust: [1.26.0, 1.34.0]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{matrix.rust}}
+      - uses: dtolnay/rust-toolchain@1.34.0
       - run: cd serde && cargo build --features rc
       - run: cd serde && cargo build --no-default-features
       - run: cd serde && cargo build

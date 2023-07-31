@@ -2238,7 +2238,6 @@ where
     }
 }
 
-#[cfg(not(no_range_inclusive))]
 impl<'de, Idx> Deserialize<'de> for RangeInclusive<Idx>
 where
     Idx: Deserialize<'de>,

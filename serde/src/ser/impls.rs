@@ -274,7 +274,6 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(not(no_range_inclusive))]
 impl<Idx> Serialize for RangeInclusive<Idx>
 where
     Idx: Serialize,

@@ -16,12 +16,9 @@ fn main() {
     let target = env::var("TARGET").unwrap();
     let emscripten = target == "asmjs-unknown-emscripten" || target == "wasm32-unknown-emscripten";
 
-    // Inclusive ranges methods stabilized in Rust 1.27:
-    // https://github.com/rust-lang/rust/pull/50758
-    // Also Iterator::try_for_each:
+    // Iterator::try_for_each stabilized in Rust 1.27:
     // https://blog.rust-lang.org/2018/06/21/Rust-1.27.html#library-stabilizations
     if minor < 27 {
-        println!("cargo:rustc-cfg=no_range_inclusive");
         println!("cargo:rustc-cfg=no_iterator_try_fold");
     }
 
