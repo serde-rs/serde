@@ -186,6 +186,7 @@ mod lib {
     pub use self::core::ops::{Range, RangeFrom, RangeTo};
     pub use self::core::option::{self, Option};
     pub use self::core::result::{self, Result};
+    pub use self::core::time::Duration;
 
     #[cfg(all(feature = "alloc", not(feature = "std")))]
     pub use alloc::borrow::{Cow, ToOwned};
@@ -279,9 +280,6 @@ mod lib {
     pub use std::sync::atomic::{AtomicI64, AtomicU64};
     #[cfg(all(feature = "std", not(no_target_has_atomic), target_has_atomic = "ptr"))]
     pub use std::sync::atomic::{AtomicIsize, AtomicUsize};
-
-    #[cfg(any(feature = "std", not(no_core_duration)))]
-    pub use self::core::time::Duration;
 }
 
 // None of this crate's error handling needs the `From::from` error conversion

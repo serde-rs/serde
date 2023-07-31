@@ -1,11 +1,9 @@
 use lib::*;
 
 use de::{
-    Deserialize, Deserializer, EnumAccess, Error, SeqAccess, Unexpected, VariantAccess, Visitor,
+    Deserialize, Deserializer, EnumAccess, Error, MapAccess, SeqAccess, Unexpected, VariantAccess,
+    Visitor,
 };
-
-#[cfg(any(feature = "std", feature = "alloc", not(no_core_duration)))]
-use de::MapAccess;
 
 use seed::InPlaceSeed;
 
@@ -1923,7 +1921,6 @@ forwarded_impl!((T), RwLock<T>, RwLock::new);
 //         secs: u64,
 //         nanos: u32,
 //     }
-#[cfg(any(feature = "std", not(no_core_duration)))]
 impl<'de> Deserialize<'de> for Duration {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

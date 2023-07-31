@@ -662,7 +662,6 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(feature = "std", not(no_core_duration)))]
 impl Serialize for Duration {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
