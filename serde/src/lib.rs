@@ -307,11 +307,6 @@ pub use crate::ser::{Serialize, Serializer};
 #[path = "private/mod.rs"]
 pub mod __private;
 
-#[allow(unused_imports)]
-use self::__private as export;
-#[allow(unused_imports)]
-use self::__private as private;
-
 #[path = "de/seed.rs"]
 mod seed;
 
