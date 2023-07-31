@@ -16,12 +16,6 @@ fn main() {
     let target = env::var("TARGET").unwrap();
     let emscripten = target == "asmjs-unknown-emscripten" || target == "wasm32-unknown-emscripten";
 
-    // Iterator::try_for_each stabilized in Rust 1.27:
-    // https://blog.rust-lang.org/2018/06/21/Rust-1.27.html#library-stabilizations
-    if minor < 27 {
-        println!("cargo:rustc-cfg=no_iterator_try_fold");
-    }
-
     // Non-zero integers stabilized in Rust 1.28:
     // https://blog.rust-lang.org/2018/08/02/Rust-1.28.html#library-stabilizations
     if minor < 28 {
