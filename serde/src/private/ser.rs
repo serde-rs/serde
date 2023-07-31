@@ -1,6 +1,6 @@
-use lib::*;
+use crate::lib::*;
 
-use ser::{self, Impossible, Serialize, SerializeMap, SerializeStruct, Serializer};
+use crate::ser::{self, Impossible, Serialize, SerializeMap, SerializeStruct, Serializer};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 use self::content::{
@@ -337,9 +337,9 @@ where
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 mod content {
-    use lib::*;
+    use crate::lib::*;
 
-    use ser::{self, Serialize, Serializer};
+    use crate::ser::{self, Serialize, Serializer};
 
     pub struct SerializeTupleVariantAsMapValue<M> {
         map: M,
@@ -499,7 +499,7 @@ mod content {
                 }
                 Content::Seq(ref elements) => elements.serialize(serializer),
                 Content::Tuple(ref elements) => {
-                    use ser::SerializeTuple;
+                    use crate::ser::SerializeTuple;
                     let mut tuple = tri!(serializer.serialize_tuple(elements.len()));
                     for e in elements {
                         tri!(tuple.serialize_element(e));
@@ -507,7 +507,7 @@ mod content {
                     tuple.end()
                 }
                 Content::TupleStruct(n, ref fields) => {
-                    use ser::SerializeTupleStruct;
+                    use crate::ser::SerializeTupleStruct;
                     let mut ts = tri!(serializer.serialize_tuple_struct(n, fields.len()));
                     for f in fields {
                         tri!(ts.serialize_field(f));
@@ -515,7 +515,7 @@ mod content {
                     ts.end()
                 }
                 Content::TupleVariant(n, i, v, ref fields) => {
-                    use ser::SerializeTupleVariant;
+                    use crate::ser::SerializeTupleVariant;
                     let mut tv = tri!(serializer.serialize_tuple_variant(n, i, v, fields.len()));
                     for f in fields {
                         tri!(tv.serialize_field(f));
@@ -523,7 +523,7 @@ mod content {
                     tv.end()
                 }
                 Content::Map(ref entries) => {
-                    use ser::SerializeMap;
+                    use crate::ser::SerializeMap;
                     let mut map = tri!(serializer.serialize_map(Some(entries.len())));
                     for (k, v) in entries {
                         tri!(map.serialize_entry(k, v));
@@ -531,7 +531,7 @@ mod content {
                     map.end()
                 }
                 Content::Struct(n, ref fields) => {
-                    use ser::SerializeStruct;
+                    use crate::ser::SerializeStruct;
                     let mut s = tri!(serializer.serialize_struct(n, fields.len()));
                     for &(k, ref v) in fields {
                         tri!(s.serialize_field(k, v));
@@ -539,7 +539,7 @@ mod content {
                     s.end()
                 }
                 Content::StructVariant(n, i, v, ref fields) => {
-                    use ser::SerializeStructVariant;
+                    use crate::ser::SerializeStructVariant;
                     let mut sv = tri!(serializer.serialize_struct_variant(n, i, v, fields.len()));
                     for &(k, ref v) in fields {
                         tri!(sv.serialize_field(k, v));

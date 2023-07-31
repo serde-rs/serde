@@ -1,5 +1,5 @@
-use lib::*;
-use ser::{Error, Impossible, Serialize, Serializer};
+use crate::lib::*;
+use crate::ser::{Error, Impossible, Serialize, Serializer};
 
 impl Error for fmt::Error {
     fn custom<T: Display>(_msg: T) -> Self {

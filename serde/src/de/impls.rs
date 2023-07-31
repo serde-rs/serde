@@ -1,14 +1,14 @@
-use lib::*;
+use crate::lib::*;
 
-use de::{
+use crate::de::{
     Deserialize, Deserializer, EnumAccess, Error, MapAccess, SeqAccess, Unexpected, VariantAccess,
     Visitor,
 };
 
-use seed::InPlaceSeed;
+use crate::seed::InPlaceSeed;
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use __private::size_hint;
+use crate::__private::size_hint;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1555,7 +1555,7 @@ impl<'de> Deserialize<'de> for net::IpAddr {
         if deserializer.is_human_readable() {
             deserializer.deserialize_str(FromStrVisitor::new("IP address"))
         } else {
-            use lib::net::IpAddr;
+            use crate::lib::net::IpAddr;
             deserialize_enum! {
                 IpAddr IpAddrKind (V4; b"V4"; 0, V6; b"V6"; 1)
                 "`V4` or `V6`",
@@ -1598,7 +1598,7 @@ impl<'de> Deserialize<'de> for net::SocketAddr {
         if deserializer.is_human_readable() {
             deserializer.deserialize_str(FromStrVisitor::new("socket address"))
         } else {
-            use lib::net::SocketAddr;
+            use crate::lib::net::SocketAddr;
             deserialize_enum! {
                 SocketAddr SocketAddrKind (V4; b"V4"; 0, V6; b"V6"; 1)
                 "`V4` or `V6`",
@@ -1968,7 +1968,7 @@ impl<'de> Deserialize<'de> for Duration {
                             b"secs" => Ok(Field::Secs),
                             b"nanos" => Ok(Field::Nanos),
                             _ => {
-                                let value = ::__private::from_utf8_lossy(value);
+                                let value = crate::__private::from_utf8_lossy(value);
                                 Err(Error::unknown_field(&*value, FIELDS))
                             }
                         }
@@ -2259,9 +2259,9 @@ where
 }
 
 mod range {
-    use lib::*;
+    use crate::lib::*;
 
-    use de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
+    use crate::de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
 
     pub const FIELDS: &[&str] = &["start", "end"];
 
@@ -2307,7 +2307,7 @@ mod range {
                         b"start" => Ok(Field::Start),
                         b"end" => Ok(Field::End),
                         _ => {
-                            let value = ::__private::from_utf8_lossy(value);
+                            let value = crate::__private::from_utf8_lossy(value);
                             Err(Error::unknown_field(&*value, FIELDS))
                         }
                     }
@@ -2417,9 +2417,9 @@ where
 }
 
 mod range_from {
-    use lib::*;
+    use crate::lib::*;
 
-    use de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
+    use crate::de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
 
     pub const FIELDS: &[&str] = &["end"];
 
@@ -2462,7 +2462,7 @@ mod range_from {
                     match value {
                         b"end" => Ok(Field::End),
                         _ => {
-                            let value = ::__private::from_utf8_lossy(value);
+                            let value = crate::__private::from_utf8_lossy(value);
                             Err(Error::unknown_field(&*value, FIELDS))
                         }
                     }
@@ -2555,9 +2555,9 @@ where
 }
 
 mod range_to {
-    use lib::*;
+    use crate::lib::*;
 
-    use de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
+    use crate::de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
 
     pub const FIELDS: &[&str] = &["start"];
 
@@ -2600,7 +2600,7 @@ mod range_to {
                     match value {
                         b"start" => Ok(Field::Start),
                         _ => {
-                            let value = ::__private::from_utf8_lossy(value);
+                            let value = crate::__private::from_utf8_lossy(value);
                             Err(Error::unknown_field(&*value, FIELDS))
                         }
                     }

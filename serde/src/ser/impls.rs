@@ -1,6 +1,6 @@
-use lib::*;
+use crate::lib::*;
 
-use ser::{Error, Serialize, SerializeTuple, Serializer};
+use crate::ser::{Error, Serialize, SerializeTuple, Serializer};
 
 ////////////////////////////////////////////////////////////////////////////////
 

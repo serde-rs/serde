@@ -1,10 +1,10 @@
-use lib::*;
+use crate::lib::*;
 
-use de::value::{BorrowedBytesDeserializer, BytesDeserializer};
-use de::{Deserialize, Deserializer, Error, IntoDeserializer, Visitor};
+use crate::de::value::{BorrowedBytesDeserializer, BytesDeserializer};
+use crate::de::{Deserialize, Deserializer, Error, IntoDeserializer, Visitor};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use de::{DeserializeSeed, MapAccess, Unexpected};
+use crate::de::{DeserializeSeed, MapAccess, Unexpected};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{
@@ -13,7 +13,7 @@ pub use self::content::{
     TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
 };
 
-pub use seed::InPlaceSeed;
+pub use crate::seed::InPlaceSeed;
 
 /// If the missing field is of type `Option<T>` then treat is as `None`,
 /// otherwise it is an error.
@@ -203,12 +203,12 @@ mod content {
     // This issue is tracking making some of this stuff public:
     // https://github.com/serde-rs/serde/issues/741
 
-    use lib::*;
+    use crate::lib::*;
 
-    use __private::size_hint;
-    use actually_private;
-    use de::value::{MapDeserializer, SeqDeserializer};
-    use de::{
+    use crate::__private::size_hint;
+    use crate::actually_private;
+    use crate::de::value::{MapDeserializer, SeqDeserializer};
+    use crate::de::{
         self, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected, IgnoredAny,
         MapAccess, SeqAccess, Unexpected, Visitor,
     };
