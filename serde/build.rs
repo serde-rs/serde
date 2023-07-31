@@ -16,12 +16,6 @@ fn main() {
     let target = env::var("TARGET").unwrap();
     let emscripten = target == "asmjs-unknown-emscripten" || target == "wasm32-unknown-emscripten";
 
-    // Non-zero integers stabilized in Rust 1.28:
-    // https://blog.rust-lang.org/2018/08/02/Rust-1.28.html#library-stabilizations
-    if minor < 28 {
-        println!("cargo:rustc-cfg=no_num_nonzero");
-    }
-
     // TryFrom, Atomic types, non-zero signed integers, and SystemTime::checked_add
     // stabilized in Rust 1.34:
     // https://blog.rust-lang.org/2019/04/11/Rust-1.34.0.html#tryfrom-and-tryinto

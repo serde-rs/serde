@@ -82,7 +82,7 @@ macro_rules! impl_deserialize_num {
     ($primitive:ident, $nonzero:ident $(cfg($($cfg:tt)*))*, $deserialize:ident $($method:ident!($($val:ident : $visit:ident)*);)*) => {
         impl_deserialize_num!($primitive, $deserialize $($method!($($val : $visit)*);)*);
 
-        #[cfg(all(not(no_num_nonzero), $($($cfg)*)*))]
+        $(#[cfg($($cfg)*)])*
         impl<'de> Deserialize<'de> for num::$nonzero {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where

@@ -536,7 +536,6 @@ where
 macro_rules! nonzero_integers {
     ($($T:ident,)+) => {
         $(
-            #[cfg(not(no_num_nonzero))]
             impl Serialize for num::$T {
                 fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
                 where
