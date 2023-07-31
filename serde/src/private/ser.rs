@@ -1355,3 +1355,28 @@ where
         Ok(())
     }
 }
+
+pub struct AdjacentlyTaggedEnumVariantSerializer {
+    tag: &'static str,
+    variant_index: u32,
+    variant_name: &'static str,
+}
+
+impl AdjacentlyTaggedEnumVariantSerializer {
+    pub fn new(tag: &'static str, variant_index: u32, variant_name: &'static str) -> Self {
+        AdjacentlyTaggedEnumVariantSerializer {
+            tag,
+            variant_index,
+            variant_name,
+        }
+    }
+}
+
+impl Serialize for AdjacentlyTaggedEnumVariantSerializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_unit_variant(self.tag, self.variant_index, self.variant_name)
+    }
+}
