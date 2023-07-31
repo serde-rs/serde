@@ -3013,6 +3013,7 @@ fn test_non_string_aliases() {
             Token::MapEnd,
         ],
     );
+}
 
 mod flatten {
     use super::*;
