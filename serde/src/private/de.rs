@@ -2865,13 +2865,8 @@ where
     where
         A: EnumAccess<'de>,
     {
-        let (variant, variant_access) = match data.variant() {
-            Ok(values) => values,
-            Err(err) => return Err(err),
-        };
-        if let Err(err) = variant_access.unit_variant() {
-            return Err(err);
-        }
+        let (variant, variant_access) = tri!(data.variant());
+        tri!(variant_access.unit_variant());
         Ok(variant)
     }
 }
