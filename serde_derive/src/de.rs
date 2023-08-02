@@ -1480,6 +1480,14 @@ fn deserialize_adjacently_tagged_enum(
         }
     };
 
+    let variant_seed = quote! {
+        _serde::__private::de::AdjacentlyTaggedEnumVariantSeed::<__Field> {
+            tag: #tag,
+            variants: &VARIANTS,
+            fields_enum: _serde::__private::PhantomData
+        }
+    };
+
     let mut missing_content = quote! {
         _serde::__private::Err(<__A::Error as _serde::de::Error>::missing_field(#content))
     };
@@ -1527,6 +1535,10 @@ fn deserialize_adjacently_tagged_enum(
         _serde::de::MapAccess::next_key_seed(&mut __map, #tag_or_content)?
     };
 
+    let variant_from_map = quote! {
+        _serde::de::MapAccess::next_value_seed(&mut __map, #variant_seed)?
+    };
+
     // When allowing unknown fields, we want to transparently step through keys
     // we don't care about until we find `tag`, `content`, or run out of keys.
     let next_relevant_key = if deny_unknown_fields {
@@ -1572,11 +1584,11 @@ fn deserialize_adjacently_tagged_enum(
 
     let finish_content_then_tag = if variant_arms.is_empty() {
         quote! {
-            match _serde::de::MapAccess::next_value::<__Field>(&mut __map)? {}
+            match #variant_from_map {}
         }
     } else {
         quote! {
-            let __ret = match _serde::de::MapAccess::next_value(&mut __map)? {
+            let __ret = match #variant_from_map {
                 // Deserialize the buffered content now that we know the variant.
                 #(#variant_arms)*
             }?;
@@ -1632,7 +1644,7 @@ fn deserialize_adjacently_tagged_enum(
                     // First key is the tag.
                     _serde::__private::Some(_serde::__private::de::TagOrContentField::Tag) => {
                         // Parse the tag.
-                        let __field = _serde::de::MapAccess::next_value(&mut __map)?;
+                        let __field = #variant_from_map;
                         // Visit the second key.
                         match #next_relevant_key {
                             // Second key is a duplicate of the tag.
