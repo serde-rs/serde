@@ -2109,7 +2109,7 @@ fn test_adjacently_tagged_enum_bytes() {
             },
             Token::Str("t"),
             Token::UnitVariant {
-                name: "t",
+                name: "Data",
                 variant: "A",
             },
             Token::Str("c"),
@@ -2130,7 +2130,7 @@ fn test_adjacently_tagged_enum_bytes() {
             },
             Token::Bytes(b"t"),
             Token::UnitVariant {
-                name: "t",
+                name: "Data",
                 variant: "A",
             },
             Token::Bytes(b"c"),
@@ -2174,7 +2174,7 @@ fn test_adjacently_tagged_enum_containing_flatten() {
             },
             Token::Str("t"),
             Token::UnitVariant {
-                name: "t",
+                name: "Data",
                 variant: "A",
             },
             Token::Str("c"),
@@ -2766,7 +2766,7 @@ fn test_expecting_message_adjacently_tagged_enum() {
     // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
     assert_de_tokens_error::<Enum>(
         &[Token::Map { len: None }, Token::Str("tag"), Token::Unit],
-        r#"invalid type: unit value, expected enum tag"#,
+        r#"invalid type: unit value, expected variant of enum Enum"#,
     );
 }
 
@@ -3002,7 +3002,7 @@ mod flatten {
                         Token::U32(42),
                         Token::Str("tag"),
                         Token::UnitVariant {
-                            name: "tag",
+                            name: "Enum",
                             variant: "Struct",
                         },
                         Token::Str("content"),
@@ -3033,7 +3033,7 @@ mod flatten {
                         Token::U32(42),
                         Token::Str("tag"),
                         Token::UnitVariant {
-                            name: "tag",
+                            name: "Enum",
                             variant: "Newtype",
                         },
                         Token::Str("content"),

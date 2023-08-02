@@ -1460,7 +1460,8 @@ fn deserialize_adjacently_tagged_enum(
         })
         .collect();
 
-    let expecting = format!("adjacently tagged enum {}", params.type_name());
+    let rust_name = params.type_name();
+    let expecting = format!("adjacently tagged enum {}", rust_name);
     let expecting = cattrs.expecting().unwrap_or(&expecting);
     let type_name = cattrs.name().deserialize_name();
     let deny_unknown_fields = cattrs.deny_unknown_fields();
@@ -1482,7 +1483,7 @@ fn deserialize_adjacently_tagged_enum(
 
     let variant_seed = quote! {
         _serde::__private::de::AdjacentlyTaggedEnumVariantSeed::<__Field> {
-            tag: #tag,
+            enum_name: #rust_name,
             variants: &VARIANTS,
             fields_enum: _serde::__private::PhantomData
         }

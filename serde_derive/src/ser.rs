@@ -650,7 +650,7 @@ fn serialize_adjacently_tagged_variant(
     let variant_name = variant.attrs.name().serialize_name();
     let serialize_variant = quote! {
         &_serde::__private::ser::AdjacentlyTaggedEnumVariant {
-            tag: #tag,
+            enum_name: #type_name,
             variant_index: #variant_index,
             variant_name: #variant_name,
         }

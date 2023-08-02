@@ -2841,13 +2841,13 @@ fn flat_map_take_entry<'de>(
 }
 
 pub struct AdjacentlyTaggedEnumVariantSeed<F> {
-    pub tag: &'static str,
+    pub enum_name: &'static str,
     pub variants: &'static [&'static str],
     pub fields_enum: PhantomData<F>,
 }
 
 pub struct AdjacentlyTaggedEnumVariantVisitor<F> {
-    tag: &'static str,
+    enum_name: &'static str,
     fields_enum: PhantomData<F>,
 }
 
@@ -2858,7 +2858,7 @@ where
     type Value = F;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        write!(formatter, "enum {}", self.tag)
+        write!(formatter, "variant of enum {}", self.enum_name)
     }
 
     fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
@@ -2882,10 +2882,10 @@ where
         D: Deserializer<'de>,
     {
         deserializer.deserialize_enum(
-            self.tag,
+            self.enum_name,
             self.variants,
             AdjacentlyTaggedEnumVariantVisitor {
-                tag: self.tag,
+                enum_name: self.enum_name,
                 fields_enum: PhantomData,
             },
         )
