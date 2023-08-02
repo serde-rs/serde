@@ -1146,9 +1146,14 @@ fn deserialize_struct_in_place(
         .filter(|&(_, field)| !field.attrs.skip_deserializing())
         .map(|(i, field)| {
             (
-                field.attrs.name().deserialize_name(),
+                VariantName::String(field.attrs.name().deserialize_name()),
                 field_i(i),
-                field.attrs.aliases(),
+                field
+                    .attrs
+                    .aliases()
+                    .iter()
+                    .map(|a| VariantName::String(a.clone()))
+                    .collect(),
             )
         })
         .collect();
