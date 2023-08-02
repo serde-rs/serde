@@ -1356,15 +1356,15 @@ where
     }
 }
 
-pub struct AdjacentlyTaggedEnumVariantSerializer {
+pub struct AdjacentlyTaggedEnumVariant {
     tag: &'static str,
     variant_index: u32,
     variant_name: &'static str,
 }
 
-impl AdjacentlyTaggedEnumVariantSerializer {
+impl AdjacentlyTaggedEnumVariant {
     pub fn new(tag: &'static str, variant_index: u32, variant_name: &'static str) -> Self {
-        AdjacentlyTaggedEnumVariantSerializer {
+        AdjacentlyTaggedEnumVariant {
             tag,
             variant_index,
             variant_name,
@@ -1372,7 +1372,7 @@ impl AdjacentlyTaggedEnumVariantSerializer {
     }
 }
 
-impl Serialize for AdjacentlyTaggedEnumVariantSerializer {
+impl Serialize for AdjacentlyTaggedEnumVariant {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
