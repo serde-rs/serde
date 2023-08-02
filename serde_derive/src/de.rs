@@ -1484,7 +1484,7 @@ fn deserialize_adjacently_tagged_enum(
     let variant_seed = quote! {
         _serde::__private::de::AdjacentlyTaggedEnumVariantSeed::<__Field> {
             enum_name: #rust_name,
-            variants: &VARIANTS,
+            variants: VARIANTS,
             fields_enum: _serde::__private::PhantomData
         }
     };
