@@ -1,10 +1,13 @@
 use crate::lib::*;
 
 use crate::de::value::{BorrowedBytesDeserializer, BytesDeserializer};
-use crate::de::{Deserialize, Deserializer, Error, IntoDeserializer, Visitor};
+use crate::de::{
+    Deserialize, DeserializeSeed, Deserializer, EnumAccess, Error, IntoDeserializer, VariantAccess,
+    Visitor,
+};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use crate::de::{DeserializeSeed, MapAccess, Unexpected};
+use crate::de::{MapAccess, Unexpected};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{
@@ -2856,5 +2859,57 @@ fn flat_map_take_entry<'de>(
         entry.take()
     } else {
         None
+    }
+}
+
+pub struct AdjacentlyTaggedEnumVariantSeed<F> {
+    pub enum_name: &'static str,
+    pub variants: &'static [&'static str],
+    pub fields_enum: PhantomData<F>,
+}
+
+pub struct AdjacentlyTaggedEnumVariantVisitor<F> {
+    enum_name: &'static str,
+    fields_enum: PhantomData<F>,
+}
+
+impl<'de, F> Visitor<'de> for AdjacentlyTaggedEnumVariantVisitor<F>
+where
+    F: Deserialize<'de>,
+{
+    type Value = F;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "variant of enum {}", self.enum_name)
+    }
+
+    fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
+    where
+        A: EnumAccess<'de>,
+    {
+        let (variant, variant_access) = tri!(data.variant());
+        tri!(variant_access.unit_variant());
+        Ok(variant)
+    }
+}
+
+impl<'de, F> DeserializeSeed<'de> for AdjacentlyTaggedEnumVariantSeed<F>
+where
+    F: Deserialize<'de>,
+{
+    type Value = F;
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_enum(
+            self.enum_name,
+            self.variants,
+            AdjacentlyTaggedEnumVariantVisitor {
+                enum_name: self.enum_name,
+                fields_enum: PhantomData,
+            },
+        )
     }
 }

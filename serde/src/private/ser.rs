@@ -1374,3 +1374,18 @@ impl Serialize for VariantName {
         }
     }
 }
+
+pub struct AdjacentlyTaggedEnumVariant {
+    pub enum_name: &'static str,
+    pub variant_index: u32,
+    pub variant_name: &'static str,
+}
+
+impl Serialize for AdjacentlyTaggedEnumVariant {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_unit_variant(self.enum_name, self.variant_index, self.variant_name)
+    }
+}

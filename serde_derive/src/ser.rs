@@ -480,7 +480,14 @@ fn serialize_variant(
                 serialize_internally_tagged_variant(params, variant, cattrs, tag)
             }
             (attr::TagType::Adjacent { tag, content }, false) => {
-                serialize_adjacently_tagged_variant(params, variant, cattrs, tag, content)
+                serialize_adjacently_tagged_variant(
+                    params,
+                    variant,
+                    cattrs,
+                    variant_index,
+                    tag,
+                    content,
+                )
             }
             (attr::TagType::None, _) | (_, true) => {
                 serialize_untagged_variant(params, variant, cattrs)
@@ -645,12 +652,20 @@ fn serialize_adjacently_tagged_variant(
     params: &Parameters,
     variant: &Variant,
     cattrs: &attr::Container,
+    variant_index: u32,
     tag: &str,
     content: &str,
 ) -> Fragment {
     let this_type = &params.this_type;
     let type_name = cattrs.name().serialize_name();
     let variant_name = variant.attrs.name().serialize_name();
+    let serialize_variant = quote! {
+        &_serde::__private::ser::AdjacentlyTaggedEnumVariant {
+            enum_name: #type_name,
+            variant_index: #variant_index,
+            variant_name: #variant_name,
+        }
+    };
 
     let inner = Stmts(if let Some(path) = variant.attrs.serialize_with() {
         let ser = wrap_serialize_variant_with(params, path, variant);
@@ -664,7 +679,7 @@ fn serialize_adjacently_tagged_variant(
                     let mut __struct = _serde::Serializer::serialize_struct(
                         __serializer, #type_name, 1)?;
                     _serde::ser::SerializeStruct::serialize_field(
-                        &mut __struct, #tag, &#variant_name)?;
+                        &mut __struct, #tag, #serialize_variant)?;
                     _serde::ser::SerializeStruct::end(__struct)
                 };
             }
@@ -681,7 +696,7 @@ fn serialize_adjacently_tagged_variant(
                     let mut __struct = _serde::Serializer::serialize_struct(
                         __serializer, #type_name, 2)?;
                     _serde::ser::SerializeStruct::serialize_field(
-                        &mut __struct, #tag, &#variant_name)?;
+                        &mut __struct, #tag, #serialize_variant)?;
                     #func(
                         &mut __struct, #content, #field_expr)?;
                     _serde::ser::SerializeStruct::end(__struct)
@@ -746,7 +761,7 @@ fn serialize_adjacently_tagged_variant(
         let mut __struct = _serde::Serializer::serialize_struct(
             __serializer, #type_name, 2)?;
         _serde::ser::SerializeStruct::serialize_field(
-            &mut __struct, #tag, &#variant_name)?;
+            &mut __struct, #tag, #serialize_variant)?;
         _serde::ser::SerializeStruct::serialize_field(
             &mut __struct, #content, &__AdjacentlyTagged {
                 data: (#(#fields_ident,)*),

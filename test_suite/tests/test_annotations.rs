@@ -2108,7 +2108,10 @@ fn test_adjacently_tagged_enum_bytes() {
                 len: 2,
             },
             Token::Str("t"),
-            Token::Str("A"),
+            Token::UnitVariant {
+                name: "Data",
+                variant: "A",
+            },
             Token::Str("c"),
             Token::Struct { name: "A", len: 1 },
             Token::Str("a"),
@@ -2126,7 +2129,10 @@ fn test_adjacently_tagged_enum_bytes() {
                 len: 2,
             },
             Token::Bytes(b"t"),
-            Token::Str("A"),
+            Token::UnitVariant {
+                name: "Data",
+                variant: "A",
+            },
             Token::Bytes(b"c"),
             Token::Struct { name: "A", len: 1 },
             Token::Str("a"),
@@ -2167,7 +2173,10 @@ fn test_adjacently_tagged_enum_containing_flatten() {
                 len: 2,
             },
             Token::Str("t"),
-            Token::Str("A"),
+            Token::UnitVariant {
+                name: "Data",
+                variant: "A",
+            },
             Token::Str("c"),
             Token::Map { len: None },
             Token::Str("a"),
@@ -2757,7 +2766,7 @@ fn test_expecting_message_adjacently_tagged_enum() {
     // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
     assert_de_tokens_error::<Enum>(
         &[Token::Map { len: None }, Token::Str("tag"), Token::Unit],
-        r#"invalid type: unit value, expected variant identifier"#,
+        r#"invalid type: unit value, expected variant of enum Enum"#,
     );
 }
 
@@ -3187,7 +3196,10 @@ mod flatten {
                         Token::Str("outer"),
                         Token::U32(42),
                         Token::Str("tag"),
-                        Token::Str("Struct"),
+                        Token::UnitVariant {
+                            name: "Enum",
+                            variant: "Struct",
+                        },
                         Token::Str("content"),
                         Token::Struct {
                             len: 2,
@@ -3215,7 +3227,10 @@ mod flatten {
                         Token::Str("outer"),
                         Token::U32(42),
                         Token::Str("tag"),
-                        Token::Str("Newtype"),
+                        Token::UnitVariant {
+                            name: "Enum",
+                            variant: "Newtype",
+                        },
                         Token::Str("content"),
                         Token::Struct {
                             len: 1,
