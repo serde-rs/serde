@@ -1357,19 +1357,9 @@ where
 }
 
 pub struct AdjacentlyTaggedEnumVariant {
-    tag: &'static str,
-    variant_index: u32,
-    variant_name: &'static str,
-}
-
-impl AdjacentlyTaggedEnumVariant {
-    pub fn new(tag: &'static str, variant_index: u32, variant_name: &'static str) -> Self {
-        AdjacentlyTaggedEnumVariant {
-            tag,
-            variant_index,
-            variant_name,
-        }
-    }
+    pub tag: &'static str,
+    pub variant_index: u32,
+    pub variant_name: &'static str,
 }
 
 impl Serialize for AdjacentlyTaggedEnumVariant {
