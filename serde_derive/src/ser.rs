@@ -1,13 +1,12 @@
 use crate::fragment::{Fragment, Match, Stmts};
-use crate::internals::ast::{Container, Data, Field, Style, Variant};
+use crate::internals::ast::{Container, Data, Field, Style, Variant, VariantMix};
+use crate::internals::attr::VariantName;
 use crate::internals::{attr, replace_receiver, Ctxt, Derive};
 use crate::{bound, dummy, pretend, this};
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 use syn::{parse_quote, Ident, Index, Member};
-
-use crate::internals::attr::VariantName;
 
 pub fn expand_derive_serialize(input: &mut syn::DeriveInput) -> syn::Result<TokenStream> {
     replace_receiver(input);
@@ -172,7 +171,7 @@ fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
         serialize_into(params, type_into)
     } else {
         match &cont.data {
-            Data::Enum(variants) => serialize_enum(params, variants, &cont.attrs),
+            Data::Enum(mix, variants) => serialize_enum(*mix, params, variants, &cont.attrs),
             Data::Struct(Style::Struct, fields) => serialize_struct(params, fields, &cont.attrs),
             Data::Struct(Style::Tuple, fields) => {
                 serialize_tuple_struct(params, fields, &cont.attrs)
@@ -188,7 +187,7 @@ fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
 fn serialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
     let fields = match &cont.data {
         Data::Struct(_, fields) => fields,
-        Data::Enum(_) => unreachable!(),
+        Data::Enum(_, _) => unreachable!(),
     };
 
     let self_var = &params.self_var;
@@ -398,7 +397,12 @@ fn serialize_struct_as_map(
     }
 }
 
-fn serialize_enum(params: &Parameters, variants: &[Variant], cattrs: &attr::Container) -> Fragment {
+fn serialize_enum(
+    mix: VariantMix,
+    params: &Parameters,
+    variants: &[Variant],
+    cattrs: &attr::Container,
+) -> Fragment {
     assert!(variants.len() as u64 <= u64::from(u32::max_value()));
 
     let self_var = &params.self_var;
@@ -407,7 +411,7 @@ fn serialize_enum(params: &Parameters, variants: &[Variant], cattrs: &attr::Cont
         .iter()
         .enumerate()
         .map(|(variant_index, variant)| {
-            serialize_variant(params, variant, variant_index as u32, cattrs)
+            serialize_variant(mix, params, variant, variant_index as u32, cattrs)
         })
         .collect();
 
@@ -419,6 +423,7 @@ fn serialize_enum(params: &Parameters, variants: &[Variant], cattrs: &attr::Cont
 }
 
 fn serialize_variant(
+    mix: VariantMix,
     params: &Parameters,
     variant: &Variant,
     variant_index: u32,
@@ -481,6 +486,7 @@ fn serialize_variant(
             }
             (attr::TagType::Adjacent { tag, content }, false) => {
                 serialize_adjacently_tagged_variant(
+                    mix,
                     params,
                     variant,
                     cattrs,
@@ -649,6 +655,7 @@ fn serialize_internally_tagged_variant(
 }
 
 fn serialize_adjacently_tagged_variant(
+    mix: VariantMix,
     params: &Parameters,
     variant: &Variant,
     cattrs: &attr::Container,
@@ -659,12 +666,19 @@ fn serialize_adjacently_tagged_variant(
     let this_type = &params.this_type;
     let type_name = cattrs.name().serialize_name();
     let variant_name = variant.attrs.name().serialize_name();
-    let serialize_variant = quote! {
-        &_serde::__private::ser::AdjacentlyTaggedEnumVariant {
-            enum_name: #type_name,
-            variant_index: #variant_index,
-            variant_name: #variant_name,
+
+    let serialize_variant = match mix {
+        // if these are all strings, then we can serialize by variant index
+        VariantMix::OnlyStrings => {
+            quote! {
+                _serde::__private::ser::AdjacentlyTaggedEnumVariant {
+                    enum_name: #type_name,
+                    variant_index: #variant_index,
+                    variant_name: #variant_name,
+                }
+            }
         }
+        _ => serialize_variant_name(&variant_name),
     };
 
     let inner = Stmts(if let Some(path) = variant.attrs.serialize_with() {
@@ -679,7 +693,7 @@ fn serialize_adjacently_tagged_variant(
                     let mut __struct = _serde::Serializer::serialize_struct(
                         __serializer, #type_name, 1)?;
                     _serde::ser::SerializeStruct::serialize_field(
-                        &mut __struct, #tag, #serialize_variant)?;
+                        &mut __struct, #tag, &#serialize_variant)?;
                     _serde::ser::SerializeStruct::end(__struct)
                 };
             }
@@ -696,7 +710,7 @@ fn serialize_adjacently_tagged_variant(
                     let mut __struct = _serde::Serializer::serialize_struct(
                         __serializer, #type_name, 2)?;
                     _serde::ser::SerializeStruct::serialize_field(
-                        &mut __struct, #tag, #serialize_variant)?;
+                        &mut __struct, #tag, &#serialize_variant)?;
                     #func(
                         &mut __struct, #content, #field_expr)?;
                     _serde::ser::SerializeStruct::end(__struct)
@@ -761,7 +775,7 @@ fn serialize_adjacently_tagged_variant(
         let mut __struct = _serde::Serializer::serialize_struct(
             __serializer, #type_name, 2)?;
         _serde::ser::SerializeStruct::serialize_field(
-            &mut __struct, #tag, #serialize_variant)?;
+            &mut __struct, #tag, &#serialize_variant)?;
         _serde::ser::SerializeStruct::serialize_field(
             &mut __struct, #content, &__AdjacentlyTagged {
                 data: (#(#fields_ident,)*),

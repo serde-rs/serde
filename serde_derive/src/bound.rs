@@ -60,7 +60,7 @@ pub fn with_where_predicates_from_variants(
     from_variant: fn(&attr::Variant) -> Option<&[syn::WherePredicate]>,
 ) -> syn::Generics {
     let variants = match &cont.data {
-        Data::Enum(variants) => variants,
+        Data::Enum(_, variants) => variants,
         Data::Struct(_, _) => {
             return generics.clone();
         }
@@ -255,7 +255,7 @@ pub fn with_bound(
         associated_type_usage: Vec::new(),
     };
     match &cont.data {
-        Data::Enum(variants) => {
+        Data::Enum(_, variants) => {
             for variant in variants {
                 let relevant_fields = variant
                     .fields

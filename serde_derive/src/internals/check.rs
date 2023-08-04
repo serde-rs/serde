@@ -44,7 +44,7 @@ fn check_remote_generic(cx: &Ctxt, cont: &Container) {
 // attribute.
 fn check_getter(cx: &Ctxt, cont: &Container) {
     match cont.data {
-        Data::Enum(_) => {
+        Data::Enum(_, _) => {
             if cont.data.has_getter() {
                 cx.error_spanned_by(
                     cont.original,
@@ -66,7 +66,7 @@ fn check_getter(cx: &Ctxt, cont: &Container) {
 // Flattening has some restrictions we can test.
 fn check_flatten(cx: &Ctxt, cont: &Container) {
     match &cont.data {
-        Data::Enum(variants) => {
+        Data::Enum(_, variants) => {
             for variant in variants {
                 for field in &variant.fields {
                     check_flatten_field(cx, variant.style, field);
@@ -110,7 +110,7 @@ fn check_flatten_field(cx: &Ctxt, style: Style, field: &Field) {
 // last variant may be a newtype variant which is an implicit "other" case.
 fn check_identifier(cx: &Ctxt, cont: &Container) {
     let variants = match &cont.data {
-        Data::Enum(variants) => variants,
+        Data::Enum(_, variants) => variants,
         Data::Struct(_, _) => return,
     };
 
@@ -192,7 +192,7 @@ fn check_identifier(cx: &Ctxt, cont: &Container) {
 // (de)serialize_with.
 fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
     let variants = match &cont.data {
-        Data::Enum(variants) => variants,
+        Data::Enum(_, variants) => variants,
         Data::Struct(_, _) => return,
     };
 
@@ -266,7 +266,7 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
 // output and/or ambiguity in the to-be-deserialized input.
 fn check_internal_tag_field_name_conflict(cx: &Ctxt, cont: &Container) {
     let variants = match &cont.data {
-        Data::Enum(variants) => variants,
+        Data::Enum(_, variants) => variants,
         Data::Struct(_, _) => return,
     };
 
@@ -358,7 +358,7 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     }
 
     let fields = match &mut cont.data {
-        Data::Enum(_) => {
+        Data::Enum(_, _) => {
             cx.error_spanned_by(
                 cont.original,
                 "#[serde(transparent)] is not allowed on an enum",
@@ -412,7 +412,7 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
 /// Externally tagged/untagged enum variants must have string names.
 fn check_non_string_renames(cx: &Ctxt, cont: &mut Container) {
     let details = match &cont.data {
-        Data::Enum(_) => match cont.attrs.tag() {
+        Data::Enum(_, _) => match cont.attrs.tag() {
             TagType::Adjacent { .. } | TagType::Internal { .. } => return,
             TagType::External => "externally tagged enums",
             TagType::None => "untagged enums",
@@ -420,7 +420,7 @@ fn check_non_string_renames(cx: &Ctxt, cont: &mut Container) {
         Data::Struct(_, _) => return,
     };
 
-    if let Data::Enum(variants) = &cont.data {
+    if let Data::Enum(_, variants) = &cont.data {
         for v in variants {
             let name = v.attrs.name();
             let ser_name = name.serialize_name();

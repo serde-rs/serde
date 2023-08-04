@@ -23,7 +23,7 @@ pub struct Container<'a> {
 ///
 /// Analogous to `syn::Data`.
 pub enum Data<'a> {
-    Enum(Vec<Variant<'a>>),
+    Enum(VariantMix, Vec<Variant<'a>>),
     Struct(Style, Vec<Field<'a>>),
 }
 
@@ -34,6 +34,42 @@ pub struct Variant<'a> {
     pub style: Style,
     pub fields: Vec<Field<'a>>,
     pub original: &'a syn::Variant,
+}
+
+/// An enum representing the distribution of different variant names
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum VariantMix {
+    OnlyStrings,
+    OnlyIntegers,
+    OnlyBooleans,
+    Any,
+}
+
+impl VariantMix {
+    pub fn from_single(variant: &Variant) -> Self {
+        match variant.attrs.name().serialize_name() {
+            attr::VariantName::String(_) => Self::OnlyStrings,
+            attr::VariantName::Integer(_) => Self::OnlyIntegers,
+            attr::VariantName::Boolean(_) => Self::OnlyBooleans,
+        }
+    }
+    pub fn from_multiple(variants: &[Variant]) -> Self {
+        let mut iter = variants.iter();
+        match iter.next() {
+            Some(first) => {
+                let mix = Self::from_single(first);
+                for rest in iter {
+                    if Self::from_single(rest) != mix {
+                        return Self::Any;
+                    }
+                }
+                mix
+            }
+
+            // string variants are the base case as they were the original case
+            None => Self::OnlyStrings,
+        }
+    }
 }
 
 /// A field of a struct.
@@ -66,7 +102,10 @@ impl<'a> Container<'a> {
         let mut attrs = attr::Container::from_ast(cx, item);
 
         let mut data = match &item.data {
-            syn::Data::Enum(data) => Data::Enum(enum_from_ast(cx, &data.variants, attrs.default())),
+            syn::Data::Enum(data) => Data::Enum(
+                VariantMix::Any,
+                enum_from_ast(cx, &data.variants, attrs.default()),
+            ),
             syn::Data::Struct(data) => {
                 let (style, fields) = struct_from_ast(cx, &data.fields, None, attrs.default());
                 Data::Struct(style, fields)
@@ -79,8 +118,8 @@ impl<'a> Container<'a> {
 
         let mut has_flatten = false;
         match &mut data {
-            Data::Enum(variants) => {
-                for variant in variants {
+            Data::Enum(mix, variants) => {
+                for variant in &mut *variants {
                     variant.attrs.rename_by_rules(attrs.rename_all_rules());
                     for field in &mut variant.fields {
                         if field.attrs.flatten() {
@@ -94,6 +133,7 @@ impl<'a> Container<'a> {
                         );
                     }
                 }
+                *mix = VariantMix::from_multiple(variants);
             }
             Data::Struct(_, fields) => {
                 for field in fields {
@@ -124,7 +164,7 @@ impl<'a> Container<'a> {
 impl<'a> Data<'a> {
     pub fn all_fields(&'a self) -> Box<dyn Iterator<Item = &'a Field<'a>> + 'a> {
         match self {
-            Data::Enum(variants) => {
+            Data::Enum(_, variants) => {
                 Box::new(variants.iter().flat_map(|variant| variant.fields.iter()))
             }
             Data::Struct(_, fields) => Box::new(fields.iter()),

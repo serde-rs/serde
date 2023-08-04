@@ -1,5 +1,5 @@
 use crate::fragment::{Expr, Fragment, Match, Stmts};
-use crate::internals::ast::{Container, Data, Field, Style, Variant};
+use crate::internals::ast::{Container, Data, Field, Style, Variant, VariantMix};
 use crate::internals::{attr, replace_receiver, ungroup, Ctxt, Derive};
 use crate::{bound, dummy, pretend, this};
 use proc_macro2::{Literal, Span, TokenStream};
@@ -284,7 +284,7 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
         deserialize_try_from(type_try_from)
     } else if let attr::Identifier::No = cont.attrs.identifier() {
         match &cont.data {
-            Data::Enum(variants) => deserialize_enum(params, variants, &cont.attrs),
+            Data::Enum(mix, variants) => deserialize_enum(*mix, params, variants, &cont.attrs),
             Data::Struct(Style::Struct, fields) => {
                 deserialize_struct(params, fields, &cont.attrs, StructForm::Struct)
             }
@@ -295,7 +295,7 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
         }
     } else {
         match &cont.data {
-            Data::Enum(variants) => deserialize_custom_identifier(params, variants, &cont.attrs),
+            Data::Enum(_, variants) => deserialize_custom_identifier(params, variants, &cont.attrs),
             Data::Struct(_, _) => unreachable!("checked in serde_derive_internals"),
         }
     }
@@ -331,7 +331,7 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
         Data::Struct(Style::Tuple, fields) | Data::Struct(Style::Newtype, fields) => {
             deserialize_tuple_in_place(params, fields, &cont.attrs)
         }
-        Data::Enum(_) | Data::Struct(Style::Unit, _) => {
+        Data::Enum(_, _) | Data::Struct(Style::Unit, _) => {
             return None;
         }
     };
@@ -359,7 +359,7 @@ fn deserialize_in_place_body(_cont: &Container, _params: &Parameters) -> Option<
 fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
     let fields = match &cont.data {
         Data::Struct(_, fields) => fields,
-        Data::Enum(_) => unreachable!(),
+        Data::Enum(_, _) => unreachable!(),
     };
 
     let this_value = &params.this_value;
@@ -991,6 +991,7 @@ fn deserialize_struct(
         })
         .collect();
     let field_visitor = Stmts(deserialize_generated_identifier(
+        VariantMix::OnlyStrings,
         &field_names_idents,
         cattrs,
         false,
@@ -1159,6 +1160,7 @@ fn deserialize_struct_in_place(
         .collect();
 
     let field_visitor = Stmts(deserialize_generated_identifier(
+        VariantMix::OnlyStrings,
         &field_names_idents,
         cattrs,
         false,
@@ -1225,6 +1227,7 @@ fn deserialize_struct_in_place(
 }
 
 fn deserialize_enum(
+    mix: VariantMix,
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
@@ -1233,14 +1236,15 @@ fn deserialize_enum(
     match variants.iter().position(|var| var.attrs.untagged()) {
         Some(variant_idx) => {
             let (tagged, untagged) = variants.split_at(variant_idx);
-            let tagged_frag = Expr(deserialize_homogeneous_enum(params, tagged, cattrs));
+            let tagged_frag = Expr(deserialize_homogeneous_enum(mix, params, tagged, cattrs));
             deserialize_untagged_enum_after(params, untagged, cattrs, Some(tagged_frag))
         }
-        None => deserialize_homogeneous_enum(params, variants, cattrs),
+        None => deserialize_homogeneous_enum(mix, params, variants, cattrs),
     }
 }
 
 fn deserialize_homogeneous_enum(
+    mix: VariantMix,
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
@@ -1248,16 +1252,17 @@ fn deserialize_homogeneous_enum(
     match cattrs.tag() {
         attr::TagType::External => deserialize_externally_tagged_enum(params, variants, cattrs),
         attr::TagType::Internal { tag } => {
-            deserialize_internally_tagged_enum(params, variants, cattrs, tag)
+            deserialize_internally_tagged_enum(mix, params, variants, cattrs, tag)
         }
         attr::TagType::Adjacent { tag, content } => {
-            deserialize_adjacently_tagged_enum(params, variants, cattrs, tag, content)
+            deserialize_adjacently_tagged_enum(mix, params, variants, cattrs, tag, content)
         }
         attr::TagType::None => deserialize_untagged_enum(params, variants, cattrs),
     }
 }
 
 fn prepare_enum_variant_enum(
+    mix: VariantMix,
     variants: &[Variant],
     cattrs: &attr::Container,
 ) -> (TokenStream, Stmts) {
@@ -1290,6 +1295,7 @@ fn prepare_enum_variant_enum(
     };
 
     let variant_visitor = Stmts(deserialize_generated_identifier(
+        mix,
         &variant_names_idents,
         cattrs,
         true,
@@ -1313,7 +1319,8 @@ fn deserialize_externally_tagged_enum(
     let expecting = format!("enum {}", params.type_name());
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
-    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants, cattrs);
+    let (variants_stmt, variant_visitor) =
+        prepare_enum_variant_enum(VariantMix::OnlyStrings, variants, cattrs);
 
     // Match arms to extract a variant from a string
     let variant_arms = variants
@@ -1393,12 +1400,13 @@ fn deserialize_externally_tagged_enum(
 }
 
 fn deserialize_internally_tagged_enum(
+    mix: VariantMix,
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
     tag: &str,
 ) -> Fragment {
-    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants, cattrs);
+    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(mix, variants, cattrs);
 
     // Match arms to extract a variant from a string
     let variant_arms = variants
@@ -1440,6 +1448,7 @@ fn deserialize_internally_tagged_enum(
 }
 
 fn deserialize_adjacently_tagged_enum(
+    mix: VariantMix,
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
@@ -1452,7 +1461,7 @@ fn deserialize_adjacently_tagged_enum(
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
 
-    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants, cattrs);
+    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(mix, variants, cattrs);
 
     let variant_arms: &Vec<_> = &variants
         .iter()
@@ -1492,14 +1501,6 @@ fn deserialize_adjacently_tagged_enum(
         #field_visitor_ty {
             tag: #tag,
             content: #content,
-        }
-    };
-
-    let variant_seed = quote! {
-        _serde::__private::de::AdjacentlyTaggedEnumVariantSeed::<__Field> {
-            enum_name: #rust_name,
-            variants: VARIANTS,
-            fields_enum: _serde::__private::PhantomData
         }
     };
 
@@ -1550,8 +1551,21 @@ fn deserialize_adjacently_tagged_enum(
         _serde::de::MapAccess::next_key_seed(&mut __map, #tag_or_content)?
     };
 
-    let variant_from_map = quote! {
-        _serde::de::MapAccess::next_value_seed(&mut __map, #variant_seed)?
+    let variant_from_map = match mix {
+        // if all variants are string variants, we can deserialize by variant index
+        VariantMix::OnlyStrings => {
+            quote! {
+                _serde::de::MapAccess::next_value_seed(
+                    &mut __map,
+                    _serde::__private::de::AdjacentlyTaggedEnumVariantSeed::<__Field> {
+                        enum_name: #rust_name,
+                        variants: VARIANTS,
+                        fields_enum: _serde::__private::PhantomData,
+                    }
+                )?
+            }
+        }
+        _ => quote! { _serde::de::MapAccess::next_value::<__Field>(&mut __map)? },
     };
 
     // When allowing unknown fields, we want to transparently step through keys
@@ -2015,6 +2029,7 @@ fn deserialize_untagged_newtype_variant(
 }
 
 fn deserialize_generated_identifier(
+    mix: VariantMix,
     fields: &[(VariantName, Ident, Vec<VariantName>)],
     cattrs: &attr::Container,
     is_variant: bool,
@@ -2055,36 +2070,19 @@ fn deserialize_generated_identifier(
         None
     };
 
-    let deserialize_call = if is_variant && !fields.is_empty() {
-        // TODO: Can we un-duplicate this work from deserialize_identifier?
-        let mut flat_fields = Vec::new();
-        for (_, ident, aliases) in fields {
-            flat_fields.extend(aliases.iter().map(|alias| (alias, ident)));
-        }
-
-        let first_field = flat_fields[0];
-        let all_same = flat_fields.iter().all(|(f, _)| match (f, first_field.0) {
-            (VariantName::String(_), VariantName::String(_)) => true,
-            (VariantName::Integer(_), VariantName::Integer(_)) => true,
-            (VariantName::Boolean(_), VariantName::Boolean(_)) => true,
-            _ => false,
-        });
-
-        if all_same {
-            match first_field.0 {
-                VariantName::String(_) => {
-                    quote! { _serde::Deserializer::deserialize_string(__deserializer, __FieldVisitor) }
-                }
-                VariantName::Integer(_) => {
-                    quote! { _serde::Deserializer::deserialize_i64(__deserializer, __FieldVisitor) }
-                }
-                VariantName::Boolean(_) => {
-                    quote! { _serde::Deserializer::deserialize_bool(__deserializer, __FieldVisitor) }
-                }
+    let deserialize_call = if is_variant {
+        match mix {
+            VariantMix::OnlyStrings => {
+                quote! { _serde::Deserializer::deserialize_string(__deserializer, __FieldVisitor) }
             }
-        } else {
-            quote! {
-                _serde::Deserializer::deserialize_any(__deserializer, __FieldVisitor)
+            VariantMix::OnlyIntegers => {
+                quote! { _serde::Deserializer::deserialize_i64(__deserializer, __FieldVisitor) }
+            }
+            VariantMix::OnlyBooleans => {
+                quote! { _serde::Deserializer::deserialize_bool(__deserializer, __FieldVisitor) }
+            }
+            VariantMix::Any => {
+                quote! { _serde::Deserializer::deserialize_any(__deserializer, __FieldVisitor) }
             }
         }
     } else {
