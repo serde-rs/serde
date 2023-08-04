@@ -2,8 +2,8 @@ use crate::lib::*;
 
 use crate::de::value::{BorrowedBytesDeserializer, BytesDeserializer};
 use crate::de::{
-    Deserialize, DeserializeSeed, Deserializer, EnumAccess, Error, IntoDeserializer, VariantAccess,
-    Visitor,
+    size_hint, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Error, IntoDeserializer,
+    VariantAccess, Visitor,
 };
 
 #[cfg(any(feature = "std", feature = "alloc"))]
@@ -2200,6 +2200,10 @@ where
             Some(value) => seed.deserialize(ContentRefDeserializer::new(value)),
             None => Err(Error::custom("value is missing")),
         }
+    }
+
+    fn is_empty(&mut self) -> bool {
+        size_hint::is_empty(&self.iter)
     }
 }
 

@@ -7,6 +7,16 @@ where
     helper(iter.size_hint())
 }
 
+pub fn is_empty<I>(iter: &I) -> bool
+where
+    I: Iterator,
+{
+    match iter.size_hint() {
+        (0, _) => true,
+        _ => false,
+    }
+}
+
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub fn cautious<Element>(hint: Option<usize>) -> usize {
     const MAX_PREALLOC_BYTES: usize = 1024 * 1024;
