@@ -21,15 +21,16 @@ struct Newtype(BTreeMap<String, String>);
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct Struct {
-    f: u8,
+    i128_: i128,
+    u128_: u128,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 enum Enum {
     Unit,
-    Newtype(u8),
-    Tuple(u8, u8),
-    Struct { f: u8 },
+    Newtype(u128),
+    Tuple(i128, u128),
+    Struct { i128_: i128, u128_: u128 },
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -42,7 +43,8 @@ enum InternallyTagged {
     NewtypeMap(BTreeMap<String, String>),
     NewtypeStruct(Struct),
     NewtypeEnum(Enum),
-    Struct { a: u8 },
+
+    Struct { i128_: i128, u128_: u128 },
     StructEnum { enum_: Enum },
 }
 
@@ -332,7 +334,7 @@ mod newtype {
 
     #[test]
     fn struct_() {
-        let value = InternallyTagged::NewtypeStruct(Struct { f: 6 });
+        let value = InternallyTagged::NewtypeStruct(Struct { i128_: 4, u128_: 2 });
 
         // Special case: tag field ("tag") is the first field
         assert_tokens(
@@ -340,12 +342,14 @@ mod newtype {
             &[
                 Token::Struct {
                     name: "Struct",
-                    len: 2,
+                    len: 3,
                 },
                 Token::Str("tag"),
                 Token::Str("NewtypeStruct"),
-                Token::Str("f"),
-                Token::U8(6),
+                Token::Str("i128_"),
+                Token::I128(4),
+                Token::Str("u128_"),
+                Token::U128(2),
                 Token::StructEnd,
             ],
         );
@@ -354,12 +358,14 @@ mod newtype {
             &[
                 Token::Struct {
                     name: "Struct",
-                    len: 2,
+                    len: 3,
                 },
                 Token::BorrowedStr("tag"),
                 Token::BorrowedStr("NewtypeStruct"),
-                Token::BorrowedStr("f"),
-                Token::U8(6),
+                Token::BorrowedStr("i128_"),
+                Token::I128(4),
+                Token::BorrowedStr("u128_"),
+                Token::U128(2),
                 Token::StructEnd,
             ],
         );
@@ -370,12 +376,14 @@ mod newtype {
             &[
                 Token::Struct {
                     name: "Struct",
-                    len: 2,
+                    len: 3,
                 },
-                Token::Str("f"),
-                Token::U8(6),
+                Token::Str("u128_"),
+                Token::U128(2),
                 Token::Str("tag"),
                 Token::Str("NewtypeStruct"),
+                Token::Str("i128_"),
+                Token::I128(4),
                 Token::StructEnd,
             ],
         );
@@ -384,12 +392,14 @@ mod newtype {
             &[
                 Token::Struct {
                     name: "Struct",
-                    len: 2,
+                    len: 3,
                 },
-                Token::BorrowedStr("f"),
-                Token::U8(6),
+                Token::BorrowedStr("u128_"),
+                Token::U128(2),
                 Token::BorrowedStr("tag"),
                 Token::BorrowedStr("NewtypeStruct"),
+                Token::BorrowedStr("i128_"),
+                Token::I128(4),
                 Token::StructEnd,
             ],
         );
@@ -399,7 +409,8 @@ mod newtype {
             &[
                 Token::Seq { len: Some(2) },
                 Token::Str("NewtypeStruct"), // tag
-                Token::U8(6),
+                Token::I128(4),
+                Token::U128(2),
                 Token::SeqEnd,
             ],
         );
@@ -408,7 +419,8 @@ mod newtype {
             &[
                 Token::Seq { len: Some(2) },
                 Token::BorrowedStr("NewtypeStruct"), // tag
-                Token::U8(6),
+                Token::I128(4),
+                Token::U128(2),
                 Token::SeqEnd,
             ],
         );
@@ -482,7 +494,7 @@ mod newtype {
                     Token::Str("tag"),
                     Token::Str("NewtypeEnum"),
                     Token::Str("Newtype"),
-                    Token::U8(1),
+                    Token::U128(1),
                     Token::MapEnd,
                 ],
             );
@@ -493,7 +505,7 @@ mod newtype {
                     Token::BorrowedStr("tag"),
                     Token::BorrowedStr("NewtypeEnum"),
                     Token::BorrowedStr("Newtype"),
-                    Token::U8(1),
+                    Token::U128(1),
                     Token::MapEnd,
                 ],
             );
@@ -504,7 +516,7 @@ mod newtype {
                 &[
                     Token::Map { len: Some(2) },
                     Token::Str("Newtype"),
-                    Token::U8(1),
+                    Token::U128(1),
                     Token::Str("tag"),
                     Token::Str("NewtypeEnum"),
                     Token::MapEnd,
@@ -515,7 +527,7 @@ mod newtype {
                 &[
                     Token::Map { len: Some(2) },
                     Token::BorrowedStr("Newtype"),
-                    Token::U8(1),
+                    Token::U128(1),
                     Token::BorrowedStr("tag"),
                     Token::BorrowedStr("NewtypeEnum"),
                     Token::MapEnd,
@@ -525,7 +537,7 @@ mod newtype {
 
         #[test]
         fn tuple() {
-            let value = InternallyTagged::NewtypeEnum(Enum::Tuple(1, 1));
+            let value = InternallyTagged::NewtypeEnum(Enum::Tuple(4, 2));
 
             // Special case: tag field ("tag") is the first field
             assert_tokens(
@@ -539,8 +551,8 @@ mod newtype {
                         name: "Tuple",
                         len: 2,
                     },
-                    Token::U8(1),
-                    Token::U8(1),
+                    Token::I128(4),
+                    Token::U128(2),
                     Token::TupleStructEnd,
                     Token::MapEnd,
                 ],
@@ -556,8 +568,8 @@ mod newtype {
                         name: "Tuple",
                         len: 2,
                     },
-                    Token::U8(1),
-                    Token::U8(1),
+                    Token::I128(4),
+                    Token::U128(2),
                     Token::TupleStructEnd,
                     Token::MapEnd,
                 ],
@@ -576,8 +588,8 @@ mod newtype {
                         name: "Tuple",
                         len: 2,
                     },
-                    Token::U8(1),
-                    Token::U8(1),
+                    Token::I128(4),
+                    Token::U128(2),
                     Token::TupleStructEnd,
                     Token::Str("tag"),
                     Token::Str("NewtypeEnum"),
@@ -593,8 +605,8 @@ mod newtype {
                         name: "Tuple",
                         len: 2,
                     },
-                    Token::U8(1),
-                    Token::U8(1),
+                    Token::I128(4),
+                    Token::U128(2),
                     Token::TupleStructEnd,
                     Token::BorrowedStr("tag"),
                     Token::BorrowedStr("NewtypeEnum"),
@@ -605,7 +617,7 @@ mod newtype {
 
         #[test]
         fn struct_() {
-            let value = InternallyTagged::NewtypeEnum(Enum::Struct { f: 1 });
+            let value = InternallyTagged::NewtypeEnum(Enum::Struct { i128_: 4, u128_: 2 });
 
             // Special case: tag field ("tag") is the first field
             assert_tokens(
@@ -617,10 +629,12 @@ mod newtype {
                     Token::Str("Struct"),
                     Token::Struct {
                         name: "Struct",
-                        len: 1,
+                        len: 2,
                     },
-                    Token::Str("f"),
-                    Token::U8(1),
+                    Token::Str("i128_"),
+                    Token::I128(4),
+                    Token::Str("u128_"),
+                    Token::U128(2),
                     Token::StructEnd,
                     Token::MapEnd,
                 ],
@@ -634,10 +648,12 @@ mod newtype {
                     Token::BorrowedStr("Struct"),
                     Token::Struct {
                         name: "Struct",
-                        len: 1,
+                        len: 2,
                     },
-                    Token::BorrowedStr("f"),
-                    Token::U8(1),
+                    Token::BorrowedStr("i128_"),
+                    Token::I128(4),
+                    Token::BorrowedStr("u128_"),
+                    Token::U128(2),
                     Token::StructEnd,
                     Token::MapEnd,
                 ],
@@ -654,10 +670,12 @@ mod newtype {
                     Token::Str("Struct"),
                     Token::Struct {
                         name: "Struct",
-                        len: 1,
+                        len: 2,
                     },
-                    Token::Str("f"),
-                    Token::U8(1),
+                    Token::Str("i128_"),
+                    Token::I128(4),
+                    Token::Str("u128_"),
+                    Token::U128(2),
                     Token::StructEnd,
                     Token::Str("tag"),
                     Token::Str("NewtypeEnum"),
@@ -671,10 +689,12 @@ mod newtype {
                     Token::BorrowedStr("Struct"),
                     Token::Struct {
                         name: "Struct",
-                        len: 1,
+                        len: 2,
                     },
-                    Token::BorrowedStr("f"),
-                    Token::U8(1),
+                    Token::BorrowedStr("i128_"),
+                    Token::I128(4),
+                    Token::BorrowedStr("u128_"),
+                    Token::U128(2),
                     Token::StructEnd,
                     Token::BorrowedStr("tag"),
                     Token::BorrowedStr("NewtypeEnum"),
@@ -690,8 +710,9 @@ mod newtype {
                     Token::Str("tag"),
                     Token::Str("NewtypeEnum"),
                     Token::Str("Struct"),
-                    Token::Seq { len: Some(1) },
-                    Token::U8(1), // f
+                    Token::Seq { len: Some(2) },
+                    Token::I128(4), // i128_
+                    Token::U128(2), // u128_
                     Token::SeqEnd,
                     Token::MapEnd,
                 ],
@@ -703,8 +724,9 @@ mod newtype {
                     Token::BorrowedStr("tag"),
                     Token::BorrowedStr("NewtypeEnum"),
                     Token::BorrowedStr("Struct"),
-                    Token::Seq { len: Some(1) },
-                    Token::U8(1), // f
+                    Token::Seq { len: Some(2) },
+                    Token::I128(4), // i128_
+                    Token::U128(2), // u128_
                     Token::SeqEnd,
                     Token::MapEnd,
                 ],
@@ -719,8 +741,9 @@ mod newtype {
                 &[
                     Token::Map { len: Some(2) },
                     Token::Str("Struct"),
-                    Token::Seq { len: Some(1) },
-                    Token::U8(1), // f
+                    Token::Seq { len: Some(2) },
+                    Token::I128(4), // i128_
+                    Token::U128(2), // u128_
                     Token::SeqEnd,
                     Token::Str("tag"),
                     Token::Str("NewtypeEnum"),
@@ -732,8 +755,9 @@ mod newtype {
                 &[
                     Token::Map { len: Some(2) },
                     Token::BorrowedStr("Struct"),
-                    Token::Seq { len: Some(1) },
-                    Token::U8(1), // f
+                    Token::Seq { len: Some(2) },
+                    Token::I128(4), // i128_
+                    Token::U128(2), // u128_
                     Token::SeqEnd,
                     Token::BorrowedStr("tag"),
                     Token::BorrowedStr("NewtypeEnum"),
@@ -746,7 +770,7 @@ mod newtype {
 
 #[test]
 fn struct_() {
-    let value = InternallyTagged::Struct { a: 1 };
+    let value = InternallyTagged::Struct { i128_: 4, u128_: 2 };
 
     // Special case: tag field ("tag") is the first field
     assert_tokens(
@@ -754,12 +778,14 @@ fn struct_() {
         &[
             Token::Struct {
                 name: "InternallyTagged",
-                len: 2,
+                len: 3,
             },
             Token::Str("tag"),
             Token::Str("Struct"),
-            Token::Str("a"),
-            Token::U8(1),
+            Token::Str("i128_"),
+            Token::I128(4),
+            Token::Str("u128_"),
+            Token::U128(2),
             Token::StructEnd,
         ],
     );
@@ -768,26 +794,30 @@ fn struct_() {
         &[
             Token::Struct {
                 name: "InternallyTagged",
-                len: 2,
+                len: 3,
             },
             Token::BorrowedStr("tag"),
             Token::BorrowedStr("Struct"),
-            Token::BorrowedStr("a"),
-            Token::U8(1),
+            Token::BorrowedStr("i128_"),
+            Token::I128(4),
+            Token::BorrowedStr("u128_"),
+            Token::U128(2),
             Token::StructEnd,
         ],
     );
 
-    // General case: tag field ("tag") is not the first field
+    // General case: tag field ("tag") is not the first field, struct fields not in order
     assert_de_tokens(
         &value,
         &[
             Token::Struct {
                 name: "InternallyTagged",
-                len: 2,
+                len: 3,
             },
-            Token::Str("a"),
-            Token::U8(1),
+            Token::Str("u128_"),
+            Token::U128(2),
+            Token::Str("i128_"),
+            Token::I128(4),
             Token::Str("tag"),
             Token::Str("Struct"),
             Token::StructEnd,
@@ -798,12 +828,14 @@ fn struct_() {
         &[
             Token::Struct {
                 name: "InternallyTagged",
-                len: 2,
+                len: 3,
             },
-            Token::BorrowedStr("a"),
-            Token::U8(1),
+            Token::BorrowedStr("u128_"),
+            Token::U128(2),
             Token::BorrowedStr("tag"),
             Token::BorrowedStr("Struct"),
+            Token::BorrowedStr("i128_"),
+            Token::I128(4),
             Token::StructEnd,
         ],
     );
@@ -815,8 +847,10 @@ fn struct_() {
             Token::Map { len: Some(2) },
             Token::Str("tag"),
             Token::Str("Struct"),
-            Token::Str("a"),
-            Token::U8(1),
+            Token::Str("i128_"),
+            Token::I128(4),
+            Token::Str("u128_"),
+            Token::U128(2),
             Token::MapEnd,
         ],
     );
@@ -826,8 +860,10 @@ fn struct_() {
             Token::Map { len: Some(2) },
             Token::BorrowedStr("tag"),
             Token::BorrowedStr("Struct"),
-            Token::BorrowedStr("a"),
-            Token::U8(1),
+            Token::BorrowedStr("i128_"),
+            Token::I128(4),
+            Token::BorrowedStr("u128_"),
+            Token::U128(2),
             Token::MapEnd,
         ],
     );
@@ -836,11 +872,13 @@ fn struct_() {
     assert_de_tokens(
         &value,
         &[
-            Token::Map { len: Some(2) },
-            Token::Str("a"),
-            Token::U8(1),
+            Token::Map { len: Some(3) },
+            Token::Str("u128_"),
+            Token::U128(2),
             Token::Str("tag"),
             Token::Str("Struct"),
+            Token::Str("i128_"),
+            Token::I128(4),
             Token::MapEnd,
         ],
     );
@@ -848,10 +886,12 @@ fn struct_() {
         &value,
         &[
             Token::Map { len: Some(2) },
-            Token::BorrowedStr("a"),
-            Token::U8(1),
+            Token::BorrowedStr("u128_"),
+            Token::U128(2),
             Token::BorrowedStr("tag"),
             Token::BorrowedStr("Struct"),
+            Token::BorrowedStr("i128_"),
+            Token::I128(4),
             Token::MapEnd,
         ],
     );
@@ -859,18 +899,20 @@ fn struct_() {
     assert_de_tokens(
         &value,
         &[
-            Token::Seq { len: Some(2) },
+            Token::Seq { len: Some(3) },
             Token::Str("Struct"), // tag
-            Token::U8(1),
+            Token::I128(4),
+            Token::U128(2),
             Token::SeqEnd,
         ],
     );
     assert_de_tokens(
         &value,
         &[
-            Token::Seq { len: Some(2) },
+            Token::Seq { len: Some(3) },
             Token::BorrowedStr("Struct"), // tag
-            Token::U8(1),
+            Token::I128(4),
+            Token::U128(2),
             Token::SeqEnd,
         ],
     );
