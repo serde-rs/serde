@@ -186,13 +186,14 @@ impl Name {
         self.deserialize_aliases.clone()
     }
 
-    fn correct_aliases(&mut self) {
-        // `deserialize_aliases` got from a BTreeSet, so it sorted and does not
-        // contain duplicates.
-        // We cannot insert main name in `new` because rename_all rules not yet
-        // applied there.
+    fn insert_deserialize_name_into_aliases(&mut self) {
+        // `deserialize_aliases` was constructed from a BTreeSet, so it is
+        // sorted and does not contain duplicates.
+        //
+        // In `Name::from_attrs` it's too early to insert the field's real name
+        // because rename_all rules have not yet gotten applied at that point.
         match self.deserialize_aliases.binary_search(&self.deserialize) {
-            Ok(_) => {} // element already here
+            Ok(_) => {} // already present
             Err(pos) => self
                 .deserialize_aliases
                 .insert(pos, self.deserialize.clone()),
@@ -996,7 +997,7 @@ impl Variant {
         if !self.name.deserialize_renamed {
             self.name.deserialize = rules.deserialize.apply_to_variant(&self.name.deserialize);
         }
-        self.name.correct_aliases();
+        self.name.insert_deserialize_name_into_aliases();
     }
 
     pub fn rename_all_rules(&self) -> RenameAllRules {
@@ -1336,7 +1337,7 @@ impl Field {
         if !self.name.deserialize_renamed {
             self.name.deserialize = rules.deserialize.apply_to_field(&self.name.deserialize);
         }
-        self.name.correct_aliases();
+        self.name.insert_deserialize_name_into_aliases();
     }
 
     pub fn skip_serializing(&self) -> bool {
