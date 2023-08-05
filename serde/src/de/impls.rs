@@ -1639,7 +1639,19 @@ macro_rules! variant_identifier {
                             $(
                                 $index => Ok($name_kind :: $variant),
                             )*
-                            _ => Err(Error::invalid_value(Unexpected::Unsigned(value), &self),),
+                            _ => Err(Error::invalid_value(Unexpected::Unsigned(value), &self)),
+                        }
+                    }
+
+                    fn visit_u128<E>(self, value: u128) -> Result<Self::Value, E>
+                    where
+                        E: Error,
+                    {
+                        match value {
+                            $(
+                                $index => Ok($name_kind :: $variant),
+                            )*
+                            _ => Err(Unexpected::invalid_u128(value, &self)),
                         }
                     }
 
@@ -2937,6 +2949,18 @@ where
                         }
                     }
 
+                    fn visit_u128<E>(self, value: u128) -> Result<Self::Value, E>
+                    where
+                        E: Error,
+                    {
+                        match value {
+                            0 => Ok(Field::Unbounded),
+                            1 => Ok(Field::Included),
+                            2 => Ok(Field::Excluded),
+                            _ => Err(Unexpected::invalid_u128(value, &self)),
+                        }
+                    }
+
                     fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
                     where
                         E: Error,
@@ -3044,6 +3068,17 @@ where
                             0 => Ok(Field::Ok),
                             1 => Ok(Field::Err),
                             _ => Err(Error::invalid_value(Unexpected::Unsigned(value), &self)),
+                        }
+                    }
+
+                    fn visit_u128<E>(self, value: u128) -> Result<Self::Value, E>
+                    where
+                        E: Error,
+                    {
+                        match value {
+                            0 => Ok(Field::Ok),
+                            1 => Ok(Field::Err),
+                            _ => Err(Unexpected::invalid_u128(value, &self)),
                         }
                     }
 
