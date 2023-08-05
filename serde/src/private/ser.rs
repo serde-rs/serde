@@ -150,6 +150,14 @@ where
         Err(self.bad_type(Unsupported::Integer))
     }
 
+    fn serialize_i128(self, _: i128) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::Integer))
+    }
+
+    fn serialize_u128(self, _: u128) -> Result<Self::Ok, Self::Error> {
+        Err(self.bad_type(Unsupported::Integer))
+    }
+
     fn serialize_f32(self, _: f32) -> Result<Self::Ok, Self::Error> {
         Err(self.bad_type(Unsupported::Float))
     }
@@ -430,11 +438,13 @@ mod content {
         U16(u16),
         U32(u32),
         U64(u64),
+        U128(u128),
 
         I8(i8),
         I16(i16),
         I32(i32),
         I64(i64),
+        I128(i128),
 
         F32(f32),
         F64(f64),
@@ -478,10 +488,12 @@ mod content {
                 Content::U16(u) => serializer.serialize_u16(u),
                 Content::U32(u) => serializer.serialize_u32(u),
                 Content::U64(u) => serializer.serialize_u64(u),
+                Content::U128(i) => serializer.serialize_u128(i),
                 Content::I8(i) => serializer.serialize_i8(i),
                 Content::I16(i) => serializer.serialize_i16(i),
                 Content::I32(i) => serializer.serialize_i32(i),
                 Content::I64(i) => serializer.serialize_i64(i),
+                Content::I128(i) => serializer.serialize_i128(i),
                 Content::F32(f) => serializer.serialize_f32(f),
                 Content::F64(f) => serializer.serialize_f64(f),
                 Content::Char(c) => serializer.serialize_char(c),
@@ -609,6 +621,14 @@ mod content {
 
         fn serialize_u64(self, v: u64) -> Result<Content, E> {
             Ok(Content::U64(v))
+        }
+
+        fn serialize_i128(self, v: i128) -> Result<Content, E> {
+            Ok(Content::I128(v))
+        }
+
+        fn serialize_u128(self, v: u128) -> Result<Content, E> {
+            Ok(Content::U128(v))
         }
 
         fn serialize_f32(self, v: f32) -> Result<Content, E> {
@@ -1065,6 +1085,14 @@ where
     }
 
     fn serialize_u64(self, _: u64) -> Result<Self::Ok, Self::Error> {
+        Err(Self::bad_type(Unsupported::Integer))
+    }
+
+    fn serialize_i128(self, _: i128) -> Result<Self::Ok, Self::Error> {
+        Err(Self::bad_type(Unsupported::Integer))
+    }
+
+    fn serialize_u128(self, _: u128) -> Result<Self::Ok, Self::Error> {
         Err(Self::bad_type(Unsupported::Integer))
     }
 
