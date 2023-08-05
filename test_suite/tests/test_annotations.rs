@@ -605,7 +605,7 @@ fn test_unknown_field_rename_struct() {
             Token::Str("a4"),
             Token::I32(3),
         ],
-        "unknown field `a4`, expected one of `a1`, `a3`, `a2`, `a5`, `a6`",
+        "unknown field `a4`, expected one of `a1`, `a2`, `a3`, `a5`, `a6`",
     );
 }
 
@@ -799,7 +799,7 @@ fn test_unknown_field_rename_enum() {
             Token::Str("d"),
             Token::I8(2),
         ],
-        "unknown field `d`, expected one of `a`, `c`, `b`, `e`, `f`",
+        "unknown field `d`, expected one of `a`, `b`, `c`, `e`, `f`",
     );
 }
 

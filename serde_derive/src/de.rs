@@ -2131,7 +2131,7 @@ fn deserialize_custom_identifier(
         })
         .collect();
 
-    let names = names_idents.iter().map(|(name, _, _)| name);
+    let names = names_idents.iter().flat_map(|(_, _, aliases)| aliases);
 
     let names_const = if fallthrough.is_some() {
         None
@@ -2194,33 +2194,23 @@ fn deserialize_identifier(
     collect_other_fields: bool,
     expecting: Option<&str>,
 ) -> Fragment {
-    let mut flat_fields = Vec::new();
-    for (_, ident, aliases) in fields {
-        flat_fields.extend(aliases.iter().map(|alias| (alias, ident)));
-    }
-
-    let field_strs: &Vec<_> = &flat_fields.iter().map(|(name, _)| name).collect();
-    let field_bytes: &Vec<_> = &flat_fields
-        .iter()
-        .map(|(name, _)| Literal::byte_string(name.as_bytes()))
-        .collect();
-
-    let constructors: &Vec<_> = &flat_fields
-        .iter()
-        .map(|(_, ident)| quote!(#this_value::#ident))
-        .collect();
-    let main_constructors: &Vec<_> = &fields
-        .iter()
-        .map(|(_, ident, _)| quote!(#this_value::#ident))
-        .collect();
+    let str_mapping = fields.iter().map(|(_, ident, aliases)| {
+        // `aliases` also contains a main name
+        quote!(#(#aliases)|* => _serde::__private::Ok(#this_value::#ident))
+    });
+    let bytes_mapping = fields.iter().map(|(_, ident, aliases)| {
+        // `aliases` also contains a main name
+        let aliases = aliases
+            .iter()
+            .map(|alias| Literal::byte_string(alias.as_bytes()));
+        quote!(#(#aliases)|* => _serde::__private::Ok(#this_value::#ident))
+    });
 
     let expecting = expecting.unwrap_or(if is_variant {
         "variant identifier"
     } else {
         "field identifier"
     });
-
-    let index_expecting = if is_variant { "variant" } else { "field" };
 
     let bytes_to_str = if fallthrough.is_some() || collect_other_fields {
         None
@@ -2269,21 +2259,6 @@ fn deserialize_identifier(
         &fallthrough_arm_tokens
     };
 
-    let u64_fallthrough_arm_tokens;
-    let u64_fallthrough_arm = if let Some(fallthrough) = &fallthrough {
-        fallthrough
-    } else {
-        let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
-        u64_fallthrough_arm_tokens = quote! {
-            _serde::__private::Err(_serde::de::Error::invalid_value(
-                _serde::de::Unexpected::Unsigned(__value),
-                &#fallthrough_msg,
-            ))
-        };
-        &u64_fallthrough_arm_tokens
-    };
-
-    let variant_indices = 0_u64..;
     let visit_other = if collect_other_fields {
         quote! {
             fn visit_bool<__E>(self, __value: bool) -> _serde::__private::Result<Self::Value, __E>
@@ -2378,15 +2353,33 @@ fn deserialize_identifier(
             }
         }
     } else {
+        let u64_mapping = fields.iter().enumerate().map(|(i, (_, ident, _))| {
+            let i = i as u64;
+            quote!(#i => _serde::__private::Ok(#this_value::#ident))
+        });
+
+        let u64_fallthrough_arm_tokens;
+        let u64_fallthrough_arm = if let Some(fallthrough) = &fallthrough {
+            fallthrough
+        } else {
+            let index_expecting = if is_variant { "variant" } else { "field" };
+            let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
+            u64_fallthrough_arm_tokens = quote! {
+                _serde::__private::Err(_serde::de::Error::invalid_value(
+                    _serde::de::Unexpected::Unsigned(__value),
+                    &#fallthrough_msg,
+                ))
+            };
+            &u64_fallthrough_arm_tokens
+        };
+
         quote! {
             fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
                 match __value {
-                    #(
-                        #variant_indices => _serde::__private::Ok(#main_constructors),
-                    )*
+                    #(#u64_mapping,)*
                     _ => #u64_fallthrough_arm,
                 }
             }
@@ -2394,6 +2387,8 @@ fn deserialize_identifier(
     };
 
     let visit_borrowed = if fallthrough_borrowed.is_some() || collect_other_fields {
+        let str_mapping = str_mapping.clone();
+        let bytes_mapping = bytes_mapping.clone();
         let fallthrough_borrowed_arm = fallthrough_borrowed.as_ref().unwrap_or(fallthrough_arm);
         Some(quote! {
             fn visit_borrowed_str<__E>(self, __value: &'de str) -> _serde::__private::Result<Self::Value, __E>
@@ -2401,9 +2396,7 @@ fn deserialize_identifier(
                 __E: _serde::de::Error,
             {
                 match __value {
-                    #(
-                        #field_strs => _serde::__private::Ok(#constructors),
-                    )*
+                    #(#str_mapping,)*
                     _ => {
                         #value_as_borrowed_str_content
                         #fallthrough_borrowed_arm
@@ -2416,9 +2409,7 @@ fn deserialize_identifier(
                 __E: _serde::de::Error,
             {
                 match __value {
-                    #(
-                        #field_bytes => _serde::__private::Ok(#constructors),
-                    )*
+                    #(#bytes_mapping,)*
                     _ => {
                         #bytes_to_str
                         #value_as_borrowed_bytes_content
@@ -2443,9 +2434,7 @@ fn deserialize_identifier(
             __E: _serde::de::Error,
         {
             match __value {
-                #(
-                    #field_strs => _serde::__private::Ok(#constructors),
-                )*
+                #(#str_mapping,)*
                 _ => {
                     #value_as_str_content
                     #fallthrough_arm
@@ -2458,9 +2447,7 @@ fn deserialize_identifier(
             __E: _serde::de::Error,
         {
             match __value {
-                #(
-                    #field_bytes => _serde::__private::Ok(#constructors),
-                )*
+                #(#bytes_mapping,)*
                 _ => {
                     #bytes_to_str
                     #value_as_bytes_content
