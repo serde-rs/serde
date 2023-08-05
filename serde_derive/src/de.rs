@@ -2001,7 +2001,7 @@ fn deserialize_untagged_newtype_variant(
 }
 
 fn deserialize_generated_identifier(
-    fields: &[(&str, Ident, &[String])],
+    fields: &[(&str, Ident, &BTreeSet<String>)],
     cattrs: &attr::Container,
     is_variant: bool,
     other_idx: Option<usize>,
@@ -2187,7 +2187,7 @@ fn deserialize_custom_identifier(
 
 fn deserialize_identifier(
     this_value: &TokenStream,
-    fields: &[(&str, Ident, &[String])],
+    fields: &[(&str, Ident, &BTreeSet<String>)],
     is_variant: bool,
     fallthrough: Option<TokenStream>,
     fallthrough_borrowed: Option<TokenStream>,
