@@ -399,6 +399,30 @@ pub enum Unexpected<'a> {
     Other(&'a str),
 }
 
+impl<'a> Unexpected<'a> {
+    /// The input contained a signed integer `i128` that was not expected.
+    pub fn invalid_i128<E>(v: i128, expected: &dyn Expected) -> E
+    where
+        E: Error,
+    {
+        let mut buf = [0u8; 58];
+        let mut writer = crate::format::Buf::new(&mut buf);
+        fmt::Write::write_fmt(&mut writer, format_args!("integer `{}` as i128", v)).unwrap();
+        Error::invalid_type(Unexpected::Other(writer.as_str()), expected)
+    }
+
+    /// The input contained an unsigned integer `u128` that was not expected.
+    pub fn invalid_u128<E>(v: u128, expected: &dyn Expected) -> E
+    where
+        E: Error,
+    {
+        let mut buf = [0u8; 57];
+        let mut writer = crate::format::Buf::new(&mut buf);
+        fmt::Write::write_fmt(&mut writer, format_args!("integer `{}` as u128", v)).unwrap();
+        Error::invalid_type(Unexpected::Other(writer.as_str()), expected)
+    }
+}
+
 impl<'a> fmt::Display for Unexpected<'a> {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         use self::Unexpected::*;
@@ -1406,13 +1430,7 @@ pub trait Visitor<'de>: Sized {
     where
         E: Error,
     {
-        let mut buf = [0u8; 58];
-        let mut writer = crate::format::Buf::new(&mut buf);
-        fmt::Write::write_fmt(&mut writer, format_args!("integer `{}` as i128", v)).unwrap();
-        Err(Error::invalid_type(
-            Unexpected::Other(writer.as_str()),
-            &self,
-        ))
+        Err(Unexpected::invalid_i128(v, &self))
     }
 
     /// The input contains a `u8`.
@@ -1468,13 +1486,7 @@ pub trait Visitor<'de>: Sized {
     where
         E: Error,
     {
-        let mut buf = [0u8; 57];
-        let mut writer = crate::format::Buf::new(&mut buf);
-        fmt::Write::write_fmt(&mut writer, format_args!("integer `{}` as u128", v)).unwrap();
-        Err(Error::invalid_type(
-            Unexpected::Other(writer.as_str()),
-            &self,
-        ))
+        Err(Unexpected::invalid_u128(v, &self))
     }
 
     /// The input contains an `f32`.
