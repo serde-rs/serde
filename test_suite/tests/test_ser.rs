@@ -86,6 +86,7 @@ fn test_isizes() {
     assert_ser_tokens(&0i16, &[Token::I16(0)]);
     assert_ser_tokens(&0i32, &[Token::I32(0)]);
     assert_ser_tokens(&0i64, &[Token::I64(0)]);
+    assert_ser_tokens(&0i128, &[Token::I128(0)]);
 }
 
 #[test]
@@ -94,6 +95,7 @@ fn test_usizes() {
     assert_ser_tokens(&0u16, &[Token::U16(0)]);
     assert_ser_tokens(&0u32, &[Token::U32(0)]);
     assert_ser_tokens(&0u64, &[Token::U64(0)]);
+    assert_ser_tokens(&0u128, &[Token::U128(0)]);
 }
 
 #[test]
@@ -874,13 +876,6 @@ fn test_enum_skipped() {
         &[],
         "the enum variant Enum::SkippedMap cannot be serialized",
     );
-}
-
-#[test]
-fn test_integer128() {
-    assert_ser_tokens_error(&1i128, &[], "i128 is not supported");
-
-    assert_ser_tokens_error(&1u128, &[], "u128 is not supported");
 }
 
 #[test]
