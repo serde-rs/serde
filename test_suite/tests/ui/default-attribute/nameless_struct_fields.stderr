@@ -1,5 +1,0 @@
-error: #[serde(default)] can only be used on structs with named fields
- --> tests/ui/default-attribute/nameless_struct_fields.rs:5:9
-  |
-5 | struct T(u8, u8);
-  |         ^^^^^^^^

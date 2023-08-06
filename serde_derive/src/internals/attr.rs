@@ -396,20 +396,20 @@ impl Container {
                         if let Some(path) = parse_lit_into_expr_path(cx, DEFAULT, &meta)? {
                             match &item.data {
                                 syn::Data::Struct(syn::DataStruct { fields, .. }) => match fields {
-                                    syn::Fields::Named(_) => {
+                                    syn::Fields::Named(_) | syn::Fields::Unnamed(_) => {
                                         default.set(&meta.path, Default::Path(path));
                                     }
-                                    syn::Fields::Unnamed(_) | syn::Fields::Unit => {
-                                        let msg = "#[serde(default = \"...\")] can only be used on structs with named fields";
+                                    syn::Fields::Unit => {
+                                        let msg = "#[serde(default = \"...\")] can only be used on structs with fields";
                                         cx.syn_error(meta.error(msg));
                                     }
                                 },
                                 syn::Data::Enum(_) => {
-                                    let msg = "#[serde(default = \"...\")] can only be used on structs with named fields";
+                                    let msg = "#[serde(default = \"...\")] can only be used on structs with fields";
                                     cx.syn_error(meta.error(msg));
                                 }
                                 syn::Data::Union(_) => {
-                                    let msg = "#[serde(default = \"...\")] can only be used on structs with named fields";
+                                    let msg = "#[serde(default = \"...\")] can only be used on structs with fields";
                                     cx.syn_error(meta.error(msg));
                                 }
                             }
@@ -418,20 +418,20 @@ impl Container {
                         // #[serde(default)]
                         match &item.data {
                             syn::Data::Struct(syn::DataStruct { fields, .. }) => match fields {
-                                syn::Fields::Named(_) => {
+                                syn::Fields::Named(_) | syn::Fields::Unnamed(_) => {
                                     default.set(meta.path, Default::Default);
                                 }
-                                syn::Fields::Unnamed(_) | syn::Fields::Unit => {
-                                    let msg = "#[serde(default)] can only be used on structs with named fields";
+                                syn::Fields::Unit => {
+                                    let msg = "#[serde(default)] can only be used on structs with fields";
                                     cx.error_spanned_by(fields, msg);
                                 }
                             },
                             syn::Data::Enum(_) => {
-                                let msg = "#[serde(default)] can only be used on structs with named fields";
+                                let msg = "#[serde(default)] can only be used on structs with fields";
                                 cx.syn_error(meta.error(msg));
                             }
                             syn::Data::Union(_) => {
-                                let msg = "#[serde(default)] can only be used on structs with named fields";
+                                let msg = "#[serde(default)] can only be used on structs with fields";
                                 cx.syn_error(meta.error(msg));
                             }
                         }
