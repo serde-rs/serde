@@ -1,6 +1,6 @@
 [package]
 name = "serde_derive"
-version = "1.0.181"
+version = "1.0.182"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 publish = false
 

@@ -1,6 +1,6 @@
 [package]
 name = "serde_derive"
-version = "1.0.181"
+version = "1.0.182"
 authors = ["David Tolnay <dtolnay@gmail.com>"]
 categories = ["no-std", "no-std::no-alloc"]
 description = "Implementation of #[derive(Serialize, Deserialize)]"
