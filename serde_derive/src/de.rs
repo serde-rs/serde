@@ -2983,7 +2983,7 @@ fn expr_is_missing_seq(
     match *cattrs.default() {
         attr::Default::Default | attr::Default::Path(_) => {
             let member = &field.member;
-            return quote!(#assign_to __default.#member);
+            quote!(#assign_to __default.#member)
         }
         attr::Default::None => quote!(
             return _serde::__private::Err(_serde::de::Error::invalid_length(#index, &#expecting))
