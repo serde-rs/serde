@@ -400,16 +400,16 @@ impl Container {
                                         default.set(&meta.path, Default::Path(path));
                                     }
                                     syn::Fields::Unit => {
-                                        let msg = "#[serde(default = \"...\")] can only be used on structs with fields";
+                                        let msg = "#[serde(default = \"...\")] can only be used on structs that have fields";
                                         cx.syn_error(meta.error(msg));
                                     }
                                 },
                                 syn::Data::Enum(_) => {
-                                    let msg = "#[serde(default = \"...\")] can only be used on structs with fields";
+                                    let msg = "#[serde(default = \"...\")] can only be used on structs";
                                     cx.syn_error(meta.error(msg));
                                 }
                                 syn::Data::Union(_) => {
-                                    let msg = "#[serde(default = \"...\")] can only be used on structs with fields";
+                                    let msg = "#[serde(default = \"...\")] can only be used on structs";
                                     cx.syn_error(meta.error(msg));
                                 }
                             }
@@ -422,16 +422,16 @@ impl Container {
                                     default.set(meta.path, Default::Default);
                                 }
                                 syn::Fields::Unit => {
-                                    let msg = "#[serde(default)] can only be used on structs with fields";
+                                    let msg = "#[serde(default)] can only be used on structs that have fields";
                                     cx.error_spanned_by(fields, msg);
                                 }
                             },
                             syn::Data::Enum(_) => {
-                                let msg = "#[serde(default)] can only be used on structs with fields";
+                                let msg = "#[serde(default)] can only be used on structs";
                                 cx.syn_error(meta.error(msg));
                             }
                             syn::Data::Union(_) => {
-                                let msg = "#[serde(default)] can only be used on structs with fields";
+                                let msg = "#[serde(default)] can only be used on structs";
                                 cx.syn_error(meta.error(msg));
                             }
                         }
