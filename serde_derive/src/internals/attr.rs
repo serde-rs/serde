@@ -173,17 +173,17 @@ impl Name {
     }
 
     /// Return the container name for the container when serializing.
-    pub fn serialize_name(&self) -> String {
-        self.serialize.clone()
+    pub fn serialize_name(&self) -> &str {
+        &self.serialize
     }
 
     /// Return the container name for the container when deserializing.
-    pub fn deserialize_name(&self) -> String {
-        self.deserialize.clone()
+    pub fn deserialize_name(&self) -> &str {
+        &self.deserialize
     }
 
-    fn deserialize_aliases(&self) -> Vec<String> {
-        self.deserialize_aliases.clone()
+    fn deserialize_aliases(&self) -> &[String] {
+        &self.deserialize_aliases
     }
 
     fn insert_deserialize_name_into_aliases(&mut self) {
@@ -986,7 +986,7 @@ impl Variant {
         &self.name
     }
 
-    pub fn aliases(&self) -> Vec<String> {
+    pub fn aliases(&self) -> &[String] {
         self.name.deserialize_aliases()
     }
 
@@ -1326,7 +1326,7 @@ impl Field {
         &self.name
     }
 
-    pub fn aliases(&self) -> Vec<String> {
+    pub fn aliases(&self) -> &[String] {
         self.name.deserialize_aliases()
     }
 

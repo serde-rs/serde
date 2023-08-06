@@ -566,7 +566,7 @@ fn serialize_externally_tagged_variant(
             },
             params,
             &variant.fields,
-            &type_name,
+            type_name,
         ),
     }
 }
@@ -631,7 +631,7 @@ fn serialize_internally_tagged_variant(
             StructVariant::InternallyTagged { tag, variant_name },
             params,
             &variant.fields,
-            &type_name,
+            type_name,
         ),
         Style::Tuple => unreachable!("checked in serde_derive_internals"),
     }
@@ -698,7 +698,7 @@ fn serialize_adjacently_tagged_variant(
                 StructVariant::Untagged,
                 params,
                 &variant.fields,
-                &variant_name,
+                variant_name,
             ),
         }
     });
@@ -794,16 +794,16 @@ fn serialize_untagged_variant(
         Style::Tuple => serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields),
         Style::Struct => {
             let type_name = cattrs.name().serialize_name();
-            serialize_struct_variant(StructVariant::Untagged, params, &variant.fields, &type_name)
+            serialize_struct_variant(StructVariant::Untagged, params, &variant.fields, type_name)
         }
     }
 }
 
-enum TupleVariant {
+enum TupleVariant<'a> {
     ExternallyTagged {
-        type_name: String,
+        type_name: &'a str,
         variant_index: u32,
-        variant_name: String,
+        variant_name: &'a str,
     },
     Untagged,
 }
@@ -870,11 +870,11 @@ fn serialize_tuple_variant(
 enum StructVariant<'a> {
     ExternallyTagged {
         variant_index: u32,
-        variant_name: String,
+        variant_name: &'a str,
     },
     InternallyTagged {
         tag: &'a str,
-        variant_name: String,
+        variant_name: &'a str,
     },
     Untagged,
 }

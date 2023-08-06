@@ -1040,7 +1040,7 @@ fn deserialize_struct(
     } else {
         let field_names = field_names_idents
             .iter()
-            .flat_map(|(_, _, aliases)| aliases);
+            .flat_map(|&(_, _, aliases)| aliases);
 
         Some(quote! {
             #[doc(hidden)]
@@ -1162,7 +1162,7 @@ fn deserialize_struct_in_place(
     let visit_map = Stmts(deserialize_map_in_place(params, fields, cattrs));
     let field_names = field_names_idents
         .iter()
-        .flat_map(|(_, _, aliases)| aliases);
+        .flat_map(|&(_, _, aliases)| aliases);
     let type_name = cattrs.name().deserialize_name();
 
     let in_place_impl_generics = de_impl_generics.in_place();
@@ -2001,7 +2001,7 @@ fn deserialize_untagged_newtype_variant(
 }
 
 fn deserialize_generated_identifier(
-    fields: &[(String, Ident, Vec<String>)],
+    fields: &[(&str, Ident, &[String])],
     cattrs: &attr::Container,
     is_variant: bool,
     other_idx: Option<usize>,
@@ -2131,7 +2131,7 @@ fn deserialize_custom_identifier(
         })
         .collect();
 
-    let names = names_idents.iter().flat_map(|(_, _, aliases)| aliases);
+    let names = names_idents.iter().flat_map(|&(_, _, aliases)| aliases);
 
     let names_const = if fallthrough.is_some() {
         None
@@ -2187,7 +2187,7 @@ fn deserialize_custom_identifier(
 
 fn deserialize_identifier(
     this_value: &TokenStream,
-    fields: &[(String, Ident, Vec<String>)],
+    fields: &[(&str, Ident, &[String])],
     is_variant: bool,
     fallthrough: Option<TokenStream>,
     fallthrough_borrowed: Option<TokenStream>,
