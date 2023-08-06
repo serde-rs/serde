@@ -1789,6 +1789,9 @@ forwarded_impl!((T), Box<[T]>, Vec::into_boxed_slice);
 #[cfg(any(feature = "std", feature = "alloc"))]
 forwarded_impl!((), Box<str>, String::into_boxed_str);
 
+#[cfg(all(feature = "std", any(unix, windows)))]
+forwarded_impl!((), Box<OsStr>, OsString::into_boxed_os_str);
+
 #[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de, 'a, T: ?Sized> Deserialize<'de> for Cow<'a, T>
 where
