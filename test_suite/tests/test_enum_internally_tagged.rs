@@ -25,6 +25,7 @@ struct Struct {
 enum InternallyTagged {
     Unit,
     NewtypeUnit(()),
+    NewtypeUnitStruct(Unit),
     NewtypeMap(BTreeMap<String, String>),
     NewtypeStruct(Struct),
     Struct { a: u8 },
@@ -152,6 +153,7 @@ fn wrong_tag() {
         "unknown variant `Z`, expected one of \
         `Unit`, \
         `NewtypeUnit`, \
+        `NewtypeUnitStruct`, \
         `NewtypeMap`, \
         `NewtypeStruct`, \
         `Struct`",
@@ -620,40 +622,36 @@ fn newtype_variant_containing_externally_tagged_enum() {
 
 #[test]
 fn newtype_variant_containing_unit_struct() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(tag = "tag")]
-    enum Message {
-        Info(Unit),
-    }
+    let value = InternallyTagged::NewtypeUnitStruct(Unit);
 
     assert_tokens(
-        &Message::Info(Unit),
+        &value,
         &[
             Token::Map { len: Some(1) },
             Token::Str("tag"),
-            Token::Str("Info"),
+            Token::Str("NewtypeUnitStruct"),
             Token::MapEnd,
         ],
     );
 
     assert_de_tokens(
-        &Message::Info(Unit),
+        &value,
         &[
             Token::Struct {
-                name: "Message",
+                name: "InternallyTagged",
                 len: 1,
             },
             Token::Str("tag"),
-            Token::Str("Info"),
+            Token::Str("NewtypeUnitStruct"),
             Token::StructEnd,
         ],
     );
 
     assert_de_tokens(
-        &Message::Info(Unit),
+        &value,
         &[
             Token::Seq { len: Some(1) },
-            Token::Str("Info"),
+            Token::Str("NewtypeUnitStruct"), // tag
             Token::SeqEnd,
         ],
     );
