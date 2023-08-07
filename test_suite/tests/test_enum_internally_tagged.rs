@@ -761,24 +761,29 @@ fn newtype_variant_containing_unit() {
 
 #[test]
 fn unit_variant_with_unknown_fields() {
-    #[derive(Debug, PartialEq, Deserialize)]
-    #[serde(tag = "tag")]
-    enum Data {
-        A,
-    }
-
-    let data = Data::A;
+    let value = InternallyTagged::Unit;
 
     assert_de_tokens(
-        &data,
+        &value,
         &[
             Token::Map { len: None },
             Token::Str("tag"),
-            Token::Str("A"),
+            Token::Str("Unit"),
             Token::Str("b"),
             Token::I32(0),
             Token::MapEnd,
         ],
+    );
+
+    // Unknown elements are not allowed in sequences
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Seq { len: None },
+            Token::Str("Unit"),
+            Token::I32(0),
+            Token::SeqEnd,
+        ],
+        "invalid length 1, expected 0 elements in sequence",
     );
 }
 
