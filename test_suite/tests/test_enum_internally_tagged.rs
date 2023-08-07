@@ -38,6 +38,7 @@ enum InternallyTagged {
     NewtypeStruct(Struct),
     NewtypeEnum(Enum),
     Struct { a: u8 },
+    StructEnum { enum_: Enum },
 }
 
 #[test]
@@ -166,7 +167,8 @@ fn wrong_tag() {
         `NewtypeMap`, \
         `NewtypeStruct`, \
         `NewtypeEnum`, \
-        `Struct`",
+        `Struct`, \
+        `StructEnum`",
     );
 }
 
@@ -442,12 +444,6 @@ mod string_and_bytes {
 
 #[test]
 fn struct_variant_containing_unit_variant() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(tag = "tag")]
-    enum Message {
-        Log { level: Enum },
-    }
-
     assert_de_tokens(
         &Enum::Unit,
         &[
@@ -457,18 +453,18 @@ fn struct_variant_containing_unit_variant() {
         ],
     );
 
-    let value = Message::Log { level: Enum::Unit };
+    let value = InternallyTagged::StructEnum { enum_: Enum::Unit };
 
     assert_de_tokens(
         &value,
         &[
             Token::Struct {
-                name: "Message",
+                name: "InternallyTagged",
                 len: 2,
             },
             Token::Str("tag"),
-            Token::Str("Log"),
-            Token::Str("level"),
+            Token::Str("StructEnum"),
+            Token::Str("enum_"),
             Token::Enum { name: "Enum" },
             Token::BorrowedStr("Unit"),
             Token::Unit,
@@ -481,8 +477,8 @@ fn struct_variant_containing_unit_variant() {
         &[
             Token::Map { len: Some(2) },
             Token::Str("tag"),
-            Token::Str("Log"),
-            Token::Str("level"),
+            Token::Str("StructEnum"),
+            Token::Str("enum_"),
             Token::Enum { name: "Enum" },
             Token::BorrowedStr("Unit"),
             Token::Unit,
@@ -494,8 +490,8 @@ fn struct_variant_containing_unit_variant() {
         &value,
         &[
             Token::Seq { len: Some(2) },
-            Token::Str("Log"),
-            Token::Enum { name: "Enum" },
+            Token::Str("StructEnum"),     // tag
+            Token::Enum { name: "Enum" }, // enum_
             Token::BorrowedStr("Unit"),
             Token::Unit,
             Token::SeqEnd,
