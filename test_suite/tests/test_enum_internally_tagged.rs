@@ -109,6 +109,23 @@ fn newtype_unit() {
             Token::MapEnd,
         ],
     );
+
+    assert_de_tokens(
+        &value,
+        &[
+            Token::Seq { len: Some(1) },
+            Token::Str("NewtypeUnit"), // tag
+            Token::SeqEnd,
+        ],
+    );
+    assert_de_tokens(
+        &value,
+        &[
+            Token::Seq { len: Some(1) },
+            Token::BorrowedStr("NewtypeUnit"), // tag
+            Token::SeqEnd,
+        ],
+    );
 }
 
 #[test]
