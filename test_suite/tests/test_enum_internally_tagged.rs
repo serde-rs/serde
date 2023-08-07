@@ -40,6 +40,7 @@ enum InternallyTagged {
     NewtypeNewtype(Newtype),
     NewtypeMap(BTreeMap<String, String>),
     NewtypeStruct(Struct),
+    NewtypeEnum(Enum),
     Struct { a: u8 },
 }
 
@@ -182,6 +183,7 @@ fn wrong_tag() {
         `NewtypeNewtype`, \
         `NewtypeMap`, \
         `NewtypeStruct`, \
+        `NewtypeEnum`, \
         `Struct`",
     );
 }
@@ -545,18 +547,12 @@ fn borrow() {
 
 #[test]
 fn newtype_variant_containing_externally_tagged_enum() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(tag = "tag")]
-    enum Outer {
-        Inner(Enum),
-    }
-
     assert_tokens(
-        &Outer::Inner(Enum::Unit),
+        &InternallyTagged::NewtypeEnum(Enum::Unit),
         &[
             Token::Map { len: Some(2) },
             Token::Str("tag"),
-            Token::Str("Inner"),
+            Token::Str("NewtypeEnum"),
             Token::Str("Unit"),
             Token::Unit,
             Token::MapEnd,
@@ -564,11 +560,11 @@ fn newtype_variant_containing_externally_tagged_enum() {
     );
 
     assert_tokens(
-        &Outer::Inner(Enum::Newtype(1)),
+        &InternallyTagged::NewtypeEnum(Enum::Newtype(1)),
         &[
             Token::Map { len: Some(2) },
             Token::Str("tag"),
-            Token::Str("Inner"),
+            Token::Str("NewtypeEnum"),
             Token::Str("Newtype"),
             Token::U8(1),
             Token::MapEnd,
@@ -579,11 +575,11 @@ fn newtype_variant_containing_externally_tagged_enum() {
     // Content::Seq case
     // via ContentDeserializer::deserialize_enum
     assert_tokens(
-        &Outer::Inner(Enum::Tuple(1, 1)),
+        &InternallyTagged::NewtypeEnum(Enum::Tuple(1, 1)),
         &[
             Token::Map { len: Some(2) },
             Token::Str("tag"),
-            Token::Str("Inner"),
+            Token::Str("NewtypeEnum"),
             Token::Str("Tuple"),
             Token::TupleStruct {
                 name: "Tuple",
@@ -600,11 +596,11 @@ fn newtype_variant_containing_externally_tagged_enum() {
     // Content::Map case
     // via ContentDeserializer::deserialize_enum
     assert_tokens(
-        &Outer::Inner(Enum::Struct { f: 1 }),
+        &InternallyTagged::NewtypeEnum(Enum::Struct { f: 1 }),
         &[
             Token::Map { len: Some(2) },
             Token::Str("tag"),
-            Token::Str("Inner"),
+            Token::Str("NewtypeEnum"),
             Token::Str("Struct"),
             Token::Struct {
                 name: "Struct",
@@ -621,11 +617,11 @@ fn newtype_variant_containing_externally_tagged_enum() {
     // Content::Seq case
     // via ContentDeserializer::deserialize_enum
     assert_de_tokens(
-        &Outer::Inner(Enum::Struct { f: 1 }),
+        &InternallyTagged::NewtypeEnum(Enum::Struct { f: 1 }),
         &[
             Token::Map { len: Some(2) },
             Token::Str("tag"),
-            Token::Str("Inner"),
+            Token::Str("NewtypeEnum"),
             Token::Str("Struct"),
             Token::Seq { len: Some(1) },
             Token::U8(1), // f
