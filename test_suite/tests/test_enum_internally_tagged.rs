@@ -13,6 +13,9 @@ use serde_test::{assert_de_tokens, assert_de_tokens_error, assert_tokens, Token}
 use std::collections::BTreeMap;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct Unit;
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct Newtype(BTreeMap<String, String>);
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -635,9 +638,6 @@ fn newtype_variant_containing_externally_tagged_enum() {
 
 #[test]
 fn newtype_variant_containing_unit_struct() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    struct Unit;
-
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "tag")]
     enum Message {
