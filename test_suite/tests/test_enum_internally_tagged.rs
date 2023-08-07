@@ -618,16 +618,16 @@ fn newtype_variant_containing_externally_tagged_enum() {
 #[test]
 fn newtype_variant_containing_unit_struct() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    struct Info;
+    struct Unit;
 
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "tag")]
     enum Message {
-        Info(Info),
+        Info(Unit),
     }
 
     assert_tokens(
-        &Message::Info(Info),
+        &Message::Info(Unit),
         &[
             Token::Map { len: Some(1) },
             Token::Str("tag"),
@@ -637,7 +637,7 @@ fn newtype_variant_containing_unit_struct() {
     );
 
     assert_de_tokens(
-        &Message::Info(Info),
+        &Message::Info(Unit),
         &[
             Token::Struct {
                 name: "Message",
@@ -650,7 +650,7 @@ fn newtype_variant_containing_unit_struct() {
     );
 
     assert_de_tokens(
-        &Message::Info(Info),
+        &Message::Info(Unit),
         &[
             Token::Seq { len: Some(1) },
             Token::Str("Info"),
