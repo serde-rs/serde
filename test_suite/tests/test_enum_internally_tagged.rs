@@ -71,6 +71,58 @@ fn unit() {
 }
 
 #[test]
+fn newtype_unit() {
+    let value = InternallyTagged::NewtypeUnit(());
+
+    assert_tokens(
+        &value,
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("tag"),
+            Token::Str("NewtypeUnit"),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
+fn newtype_unit_struct() {
+    let value = InternallyTagged::NewtypeUnitStruct(Unit);
+
+    assert_tokens(
+        &value,
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("tag"),
+            Token::Str("NewtypeUnitStruct"),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &value,
+        &[
+            Token::Struct {
+                name: "InternallyTagged",
+                len: 1,
+            },
+            Token::Str("tag"),
+            Token::Str("NewtypeUnitStruct"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &value,
+        &[
+            Token::Seq { len: Some(1) },
+            Token::Str("NewtypeUnitStruct"), // tag
+            Token::SeqEnd,
+        ],
+    );
+}
+
+#[test]
 fn newtype_newtype() {
     assert_tokens(
         &InternallyTagged::NewtypeNewtype(Newtype(BTreeMap::new())),
@@ -136,6 +188,92 @@ fn newtype_struct() {
 }
 
 #[test]
+fn newtype_enum() {
+    assert_tokens(
+        &InternallyTagged::NewtypeEnum(Enum::Unit),
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("tag"),
+            Token::Str("NewtypeEnum"),
+            Token::Str("Unit"),
+            Token::Unit,
+            Token::MapEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::NewtypeEnum(Enum::Newtype(1)),
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("tag"),
+            Token::Str("NewtypeEnum"),
+            Token::Str("Newtype"),
+            Token::U8(1),
+            Token::MapEnd,
+        ],
+    );
+
+    // Reaches crate::private::de::content::VariantDeserializer::tuple_variant
+    // Content::Seq case
+    // via ContentDeserializer::deserialize_enum
+    assert_tokens(
+        &InternallyTagged::NewtypeEnum(Enum::Tuple(1, 1)),
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("tag"),
+            Token::Str("NewtypeEnum"),
+            Token::Str("Tuple"),
+            Token::TupleStruct {
+                name: "Tuple",
+                len: 2,
+            },
+            Token::U8(1),
+            Token::U8(1),
+            Token::TupleStructEnd,
+            Token::MapEnd,
+        ],
+    );
+
+    // Reaches crate::private::de::content::VariantDeserializer::struct_variant
+    // Content::Map case
+    // via ContentDeserializer::deserialize_enum
+    assert_tokens(
+        &InternallyTagged::NewtypeEnum(Enum::Struct { f: 1 }),
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("tag"),
+            Token::Str("NewtypeEnum"),
+            Token::Str("Struct"),
+            Token::Struct {
+                name: "Struct",
+                len: 1,
+            },
+            Token::Str("f"),
+            Token::U8(1),
+            Token::StructEnd,
+            Token::MapEnd,
+        ],
+    );
+
+    // Reaches crate::private::de::content::VariantDeserializer::struct_variant
+    // Content::Seq case
+    // via ContentDeserializer::deserialize_enum
+    assert_de_tokens(
+        &InternallyTagged::NewtypeEnum(Enum::Struct { f: 1 }),
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("tag"),
+            Token::Str("NewtypeEnum"),
+            Token::Str("Struct"),
+            Token::Seq { len: Some(1) },
+            Token::U8(1), // f
+            Token::SeqEnd,
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
 fn struct_() {
     assert_tokens(
         &InternallyTagged::Struct { a: 1 },
@@ -158,6 +296,63 @@ fn struct_() {
             Token::Seq { len: Some(2) },
             Token::Str("Struct"),
             Token::U8(1),
+            Token::SeqEnd,
+        ],
+    );
+}
+
+#[test]
+fn struct_enum() {
+    assert_de_tokens(
+        &Enum::Unit,
+        &[
+            Token::Enum { name: "Enum" },
+            Token::BorrowedStr("Unit"),
+            Token::Unit,
+        ],
+    );
+
+    let value = InternallyTagged::StructEnum { enum_: Enum::Unit };
+
+    assert_de_tokens(
+        &value,
+        &[
+            Token::Struct {
+                name: "InternallyTagged",
+                len: 2,
+            },
+            Token::Str("tag"),
+            Token::Str("StructEnum"),
+            Token::Str("enum_"),
+            Token::Enum { name: "Enum" },
+            Token::BorrowedStr("Unit"),
+            Token::Unit,
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &value,
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("tag"),
+            Token::Str("StructEnum"),
+            Token::Str("enum_"),
+            Token::Enum { name: "Enum" },
+            Token::BorrowedStr("Unit"),
+            Token::Unit,
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &value,
+        &[
+            Token::Seq { len: Some(2) },
+            Token::Str("StructEnum"),     // tag
+            Token::Enum { name: "Enum" }, // enum_
+            Token::BorrowedStr("Unit"),
+            Token::Unit,
             Token::SeqEnd,
         ],
     );
@@ -461,63 +656,6 @@ mod string_and_bytes {
 }
 
 #[test]
-fn struct_variant_containing_unit_variant() {
-    assert_de_tokens(
-        &Enum::Unit,
-        &[
-            Token::Enum { name: "Enum" },
-            Token::BorrowedStr("Unit"),
-            Token::Unit,
-        ],
-    );
-
-    let value = InternallyTagged::StructEnum { enum_: Enum::Unit };
-
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "InternallyTagged",
-                len: 2,
-            },
-            Token::Str("tag"),
-            Token::Str("StructEnum"),
-            Token::Str("enum_"),
-            Token::Enum { name: "Enum" },
-            Token::BorrowedStr("Unit"),
-            Token::Unit,
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Map { len: Some(2) },
-            Token::Str("tag"),
-            Token::Str("StructEnum"),
-            Token::Str("enum_"),
-            Token::Enum { name: "Enum" },
-            Token::BorrowedStr("Unit"),
-            Token::Unit,
-            Token::MapEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Seq { len: Some(2) },
-            Token::Str("StructEnum"),     // tag
-            Token::Enum { name: "Enum" }, // enum_
-            Token::BorrowedStr("Unit"),
-            Token::Unit,
-            Token::SeqEnd,
-        ],
-    );
-}
-
-#[test]
 fn borrow() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "tag")]
@@ -537,129 +675,6 @@ fn borrow() {
             Token::BorrowedStr("name"),
             Token::BorrowedStr("borrowed"),
             Token::StructEnd,
-        ],
-    );
-}
-
-#[test]
-fn newtype_variant_containing_externally_tagged_enum() {
-    assert_tokens(
-        &InternallyTagged::NewtypeEnum(Enum::Unit),
-        &[
-            Token::Map { len: Some(2) },
-            Token::Str("tag"),
-            Token::Str("NewtypeEnum"),
-            Token::Str("Unit"),
-            Token::Unit,
-            Token::MapEnd,
-        ],
-    );
-
-    assert_tokens(
-        &InternallyTagged::NewtypeEnum(Enum::Newtype(1)),
-        &[
-            Token::Map { len: Some(2) },
-            Token::Str("tag"),
-            Token::Str("NewtypeEnum"),
-            Token::Str("Newtype"),
-            Token::U8(1),
-            Token::MapEnd,
-        ],
-    );
-
-    // Reaches crate::private::de::content::VariantDeserializer::tuple_variant
-    // Content::Seq case
-    // via ContentDeserializer::deserialize_enum
-    assert_tokens(
-        &InternallyTagged::NewtypeEnum(Enum::Tuple(1, 1)),
-        &[
-            Token::Map { len: Some(2) },
-            Token::Str("tag"),
-            Token::Str("NewtypeEnum"),
-            Token::Str("Tuple"),
-            Token::TupleStruct {
-                name: "Tuple",
-                len: 2,
-            },
-            Token::U8(1),
-            Token::U8(1),
-            Token::TupleStructEnd,
-            Token::MapEnd,
-        ],
-    );
-
-    // Reaches crate::private::de::content::VariantDeserializer::struct_variant
-    // Content::Map case
-    // via ContentDeserializer::deserialize_enum
-    assert_tokens(
-        &InternallyTagged::NewtypeEnum(Enum::Struct { f: 1 }),
-        &[
-            Token::Map { len: Some(2) },
-            Token::Str("tag"),
-            Token::Str("NewtypeEnum"),
-            Token::Str("Struct"),
-            Token::Struct {
-                name: "Struct",
-                len: 1,
-            },
-            Token::Str("f"),
-            Token::U8(1),
-            Token::StructEnd,
-            Token::MapEnd,
-        ],
-    );
-
-    // Reaches crate::private::de::content::VariantDeserializer::struct_variant
-    // Content::Seq case
-    // via ContentDeserializer::deserialize_enum
-    assert_de_tokens(
-        &InternallyTagged::NewtypeEnum(Enum::Struct { f: 1 }),
-        &[
-            Token::Map { len: Some(2) },
-            Token::Str("tag"),
-            Token::Str("NewtypeEnum"),
-            Token::Str("Struct"),
-            Token::Seq { len: Some(1) },
-            Token::U8(1), // f
-            Token::SeqEnd,
-            Token::MapEnd,
-        ],
-    );
-}
-
-#[test]
-fn newtype_variant_containing_unit_struct() {
-    let value = InternallyTagged::NewtypeUnitStruct(Unit);
-
-    assert_tokens(
-        &value,
-        &[
-            Token::Map { len: Some(1) },
-            Token::Str("tag"),
-            Token::Str("NewtypeUnitStruct"),
-            Token::MapEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "InternallyTagged",
-                len: 1,
-            },
-            Token::Str("tag"),
-            Token::Str("NewtypeUnitStruct"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Seq { len: Some(1) },
-            Token::Str("NewtypeUnitStruct"), // tag
-            Token::SeqEnd,
         ],
     );
 }
@@ -729,21 +744,6 @@ fn containing_flatten() {
             Token::I32(0),
             Token::Str("b"),
             Token::I32(0),
-            Token::MapEnd,
-        ],
-    );
-}
-
-#[test]
-fn newtype_variant_containing_unit() {
-    let value = InternallyTagged::NewtypeUnit(());
-
-    assert_tokens(
-        &value,
-        &[
-            Token::Map { len: Some(1) },
-            Token::Str("tag"),
-            Token::Str("NewtypeUnit"),
             Token::MapEnd,
         ],
     );
