@@ -24,6 +24,7 @@ struct Struct {
 #[serde(tag = "tag")]
 enum InternallyTagged {
     Unit,
+    NewtypeUnit(()),
     NewtypeNewtype(Newtype),
     NewtypeMap(BTreeMap<String, String>),
     NewtypeStruct(Struct),
@@ -162,7 +163,13 @@ fn wrong_tag() {
             Token::Str("Z"),
             Token::MapEnd,
         ],
-        "unknown variant `Z`, expected one of `Unit`, `NewtypeNewtype`, `NewtypeMap`, `NewtypeStruct`, `Struct`",
+        "unknown variant `Z`, expected one of \
+        `Unit`, \
+        `NewtypeUnit`, \
+        `NewtypeNewtype`, \
+        `NewtypeMap`, \
+        `NewtypeStruct`, \
+        `Struct`",
     );
 }
 
@@ -742,18 +749,14 @@ fn containing_flatten() {
 
 #[test]
 fn newtype_variant_containing_unit() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(tag = "tag")]
-    enum Data {
-        A(()),
-    }
+    let value = InternallyTagged::NewtypeUnit(());
 
     assert_tokens(
-        &Data::A(()),
+        &value,
         &[
             Token::Map { len: Some(1) },
             Token::Str("tag"),
-            Token::Str("A"),
+            Token::Str("NewtypeUnit"),
             Token::MapEnd,
         ],
     );
