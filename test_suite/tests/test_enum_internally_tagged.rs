@@ -672,7 +672,7 @@ fn newtype_variant_containing_unit_struct() {
 
 #[test]
 fn with_skipped_conflict() {
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "t")]
     enum Data {
         A,
@@ -705,7 +705,7 @@ fn with_skipped_conflict() {
 
 #[test]
 fn containing_flatten() {
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "t")]
     enum Data {
         A {
@@ -715,7 +715,7 @@ fn containing_flatten() {
         },
     }
 
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
     struct Flat {
         b: i32,
     }
@@ -742,7 +742,7 @@ fn containing_flatten() {
 
 #[test]
 fn newtype_variant_containing_unit() {
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "t")]
     enum Data {
         A(()),
@@ -761,7 +761,7 @@ fn newtype_variant_containing_unit() {
 
 #[test]
 fn unit_variant_with_unknown_fields() {
-    #[derive(Deserialize, PartialEq, Debug)]
+    #[derive(Debug, PartialEq, Deserialize)]
     #[serde(tag = "t")]
     enum Data {
         A,
