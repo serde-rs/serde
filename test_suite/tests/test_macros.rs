@@ -987,6 +987,18 @@ fn test_internally_tagged_struct_variant_containing_unit_variant() {
         Log { level: Level },
     }
 
+    // Canary test that ensures that we use adequate enum representation that
+    // is possible to deserialize regardless of possible buffering in internally
+    // tagged enum implementation
+    assert_de_tokens(
+        &Level::Info,
+        &[
+            Token::Enum { name: "Level" },
+            Token::BorrowedStr("Info"),
+            Token::Unit,
+        ],
+    );
+
     assert_de_tokens(
         &Message::Log { level: Level::Info },
         &[
