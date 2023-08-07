@@ -76,6 +76,25 @@ fn unit() {
     assert_de_tokens(
         &InternallyTagged::Unit,
         &[
+            Token::Map { len: Some(1) },
+            Token::Str("tag"),
+            Token::Str("Unit"),
+            Token::MapEnd,
+        ],
+    );
+    assert_de_tokens(
+        &InternallyTagged::Unit,
+        &[
+            Token::Map { len: Some(1) },
+            Token::BorrowedStr("tag"),
+            Token::BorrowedStr("Unit"),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &InternallyTagged::Unit,
+        &[
             Token::Seq { len: Some(1) },
             Token::Str("Unit"), // tag
             Token::SeqEnd,
@@ -111,6 +130,31 @@ fn newtype_unit() {
             Token::BorrowedStr("tag"),
             Token::BorrowedStr("NewtypeUnit"),
             Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &value,
+        &[
+            Token::Struct {
+                name: "InternallyTagged",
+                len: 1,
+            },
+            Token::Str("tag"),
+            Token::Str("NewtypeUnit"),
+            Token::StructEnd,
+        ],
+    );
+    assert_de_tokens(
+        &value,
+        &[
+            Token::Struct {
+                name: "InternallyTagged",
+                len: 1,
+            },
+            Token::BorrowedStr("tag"),
+            Token::BorrowedStr("NewtypeUnit"),
+            Token::StructEnd,
         ],
     );
 }
