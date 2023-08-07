@@ -977,6 +977,354 @@ mod struct_enum {
             ],
         );
     }
+
+    #[test]
+    fn newtype() {
+        // Canary test that ensures that we use adequate enum representation that
+        // is possible to deserialize regardless of possible buffering in internally
+        // tagged enum implementation
+        assert_de_tokens(
+            &Enum::Newtype(42),
+            &[
+                Token::Enum { name: "Enum" },
+                Token::BorrowedStr("Newtype"),
+                Token::U8(42),
+            ],
+        );
+
+        let value = InternallyTagged::StructEnum {
+            enum_: Enum::Newtype(42),
+        };
+
+        // Special case: tag field ("tag") is the first field
+        assert_tokens(
+            &value,
+            &[
+                Token::Struct {
+                    name: "InternallyTagged",
+                    len: 2,
+                },
+                Token::Str("tag"),
+                Token::Str("StructEnum"),
+                Token::Str("enum_"),
+                Token::Enum { name: "Enum" },
+                Token::Str("Newtype"),
+                Token::U8(42),
+                Token::StructEnd,
+            ],
+        );
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Struct {
+                    name: "InternallyTagged",
+                    len: 2,
+                },
+                Token::BorrowedStr("tag"),
+                Token::BorrowedStr("StructEnum"),
+                Token::BorrowedStr("enum_"),
+                Token::Enum { name: "Enum" },
+                Token::BorrowedStr("Newtype"),
+                Token::U8(42),
+                Token::StructEnd,
+            ],
+        );
+
+        // General case: tag field ("tag") is not the first field
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Map { len: Some(2) },
+                Token::Str("enum_"),
+                Token::Enum { name: "Enum" },
+                Token::Str("Newtype"),
+                Token::U8(42),
+                Token::Str("tag"),
+                Token::Str("StructEnum"),
+                Token::MapEnd,
+            ],
+        );
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Map { len: Some(2) },
+                Token::BorrowedStr("enum_"),
+                Token::Enum { name: "Enum" },
+                Token::BorrowedStr("Newtype"),
+                Token::U8(42),
+                Token::BorrowedStr("tag"),
+                Token::BorrowedStr("StructEnum"),
+                Token::MapEnd,
+            ],
+        );
+
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: Some(2) },
+                Token::Str("StructEnum"),     // tag
+                Token::Enum { name: "Enum" }, // enum_
+                Token::Str("Newtype"),
+                Token::U8(42),
+                Token::SeqEnd,
+            ],
+        );
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: Some(2) },
+                Token::BorrowedStr("StructEnum"), // tag
+                Token::Enum { name: "Enum" },     // enum_
+                Token::BorrowedStr("Newtype"),
+                Token::U8(42),
+                Token::SeqEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn tuple() {
+        // Canary test that ensures that we use adequate enum representation that
+        // is possible to deserialize regardless of possible buffering in internally
+        // tagged enum implementation
+        assert_de_tokens(
+            &Enum::Tuple(4, 2),
+            &[
+                Token::Enum { name: "Enum" },
+                Token::BorrowedStr("Tuple"),
+                Token::Tuple { len: 2 },
+                Token::U8(4),
+                Token::U8(2),
+                Token::TupleEnd,
+            ],
+        );
+
+        let value = InternallyTagged::StructEnum {
+            enum_: Enum::Tuple(4, 2),
+        };
+
+        // Special case: tag field ("tag") is the first field
+        assert_tokens(
+            &value,
+            &[
+                Token::Struct {
+                    name: "InternallyTagged",
+                    len: 2,
+                },
+                Token::Str("tag"),
+                Token::Str("StructEnum"),
+                Token::Str("enum_"),
+                Token::Enum { name: "Enum" },
+                Token::Str("Tuple"),
+                Token::Seq { len: Some(2) },
+                Token::U8(4),
+                Token::U8(2),
+                Token::SeqEnd,
+                Token::StructEnd,
+            ],
+        );
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Struct {
+                    name: "InternallyTagged",
+                    len: 2,
+                },
+                Token::BorrowedStr("tag"),
+                Token::BorrowedStr("StructEnum"),
+                Token::BorrowedStr("enum_"),
+                Token::Enum { name: "Enum" },
+                Token::BorrowedStr("Tuple"),
+                Token::Seq { len: Some(2) },
+                Token::U8(4),
+                Token::U8(2),
+                Token::SeqEnd,
+                Token::StructEnd,
+            ],
+        );
+
+        // General case: tag field ("tag") is not the first field
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Map { len: Some(2) },
+                Token::Str("enum_"),
+                Token::Enum { name: "Enum" },
+                Token::Str("Tuple"),
+                Token::Tuple { len: 2 },
+                Token::U8(4),
+                Token::U8(2),
+                Token::TupleEnd,
+                Token::Str("tag"),
+                Token::Str("StructEnum"),
+                Token::MapEnd,
+            ],
+        );
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Map { len: Some(2) },
+                Token::BorrowedStr("enum_"),
+                Token::Enum { name: "Enum" },
+                Token::BorrowedStr("Tuple"),
+                Token::Tuple { len: 2 },
+                Token::U8(4),
+                Token::U8(2),
+                Token::TupleEnd,
+                Token::BorrowedStr("tag"),
+                Token::BorrowedStr("StructEnum"),
+                Token::MapEnd,
+            ],
+        );
+
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: Some(2) },
+                Token::Str("StructEnum"),     // tag
+                Token::Enum { name: "Enum" }, // enum_
+                Token::Str("Tuple"),
+                Token::Tuple { len: 2 },
+                Token::U8(4),
+                Token::U8(2),
+                Token::TupleEnd,
+                Token::SeqEnd,
+            ],
+        );
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: Some(2) },
+                Token::BorrowedStr("StructEnum"), // tag
+                Token::Enum { name: "Enum" },     // enum_
+                Token::BorrowedStr("Tuple"),
+                Token::Tuple { len: 2 },
+                Token::U8(4),
+                Token::U8(2),
+                Token::TupleEnd,
+                Token::SeqEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn struct_() {
+        // Canary test that ensures that we use adequate enum representation that
+        // is possible to deserialize regardless of possible buffering in internally
+        // tagged enum implementation
+        assert_de_tokens(
+            &Enum::Struct { f: 42 },
+            &[
+                Token::Enum { name: "Enum" },
+                Token::BorrowedStr("Struct"),
+                Token::Tuple { len: 1 },
+                Token::U8(42),
+                Token::TupleEnd,
+            ],
+        );
+
+        let value = InternallyTagged::StructEnum {
+            enum_: Enum::Struct { f: 42 },
+        };
+
+        // Special case: tag field ("tag") is the first field
+        assert_tokens(
+            &value,
+            &[
+                Token::Struct {
+                    name: "InternallyTagged",
+                    len: 2,
+                },
+                Token::Str("tag"),
+                Token::Str("StructEnum"),
+                Token::Str("enum_"),
+                Token::Enum { name: "Enum" },
+                Token::Str("Struct"),
+                Token::Map { len: Some(1) },
+                Token::Str("f"),
+                Token::U8(42),
+                Token::MapEnd,
+                Token::StructEnd,
+            ],
+        );
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Struct {
+                    name: "InternallyTagged",
+                    len: 2,
+                },
+                Token::BorrowedStr("tag"),
+                Token::BorrowedStr("StructEnum"),
+                Token::BorrowedStr("enum_"),
+                Token::Enum { name: "Enum" },
+                Token::BorrowedStr("Struct"),
+                Token::Tuple { len: 1 },
+                Token::U8(42),
+                Token::TupleEnd,
+                Token::StructEnd,
+            ],
+        );
+
+        // General case: tag field ("tag") is not the first field
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Map { len: Some(2) },
+                Token::Str("enum_"),
+                Token::Enum { name: "Enum" },
+                Token::Str("Struct"),
+                Token::Tuple { len: 1 },
+                Token::U8(42),
+                Token::TupleEnd,
+                Token::Str("tag"),
+                Token::Str("StructEnum"),
+                Token::MapEnd,
+            ],
+        );
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Map { len: Some(2) },
+                Token::BorrowedStr("enum_"),
+                Token::Enum { name: "Enum" },
+                Token::BorrowedStr("Struct"),
+                Token::Tuple { len: 1 },
+                Token::U8(42),
+                Token::TupleEnd,
+                Token::BorrowedStr("tag"),
+                Token::BorrowedStr("StructEnum"),
+                Token::MapEnd,
+            ],
+        );
+
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: Some(2) },
+                Token::Str("StructEnum"),     // tag
+                Token::Enum { name: "Enum" }, // enum_
+                Token::Str("Struct"),
+                Token::Tuple { len: 1 },
+                Token::U8(42),
+                Token::TupleEnd,
+                Token::SeqEnd,
+            ],
+        );
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: Some(2) },
+                Token::BorrowedStr("StructEnum"), // tag
+                Token::Enum { name: "Enum" },     // enum_
+                Token::BorrowedStr("Struct"),
+                Token::Tuple { len: 1 },
+                Token::U8(42),
+                Token::TupleEnd,
+                Token::SeqEnd,
+            ],
+        );
+    }
 }
 
 #[test]
