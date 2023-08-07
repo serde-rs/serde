@@ -1311,31 +1311,8 @@ mod content {
         where
             V: Visitor<'de>,
         {
-            match self.content {
-                Content::Unit => visitor.visit_unit(),
-
-                // Allow deserializing newtype variant containing unit.
-                //
-                //     #[derive(Deserialize)]
-                //     #[serde(tag = "result")]
-                //     enum Response<T> {
-                //         Success(T),
-                //     }
-                //
-                // We want {"result":"Success"} to deserialize into Response<()>.
-                Content::Map(ref v) if v.is_empty() => visitor.visit_unit(),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-
-        fn deserialize_unit_struct<V>(
-            self,
-            _name: &'static str,
-            visitor: V,
-        ) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
+            // Covered by tests/test_enum_internally_tagged.rs
+            //      newtype_unit
             match self.content {
                 // As a special case, allow deserializing untagged newtype
                 // variant containing unit struct.
@@ -1351,10 +1328,33 @@ mod content {
                 //
                 // We want {"topic":"Info"} to deserialize even though
                 // ordinarily unit structs do not deserialize from empty map/seq.
+                //
+                // Allow deserializing newtype variant containing unit.
+                //
+                //     #[derive(Deserialize)]
+                //     #[serde(tag = "result")]
+                //     enum Response<T> {
+                //         Success(T),
+                //     }
+                //
+                // We want {"result":"Success"} to deserialize into Response<()>.
                 Content::Map(ref v) if v.is_empty() => visitor.visit_unit(),
                 Content::Seq(ref v) if v.is_empty() => visitor.visit_unit(),
                 _ => self.deserialize_any(visitor),
             }
+        }
+
+        fn deserialize_unit_struct<V>(
+            self,
+            _name: &'static str,
+            visitor: V,
+        ) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            // Covered by tests/test_enum_internally_tagged.rs
+            //      newtype_unit_struct
+            self.deserialize_unit(visitor)
         }
 
         fn deserialize_newtype_struct<V>(
