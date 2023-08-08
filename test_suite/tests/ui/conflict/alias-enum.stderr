@@ -1,0 +1,71 @@
+error: alias `b` conflicts with deserialization name of other field
+  --> tests/ui/conflict/alias-enum.rs:8:9
+   |
+8  | /         /// Expected error on "alias b", because this is a name of other field
+9  | |         /// Error on "alias a" is not expected because this is a name of this field
+10 | |         /// Error on "alias c" is not expected because field `c` is skipped
+11 | |         #[serde(alias = "a", alias = "b", alias = "c")]
+12 | |         a: (),
+   | |_____________^
+
+error: alias `c` already used by field a
+  --> tests/ui/conflict/alias-enum.rs:14:9
+   |
+14 | /         /// Expected error on "alias c", because it is already used as alias of `a`
+15 | |         #[serde(alias = "c")]
+16 | |         b: (),
+   | |_____________^
+
+error: alias `c` conflicts with deserialization name of other field
+  --> tests/ui/conflict/alias-enum.rs:23:9
+   |
+23 | /         /// Expected error on "alias c", because this is a name of other field after
+24 | |         /// applying rename rules
+25 | |         #[serde(alias = "b", alias = "c")]
+26 | |         a: (),
+   | |_____________^
+
+error: alias `B` conflicts with deserialization name of other field
+  --> tests/ui/conflict/alias-enum.rs:34:9
+   |
+34 | /         /// Expected error on "alias B", because this is a name of field after
+35 | |         /// applying rename rules
+36 | |         #[serde(alias = "B", alias = "c")]
+37 | |         a: (),
+   | |_____________^
+
+error: alias `b` conflicts with deserialization name of other variant
+  --> tests/ui/conflict/alias-enum.rs:44:5
+   |
+44 | /     /// Expected error on "alias b", because this is a name of other variant
+45 | |     /// Error on "alias a" is not expected because this is a name of this variant
+46 | |     /// Error on "alias c" is not expected because variant `c` is skipped
+47 | |     #[serde(alias = "a", alias = "b", alias = "c")]
+48 | |     a,
+   | |_____^
+
+error: alias `c` already used by variant a
+  --> tests/ui/conflict/alias-enum.rs:50:5
+   |
+50 | /     /// Expected error on "alias c", because it is already used as alias of `a`
+51 | |     #[serde(alias = "c")]
+52 | |     b,
+   | |_____^
+
+error: alias `c` conflicts with deserialization name of other variant
+  --> tests/ui/conflict/alias-enum.rs:60:5
+   |
+60 | /     /// Expected error on "alias c", because this is a name of other variant after
+61 | |     /// applying rename rules
+62 | |     #[serde(alias = "b", alias = "c")]
+63 | |     a,
+   | |_____^
+
+error: alias `B` conflicts with deserialization name of other variant
+  --> tests/ui/conflict/alias-enum.rs:72:5
+   |
+72 | /     /// Expected error on "alias B", because this is a name of variant after
+73 | |     /// applying rename rules
+74 | |     #[serde(alias = "B", alias = "c")]
+75 | |     a,
+   | |_____^
