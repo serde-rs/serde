@@ -221,6 +221,7 @@ pub struct Container {
     is_packed: bool,
     /// Error message generated when type can't be deserialized
     expecting: Option<String>,
+    custom_fields: Vec<CustomField>,
 }
 
 /// Styles of representing an enum.
@@ -281,6 +282,21 @@ impl Identifier {
     }
 }
 
+/// A custom struct field that is calculated on serializing.
+pub struct CustomField {
+    pub name: String,
+    pub path: syn::ExprPath,
+    pub ty: CustomFieldType,
+    pub span: Span,
+}
+
+/// Wether this field's value is provided by a `serialize_with` type of function,
+/// or a getter function.
+pub enum CustomFieldType {
+    Getter,
+    With,
+}
+
 impl Container {
     /// Extract out the `#[serde(...)]` attributes from an item.
     pub fn from_ast(cx: &Ctxt, item: &syn::DeriveInput) -> Self {
@@ -306,6 +322,7 @@ impl Container {
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
         let mut serde_path = Attr::none(cx, CRATE);
         let mut expecting = Attr::none(cx, EXPECTING);
+        let mut custom_fields: Attr<'_, Vec<CustomField>> = Attr::none(cx, FIELD);
 
         for attr in &item.attrs {
             if attr.path() != SERDE {
@@ -536,6 +553,49 @@ impl Container {
                     if let Some(s) = get_lit_str(cx, EXPECTING, &meta)? {
                         expecting.set(&meta.path, s.value());
                     }
+                } else if meta.path == FIELD {
+                    // #[serde(field(name = "fieldName", with = "serialize_with"))]
+                    // #[serde(field(name = "fieldName", getter = "Self::getter"))]
+
+                    if matches!(&item.data, syn::Data::Enum(_)) {
+                        let msg = "#[serde(field(\"...\"))] can only be used on structs and unions";
+                        cx.syn_error(meta.error(msg));
+                    }
+
+                    let mut name = None;
+                    let mut path_and_ty = None;
+
+                    meta.parse_nested_meta(|meta| {
+                        if meta.path == NAME {
+                            name = get_lit_str(cx, NAME, &meta)?.map(|s| s.value());
+                        } else if path_and_ty.is_some() {
+                            let msg = "#[serde(field(...)] expected only one of getter or with";
+                            cx.syn_error(meta.error(msg));
+                        } else if meta.path == GETTER {
+                            path_and_ty = parse_lit_into_expr_path(cx, GETTER, &meta)?
+                                .map(|path| (path, CustomFieldType::Getter));
+                        } else if meta.path == WITH {
+                            path_and_ty = parse_lit_into_expr_path(cx, WITH, &meta)?
+                                .map(|path| (path, CustomFieldType::With));
+                        } else {
+                            let msg = "#[serde(field(...)] expected name, getter or with";
+                            cx.syn_error(meta.error(msg));
+                        }
+
+                        Ok(())
+                    })?;
+
+                    if let Some((name, (path, ty))) = name.zip(path_and_ty) {
+                        let mut local = custom_fields.value.take().unwrap_or_default();
+                        local.push(CustomField {
+                            name, path, ty, span: meta.input.span()
+                        });
+
+                        custom_fields.set(&meta.path, local);
+                    } else {
+                        let msg = "#[serde(field(...)] expected name, getter or with";
+                        cx.syn_error(meta.error(msg));
+                    }
                 } else {
                     let path = meta.path.to_token_stream().to_string().replace(' ', "");
                     return Err(
@@ -587,6 +647,7 @@ impl Container {
             serde_path: serde_path.get(),
             is_packed,
             expecting: expecting.get(),
+            custom_fields: custom_fields.get().unwrap_or_default(),
         }
     }
 
@@ -671,6 +732,10 @@ impl Container {
     /// If `None`, default message will be used
     pub fn expecting(&self) -> Option<&str> {
         self.expecting.as_ref().map(String::as_ref)
+    }
+
+    pub fn custom_fields(&self) -> &[CustomField] {
+        &self.custom_fields
     }
 }
 

@@ -1,5 +1,6 @@
 use crate::fragment::{Fragment, Match, Stmts};
 use crate::internals::ast::{Container, Data, Field, Style, Variant};
+use crate::internals::attr::CustomField;
 use crate::internals::{attr, replace_receiver, Ctxt, Derive};
 use crate::{bound, dummy, pretend, this};
 use proc_macro2::{Span, TokenStream};
@@ -316,8 +317,13 @@ fn serialize_struct_as_struct(
     fields: &[Field],
     cattrs: &attr::Container,
 ) -> Fragment {
-    let serialize_fields =
-        serialize_struct_visitor(fields, params, false, &StructTrait::SerializeStruct);
+    let serialize_fields = serialize_struct_visitor(
+        fields,
+        cattrs.custom_fields(),
+        params,
+        false,
+        &StructTrait::SerializeStruct,
+    );
 
     let type_name = cattrs.name().serialize_name();
 
@@ -339,6 +345,7 @@ fn serialize_struct_as_struct(
                 quote!(if #path(#field_expr) { 0 } else { 1 })
             }
         })
+        .chain(cattrs.custom_fields().iter().map(|_| quote!(1)))
         .fold(
             quote!(#tag_field_exists as usize),
             |sum, expr| quote!(#sum + #expr),
@@ -357,8 +364,13 @@ fn serialize_struct_as_map(
     fields: &[Field],
     cattrs: &attr::Container,
 ) -> Fragment {
-    let serialize_fields =
-        serialize_struct_visitor(fields, params, false, &StructTrait::SerializeMap);
+    let serialize_fields = serialize_struct_visitor(
+        fields,
+        cattrs.custom_fields(),
+        params,
+        false,
+        &StructTrait::SerializeMap,
+    );
 
     let tag_field = serialize_struct_tag_field(cattrs, &StructTrait::SerializeMap);
     let tag_field_exists = !tag_field.is_empty();
@@ -381,6 +393,7 @@ fn serialize_struct_as_map(
                     quote!(if #path(#field_expr) { 0 } else { 1 })
                 }
             })
+            .chain(cattrs.custom_fields().iter().map(|_| quote!(1)))
             .fold(
                 quote!(#tag_field_exists as usize),
                 |sum, expr| quote!(#sum + #expr),
@@ -896,7 +909,7 @@ fn serialize_struct_variant(
         }
     };
 
-    let serialize_fields = serialize_struct_visitor(fields, params, true, &struct_trait);
+    let serialize_fields = serialize_struct_visitor(fields, &[], params, true, &struct_trait);
 
     let mut serialized_fields = fields
         .iter()
@@ -970,7 +983,7 @@ fn serialize_struct_variant_with_flatten(
     name: &str,
 ) -> Fragment {
     let struct_trait = StructTrait::SerializeMap;
-    let serialize_fields = serialize_struct_visitor(fields, params, true, &struct_trait);
+    let serialize_fields = serialize_struct_visitor(fields, &[], params, true, &struct_trait);
 
     let mut serialized_fields = fields
         .iter()
@@ -1100,11 +1113,12 @@ fn serialize_tuple_struct_visitor(
 
 fn serialize_struct_visitor(
     fields: &[Field],
+    custom_fields: &[CustomField],
     params: &Parameters,
     is_enum: bool,
     struct_trait: &StructTrait,
 ) -> Vec<TokenStream> {
-    fields
+    let fields = fields
         .iter()
         .filter(|&field| !field.attrs.skip_serializing())
         .map(|field| {
@@ -1160,8 +1174,35 @@ fn serialize_struct_visitor(
                     }
                 }
             }
-        })
-        .collect()
+        });
+
+    let custom_fields = custom_fields.iter().map(|field| {
+        let self_var = &params.self_var;
+        let path = &field.path;
+        let field_expr = match &field.ty {
+            attr::CustomFieldType::Getter => quote!(&#path(#self_var)),
+            attr::CustomFieldType::With => {
+                let this_type = &params.this_type;
+                let (_, ty_generics, _) = params.generics.split_for_impl();
+
+                wrap_serialize_with(
+                    &params,
+                    path,
+                    &[&syn::parse_quote!(#this_type #ty_generics)],
+                    &[quote!(#self_var)],
+                )
+            }
+        };
+
+        let key_expr = &field.name;
+        let func = struct_trait.serialize_field(field.span);
+
+        return quote! {
+            #func(&mut __serde_state, #key_expr, #field_expr)?;
+        };
+    });
+
+    fields.chain(custom_fields).collect()
 }
 
 fn wrap_serialize_field_with(

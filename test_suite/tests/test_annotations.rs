@@ -1110,6 +1110,75 @@ fn test_serialize_with_struct() {
     );
 }
 
+#[test]
+fn test_custom_fields_struct() {
+    #[derive(Debug, PartialEq, Serialize)]
+    #[serde(field(name = "b", with = "serialize_with"))]
+    struct CustomFieldsStruct<'a> {
+        a: &'a str,
+    }
+
+    fn serialize_with<S>(v: &CustomFieldsStruct<'_>, ser: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        v.a.to_uppercase().serialize(ser)
+    }
+
+    let a = "trouble";
+    assert_ser_tokens(
+        &CustomFieldsStruct { a },
+        &[
+            Token::Struct {
+                name: "CustomFieldsStruct",
+                len: 2,
+            },
+            Token::Str("a"),
+            Token::Str("trouble"),
+            Token::Str("b"),
+            Token::Str("TROUBLE"),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_custom_fields_struct_flatten() {
+    #[derive(Debug, PartialEq, Serialize)]
+    struct A {
+        d: i32,
+    }
+
+    #[derive(Debug, PartialEq, Serialize)]
+    #[serde(field(name = "b", getter = "Self::b_getter"))]
+    struct CustomFieldsStruct<'a> {
+        a: &'a str,
+        #[serde(flatten)]
+        d: A,
+    }
+
+    impl CustomFieldsStruct<'_> {
+        fn b_getter(&self) -> String {
+            self.a.to_uppercase()
+        }
+    }
+
+    let a = "trouble";
+    assert_ser_tokens(
+        &CustomFieldsStruct { a, d: A { d: 1 } },
+        &[
+            Token::Map { len: None },
+            Token::Str("a"),
+            Token::Str("trouble"),
+            Token::Str("d"),
+            Token::I32(1),
+            Token::Str("b"),
+            Token::Str("TROUBLE"),
+            Token::MapEnd,
+        ],
+    );
+}
+
 #[derive(Debug, PartialEq, Serialize)]
 enum SerializeWithEnum<'a, B>
 where
