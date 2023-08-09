@@ -16,6 +16,9 @@ pub use self::content::{
     TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
 };
 
+pub use crate::de::identifier::{Field, FieldSeed, FieldStrong, FieldStrongSeed};
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub use crate::de::identifier::{FieldFlatten, FieldFlattenSeed};
 pub use crate::seed::InPlaceSeed;
 
 /// If the missing field is of type `Option<T>` then treat is as `None`,

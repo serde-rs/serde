@@ -966,7 +966,7 @@ fn deserialize_struct(
         .collect();
 
     let has_flatten = has_flatten(fields);
-    let field_visitor = deserialize_field_identifier(&field_names_idents, cattrs, has_flatten);
+    let (consts, field, field_seed) = deserialize_field_identifier(&field_names_idents, cattrs, has_flatten);
 
     // untagged struct variants do not get a visit_seq method. The same applies to
     // structs that only have a map representation.
@@ -1001,6 +1001,8 @@ fn deserialize_struct(
         fields,
         cattrs,
         has_flatten,
+        field,
+        field_seed,
     ));
 
     let visitor_seed = match form {
@@ -1063,8 +1065,6 @@ fn deserialize_struct(
     };
 
     quote_block! {
-        #field_visitor
-
         #[doc(hidden)]
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::__private::PhantomData<#this_type #ty_generics>,
@@ -1092,6 +1092,7 @@ fn deserialize_struct(
         #visitor_seed
 
         #fields_stmt
+        #consts
 
         #dispatch
     }
@@ -1130,7 +1131,7 @@ fn deserialize_struct_in_place(
         })
         .collect();
 
-    let field_visitor = deserialize_field_identifier(&field_names_idents, cattrs, false);
+    let (consts, field, field_seed) = deserialize_field_identifier(&field_names_idents, cattrs, false);
 
     let mut_seq = if field_names_idents.is_empty() {
         quote!(_)
@@ -1138,7 +1139,9 @@ fn deserialize_struct_in_place(
         quote!(mut __seq)
     };
     let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
-    let visit_map = Stmts(deserialize_map_in_place(params, fields, cattrs));
+    let visit_map = Stmts(deserialize_map_in_place(
+        params, fields, cattrs, field, field_seed,
+    ));
     let field_names = field_names_idents
         .iter()
         .flat_map(|&(_, _, aliases)| aliases);
@@ -1149,8 +1152,6 @@ fn deserialize_struct_in_place(
     let place_life = place_lifetime();
 
     Some(quote_block! {
-        #field_visitor
-
         #[doc(hidden)]
         struct __Visitor #in_place_impl_generics #where_clause {
             place: &#place_life mut #this_type #ty_generics,
@@ -1183,6 +1184,7 @@ fn deserialize_struct_in_place(
 
         #[doc(hidden)]
         const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
+        #consts
 
         _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, __Visitor {
             place: __place,
@@ -2055,26 +2057,34 @@ fn deserialize_field_identifier(
     fields: &[(&str, Ident, &BTreeSet<String>)],
     cattrs: &attr::Container,
     has_flatten: bool,
-) -> Stmts {
-    let (ignore_variant, fallthrough) = if has_flatten {
-        let ignore_variant = quote!(__other(_serde::__private::de::Content<'de>),);
-        let fallthrough = quote!(_serde::__private::Ok(__Field::__other(__value)));
-        (Some(ignore_variant), Some(fallthrough))
+) -> (TokenStream, TokenStream, TokenStream) {
+    let (field, field_seed) = if has_flatten {
+        (
+            quote!(_serde::__private::de::FieldFlatten),
+            quote!(_serde::__private::de::FieldFlattenSeed::new(ALIASES)),
+        )
     } else if cattrs.deny_unknown_fields() {
-        (None, None)
+        (
+            quote!(_serde::__private::de::FieldStrong),
+            quote!(_serde::__private::de::FieldStrongSeed::new(ALIASES, FIELDS)),
+        )
     } else {
-        let ignore_variant = quote!(__ignore,);
-        let fallthrough = quote!(_serde::__private::Ok(__Field::__ignore));
-        (Some(ignore_variant), Some(fallthrough))
+        (
+            quote!(_serde::__private::de::Field),
+            quote!(_serde::__private::de::FieldSeed::new(ALIASES)),
+        )
     };
 
-    Stmts(deserialize_generated_identifier(
-        fields,
-        has_flatten,
-        false,
-        ignore_variant,
-        fallthrough,
-    ))
+    // `aliases` also contains a main name
+    let aliases = fields
+        .iter()
+        .map(|(_, _, aliases)| quote!(&[ #(#aliases),* ]));
+    let consts = quote! {
+        #[doc(hidden)]
+        const ALIASES: &[&[&str]] = &[ #(#aliases),* ];
+    };
+
+    (consts, field, field_seed)
 }
 
 // Generates `Deserialize::deserialize` body for an enum with
@@ -2473,6 +2483,8 @@ fn deserialize_map(
     fields: &[Field],
     cattrs: &attr::Container,
     has_flatten: bool,
+    field_enum: TokenStream,
+    field_seed: TokenStream,
 ) -> Fragment {
     // Create the field names for the fields.
     let fields_names: Vec<_> = fields
@@ -2508,7 +2520,8 @@ fn deserialize_map(
     let value_arms = fields_names
         .iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
-        .map(|(field, name)| {
+        .enumerate()
+        .map(|(i, (field, name))| {
             let deser_name = field.attrs.name().deserialize_name();
 
             let visit = match field.attrs.deserialize_with() {
@@ -2535,7 +2548,7 @@ fn deserialize_map(
                 }
             };
             quote! {
-                __Field::#name => {
+                #field_enum::Field(#i) => {
                     if _serde::__private::Option::is_some(&#name) {
                         return _serde::__private::Err(<__A::Error as _serde::de::Error>::duplicate_field(#deser_name));
                     }
@@ -2547,7 +2560,7 @@ fn deserialize_map(
     // Visit ignored values to consume them
     let ignored_arm = if has_flatten {
         Some(quote! {
-            __Field::__other(__name) => {
+            #field_enum::Other(__name) => {
                 __collect.push(_serde::__private::Some((
                     __name,
                     _serde::de::MapAccess::next_value(&mut __map)?)));
@@ -2561,22 +2574,13 @@ fn deserialize_map(
         })
     };
 
-    let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
-    let match_keys = if cattrs.deny_unknown_fields() && all_skipped {
-        quote! {
-            // FIXME: Once feature(exhaustive_patterns) is stable:
-            // let _serde::__private::None::<__Field> = _serde::de::MapAccess::next_key(&mut __map)?;
-            _serde::__private::Option::map(
-                _serde::de::MapAccess::next_key::<__Field>(&mut __map)?,
-                |__impossible| match __impossible {});
-        }
-    } else {
-        quote! {
-            while let _serde::__private::Some(__key) = _serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
-                match __key {
-                    #(#value_arms)*
-                    #ignored_arm
-                }
+    let match_keys = quote! {
+        let mut __seed = #field_seed;
+        while let _serde::__private::Some(__key) = _serde::de::MapAccess::next_key_seed(&mut __map, &mut __seed)? {
+            match __key {
+                #(#value_arms)*
+                #field_enum::Field(_) => unreachable!(),
+                #ignored_arm
             }
         }
     };
@@ -2690,6 +2694,8 @@ fn deserialize_map_in_place(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
+    field_enum: TokenStream,
+    field_seed: TokenStream,
 ) -> Fragment {
     assert!(
         !has_flatten(fields),
@@ -2718,7 +2724,8 @@ fn deserialize_map_in_place(
     let value_arms_from = fields_names
         .iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
-        .map(|(field, name)| {
+        .enumerate()
+        .map(|(i, (field, name))| {
             let deser_name = field.attrs.name().deserialize_name();
             let member = &field.member;
 
@@ -2742,7 +2749,7 @@ fn deserialize_map_in_place(
                 }
             };
             quote! {
-                __Field::#name => {
+                #field_enum::Field(#i) => {
                     if #name {
                         return _serde::__private::Err(<__A::Error as _serde::de::Error>::duplicate_field(#deser_name));
                     }
@@ -2761,23 +2768,13 @@ fn deserialize_map_in_place(
         })
     };
 
-    let all_skipped = fields.iter().all(|field| field.attrs.skip_deserializing());
-
-    let match_keys = if cattrs.deny_unknown_fields() && all_skipped {
-        quote! {
-            // FIXME: Once feature(exhaustive_patterns) is stable:
-            // let _serde::__private::None::<__Field> = _serde::de::MapAccess::next_key(&mut __map)?;
-            _serde::__private::Option::map(
-                _serde::de::MapAccess::next_key::<__Field>(&mut __map)?,
-                |__impossible| match __impossible {});
-        }
-    } else {
-        quote! {
-            while let _serde::__private::Some(__key) = _serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
-                match __key {
-                    #(#value_arms_from)*
-                    #ignored_arm
-                }
+    let match_keys = quote! {
+        let mut __seed = #field_seed;
+        while let _serde::__private::Some(__key) = _serde::de::MapAccess::next_key_seed(&mut __map, &mut __seed)? {
+            match __key {
+                #(#value_arms_from)*
+                #field_enum::Field(_) => unreachable!(),
+                #ignored_arm
             }
         }
     };
