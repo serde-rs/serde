@@ -5,44 +5,6 @@ error[E0425]: cannot find value `__FAIL__` in this scope
    |     ^^^^^^^^ not found in this scope
 
 warning: unreachable pattern
-  --> tests/ui/conflict/alias-enum.rs:13:9
-   |
- 8 |         #[serde(alias = "a", alias = "b", alias = "c")]
-   |                                      --- matches all the relevant values
-...
-13 |         b: (),
-   |         ^ no value can reach this
-   |
-   = note: `#[warn(unreachable_patterns)]` (part of `#[warn(unused)]`) on by default
-
-warning: unreachable pattern
-  --> tests/ui/conflict/alias-enum.rs:12:25
-   |
- 8 |         #[serde(alias = "a", alias = "b", alias = "c")]
-   |                                                   --- matches all the relevant values
-...
-12 |         #[serde(alias = "c")]
-   |                         ^^^ no value can reach this
-
-warning: unreachable pattern
-  --> tests/ui/conflict/alias-enum.rs:24:26
-   |
-20 |         #[serde(alias = "b", alias = "c")]
-   |                                      --- matches all the relevant values
-...
-24 |         #[serde(rename = "c")]
-   |                          ^^^ no value can reach this
-
-warning: unreachable pattern
-  --> tests/ui/conflict/alias-enum.rs:35:9
-   |
-30 |         #[serde(alias = "B", alias = "c")]
-   |                         --- matches all the relevant values
-...
-35 |         b: (),
-   |         ^ no value can reach this
-
-warning: unreachable pattern
   --> tests/ui/conflict/alias-enum.rs:46:5
    |
 41 |     #[serde(alias = "a", alias = "b", alias = "c")]
@@ -50,6 +12,8 @@ warning: unreachable pattern
 ...
 46 |     b,
    |     ^ no value can reach this
+   |
+   = note: `#[warn(unreachable_patterns)]` (part of `#[warn(unused)]`) on by default
 
 warning: unreachable pattern
   --> tests/ui/conflict/alias-enum.rs:45:21
