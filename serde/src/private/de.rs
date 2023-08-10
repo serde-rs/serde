@@ -16,7 +16,9 @@ pub use self::content::{
     TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
 };
 
-pub use crate::de::identifier::{Field, FieldSeed, FieldStrong, FieldStrongSeed};
+pub use crate::de::identifier::{
+    Field, FieldSeed, FieldStrong, FieldStrongSeed, VariantOtherSeed, VariantSeed,
+};
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use crate::de::identifier::{FieldFlatten, FieldFlattenSeed};
 pub use crate::seed::InPlaceSeed;
