@@ -1238,7 +1238,7 @@ fn prepare_enum_variant_enum(
         });
 
     let variants_stmt = {
-        let variant_names = variant_names_idents.iter().map(|(name, _, _)| name);
+        let variant_names = variant_names_idents.iter().flat_map(|&(_, _, aliases)| aliases);
         quote! {
             #[doc(hidden)]
             const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
