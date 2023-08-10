@@ -2597,17 +2597,6 @@ fn deserialize_map(
         })
     };
 
-    let match_keys = quote! {
-        let mut __seed = #field_seed;
-        while let _serde::__private::Some(__key) = _serde::de::MapAccess::next_key_seed(&mut __map, &mut __seed)? {
-            match __key {
-                #(#value_arms)*
-                #field_enum::Field(_) => unreachable!(),
-                #ignored_arm
-            }
-        }
-    };
-
     let extract_values = fields_names
         .iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
@@ -2702,7 +2691,14 @@ fn deserialize_map(
 
         #let_collect
 
-        #match_keys
+        let mut __seed = #field_seed;
+        while let _serde::__private::Some(__key) = _serde::de::MapAccess::next_key_seed(&mut __map, &mut __seed)? {
+            match __key {
+                #(#value_arms)*
+                #field_enum::Field(_) => unreachable!(),
+                #ignored_arm
+            }
+        }
 
         #let_default
 
@@ -2795,17 +2791,6 @@ fn deserialize_map_in_place(
         })
     };
 
-    let match_keys = quote! {
-        let mut __seed = #field_seed;
-        while let _serde::__private::Some(__key) = _serde::de::MapAccess::next_key_seed(&mut __map, &mut __seed)? {
-            match __key {
-                #(#value_arms_from)*
-                #field_enum::Field(_) => unreachable!(),
-                #ignored_arm
-            }
-        }
-    };
-
     let check_flags = fields_names
         .iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
@@ -2858,7 +2843,14 @@ fn deserialize_map_in_place(
     quote_block! {
         #(#let_flags)*
 
-        #match_keys
+        let mut __seed = #field_seed;
+        while let _serde::__private::Some(__key) = _serde::de::MapAccess::next_key_seed(&mut __map, &mut __seed)? {
+            match __key {
+                #(#value_arms_from)*
+                #field_enum::Field(_) => unreachable!(),
+                #ignored_arm
+            }
+        }
 
         #let_default
 
