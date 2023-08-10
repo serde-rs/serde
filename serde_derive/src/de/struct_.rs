@@ -1,6 +1,6 @@
 use crate::de::{
     deserialize_seq, expr_is_missing, field_i, has_flatten, wrap_deserialize_field_with,
-    FieldWithAliases, Parameters, StructForm,
+    Parameters, StructForm,
 };
 #[cfg(feature = "deserialize_in_place")]
 use crate::de::{deserialize_seq_in_place, place_lifetime};
@@ -53,14 +53,9 @@ pub(super) fn deserialize(
 
     let deserialized_fields: Vec<_> = fields
         .iter()
-        .enumerate()
         // Skip fields that shouldn't be deserialized or that were flattened,
         // so they don't appear in the storage in their literal form
-        .filter(|&(_, field)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
-        .map(|(i, field)| FieldWithAliases {
-            ident: field_i(i),
-            aliases: field.attrs.aliases(),
-        })
+        .filter(|field| !field.attrs.skip_deserializing() && !field.attrs.flatten())
         .collect();
 
     let has_flatten = has_flatten(fields);
@@ -124,7 +119,9 @@ pub(super) fn deserialize(
     let fields_stmt = if has_flatten {
         None
     } else {
-        let field_names = deserialized_fields.iter().flat_map(|field| field.aliases);
+        let field_names = deserialized_fields
+            .iter()
+            .flat_map(|field| field.attrs.aliases());
 
         Some(quote! {
             #[doc(hidden)]
@@ -432,12 +429,7 @@ pub(super) fn deserialize_in_place(
 
     let deserialized_fields: Vec<_> = fields
         .iter()
-        .enumerate()
-        .filter(|&(_, field)| !field.attrs.skip_deserializing())
-        .map(|(i, field)| FieldWithAliases {
-            ident: field_i(i),
-            aliases: field.attrs.aliases(),
-        })
+        .filter(|field| !field.attrs.skip_deserializing())
         .collect();
 
     let (consts, field, field_seed) =
@@ -452,7 +444,9 @@ pub(super) fn deserialize_in_place(
     let visit_map = Stmts(deserialize_map_in_place(
         params, fields, cattrs, field, field_seed,
     ));
-    let field_names = deserialized_fields.iter().flat_map(|field| field.aliases);
+    let field_names = deserialized_fields
+        .iter()
+        .flat_map(|field| field.attrs.aliases());
     let type_name = cattrs.name().deserialize_name();
 
     let in_place_impl_generics = de_impl_generics.in_place();
@@ -653,7 +647,7 @@ fn deserialize_map_in_place(
 /// Generates enum and its `Deserialize` implementation that represents each
 /// non-skipped field of the struct
 fn deserialize_field_identifier(
-    deserialized_fields: &[FieldWithAliases],
+    deserialized_fields: &[&Field],
     cattrs: &attr::Container,
     has_flatten: bool,
 ) -> (TokenStream, TokenStream, TokenStream) {
@@ -674,9 +668,9 @@ fn deserialize_field_identifier(
         )
     };
 
-    // `aliases` also contains a main name
     let aliases = deserialized_fields.iter().map(|field| {
-        let aliases = field.aliases;
+        // `aliases` also contains a main name
+        let aliases = field.attrs.aliases();
         quote!(&[ #(#aliases),* ])
     });
     let consts = quote! {
