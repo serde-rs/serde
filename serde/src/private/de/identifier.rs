@@ -509,3 +509,199 @@ impl<'de, 'a, 'b> DeserializeSeed<'de> for &'b mut FieldFlattenSeed<'a> {
         deserializer.deserialize_identifier(self)
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+/// Creates a field deserialization seed that wrapped array with all possible
+/// field names and their aliases.
+///
+/// # Example
+///
+/// ```ignore
+/// let seed = VariantSeed::new(
+///     &[
+///         // First field with two aliases
+///         &["a", "alias 1", "alias 2"],
+///         // Second field with one alias
+///         &["b", "alias 3"],
+///         // Third field without aliases
+///         &["c"],
+///     ],
+///     &[
+///         // First field with two aliases
+///         "a", "alias 1", "alias 2",
+///         // Second field with one alias
+///         "b", "alias 3",
+///         // Third field without aliases
+///         "c",
+///     ],
+/// );
+/// ```
+#[derive(Debug)]
+pub struct VariantSeed<'a> {
+    aliases: &'a [&'a [&'a str]],
+    variants: &'static [&'static str],
+}
+
+impl<'a> VariantSeed<'a> {
+    #[allow(missing_docs)]
+    pub const fn new(aliases: &'a [&'a [&'a str]], variants: &'static [&'static str]) -> Self {
+        Self { aliases, variants }
+    }
+
+    fn matches(&self, value: &[u8]) -> Option<usize> {
+        self.aliases
+            .iter()
+            .position(|variant| variant.iter().any(|v| v.as_bytes() == value))
+    }
+}
+
+impl<'de, 'a> Visitor<'de> for VariantSeed<'a> {
+    type Value = usize;
+
+    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("variant identifier")
+    }
+
+    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        if value < self.aliases.len() as u64 {
+            Ok(value as usize)
+        } else {
+            // length of string "variant index 0 <= i < " and u64::MAX.to_string()
+            let mut buf = [0u8; 23 + 20];
+            let mut writer = Buf::new(&mut buf);
+            fmt::Write::write_fmt(
+                &mut writer,
+                format_args!("variant index 0 <= i < {}", value),
+            )
+            .unwrap();
+            Err(Error::invalid_value(
+                Unexpected::Unsigned(value),
+                &writer.as_str(),
+            ))
+        }
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        match self.matches(value.as_bytes()) {
+            Some(index) => Ok(index),
+            None => Err(Error::unknown_variant(value, self.variants)),
+        }
+    }
+
+    fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        match self.matches(value) {
+            Some(index) => Ok(index),
+            None => Err(Error::unknown_variant(
+                &from_utf8_lossy(value),
+                self.variants,
+            )),
+        }
+    }
+}
+
+impl<'de, 'a> DeserializeSeed<'de> for VariantSeed<'a> {
+    type Value = usize;
+
+    #[inline]
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_identifier(self)
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+/// Creates a field deserialization seed that wrapped array with all possible
+/// field names and their aliases.
+///
+/// # Example
+///
+/// ```ignore
+/// let seed = VariantOtherSeed::new(
+///     &[
+///         // First field with two aliases
+///         &["a", "alias 1", "alias 2"],
+///         // Second field with one alias
+///         &["b", "alias 3"],
+///         // Third field without aliases
+///         &["c"],
+///     ],
+///     2,
+/// );
+/// ```
+#[derive(Debug)]
+pub struct VariantOtherSeed<'a> {
+    aliases: &'a [&'a [&'a str]],
+    other: usize,
+}
+
+impl<'a> VariantOtherSeed<'a> {
+    #[allow(missing_docs)]
+    pub const fn new(aliases: &'a [&'a [&'a str]], other: usize) -> Self {
+        Self { aliases, other }
+    }
+
+    fn matches(&self, value: &[u8]) -> usize {
+        self.aliases
+            .iter()
+            .position(|variant| variant.iter().any(|v| v.as_bytes() == value))
+            .unwrap_or(self.other)
+    }
+}
+
+impl<'de, 'a> Visitor<'de> for VariantOtherSeed<'a> {
+    type Value = usize;
+
+    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("variant identifier")
+    }
+
+    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        if value < self.aliases.len() as u64 {
+            Ok(value as usize)
+        } else {
+            Ok(self.other)
+        }
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Ok(self.matches(value.as_bytes()))
+    }
+
+    fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        Ok(self.matches(value))
+    }
+}
+
+impl<'de, 'a> DeserializeSeed<'de> for VariantOtherSeed<'a> {
+    type Value = usize;
+
+    #[inline]
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_identifier(self)
+    }
+}
