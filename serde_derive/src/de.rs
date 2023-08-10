@@ -1296,50 +1296,49 @@ fn deserialize_externally_tagged_enum(
     let expecting = format!("enum {}", params.type_name());
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
-    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants);
-
     // Match arms to extract a variant from a string
     let variant_arms = variants
         .iter()
+        .filter(|variant| !variant.attrs.skip_deserializing())
         .enumerate()
-        .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
         .map(|(i, variant)| {
-            let variant_name = field_i(i);
-
             let block = Match(deserialize_externally_tagged_variant(
                 params, variant, cattrs,
             ));
 
             quote! {
-                (__Field::#variant_name, __variant) => #block
+                (#i, __variant) => #block
             }
         });
 
-    let all_skipped = variants
+    let seed = match variants
         .iter()
-        .all(|variant| variant.attrs.skip_deserializing());
-    let match_variant = if all_skipped {
-        // This is an empty enum like `enum Impossible {}` or an enum in which
-        // all variants have `#[serde(skip_deserializing)]`.
-        quote! {
-            // FIXME: Once feature(exhaustive_patterns) is stable:
-            // let _serde::#private::Err(__err) = _serde::de::EnumAccess::variant::<__Field>(__data);
-            // _serde::#private::Err(__err)
-            _serde::#private::Result::map(
-                _serde::de::EnumAccess::variant::<__Field>(__data),
-                |(__impossible, _)| match __impossible {})
+        .filter(|variant| !variant.attrs.skip_deserializing())
+        .position(|variant| variant.attrs.other())
+    {
+        Some(other) => {
+            quote!(_serde::#private::de::VariantOtherSeed::new(VARIANT_ALIASES, #other))
         }
-    } else {
-        quote! {
-            match _serde::de::EnumAccess::variant(__data)? {
-                #(#variant_arms)*
-            }
-        }
+        None => quote!(_serde::#private::de::VariantSeed::new(
+            VARIANT_ALIASES,
+            VARIANTS
+        )),
     };
 
-    quote_block! {
-        #variant_visitor
+    let variant_names = variants
+        .iter()
+        .filter(|variant| !variant.attrs.skip_deserializing())
+        .flat_map(|variant| variant.attrs.aliases());
+    let aliases = variants.iter().filter_map(|variant| {
+        if variant.attrs.skip_deserializing() {
+            None
+        } else {
+            let aliases = variant.attrs.aliases();
+            Some(quote!(&[ #(#aliases),* ]))
+        }
+    });
 
+    quote_block! {
         #[doc(hidden)]
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::#private::PhantomData<#this_type #ty_generics>,
@@ -1358,11 +1357,17 @@ fn deserialize_externally_tagged_enum(
             where
                 __A: _serde::de::EnumAccess<#delife>,
             {
-                #match_variant
+                match _serde::de::EnumAccess::variant_seed(__data, #seed)? {
+                    #(#variant_arms)*
+                    _ => unreachable!(),
+                }
             }
         }
 
-        #variants_stmt
+        #[doc(hidden)]
+        const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
+        #[doc(hidden)]
+        const VARIANT_ALIASES: &[&[&str]] = &[ #(#aliases),* ];
 
         _serde::Deserializer::deserialize_enum(
             __deserializer,
