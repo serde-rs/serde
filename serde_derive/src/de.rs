@@ -1921,7 +1921,7 @@ fn deserialize_untagged_variant(
                 quote!((#default))
             });
             quote_expr! {
-                match _serde::Deserializer::deserialize_any(
+                match _serde::Deserializer::deserialize_unit(
                     #deserializer,
                     _serde::__private::de::UntaggedUnitVisitor::new(#type_name, #variant_name)
                 ) {
