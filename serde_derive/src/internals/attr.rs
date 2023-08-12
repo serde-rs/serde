@@ -707,7 +707,7 @@ fn decide_tag(
             }
             TagType::Internal { tag }
         }
-        (Some((untagged_tokens, _)), Some((tag_tokens, _)), None) => {
+        (Some((untagged_tokens, ())), Some((tag_tokens, _)), None) => {
             let msg = "enum cannot be both untagged and internally tagged";
             cx.error_spanned_by(untagged_tokens, msg);
             cx.error_spanned_by(tag_tokens, msg);
@@ -718,14 +718,14 @@ fn decide_tag(
             cx.error_spanned_by(content_tokens, msg);
             TagType::External
         }
-        (Some((untagged_tokens, _)), None, Some((content_tokens, _))) => {
+        (Some((untagged_tokens, ())), None, Some((content_tokens, _))) => {
             let msg = "untagged enum cannot have #[serde(content = \"...\")]";
             cx.error_spanned_by(untagged_tokens, msg);
             cx.error_spanned_by(content_tokens, msg);
             TagType::External
         }
         (None, Some((_, tag)), Some((_, content))) => TagType::Adjacent { tag, content },
-        (Some((untagged_tokens, _)), Some((tag_tokens, _)), Some((content_tokens, _))) => {
+        (Some((untagged_tokens, ())), Some((tag_tokens, _)), Some((content_tokens, _))) => {
             let msg = "untagged enum cannot have #[serde(tag = \"...\", content = \"...\")]";
             cx.error_spanned_by(untagged_tokens, msg);
             cx.error_spanned_by(tag_tokens, msg);
@@ -747,7 +747,7 @@ fn decide_identifier(
         variant_identifier.0.get_with_tokens(),
     ) {
         (_, None, None) => Identifier::No,
-        (_, Some((field_identifier_tokens, _)), Some((variant_identifier_tokens, _))) => {
+        (_, Some((field_identifier_tokens, ())), Some((variant_identifier_tokens, ()))) => {
             let msg =
                 "#[serde(field_identifier)] and #[serde(variant_identifier)] cannot both be set";
             cx.error_spanned_by(field_identifier_tokens, msg);
