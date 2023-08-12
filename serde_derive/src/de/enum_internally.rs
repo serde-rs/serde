@@ -91,7 +91,7 @@ pub(super) fn deserialize(
             }
         }
 
-        _serde::Deserializer::deserialize_any(
+        _serde::Deserializer::deserialize_map(
             __deserializer,
             _serde::#private::de::TaggedContentVisitor::<__Seed>::new(#tag, #expecting)
         )
@@ -124,7 +124,7 @@ fn deserialize_internally_tagged_variant(
                 quote!((#default))
             });
             quote_block! {
-                _serde::Deserializer::deserialize_any(__deserializer, _serde::#private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name))?;
+                _serde::Deserializer::deserialize_map(__deserializer, _serde::#private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name))?;
                 _serde::#private::Ok(#this_value::#variant_ident #default)
             }
         }
