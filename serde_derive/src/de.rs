@@ -1076,7 +1076,7 @@ fn deserialize_struct(
             _serde::Deserializer::deserialize_map(#deserializer, #visitor_expr)
         },
         StructForm::Untagged(_, deserializer) => quote! {
-            _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
+            _serde::Deserializer::deserialize_map(#deserializer, #visitor_expr)
         },
     };
 
