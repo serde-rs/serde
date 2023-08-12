@@ -211,8 +211,8 @@ mod content {
     use crate::actually_private;
     use crate::de::value::{MapDeserializer, SeqDeserializer};
     use crate::de::{
-        self, size_hint, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected,
-        IgnoredAny, MapAccess, SeqAccess, Unexpected, Visitor,
+        self, size_hint, Deserialize, DeserializeSeed, Deserializer, EnumAccess, IgnoredAny,
+        MapAccess, SeqAccess, Unexpected, Visitor,
     };
 
     /// Used from generated code to buffer the contents of the Deserializer when
@@ -1060,52 +1060,6 @@ mod content {
         err: PhantomData<E>,
     }
 
-    impl<'de, E> ContentDeserializer<'de, E>
-    where
-        E: de::Error,
-    {
-        #[cold]
-        fn invalid_type(self, exp: &Expected) -> E {
-            de::Error::invalid_type(self.content.unexpected(), exp)
-        }
-
-        fn deserialize_integer<V>(self, visitor: V) -> Result<V::Value, E>
-        where
-            V: Visitor<'de>,
-        {
-            match self.content {
-                Content::U8(v) => visitor.visit_u8(v),
-                Content::U16(v) => visitor.visit_u16(v),
-                Content::U32(v) => visitor.visit_u32(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I8(v) => visitor.visit_i8(v),
-                Content::I16(v) => visitor.visit_i16(v),
-                Content::I32(v) => visitor.visit_i32(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-
-        fn deserialize_float<V>(self, visitor: V) -> Result<V::Value, E>
-        where
-            V: Visitor<'de>,
-        {
-            match self.content {
-                Content::F32(v) => visitor.visit_f32(v),
-                Content::F64(v) => visitor.visit_f64(v),
-                Content::U8(v) => visitor.visit_u8(v),
-                Content::U16(v) => visitor.visit_u16(v),
-                Content::U32(v) => visitor.visit_u32(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I8(v) => visitor.visit_i8(v),
-                Content::I16(v) => visitor.visit_i16(v),
-                Content::I32(v) => visitor.visit_i32(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-    }
-
     fn visit_content_seq<'de, V, E>(content: Vec<Content<'de>>, visitor: V) -> Result<V::Value, E>
     where
         V: Visitor<'de>,
@@ -1139,6 +1093,12 @@ mod content {
     {
         type Error = E;
 
+        forward_to_deserialize_any! {
+            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+            bytes byte_buf seq tuple
+            tuple_struct map struct identifier
+        }
+
         fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
@@ -1166,139 +1126,6 @@ mod content {
                 Content::Newtype(v) => visitor.visit_newtype_struct(ContentDeserializer::new(*v)),
                 Content::Seq(v) => visit_content_seq(v, visitor),
                 Content::Map(v) => visit_content_map(v, visitor),
-            }
-        }
-
-        fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            match self.content {
-                Content::Bool(v) => visitor.visit_bool(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-
-        fn deserialize_i8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_integer(visitor)
-        }
-
-        fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_integer(visitor)
-        }
-
-        fn deserialize_i32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_integer(visitor)
-        }
-
-        fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_integer(visitor)
-        }
-
-        fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_integer(visitor)
-        }
-
-        fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_integer(visitor)
-        }
-
-        fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_integer(visitor)
-        }
-
-        fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_integer(visitor)
-        }
-
-        fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_float(visitor)
-        }
-
-        fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_float(visitor)
-        }
-
-        fn deserialize_char<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            match self.content {
-                Content::Char(v) => visitor.visit_char(v),
-                Content::String(v) => visitor.visit_string(v),
-                Content::Str(v) => visitor.visit_borrowed_str(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-
-        fn deserialize_str<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_string(visitor)
-        }
-
-        fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            match self.content {
-                Content::String(v) => visitor.visit_string(v),
-                Content::Str(v) => visitor.visit_borrowed_str(v),
-                Content::ByteBuf(v) => visitor.visit_byte_buf(v),
-                Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-
-        fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_byte_buf(visitor)
-        }
-
-        fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            match self.content {
-                Content::String(v) => visitor.visit_string(v),
-                Content::Str(v) => visitor.visit_borrowed_str(v),
-                Content::ByteBuf(v) => visitor.visit_byte_buf(v),
-                Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
-                Content::Seq(v) => visit_content_seq(v, visitor),
-                _ => Err(self.invalid_type(&visitor)),
             }
         }
 
@@ -1394,61 +1221,6 @@ mod content {
             }
         }
 
-        fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            match self.content {
-                Content::Seq(v) => visit_content_seq(v, visitor),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-
-        fn deserialize_tuple<V>(self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_seq(visitor)
-        }
-
-        fn deserialize_tuple_struct<V>(
-            self,
-            _name: &'static str,
-            _len: usize,
-            visitor: V,
-        ) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_seq(visitor)
-        }
-
-        fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            match self.content {
-                Content::Map(v) => visit_content_map(v, visitor),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-
-        fn deserialize_struct<V>(
-            self,
-            _name: &'static str,
-            _fields: &'static [&'static str],
-            visitor: V,
-        ) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            match self.content {
-                Content::Seq(v) => visit_content_seq(v, visitor),
-                Content::Map(v) => visit_content_map(v, visitor),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-
         fn deserialize_enum<V>(
             self,
             _name: &str,
@@ -1459,6 +1231,11 @@ mod content {
             V: Visitor<'de>,
         {
             let (variant, value) = match self.content {
+                // Covered by tests/test_enum_internally_tagged.rs
+                //      newtype_enum::unit
+                //      newtype_enum::newtype
+                //      newtype_enum::tuple
+                //      newtype_enum::struct_
                 Content::Map(value) => {
                     let mut iter = value.into_iter();
                     let (variant, value) = match iter.next() {
@@ -1479,6 +1256,13 @@ mod content {
                     }
                     (variant, Some(value))
                 }
+                // String() covered by tests/test_annotations.rs
+                //      flatten::enum_::adjacently_tagged::newtype
+                //      flatten::enum_::adjacently_tagged::struct_
+                // String() covered by tests/test_enum_internally_tagged.rs
+                //      struct_enum::unit
+                // String() covered by tests/test_macros.rs
+                //      test_internally_tagged_struct_with_flattened_field
                 s @ Content::String(_) | s @ Content::Str(_) => (s, None),
                 other => {
                     return Err(de::Error::invalid_type(
@@ -1489,21 +1273,6 @@ mod content {
             };
 
             visitor.visit_enum(EnumDeserializer::new(variant, value))
-        }
-
-        fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            match self.content {
-                Content::String(v) => visitor.visit_string(v),
-                Content::Str(v) => visitor.visit_borrowed_str(v),
-                Content::ByteBuf(v) => visitor.visit_byte_buf(v),
-                Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
-                Content::U8(v) => visitor.visit_u8(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
         }
 
         fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -1522,6 +1291,8 @@ mod content {
         where
             V: Visitor<'de, Value = Content<'de>>,
         {
+            // Covered by tests/test_enum_internally_tagged.rs
+            //      containing_flatten
             let _ = visitor;
             Ok(self.content)
         }
@@ -1659,52 +1430,6 @@ mod content {
         err: PhantomData<E>,
     }
 
-    impl<'a, 'de, E> ContentRefDeserializer<'a, 'de, E>
-    where
-        E: de::Error,
-    {
-        #[cold]
-        fn invalid_type(self, exp: &Expected) -> E {
-            de::Error::invalid_type(self.content.unexpected(), exp)
-        }
-
-        fn deserialize_integer<V>(self, visitor: V) -> Result<V::Value, E>
-        where
-            V: Visitor<'de>,
-        {
-            match *self.content {
-                Content::U8(v) => visitor.visit_u8(v),
-                Content::U16(v) => visitor.visit_u16(v),
-                Content::U32(v) => visitor.visit_u32(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I8(v) => visitor.visit_i8(v),
-                Content::I16(v) => visitor.visit_i16(v),
-                Content::I32(v) => visitor.visit_i32(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-
-        fn deserialize_float<V>(self, visitor: V) -> Result<V::Value, E>
-        where
-            V: Visitor<'de>,
-        {
-            match *self.content {
-                Content::F32(v) => visitor.visit_f32(v),
-                Content::F64(v) => visitor.visit_f64(v),
-                Content::U8(v) => visitor.visit_u8(v),
-                Content::U16(v) => visitor.visit_u16(v),
-                Content::U32(v) => visitor.visit_u32(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                Content::I8(v) => visitor.visit_i8(v),
-                Content::I16(v) => visitor.visit_i16(v),
-                Content::I32(v) => visitor.visit_i32(v),
-                Content::I64(v) => visitor.visit_i64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-    }
-
     fn visit_content_seq_ref<'a, 'de, V, E>(
         content: &'a [Content<'de>],
         visitor: V,
@@ -1748,6 +1473,12 @@ mod content {
     {
         type Error = E;
 
+        forward_to_deserialize_any! {
+            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+            bytes byte_buf unit unit_struct seq tuple
+            tuple_struct map struct identifier
+        }
+
         fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, E>
         where
             V: Visitor<'de>,
@@ -1780,139 +1511,6 @@ mod content {
             }
         }
 
-        fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            match *self.content {
-                Content::Bool(v) => visitor.visit_bool(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-
-        fn deserialize_i8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_integer(visitor)
-        }
-
-        fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_integer(visitor)
-        }
-
-        fn deserialize_i32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_integer(visitor)
-        }
-
-        fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_integer(visitor)
-        }
-
-        fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_integer(visitor)
-        }
-
-        fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_integer(visitor)
-        }
-
-        fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_integer(visitor)
-        }
-
-        fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_integer(visitor)
-        }
-
-        fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_float(visitor)
-        }
-
-        fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_float(visitor)
-        }
-
-        fn deserialize_char<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            match *self.content {
-                Content::Char(v) => visitor.visit_char(v),
-                Content::String(ref v) => visitor.visit_str(v),
-                Content::Str(v) => visitor.visit_borrowed_str(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-
-        fn deserialize_str<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            match *self.content {
-                Content::String(ref v) => visitor.visit_str(v),
-                Content::Str(v) => visitor.visit_borrowed_str(v),
-                Content::ByteBuf(ref v) => visitor.visit_bytes(v),
-                Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-
-        fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_str(visitor)
-        }
-
-        fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            match *self.content {
-                Content::String(ref v) => visitor.visit_str(v),
-                Content::Str(v) => visitor.visit_borrowed_str(v),
-                Content::ByteBuf(ref v) => visitor.visit_bytes(v),
-                Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
-                Content::Seq(ref v) => visit_content_seq_ref(v, visitor),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-
-        fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_bytes(visitor)
-        }
-
         fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, E>
         where
             V: Visitor<'de>,
@@ -1934,27 +1532,6 @@ mod content {
             }
         }
 
-        fn deserialize_unit<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            match *self.content {
-                Content::Unit => visitor.visit_unit(),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-
-        fn deserialize_unit_struct<V>(
-            self,
-            _name: &'static str,
-            visitor: V,
-        ) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_unit(visitor)
-        }
-
         fn deserialize_newtype_struct<V>(self, _name: &str, visitor: V) -> Result<V::Value, E>
         where
             V: Visitor<'de>,
@@ -1962,6 +1539,8 @@ mod content {
             // Covered by tests/test_enum_untagged.rs
             //      newtype_struct
             match *self.content {
+                // Covered by tests/test_enum_untagged.rs
+                //      newtype_struct
                 Content::Newtype(ref v) => {
                     visitor.visit_newtype_struct(ContentRefDeserializer::new(v))
                 }
@@ -1978,61 +1557,6 @@ mod content {
             }
         }
 
-        fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            match *self.content {
-                Content::Seq(ref v) => visit_content_seq_ref(v, visitor),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-
-        fn deserialize_tuple<V>(self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_seq(visitor)
-        }
-
-        fn deserialize_tuple_struct<V>(
-            self,
-            _name: &'static str,
-            _len: usize,
-            visitor: V,
-        ) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_seq(visitor)
-        }
-
-        fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            match *self.content {
-                Content::Map(ref v) => visit_content_map_ref(v, visitor),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-
-        fn deserialize_struct<V>(
-            self,
-            _name: &'static str,
-            _fields: &'static [&'static str],
-            visitor: V,
-        ) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            match *self.content {
-                Content::Seq(ref v) => visit_content_seq_ref(v, visitor),
-                Content::Map(ref v) => visit_content_map_ref(v, visitor),
-                _ => Err(self.invalid_type(&visitor)),
-            }
-        }
-
         fn deserialize_enum<V>(
             self,
             _name: &str,
@@ -2043,6 +1567,9 @@ mod content {
             V: Visitor<'de>,
         {
             let (variant, value) = match *self.content {
+                // Covered by tests/test_annotations.rs
+                //      test_partially_untagged_enum
+                //      test_partially_untagged_enum_desugared
                 Content::Map(ref value) => {
                     let mut iter = value.iter();
                     let (variant, value) = match iter.next() {
@@ -2063,7 +1590,13 @@ mod content {
                     }
                     (variant, Some(value))
                 }
+                // String() covered by tests/test_enum_adjacently_tagged.rs
+                //      partially_untagged
+                // String() covered by tests/test_macros.rs
+                //      test_enum_in_untagged_enum
                 ref s @ Content::String(_) | ref s @ Content::Str(_) => (s, None),
+                // Bool() covered by tests/test_annotations.rs
+                //      test_partially_untagged_enum_generic
                 ref other => {
                     return Err(de::Error::invalid_type(
                         other.unexpected(),
@@ -2077,21 +1610,6 @@ mod content {
                 value,
                 err: PhantomData,
             })
-        }
-
-        fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            match *self.content {
-                Content::String(ref v) => visitor.visit_str(v),
-                Content::Str(v) => visitor.visit_borrowed_str(v),
-                Content::ByteBuf(ref v) => visitor.visit_bytes(v),
-                Content::Bytes(v) => visitor.visit_borrowed_bytes(v),
-                Content::U8(v) => visitor.visit_u8(v),
-                Content::U64(v) => visitor.visit_u64(v),
-                _ => Err(self.invalid_type(&visitor)),
-            }
         }
 
         fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -2109,6 +1627,16 @@ mod content {
         where
             V: Visitor<'de, Value = Content<'de>>,
         {
+            // Covered by tests/test_annotations.rs
+            //      flatten::enum_::internally_tagged::structs
+            //      flatten::enum_::internally_tagged::unit_enum_with_unknown_fields
+            //      flatten::enum_::untagged::straightforward
+            //      flatten::enum_::untagged::struct_
+            //      test_partially_untagged_enum
+            // Covered by tests/test_enum_internally_tagged.rs
+            //      untagged_variant
+            // Covered by tests/test_enum_untagged.rs
+            //      contains_flatten_with_integer_key
             let _ = visitor;
             Ok(self.content.clone())
         }
