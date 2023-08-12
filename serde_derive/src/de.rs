@@ -1055,7 +1055,7 @@ fn deserialize_struct(
             _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
         },
         StructForm::InternallyTagged(_, deserializer) => quote! {
-            _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
+            _serde::Deserializer::deserialize_map(#deserializer, #visitor_expr)
         },
         StructForm::Untagged(_, deserializer) => quote! {
             _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
@@ -1436,7 +1436,7 @@ fn deserialize_internally_tagged_enum(
             }
         }
 
-        _serde::Deserializer::deserialize_any(
+        _serde::Deserializer::deserialize_map(
             __deserializer,
             _serde::__private::de::TaggedContentVisitor::<__Seed>::new(#tag, #expecting)
         )
@@ -1892,7 +1892,7 @@ fn deserialize_internally_tagged_variant(
                 quote!((#default))
             });
             quote_block! {
-                _serde::Deserializer::deserialize_any(#deserializer, _serde::__private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name))?;
+                _serde::Deserializer::deserialize_map(#deserializer, _serde::__private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name))?;
                 _serde::__private::Ok(#this_value::#variant_ident #default)
             }
         }
