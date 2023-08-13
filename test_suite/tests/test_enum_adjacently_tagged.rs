@@ -11,17 +11,17 @@ use serde_test::{
     assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_tokens, Token,
 };
 
-#[test]
-fn test_adjacently_tagged_enum() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(tag = "t", content = "c")]
-    enum AdjacentlyTagged<T> {
-        Unit,
-        Newtype(T),
-        Tuple(u8, u8),
-        Struct { f: u8 },
-    }
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "t", content = "c")]
+enum AdjacentlyTagged<T> {
+    Unit,
+    Newtype(T),
+    Tuple(u8, u8),
+    Struct { f: u8 },
+}
 
+#[test]
+fn unit() {
     // unit with no content
     assert_ser_tokens(
         &AdjacentlyTagged::Unit::<u8>,
@@ -118,7 +118,10 @@ fn test_adjacently_tagged_enum() {
             Token::StructEnd,
         ],
     );
+}
 
+#[test]
+fn newtype() {
     // newtype with tag first
     assert_tokens(
         &AdjacentlyTagged::Newtype::<u8>(1),
@@ -211,7 +214,10 @@ fn test_adjacently_tagged_enum() {
             Token::StructEnd,
         ],
     );
+}
 
+#[test]
+fn tuple() {
     // tuple with tag first
     assert_tokens(
         &AdjacentlyTagged::Tuple::<u8>(1, 1),
@@ -255,7 +261,10 @@ fn test_adjacently_tagged_enum() {
             Token::StructEnd,
         ],
     );
+}
 
+#[test]
+fn struct_() {
     // struct with tag first
     assert_tokens(
         &AdjacentlyTagged::Struct::<u8> { f: 1 },
