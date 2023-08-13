@@ -174,6 +174,44 @@ fn test_adjacently_tagged_enum() {
         ],
     );
 
+    // integer field keys
+    assert_de_tokens(
+        &AdjacentlyTagged::Newtype::<u8>(1),
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::U64(1), // content field
+            Token::U8(1),
+            Token::U64(0), // tag field
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Newtype",
+            },
+            Token::StructEnd,
+        ],
+    );
+
+    // byte-array field keys
+    assert_de_tokens(
+        &AdjacentlyTagged::Newtype::<u8>(1),
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Bytes(b"c"),
+            Token::U8(1),
+            Token::Bytes(b"t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Newtype",
+            },
+            Token::StructEnd,
+        ],
+    );
+
     // tuple with tag first
     assert_tokens(
         &AdjacentlyTagged::Tuple::<u8>(1, 1),
@@ -263,44 +301,6 @@ fn test_adjacently_tagged_enum() {
             Token::UnitVariant {
                 name: "AdjacentlyTagged",
                 variant: "Struct",
-            },
-            Token::StructEnd,
-        ],
-    );
-
-    // integer field keys
-    assert_de_tokens(
-        &AdjacentlyTagged::Newtype::<u8>(1),
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::U64(1), // content field
-            Token::U8(1),
-            Token::U64(0), // tag field
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Newtype",
-            },
-            Token::StructEnd,
-        ],
-    );
-
-    // byte-array field keys
-    assert_de_tokens(
-        &AdjacentlyTagged::Newtype::<u8>(1),
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Bytes(b"c"),
-            Token::U8(1),
-            Token::Bytes(b"t"),
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Newtype",
             },
             Token::StructEnd,
         ],
