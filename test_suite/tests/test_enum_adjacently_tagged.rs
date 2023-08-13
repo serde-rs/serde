@@ -349,51 +349,51 @@ fn struct_() {
 
 #[test]
 fn bytes() {
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
-    #[serde(tag = "t", content = "c")]
-    enum Data {
-        A { a: i32 },
-    }
-
-    let data = Data::A { a: 0 };
+    let value = AdjacentlyTagged::Struct::<u8> { f: 1 };
 
     assert_tokens(
-        &data,
+        &value,
         &[
             Token::Struct {
-                name: "Data",
+                name: "AdjacentlyTagged",
                 len: 2,
             },
             Token::Str("t"),
             Token::UnitVariant {
-                name: "Data",
-                variant: "A",
+                name: "AdjacentlyTagged",
+                variant: "Struct",
             },
             Token::Str("c"),
-            Token::Struct { name: "A", len: 1 },
-            Token::Str("a"),
-            Token::I32(0),
+            Token::Struct {
+                name: "Struct",
+                len: 1,
+            },
+            Token::Str("f"),
+            Token::U8(1),
             Token::StructEnd,
             Token::StructEnd,
         ],
     );
 
     assert_de_tokens(
-        &data,
+        &value,
         &[
             Token::Struct {
-                name: "Data",
+                name: "AdjacentlyTagged",
                 len: 2,
             },
             Token::Bytes(b"t"),
             Token::UnitVariant {
-                name: "Data",
-                variant: "A",
+                name: "AdjacentlyTagged",
+                variant: "Struct",
             },
             Token::Bytes(b"c"),
-            Token::Struct { name: "A", len: 1 },
-            Token::Str("a"),
-            Token::I32(0),
+            Token::Struct {
+                name: "Struct",
+                len: 1,
+            },
+            Token::Str("f"),
+            Token::U8(1),
             Token::StructEnd,
             Token::StructEnd,
         ],
