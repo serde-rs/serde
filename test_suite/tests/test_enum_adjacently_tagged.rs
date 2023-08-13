@@ -122,9 +122,11 @@ fn unit() {
 
 #[test]
 fn newtype() {
+    let value = AdjacentlyTagged::Newtype::<u8>(1);
+
     // newtype with tag first
     assert_tokens(
-        &AdjacentlyTagged::Newtype::<u8>(1),
+        &value,
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -143,7 +145,7 @@ fn newtype() {
 
     // newtype with content first
     assert_de_tokens(
-        &AdjacentlyTagged::Newtype::<u8>(1),
+        &value,
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -179,7 +181,7 @@ fn newtype() {
 
     // integer field keys
     assert_de_tokens(
-        &AdjacentlyTagged::Newtype::<u8>(1),
+        &value,
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -198,7 +200,7 @@ fn newtype() {
 
     // byte-array field keys
     assert_de_tokens(
-        &AdjacentlyTagged::Newtype::<u8>(1),
+        &value,
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -218,9 +220,11 @@ fn newtype() {
 
 #[test]
 fn tuple() {
+    let value = AdjacentlyTagged::Tuple::<u8>(1, 1);
+
     // tuple with tag first
     assert_tokens(
-        &AdjacentlyTagged::Tuple::<u8>(1, 1),
+        &value,
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -242,7 +246,7 @@ fn tuple() {
 
     // tuple with content first
     assert_de_tokens(
-        &AdjacentlyTagged::Tuple::<u8>(1, 1),
+        &value,
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -265,9 +269,11 @@ fn tuple() {
 
 #[test]
 fn struct_() {
+    let value = AdjacentlyTagged::Struct::<u8> { f: 1 };
+
     // struct with tag first
     assert_tokens(
-        &AdjacentlyTagged::Struct::<u8> { f: 1 },
+        &value,
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -292,7 +298,7 @@ fn struct_() {
 
     // struct with content first
     assert_de_tokens(
-        &AdjacentlyTagged::Struct::<u8> { f: 1 },
+        &value,
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
