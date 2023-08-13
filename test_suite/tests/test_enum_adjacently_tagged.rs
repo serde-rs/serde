@@ -345,36 +345,8 @@ fn struct_() {
             Token::StructEnd,
         ],
     );
-}
 
-#[test]
-fn bytes() {
-    let value = AdjacentlyTagged::Struct::<u8> { f: 1 };
-
-    assert_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("t"),
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Struct",
-            },
-            Token::Str("c"),
-            Token::Struct {
-                name: "Struct",
-                len: 1,
-            },
-            Token::Str("f"),
-            Token::U8(1),
-            Token::StructEnd,
-            Token::StructEnd,
-        ],
-    );
-
+    // byte-array field keys
     assert_de_tokens(
         &value,
         &[
