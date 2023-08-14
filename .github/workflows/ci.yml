@@ -122,13 +122,11 @@ jobs:
       - run: precompiled/build.sh
       - name: replace serde_derive dependency with precompiled
         run: |
-          # FIXME: consider using `cargo rm serde_derive` but it's currently broken
-          # https://github.com/rust-lang/cargo/issues/12419
-          sed -i '/serde_derive =/d' serde/Cargo.toml
-          sed -i '/derive = \["serde_derive"\]/d' serde/Cargo.toml
+          cargo rm serde_derive --package serde
+          cargo rm serde_derive --package serde --dev
           sed -i '/"serde_derive"/d' Cargo.toml
           sed -i '/\[workspace\]/d' precompiled/serde_derive/Cargo.toml
-          cargo add --dev serde_derive --path precompiled/serde_derive --manifest-path test_suite/Cargo.toml
+          cargo add --dev serde_derive --path precompiled/serde_derive --package serde_test_suite
           git diff
       - run: cd test_suite && cargo test --features unstable -- --skip ui --exact
 
