@@ -221,6 +221,7 @@ pub struct Container {
     is_packed: bool,
     /// Error message generated when type can't be deserialized
     expecting: Option<String>,
+    non_exhaustive: bool,
 }
 
 /// Styles of representing an enum.
@@ -306,9 +307,12 @@ impl Container {
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
         let mut serde_path = Attr::none(cx, CRATE);
         let mut expecting = Attr::none(cx, EXPECTING);
+        let mut non_exhaustive = false;
 
         for attr in &item.attrs {
             if attr.path() != SERDE {
+                non_exhaustive |=
+                    matches!(&attr.meta, syn::Meta::Path(path) if path == NON_EXHAUSTIVE);
                 continue;
             }
 
@@ -587,6 +591,7 @@ impl Container {
             serde_path: serde_path.get(),
             is_packed,
             expecting: expecting.get(),
+            non_exhaustive,
         }
     }
 
@@ -671,6 +676,10 @@ impl Container {
     /// If `None`, default message will be used
     pub fn expecting(&self) -> Option<&str> {
         self.expecting.as_ref().map(String::as_ref)
+    }
+
+    pub fn non_exhaustive(&self) -> bool {
+        self.non_exhaustive
     }
 }
 
