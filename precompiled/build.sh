@@ -17,5 +17,3 @@ cargo +nightly build \
 
 rm -f serde_derive/serde_derive-x86_64-unknown-linux-gnu
 mv serde_derive/serde_derive{,-x86_64-unknown-linux-gnu}
-
-#upx --best --lzma serde_derive/serde_derive-x86_64-unknown-linux-gnu
