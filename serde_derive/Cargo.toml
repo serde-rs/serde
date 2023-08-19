@@ -15,7 +15,6 @@ rust-version = "1.56"
 [features]
 default = []
 deserialize_in_place = []
-compiled = []
 
 [lib]
 name = "serde_derive"
