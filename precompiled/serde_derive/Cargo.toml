@@ -17,20 +17,14 @@ rust-version = "1.56"
 [features]
 default = []
 deserialize_in_place = []
-compiled = ["proc-macro2", "quote", "syn"]
 
 [lib]
 proc-macro = true
 
-[target.'cfg(not(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")))'.dependencies]
+[target.'cfg(not(all(serde_derive_build = "precompiled", target_arch = "x86_64", target_os = "linux", target_env = "gnu")))'.dependencies]
 proc-macro2 = "1"
 quote = "1"
 syn = "2.0.28"
-
-[dependencies]
-proc-macro2 = { version = "1", optional = true }
-quote = { version = "1", optional = true }
-syn = { version = "2.0.28", optional = true }
 
 [dev-dependencies]
 serde = { version = "1", path = "../../serde" }
