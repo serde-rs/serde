@@ -40,6 +40,9 @@ default = ["std"]
 # Provide derive(Serialize, Deserialize) macros.
 derive = ["serde_derive"]
 
+# Force compilation from source - currently serde_derive
+from_source = ["serde_derive/from_source"]
+
 # Provide impls for common standard library types like Vec<T> and HashMap<K, V>.
 # Requires a dependency on the Rust standard library.
 std = []

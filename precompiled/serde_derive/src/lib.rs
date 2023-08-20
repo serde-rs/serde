@@ -16,13 +16,13 @@
 #![doc(html_root_url = "https://docs.rs/serde_derive/1.0.183")]
 
 #[cfg(any(
-    serde_derive_build = "source",
+    feature = "from_source",
     not(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))
 ))]
 include!("lib_from_source.rs");
 
 #[cfg(all(
-    not(serde_derive_build = "source"),
+    not(feature = "from_source"),
     target_arch = "x86_64",
     target_os = "linux",
     target_env = "gnu"

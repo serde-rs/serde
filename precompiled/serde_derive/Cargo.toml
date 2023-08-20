@@ -17,11 +17,19 @@ rust-version = "1.56"
 [features]
 default = []
 deserialize_in_place = []
+from_source = ["proc-macro2", "quote", "syn"]
 
 [lib]
 proc-macro = true
 
-[target.'cfg(any(serde_derive_build = "source", not(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))))'.dependencies]
+# By feature source compilation
+[dependencies]
+proc-macro2 = { version = "1", optional = true }
+quote = { version = "1", optional = true }
+syn = { version = "2.0.28", optional = true }
+
+# Compile from source when no precompiled binary available
+[target.'cfg(not(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")))'.dependencies]
 proc-macro2 = "1"
 quote = "1"
 syn = "2.0.28"
