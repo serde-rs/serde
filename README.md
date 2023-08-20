@@ -73,6 +73,25 @@ fn main() {
 }
 ```
 
+## Note about serde_derive Binary
+
+When using `serde_derive` either directly or via `serde` with `derive` feature.
+
+Please note that `serde_derive` may be distributed from within pre-compiled binary
+
+To force building `serde_derive` from source, an override is provided:
+
+```sh
+RUSTFLAGS='--cfg serde_derive_build="source"'
+```
+
+Alternatively in `~/.cargo/config`:
+```toml
+rustflags = ['--cfg serde_derive_build="source"']
+```
+
+More info from [cargo reference](https://doc.rust-lang.org/cargo/reference/config.html#buildrustflags).
+
 ## Getting help
 
 Serde is one of the most widely used Rust libraries so any place that Rustaceans
