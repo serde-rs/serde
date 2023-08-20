@@ -75,8 +75,17 @@ fn main() {
 
 ## Note about serde_derive Binary
 
-To force building `serde_derive` from source, an override is provided via
-feature `from_source` if the target environment requires it.
+To force building `serde_derive` from source, an override is provided:
+
+In your project `~/.cargo/config`:
+```toml
+[host]
+rustflags = ['--cfg=serde_derive_build="source"']
+```
+
+And then using `-Ztarget-applies-to-host` and `-Zhost-config` flags.
+
+For example: `cargo -Ztarget-applies-to-host -Zhost-config build`
 
 ## Getting help
 
