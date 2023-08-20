@@ -73,6 +73,16 @@ fn main() {
 }
 ```
 
+## Note about serde_derive Binary
+
+When using `serde_derive` either directly or via `serde` with `derive` feature it
+may be distributed from within pre-compiled binary (currently only on `x86_64-linux-gnu` target)
+
+To force building `serde_derive` from source, an override is provided via:
+
+- `derive_compiled` feature in `serde`
+- `compiled` feature in `serde_derive`
+
 ## Getting help
 
 Serde is one of the most widely used Rust libraries so any place that Rustaceans
