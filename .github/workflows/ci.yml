@@ -156,3 +156,12 @@ jobs:
       - uses: actions/checkout@v3
       - uses: dtolnay/install@cargo-outdated
       - run: cargo outdated --workspace --exit-code 1
+
+  lockstep:
+    name: Lockstep
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cd test_suite/assert_lockstep && cargo run -- dummy_dependant

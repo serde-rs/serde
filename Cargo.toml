@@ -4,6 +4,7 @@ members = [
     "serde_derive",
     "serde_derive_internals",
     "test_suite",
+    "test_suite/assert_lockstep",
 ]
 
 [patch.crates-io]

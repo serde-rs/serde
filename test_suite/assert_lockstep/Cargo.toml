@@ -1,0 +1,12 @@
+[package]
+name = "assert_lockstep"
+version = "0.1.0"
+edition = "2018"
+rust-version = "1.70"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cargo-lock = "8.0.0"
+toml = "0.5"
+thiserror = "1.0.39"

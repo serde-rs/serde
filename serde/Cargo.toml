@@ -31,6 +31,10 @@ features = ["derive"]
 targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--generate-link-to-definition"]
 
+# Even though this `cfg` can never be enabled, it still forces cargo to keep `serde_derive` in lockstep with `serde`.
+[target.'cfg(any())'.dependencies]
+serde_derive = { version = "=1.0.185", path = "../serde_derive" }
+
 
 ### FEATURES #################################################################
 
