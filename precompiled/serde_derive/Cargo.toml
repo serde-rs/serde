@@ -21,7 +21,7 @@ deserialize_in_place = []
 [lib]
 proc-macro = true
 
-[target.'cfg(serde_derive_build = "source")'.dependencies]
+[target.'cfg(any(serde_derive_build = "source", all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")))'.dependencies]
 proc-macro2 = "1"
 quote = "1"
 syn = "2.0.28"

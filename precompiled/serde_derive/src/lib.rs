@@ -15,8 +15,16 @@
 
 #![doc(html_root_url = "https://docs.rs/serde_derive/1.0.183")]
 
-#[cfg(serde_derive_build = "source")]
+#[cfg(any(
+    serde_derive_build = "source",
+    not(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))
+))]
 include!("lib_from_source.rs");
 
-#[cfg(not(serde_derive_build = "source"))]
+#[cfg(all(
+    not(serde_derive_build = "source"),
+    target_arch = "x86_64",
+    target_os = "linux",
+    target_env = "gnu"
+))]
 include!("lib_precompiled.rs");
