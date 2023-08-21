@@ -98,7 +98,6 @@ jobs:
       - run: cd serde && cargo check --no-default-features
       - run: cd serde && cargo check
       - run: cd serde_derive && cargo check
-      - run: cd precompiled/serde_derive && cargo check
 
   alloc:
     name: Rust 1.36.0
@@ -109,27 +108,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.36.0
       - run: cd serde && cargo build --no-default-features --features alloc
 
-  precompiled:
-    name: Precompiled
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: rust-src
-          targets: x86_64-unknown-linux-musl
-      - run: precompiled/build.sh
-      - name: replace serde_derive dependency with precompiled
-        run: |
-          cargo rm serde_derive --package serde
-          cargo rm serde_derive --package serde --dev
-          sed -i '/"serde_derive"/d' Cargo.toml
-          sed -i '/\[workspace\]/d' precompiled/serde_derive/Cargo.toml
-          cargo add --dev serde_derive --path precompiled/serde_derive --package serde_test_suite
-          git diff
-      - run: cd test_suite && cargo test --features unstable -- --skip ui --exact
-
   macos:
     name: macOS
     runs-on: macos-latest
@@ -137,7 +115,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
-      - run: cd precompiled/serde_derive && cargo check
+      - run: cd serde_derive && cargo check
 
   minimal:
     name: Minimal versions
