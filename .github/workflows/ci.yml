@@ -108,15 +108,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.36.0
       - run: cd serde && cargo build --no-default-features --features alloc
 
-  macos:
-    name: macOS
-    runs-on: macos-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cd serde_derive && cargo check
-
   minimal:
     name: Minimal versions
     runs-on: ubuntu-latest
