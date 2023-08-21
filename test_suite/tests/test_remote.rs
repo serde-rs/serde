@@ -127,7 +127,7 @@ struct Test {
     enum_concrete: remote::EnumGeneric<u8>,
 
     #[serde(with = "ErrorKindDef")]
-    io_error_kind: std::io::ErrorKind,
+    io_error_kind: ErrorKind,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -200,8 +200,16 @@ enum EnumConcrete {
     Variant(u8),
 }
 
+#[derive(Debug)]
+enum ErrorKind {
+    NotFound,
+    PermissionDenied,
+    #[allow(dead_code)]
+    ConnectionRefused,
+}
+
 #[derive(Serialize, Deserialize)]
-#[serde(remote = "std::io::ErrorKind")]
+#[serde(remote = "ErrorKind")]
 #[non_exhaustive]
 enum ErrorKindDef {
     NotFound,
