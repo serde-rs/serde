@@ -1555,7 +1555,6 @@ pub trait Visitor<'de>: Sized {
     where
         E: Error,
     {
-        let _ = v;
         Err(Error::invalid_type(Unexpected::Bytes(v), &self))
     }
 
