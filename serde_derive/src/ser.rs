@@ -710,7 +710,7 @@ fn serialize_adjacently_tagged_variant(
     });
 
     let fields_ty = variant.fields.iter().map(|f| &f.ty);
-    let fields_ident: &Vec<_> = &match variant.style {
+    let fields_ident: &[_] = &match variant.style {
         Style::Unit => {
             if variant.attrs.serialize_with().is_some() {
                 vec![]
