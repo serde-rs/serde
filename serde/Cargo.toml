@@ -31,7 +31,11 @@ features = ["derive"]
 targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--generate-link-to-definition"]
 
-# Even though this `cfg` can never be enabled, it still forces cargo to keep `serde_derive` in lockstep with `serde`.
+# This cfg cannot be enabled, but it still forces Cargo to keep serde_derive's
+# version in lockstep with serde's, even if someone depends on the two crates
+# separately with serde's "derive" feature disabled. Every serde_derive release
+# is compatible with exactly one serde release because the generated code
+# involves nonpublic APIs which are not bound by semver.
 [target.'cfg(any())'.dependencies]
 serde_derive = { version = "=1.0.185", path = "../serde_derive" }
 
