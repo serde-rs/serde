@@ -118,7 +118,6 @@ use crate::lib::*;
 
 pub mod value;
 
-#[cfg(not(no_integer128))]
 mod format;
 mod ignored_any;
 mod impls;
