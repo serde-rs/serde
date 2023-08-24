@@ -123,7 +123,6 @@ mod format;
 mod ignored_any;
 mod impls;
 pub(crate) mod size_hint;
-mod utf8;
 
 pub use self::ignored_any::IgnoredAny;
 
@@ -1478,7 +1477,7 @@ pub trait Visitor<'de>: Sized {
     where
         E: Error,
     {
-        self.visit_str(utf8::encode(v).as_str())
+        self.visit_str(v.encode_utf8(&mut [0u8; 4]))
     }
 
     /// The input contains a string. The lifetime of the string is ephemeral and
