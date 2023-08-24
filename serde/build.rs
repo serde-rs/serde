@@ -27,13 +27,6 @@ fn main() {
         println!("cargo:rustc-cfg=no_relaxed_trait_bounds");
     }
 
-    // Disabled on Emscripten targets before Rust 1.40 since
-    // Emscripten did not support 128-bit integers until Rust 1.40
-    // (https://github.com/rust-lang/rust/pull/65251)
-    if emscripten && minor < 40 {
-        println!("cargo:rustc-cfg=no_integer128");
-    }
-
     // Current minimum supported version of serde_derive crate is Rust 1.56.
     if minor < 56 {
         println!("cargo:rustc-cfg=no_serde_derive");

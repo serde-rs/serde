@@ -292,19 +292,16 @@ primitive_deserializer!(i8, "an `i8`.", I8Deserializer, visit_i8);
 primitive_deserializer!(i16, "an `i16`.", I16Deserializer, visit_i16);
 primitive_deserializer!(i32, "an `i32`.", I32Deserializer, visit_i32);
 primitive_deserializer!(i64, "an `i64`.", I64Deserializer, visit_i64);
+primitive_deserializer!(i128, "an `i128`.", I128Deserializer, visit_i128);
 primitive_deserializer!(isize, "an `isize`.", IsizeDeserializer, visit_i64 as i64);
 primitive_deserializer!(u8, "a `u8`.", U8Deserializer, visit_u8);
 primitive_deserializer!(u16, "a `u16`.", U16Deserializer, visit_u16);
 primitive_deserializer!(u64, "a `u64`.", U64Deserializer, visit_u64);
+primitive_deserializer!(u128, "a `u128`.", U128Deserializer, visit_u128);
 primitive_deserializer!(usize, "a `usize`.", UsizeDeserializer, visit_u64 as u64);
 primitive_deserializer!(f32, "an `f32`.", F32Deserializer, visit_f32);
 primitive_deserializer!(f64, "an `f64`.", F64Deserializer, visit_f64);
 primitive_deserializer!(char, "a `char`.", CharDeserializer, visit_char);
-
-serde_if_integer128! {
-    primitive_deserializer!(i128, "an `i128`.", I128Deserializer, visit_i128);
-    primitive_deserializer!(u128, "a `u128`.", U128Deserializer, visit_u128);
-}
 
 /// A deserializer holding a `u32`.
 pub struct U32Deserializer<E> {

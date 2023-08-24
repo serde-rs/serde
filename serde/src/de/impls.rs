@@ -364,64 +364,62 @@ impl_deserialize_num! {
     num_as_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32 u64:visit_u64);
 }
 
-serde_if_integer128! {
-    macro_rules! num_128 {
-        ($ty:ident : $visit:ident) => {
-            fn $visit<E>(self, v: $ty) -> Result<Self::Value, E>
-            where
-                E: Error,
+macro_rules! num_128 {
+    ($ty:ident : $visit:ident) => {
+        fn $visit<E>(self, v: $ty) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            if v as i128 >= Self::Value::min_value() as i128
+                && v as u128 <= Self::Value::max_value() as u128
             {
-                if v as i128 >= Self::Value::min_value() as i128
-                    && v as u128 <= Self::Value::max_value() as u128
-                {
-                    Ok(v as Self::Value)
-                } else {
-                    Err(Error::invalid_value(
-                        Unexpected::Other(stringify!($ty)),
-                        &self,
-                    ))
-                }
+                Ok(v as Self::Value)
+            } else {
+                Err(Error::invalid_value(
+                    Unexpected::Other(stringify!($ty)),
+                    &self,
+                ))
             }
-        };
+        }
+    };
 
-        (nonzero $primitive:ident $ty:ident : $visit:ident) => {
-            fn $visit<E>(self, v: $ty) -> Result<Self::Value, E>
-            where
-                E: Error,
+    (nonzero $primitive:ident $ty:ident : $visit:ident) => {
+        fn $visit<E>(self, v: $ty) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            if v as i128 >= $primitive::min_value() as i128
+                && v as u128 <= $primitive::max_value() as u128
             {
-                if v as i128 >= $primitive::min_value() as i128
-                    && v as u128 <= $primitive::max_value() as u128
-                {
-                    if let Some(nonzero) = Self::Value::new(v as $primitive) {
-                        Ok(nonzero)
-                    } else {
-                        Err(Error::invalid_value(Unexpected::Unsigned(0), &self))
-                    }
+                if let Some(nonzero) = Self::Value::new(v as $primitive) {
+                    Ok(nonzero)
                 } else {
-                    Err(Error::invalid_value(
-                        Unexpected::Other(stringify!($ty)),
-                        &self,
-                    ))
+                    Err(Error::invalid_value(Unexpected::Unsigned(0), &self))
                 }
+            } else {
+                Err(Error::invalid_value(
+                    Unexpected::Other(stringify!($ty)),
+                    &self,
+                ))
             }
-        };
-    }
+        }
+    };
+}
 
-    impl_deserialize_num! {
-        i128, NonZeroI128 cfg(not(no_num_nonzero_signed)), deserialize_i128
-        num_self!(i128:visit_i128);
-        num_as_self!(i8:visit_i8 i16:visit_i16 i32:visit_i32 i64:visit_i64);
-        num_as_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32 u64:visit_u64);
-        num_128!(u128:visit_u128);
-    }
+impl_deserialize_num! {
+    i128, NonZeroI128 cfg(not(no_num_nonzero_signed)), deserialize_i128
+    num_self!(i128:visit_i128);
+    num_as_self!(i8:visit_i8 i16:visit_i16 i32:visit_i32 i64:visit_i64);
+    num_as_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32 u64:visit_u64);
+    num_128!(u128:visit_u128);
+}
 
-    impl_deserialize_num! {
-        u128, NonZeroU128, deserialize_u128
-        num_self!(u128:visit_u128);
-        num_as_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32 u64:visit_u64);
-        int_to_uint!(i8:visit_i8 i16:visit_i16 i32:visit_i32 i64:visit_i64);
-        num_128!(i128:visit_i128);
-    }
+impl_deserialize_num! {
+    u128, NonZeroU128, deserialize_u128
+    num_self!(u128:visit_u128);
+    num_as_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32 u64:visit_u64);
+    int_to_uint!(i8:visit_i8 i16:visit_i16 i32:visit_i32 i64:visit_i64);
+    num_128!(i128:visit_i128);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
