@@ -129,12 +129,10 @@ impl<'de> Visitor<'de> for IgnoredAny {
         Ok(IgnoredAny)
     }
 
-    serde_if_integer128! {
-        #[inline]
-        fn visit_i128<E>(self, x: i128) -> Result<Self::Value, E> {
-            let _ = x;
-            Ok(IgnoredAny)
-        }
+    #[inline]
+    fn visit_i128<E>(self, x: i128) -> Result<Self::Value, E> {
+        let _ = x;
+        Ok(IgnoredAny)
     }
 
     #[inline]
@@ -143,12 +141,10 @@ impl<'de> Visitor<'de> for IgnoredAny {
         Ok(IgnoredAny)
     }
 
-    serde_if_integer128! {
-        #[inline]
-        fn visit_u128<E>(self, x: u128) -> Result<Self::Value, E> {
-            let _ = x;
-            Ok(IgnoredAny)
-        }
+    #[inline]
+    fn visit_u128<E>(self, x: u128) -> Result<Self::Value, E> {
+        let _ = x;
+        Ok(IgnoredAny)
     }
 
     #[inline]

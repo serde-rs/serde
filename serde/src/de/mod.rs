@@ -948,18 +948,15 @@ pub trait Deserializer<'de>: Sized {
     where
         V: Visitor<'de>;
 
-    serde_if_integer128! {
-        /// Hint that the `Deserialize` type is expecting an `i128` value.
-        ///
-        /// This method is available only on Rust compiler versions >=1.26. The
-        /// default behavior unconditionally returns an error.
-        fn deserialize_i128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>
-        {
-            let _ = visitor;
-            Err(Error::custom("i128 is not supported"))
-        }
+    /// Hint that the `Deserialize` type is expecting an `i128` value.
+    ///
+    /// The default behavior unconditionally returns an error.
+    fn deserialize_i128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::custom("i128 is not supported"))
     }
 
     /// Hint that the `Deserialize` type is expecting a `u8` value.
@@ -982,18 +979,15 @@ pub trait Deserializer<'de>: Sized {
     where
         V: Visitor<'de>;
 
-    serde_if_integer128! {
-        /// Hint that the `Deserialize` type is expecting an `u128` value.
-        ///
-        /// This method is available only on Rust compiler versions >=1.26. The
-        /// default behavior unconditionally returns an error.
-        fn deserialize_u128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>
-        {
-            let _ = visitor;
-            Err(Error::custom("u128 is not supported"))
-        }
+    /// Hint that the `Deserialize` type is expecting an `u128` value.
+    ///
+    /// The default behavior unconditionally returns an error.
+    fn deserialize_u128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::custom("u128 is not supported"))
     }
 
     /// Hint that the `Deserialize` type is expecting a `f32` value.
@@ -1365,20 +1359,20 @@ pub trait Visitor<'de>: Sized {
         Err(Error::invalid_type(Unexpected::Signed(v), &self))
     }
 
-    serde_if_integer128! {
-        /// The input contains a `i128`.
-        ///
-        /// This method is available only on Rust compiler versions >=1.26. The
-        /// default implementation fails with a type error.
-        fn visit_i128<E>(self, v: i128) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            let mut buf = [0u8; 58];
-            let mut writer = format::Buf::new(&mut buf);
-            fmt::Write::write_fmt(&mut writer, format_args!("integer `{}` as i128", v)).unwrap();
-            Err(Error::invalid_type(Unexpected::Other(writer.as_str()), &self))
-        }
+    /// The input contains a `i128`.
+    ///
+    /// The default implementation fails with a type error.
+    fn visit_i128<E>(self, v: i128) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        let mut buf = [0u8; 58];
+        let mut writer = format::Buf::new(&mut buf);
+        fmt::Write::write_fmt(&mut writer, format_args!("integer `{}` as i128", v)).unwrap();
+        Err(Error::invalid_type(
+            Unexpected::Other(writer.as_str()),
+            &self,
+        ))
     }
 
     /// The input contains a `u8`.
@@ -1427,20 +1421,20 @@ pub trait Visitor<'de>: Sized {
         Err(Error::invalid_type(Unexpected::Unsigned(v), &self))
     }
 
-    serde_if_integer128! {
-        /// The input contains a `u128`.
-        ///
-        /// This method is available only on Rust compiler versions >=1.26. The
-        /// default implementation fails with a type error.
-        fn visit_u128<E>(self, v: u128) -> Result<Self::Value, E>
-        where
-            E: Error,
-        {
-            let mut buf = [0u8; 57];
-            let mut writer = format::Buf::new(&mut buf);
-            fmt::Write::write_fmt(&mut writer, format_args!("integer `{}` as u128", v)).unwrap();
-            Err(Error::invalid_type(Unexpected::Other(writer.as_str()), &self))
-        }
+    /// The input contains a `u128`.
+    ///
+    /// The default implementation fails with a type error.
+    fn visit_u128<E>(self, v: u128) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        let mut buf = [0u8; 57];
+        let mut writer = format::Buf::new(&mut buf);
+        fmt::Write::write_fmt(&mut writer, format_args!("integer `{}` as u128", v)).unwrap();
+        Err(Error::invalid_type(
+            Unexpected::Other(writer.as_str()),
+            &self,
+        ))
     }
 
     /// The input contains an `f32`.
