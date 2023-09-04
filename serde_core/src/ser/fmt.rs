@@ -18,6 +18,7 @@ macro_rules! fmt_primitives {
 }
 
 /// ```edition2021
+/// # use serde_core as serde;
 /// use serde::ser::Serialize;
 /// use serde_derive::Serialize;
 /// use std::fmt::{self, Display};

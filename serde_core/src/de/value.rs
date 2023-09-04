@@ -2,6 +2,7 @@
 //! trait.
 //!
 //! ```edition2021
+//! # use serde_core as serde;
 //! use serde::de::{value, Deserialize, IntoDeserializer};
 //! use serde_derive::Deserialize;
 //! use std::str::FromStr;

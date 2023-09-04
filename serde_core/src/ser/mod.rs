@@ -150,6 +150,7 @@ macro_rules! declare_error_trait {
             /// itself if it contains invalid UTF-8 data.
             ///
             /// ```edition2021
+            /// # use serde_core as serde;
             /// # struct Path;
             /// #
             /// # impl Path {
@@ -222,6 +223,7 @@ pub trait Serialize {
     /// information about how to implement this method.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// use serde::ser::{Serialize, SerializeStruct, Serializer};
     ///
     /// struct Person {
@@ -389,6 +391,7 @@ pub trait Serializer: Sized {
     /// Serialize a `bool` value.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::Serializer;
     /// #
     /// # serde::__private_serialize!();
@@ -411,6 +414,7 @@ pub trait Serializer: Sized {
     /// forward to `serialize_i64`.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::Serializer;
     /// #
     /// # serde::__private_serialize!();
@@ -433,6 +437,7 @@ pub trait Serializer: Sized {
     /// forward to `serialize_i64`.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::Serializer;
     /// #
     /// # serde::__private_serialize!();
@@ -455,6 +460,7 @@ pub trait Serializer: Sized {
     /// forward to `serialize_i64`.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::Serializer;
     /// #
     /// # serde::__private_serialize!();
@@ -473,6 +479,7 @@ pub trait Serializer: Sized {
     /// Serialize an `i64` value.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::Serializer;
     /// #
     /// # serde::__private_serialize!();
@@ -491,6 +498,7 @@ pub trait Serializer: Sized {
     /// Serialize an `i128` value.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::Serializer;
     /// #
     /// # serde::__private_serialize!();
@@ -518,6 +526,7 @@ pub trait Serializer: Sized {
     /// forward to `serialize_u64`.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::Serializer;
     /// #
     /// # serde::__private_serialize!();
@@ -540,6 +549,7 @@ pub trait Serializer: Sized {
     /// forward to `serialize_u64`.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::Serializer;
     /// #
     /// # serde::__private_serialize!();
@@ -562,6 +572,7 @@ pub trait Serializer: Sized {
     /// forward to `serialize_u64`.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::Serializer;
     /// #
     /// # serde::__private_serialize!();
@@ -580,6 +591,7 @@ pub trait Serializer: Sized {
     /// Serialize a `u64` value.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::Serializer;
     /// #
     /// # serde::__private_serialize!();
@@ -598,6 +610,7 @@ pub trait Serializer: Sized {
     /// Serialize a `u128` value.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::Serializer;
     /// #
     /// # serde::__private_serialize!();
@@ -625,6 +638,7 @@ pub trait Serializer: Sized {
     /// forward to `serialize_f64`.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::Serializer;
     /// #
     /// # serde::__private_serialize!();
@@ -643,6 +657,7 @@ pub trait Serializer: Sized {
     /// Serialize an `f64` value.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::Serializer;
     /// #
     /// # serde::__private_serialize!();
@@ -664,6 +679,7 @@ pub trait Serializer: Sized {
     /// it as a single element `str` or a `u32`.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::Serializer;
     /// #
     /// # serde::__private_serialize!();
@@ -682,6 +698,7 @@ pub trait Serializer: Sized {
     /// Serialize a `&str`.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::Serializer;
     /// #
     /// # serde::__private_serialize!();
@@ -706,6 +723,7 @@ pub trait Serializer: Sized {
     /// like this:
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::ser::{Serializer, SerializeSeq};
     /// # use serde::__private::doc::Error;
     /// #
@@ -735,6 +753,7 @@ pub trait Serializer: Sized {
     /// Serialize a [`None`] value.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::{Serialize, Serializer};
     /// #
     /// # enum Option<T> {
@@ -768,6 +787,7 @@ pub trait Serializer: Sized {
     /// Serialize a [`Some(T)`] value.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::{Serialize, Serializer};
     /// #
     /// # enum Option<T> {
@@ -803,6 +823,7 @@ pub trait Serializer: Sized {
     /// Serialize a `()` value.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::Serializer;
     /// #
     /// # serde::__private_serialize!();
@@ -823,6 +844,7 @@ pub trait Serializer: Sized {
     /// A reasonable implementation would be to forward to `serialize_unit`.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// use serde::{Serialize, Serializer};
     ///
     /// struct Nothing;
@@ -845,6 +867,7 @@ pub trait Serializer: Sized {
     /// variant.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// use serde::{Serialize, Serializer};
     ///
     /// enum E {
@@ -878,6 +901,7 @@ pub trait Serializer: Sized {
     /// be to forward to `value.serialize(self)`.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// use serde::{Serialize, Serializer};
     ///
     /// struct Millimeters(u8);
@@ -906,6 +930,7 @@ pub trait Serializer: Sized {
     /// variant. The `value` is the data contained within this newtype variant.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// use serde::{Serialize, Serializer};
     ///
     /// enum E {
@@ -944,6 +969,7 @@ pub trait Serializer: Sized {
     /// support sequences whose length is known up front.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use std::marker::PhantomData;
     /// #
     /// # struct Vec<T>(PhantomData<T>);
@@ -989,6 +1015,7 @@ pub trait Serializer: Sized {
     /// then a call to `end`.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// use serde::ser::{Serialize, SerializeTuple, Serializer};
     ///
     /// # mod fool {
@@ -1019,6 +1046,7 @@ pub trait Serializer: Sized {
     /// ```
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// use serde::ser::{Serialize, SerializeTuple, Serializer};
     ///
     /// const VRAM_SIZE: usize = 386;
@@ -1047,6 +1075,7 @@ pub trait Serializer: Sized {
     /// of data fields that will be serialized.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// use serde::ser::{Serialize, SerializeTupleStruct, Serializer};
     ///
     /// struct Rgb(u8, u8, u8);
@@ -1079,6 +1108,7 @@ pub trait Serializer: Sized {
     /// and the `len` is the number of data fields that will be serialized.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// use serde::ser::{Serialize, SerializeTupleVariant, Serializer};
     ///
     /// enum E {
@@ -1125,6 +1155,7 @@ pub trait Serializer: Sized {
     /// maps whose length is known up front.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use std::marker::PhantomData;
     /// #
     /// # struct HashMap<K, V>(PhantomData<K>, PhantomData<V>);
@@ -1173,6 +1204,7 @@ pub trait Serializer: Sized {
     /// data fields that will be serialized.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// use serde::ser::{Serialize, SerializeStruct, Serializer};
     ///
     /// struct Rgb {
@@ -1209,6 +1241,7 @@ pub trait Serializer: Sized {
     /// and the `len` is the number of data fields that will be serialized.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// use serde::ser::{Serialize, SerializeStructVariant, Serializer};
     ///
     /// enum E {
@@ -1251,6 +1284,7 @@ pub trait Serializer: Sized {
     /// method.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// use serde::{Serialize, Serializer};
     ///
     /// struct SecretlyOneHigher {
@@ -1286,6 +1320,7 @@ pub trait Serializer: Sized {
     /// method.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// use serde::{Serialize, Serializer};
     /// use std::collections::BTreeSet;
     ///
@@ -1324,6 +1359,7 @@ pub trait Serializer: Sized {
     /// more efficient implementation if possible.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # struct DateTime;
     /// #
     /// # impl DateTime {
@@ -1360,6 +1396,7 @@ pub trait Serializer: Sized {
     /// implementation is expected to return an error.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # struct DateTime;
     /// #
     /// # impl DateTime {
@@ -1393,6 +1430,7 @@ pub trait Serializer: Sized {
     /// compact one.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use std::fmt::{self, Display};
     /// #
     /// # struct Timestamp;
@@ -1443,6 +1481,7 @@ pub trait Serializer: Sized {
 ///
 /// ```edition2021
 /// # use std::marker::PhantomData;
+/// # use serde_core as serde;
 /// #
 /// # struct Vec<T>(PhantomData<T>);
 /// #
@@ -1506,6 +1545,7 @@ pub trait SerializeSeq {
 /// # Example use
 ///
 /// ```edition2021
+/// # use serde_core as serde;
 /// use serde::ser::{Serialize, SerializeTuple, Serializer};
 ///
 /// # mod fool {
@@ -1536,6 +1576,7 @@ pub trait SerializeSeq {
 /// ```
 ///
 /// ```edition2021
+/// # use serde_core as serde;
 /// # use std::marker::PhantomData;
 /// #
 /// # struct Array<T>(PhantomData<T>);
@@ -1606,6 +1647,7 @@ pub trait SerializeTuple {
 /// # Example use
 ///
 /// ```edition2021
+/// # use serde_core as serde;
 /// use serde::ser::{Serialize, SerializeTupleStruct, Serializer};
 ///
 /// struct Rgb(u8, u8, u8);
@@ -1651,6 +1693,7 @@ pub trait SerializeTupleStruct {
 /// # Example use
 ///
 /// ```edition2021
+/// # use serde_core as serde;
 /// use serde::ser::{Serialize, SerializeTupleVariant, Serializer};
 ///
 /// enum E {
@@ -1709,6 +1752,7 @@ pub trait SerializeTupleVariant {
 /// # Example use
 ///
 /// ```edition2021
+/// # use serde_core as serde;
 /// # use std::marker::PhantomData;
 /// #
 /// # struct HashMap<K, V>(PhantomData<K>, PhantomData<V>);
@@ -1820,6 +1864,7 @@ pub trait SerializeMap {
 /// # Example use
 ///
 /// ```edition2021
+/// # use serde_core as serde;
 /// use serde::ser::{Serialize, SerializeStruct, Serializer};
 ///
 /// struct Rgb {
@@ -1880,6 +1925,7 @@ pub trait SerializeStruct {
 /// # Example use
 ///
 /// ```edition2021
+/// # use serde_core as serde;
 /// use serde::ser::{Serialize, SerializeStructVariant, Serializer};
 ///
 /// enum E {

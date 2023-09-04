@@ -11,6 +11,7 @@ use crate::de::{
 /// gets deserialized.
 ///
 /// ```edition2021
+/// # use serde_core as serde;
 /// use serde::de::{
 ///     self, Deserialize, DeserializeSeed, Deserializer, IgnoredAny, SeqAccess, Visitor,
 /// };

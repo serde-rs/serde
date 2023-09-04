@@ -167,6 +167,8 @@ macro_rules! declare_error_trait {
             /// ```edition2021
             /// # use std::str::FromStr;
             /// #
+            /// # use serde_core as serde;
+            /// #
             /// # struct IpAddr;
             /// #
             /// # impl FromStr for IpAddr {
@@ -312,6 +314,7 @@ declare_error_trait!(Error: Sized + Debug + Display);
 /// ```edition2021
 /// # use std::fmt;
 /// #
+/// # use serde_core as serde;
 /// # use serde::de::{self, Unexpected, Visitor};
 /// #
 /// # struct Example;
@@ -435,6 +438,7 @@ impl<'a> fmt::Display for Unexpected<'a> {
 /// (`&self`) is an implementation of this trait.
 ///
 /// ```edition2021
+/// # use serde_core as serde;
 /// # use serde::de::{self, Unexpected, Visitor};
 /// # use std::fmt;
 /// #
@@ -459,6 +463,7 @@ impl<'a> fmt::Display for Unexpected<'a> {
 /// Outside of a `Visitor`, `&"..."` can be used.
 ///
 /// ```edition2021
+/// # use serde_core as serde;
 /// # use serde::de::{self, Unexpected};
 /// #
 /// # fn example<E>() -> Result<(), E>
@@ -582,6 +587,7 @@ pub trait Deserialize<'de>: Sized {
 /// owned data.
 ///
 /// ```edition2021
+/// # use serde_core as serde;
 /// # use serde::de::{Deserialize, DeserializeOwned};
 /// # use std::io::{Read, Result};
 /// #
@@ -621,6 +627,7 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 /// The canonical API for stateless deserialization looks like this:
 ///
 /// ```edition2021
+/// # use serde_core as serde;
 /// # use serde::Deserialize;
 /// #
 /// # enum Error {}
@@ -635,6 +642,7 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 /// of accepting a seed as input:
 ///
 /// ```edition2021
+/// # use serde_core as serde;
 /// # use serde::de::DeserializeSeed;
 /// #
 /// # enum Error {}
@@ -668,6 +676,7 @@ impl<T> DeserializeOwned for T where T: for<'de> Deserialize<'de> {}
 /// trait.
 ///
 /// ```edition2021
+/// # use serde_core as serde;
 /// use serde::de::{Deserialize, DeserializeSeed, Deserializer, SeqAccess, Visitor};
 /// use std::fmt;
 /// use std::marker::PhantomData;
@@ -1156,6 +1165,7 @@ pub trait Deserializer<'de>: Sized {
     /// compact one.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use std::ops::Add;
     /// # use std::str::FromStr;
     /// #
@@ -1247,6 +1257,7 @@ pub trait Deserializer<'de>: Sized {
 /// # Example
 ///
 /// ```edition2021
+/// # use serde_core as serde;
 /// # use serde::de::{self, Unexpected, Visitor};
 /// # use std::fmt;
 /// #
@@ -1287,6 +1298,7 @@ pub trait Visitor<'de>: Sized {
     /// should not end with a period.
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use std::fmt;
     /// #
     /// # struct S {
@@ -2031,6 +2043,7 @@ pub trait VariantAccess<'de>: Sized {
     /// `invalid_type` error should be constructed:
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, Unexpected};
     /// #
     /// # struct X;
@@ -2071,6 +2084,7 @@ pub trait VariantAccess<'de>: Sized {
     /// `invalid_type` error should be constructed:
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, Unexpected};
     /// #
     /// # struct X;
@@ -2127,6 +2141,7 @@ pub trait VariantAccess<'de>: Sized {
     /// `invalid_type` error should be constructed:
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, Unexpected};
     /// #
     /// # struct X;
@@ -2170,6 +2185,7 @@ pub trait VariantAccess<'de>: Sized {
     /// `invalid_type` error should be constructed:
     ///
     /// ```edition2021
+    /// # use serde_core as serde;
     /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, Unexpected};
     /// #
     /// # struct X;
@@ -2230,6 +2246,7 @@ pub trait VariantAccess<'de>: Sized {
 /// # Example
 ///
 /// ```edition2021
+/// # use serde_core as serde;
 /// use serde::de::{value, Deserialize, IntoDeserializer};
 /// use serde_derive::Deserialize;
 /// use std::str::FromStr;
