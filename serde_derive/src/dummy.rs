@@ -4,11 +4,11 @@ use quote::quote;
 pub fn wrap_in_const(serde_path: Option<&syn::Path>, code: TokenStream) -> TokenStream {
     let use_serde = match serde_path {
         Some(path) => quote! {
-            use #path as _serde;
+            use #path as _serde_core;
         },
         None => quote! {
             #[allow(unused_extern_crates, clippy::useless_attribute)]
-            extern crate serde as _serde;
+            extern crate serde_core as _serde_core;
         },
     };
 
