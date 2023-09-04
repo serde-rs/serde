@@ -669,7 +669,7 @@ impl Container {
 
     pub fn serde_path(&self) -> Cow<syn::Path> {
         self.custom_serde_path()
-            .map_or_else(|| Cow::Owned(parse_quote!(_serde_core)), Cow::Borrowed)
+            .map_or_else(|| Cow::Owned(parse_quote!(_serde)), Cow::Borrowed)
     }
 
     /// Error message generated when type can't be deserialized.
@@ -1263,7 +1263,7 @@ impl Field {
                     segments: Punctuated::new(),
                 };
                 let span = Span::call_site();
-                path.segments.push(Ident::new("_serde_core", span).into());
+                path.segments.push(Ident::new("_serde", span).into());
                 path.segments.push(Ident::new("__private", span).into());
                 path.segments.push(Ident::new("de", span).into());
                 path.segments
@@ -1280,7 +1280,7 @@ impl Field {
                     segments: Punctuated::new(),
                 };
                 let span = Span::call_site();
-                path.segments.push(Ident::new("_serde_core", span).into());
+                path.segments.push(Ident::new("_serde", span).into());
                 path.segments.push(Ident::new("__private", span).into());
                 path.segments.push(Ident::new("de", span).into());
                 path.segments
