@@ -10,7 +10,7 @@ error[E0308]: mismatched types
    = note: expected reference `&u8`
               found reference `&u16`
 note: function defined here
-  --> $WORKSPACE/serde/src/private/ser.rs
+  --> $WORKSPACE/serde_core/src/private/ser.rs
    |
    | pub fn constrain<T: ?Sized>(t: &T) -> &T {
    |        ^^^^^^^^^
