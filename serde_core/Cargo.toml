@@ -16,6 +16,7 @@ rust-version = "1.31"
 
 [dev-dependencies]
 serde_derive = { version = "1", path = "../serde_derive" }
+serde = {version = "1", path = "../serde"}
 
 [lib]
 doc-scrape-examples = false
