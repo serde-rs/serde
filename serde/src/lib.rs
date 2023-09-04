@@ -90,6 +90,8 @@
 //! [rusoto_dynamodb]: https://docs.rs/rusoto_dynamodb
 //! [Hjson]: https://github.com/Canop/deser-hjson
 
+// Support using Serde without the standard library!
+#![cfg_attr(not(feature = "std"), no_std)]
 #[doc(inline)]
 pub use serde_core::*;
 
