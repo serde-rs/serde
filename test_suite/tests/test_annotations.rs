@@ -2381,6 +2381,30 @@ fn test_partially_untagged_enum_desugared() {
 }
 
 #[test]
+fn test_partially_untagged_simple_enum() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(tag = "tag")]
+    enum Data {
+        A,
+        #[serde(untagged)]
+        Var(u32),
+    }
+
+    let data = Data::A;
+    assert_tokens(
+        &data,
+        &[
+            Token::Map { len: None },
+            Token::Str("t"),
+            Token::Str("A"),
+            Token::Str("b"),
+            Token::I32(0),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_flatten_option() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     struct Outer {
