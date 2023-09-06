@@ -857,12 +857,9 @@ mod content {
         where
             S: SeqAccess<'de>,
         {
-            let tag = match seq.next_element()? {
+            let tag = match seq.next_element()?.or(self.default_variant) {
                 Some(tag) => tag,
-                None => match self.default_variant {
-                    Some(variant) => variant,
-                    None => return Err(de::Error::missing_field(self.tag_name)),
-                },
+                None => return Err(de::Error::missing_field(self.tag_name)),
             };
             let rest = de::value::SeqAccessDeserializer::new(seq);
             Ok(TaggedContent {
@@ -891,18 +888,12 @@ mod content {
                     }
                 }
             }
-            match tag {
-                None => match self.default_variant {
-                    Some(default) => Ok(TaggedContent {
-                        tag: default,
-                        content: Content::Map(vec),
-                    }),
-                    None => Err(de::Error::missing_field(self.tag_name)),
-                },
-                Some(tag) => Ok(TaggedContent {
-                    tag,
+            match tag.or(self.default_variant) {
+                Some(default) => Ok(TaggedContent {
+                    tag: default,
                     content: Content::Map(vec),
                 }),
+                None => Err(de::Error::missing_field(self.tag_name)),
             }
         }
     }

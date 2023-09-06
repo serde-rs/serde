@@ -163,7 +163,6 @@ fn enum_from_ast<'a>(
         }
         if has_default {
             cx.error_spanned_by(&variant.ident, "only one variant can be marked as default");
-            break;
         }
         has_default = true;
     }
