@@ -2383,7 +2383,7 @@ fn test_partially_untagged_enum_desugared() {
 #[test]
 fn test_partially_untagged_simple_enum() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
-    #[serde(tag = "tag")]
+    #[serde(tag = "t")]
     enum Data {
         A,
         #[serde(untagged)]
@@ -2391,7 +2391,8 @@ fn test_partially_untagged_simple_enum() {
     }
 
     let data = Data::A;
-    assert_tokens(
+
+    assert_de_tokens(
         &data,
         &[
             Token::Map { len: None },
