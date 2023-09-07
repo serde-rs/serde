@@ -8,3 +8,5 @@ members = [
 
 [patch.crates-io]
 serde = { path = "serde" }
+# Temorary until https://github.com/serde-rs/test/pull/31 is merged
+serde_test = { git = "https://github.com/Mingun/serde-test", branch = "borrowed-variant-identifiers" }
