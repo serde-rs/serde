@@ -2381,7 +2381,7 @@ fn test_partially_untagged_enum_desugared() {
 }
 
 #[test]
-fn test_partially_untagged_tagged_enum() {
+fn test_partially_untagged_internally_tagged_enum() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     #[serde(tag = "t")]
     enum Data {
@@ -2408,17 +2408,20 @@ fn test_partially_untagged_tagged_enum() {
     assert_de_tokens(&data, &[Token::U32(42)]);
 
     // TODO test error output
+}
 
+#[test]
+fn test_partially_untagged_adjacently_tagged_enum() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     #[serde(tag = "t", content = "c")]
-    enum Data2 {
+    enum Data {
         A(u32),
         B,
         #[serde(untagged)]
         Var(u32),
     }
 
-    let data = Data2::A(7);
+    let data = Data::A(7);
 
     assert_de_tokens(
         &data,
@@ -2432,7 +2435,7 @@ fn test_partially_untagged_tagged_enum() {
         ],
     );
 
-    let data = Data2::Var(42);
+    let data = Data::Var(42);
 
     assert_de_tokens(&data, &[Token::U32(42)]);
 
