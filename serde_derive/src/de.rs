@@ -1749,10 +1749,14 @@ fn deserialize_untagged_enum_after(
     );
     let fallthrough_msg = cattrs.expecting().unwrap_or(&fallthrough_msg);
 
-    // This may be infallible so we need to provide the error type.
+    // Ignore any error associated with non-untagged deserialization so that we
+    // can fall through to the untagged variants. This may be infallible so we
+    // need to provide the error type.
     let first_attempt = first_attempt.map(|expr| {
         quote! {
-            if let _serde::__private::Result::<_, __D::Error>::Ok(__ok) = #expr {
+            if let _serde::__private::Result::<_, __D::Error>::Ok(__ok) = (|| {
+                #expr
+            })() {
                 return _serde::__private::Ok(__ok);
             }
         }
