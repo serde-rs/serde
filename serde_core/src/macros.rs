@@ -12,7 +12,6 @@
 /// trait methods.
 ///
 /// ```edition2021
-/// # use serde_core as serde;
 /// # use serde::forward_to_deserialize_any;
 /// # use serde::de::{value, Deserializer, Visitor};
 /// #
@@ -49,7 +48,6 @@
 /// You can choose which methods to forward.
 ///
 /// ```edition2021
-/// # use serde_core as serde;
 /// # use serde::forward_to_deserialize_any;
 /// # use serde::de::{value, Deserializer, Visitor};
 /// #
@@ -81,7 +79,6 @@
 /// specified explicitly if necessary.
 ///
 /// ```edition2021
-/// # use serde_core as serde;
 /// # use serde::forward_to_deserialize_any;
 /// # use serde::de::{value, Deserializer, Visitor};
 /// # use std::marker::PhantomData;

@@ -16,7 +16,6 @@ use crate::ser::{
 /// [`SerializeMap`], [`SerializeStruct`], and [`SerializeStructVariant`].
 ///
 /// ```edition2021
-/// # use serde_core as serde;
 /// # use serde::ser::{Serializer, Impossible};
 /// # use serde::__private::doc::Error;
 /// #
