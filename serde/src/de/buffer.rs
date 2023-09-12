@@ -10,11 +10,11 @@
 //! # assert_eq!(u32::deserialize(deserializer).unwrap(), 32);
 //! ```
 
-use lib::*;
+use crate::{actually_private, lib::*};
 
-use __private::size_hint;
-
-use de::{self, Deserialize, Deserializer, EnumAccess, Expected, MapAccess, SeqAccess, Visitor};
+use crate::de::{
+    self, size_hint, Deserialize, Deserializer, EnumAccess, Expected, MapAccess, SeqAccess, Visitor,
+};
 
 /// An efficient buffer for self-describing formats.
 #[derive(Debug, Clone)]
@@ -39,7 +39,7 @@ impl<'de> Deserialize<'de> for Buffer<'de> {
         D: Deserializer<'de>,
     {
         let visitor = BufferVisitor::new();
-        deserializer.__deserialize_buffer(::actually_private::T, visitor)
+        deserializer.__deserialize_buffer(actually_private::T, visitor)
     }
 }
 
@@ -366,8 +366,8 @@ impl<'de> Visitor<'de> for BufferVisitor<'de> {
     where
         V: SeqAccess<'de>,
     {
-        let mut vec = Vec::with_capacity(size_hint::cautious(visitor.size_hint()));
-        while let Some(e) = try!(visitor.next_element()) {
+        let mut vec = Vec::with_capacity(size_hint::cautious::<Buffer<'de>>(visitor.size_hint()));
+        while let Some(e) = visitor.next_element()? {
             vec.push(e);
         }
         Ok(Buffer(BufferInner::Seq(vec)))
@@ -377,8 +377,8 @@ impl<'de> Visitor<'de> for BufferVisitor<'de> {
     where
         V: MapAccess<'de>,
     {
-        let mut vec = Vec::with_capacity(size_hint::cautious(visitor.size_hint()));
-        while let Some(kv) = try!(visitor.next_entry()) {
+        let mut vec = Vec::with_capacity(size_hint::cautious::<Buffer<'de>>(visitor.size_hint()));
+        while let Some(kv) = visitor.next_entry()? {
             vec.push(kv);
         }
         Ok(Buffer(BufferInner::Map(vec)))
@@ -461,8 +461,8 @@ where
 {
     let seq = buffer.into_iter().map(BufferDeserializer::new);
     let mut seq_visitor = de::value::SeqDeserializer::new(seq);
-    let value = try!(visitor.visit_seq(&mut seq_visitor));
-    try!(seq_visitor.end());
+    let value = visitor.visit_seq(&mut seq_visitor)?;
+    seq_visitor.end()?;
     Ok(value)
 }
 
@@ -478,8 +478,8 @@ where
         .into_iter()
         .map(|(k, v)| (BufferDeserializer::new(k), BufferDeserializer::new(v)));
     let mut map_visitor = de::value::MapDeserializer::new(map);
-    let value = try!(visitor.visit_map(&mut map_visitor));
-    try!(map_visitor.end());
+    let value = visitor.visit_map(&mut map_visitor)?;
+    map_visitor.end()?;
     Ok(value)
 }
 
@@ -866,7 +866,7 @@ where
 
     fn __deserialize_buffer<V>(
         self,
-        _: ::actually_private::T,
+        _: actually_private::T,
         visitor: V,
     ) -> Result<Buffer<'de>, Self::Error>
     where
@@ -1047,7 +1047,7 @@ where
         if len == 0 {
             visitor.visit_unit()
         } else {
-            let ret = try!(visitor.visit_seq(&mut self));
+            let ret = visitor.visit_seq(&mut self)?;
             let remaining = self.iter.len();
             if remaining == 0 {
                 Ok(ret)
@@ -1229,8 +1229,8 @@ where
 {
     let seq = buffer.iter().map(BufferRefDeserializer::new);
     let mut seq_visitor = de::value::SeqDeserializer::new(seq);
-    let value = try!(visitor.visit_seq(&mut seq_visitor));
-    try!(seq_visitor.end());
+    let value = visitor.visit_seq(&mut seq_visitor)?;
+    seq_visitor.end()?;
     Ok(value)
 }
 
@@ -1249,8 +1249,8 @@ where
         )
     });
     let mut map_visitor = de::value::MapDeserializer::new(map);
-    let value = try!(visitor.visit_map(&mut map_visitor));
-    try!(map_visitor.end());
+    let value = visitor.visit_map(&mut map_visitor)?;
+    map_visitor.end()?;
     Ok(value)
 }
 
@@ -1615,7 +1615,7 @@ where
 
     fn __deserialize_buffer<V>(
         self,
-        _: ::actually_private::T,
+        _: actually_private::T,
         visitor: V,
     ) -> Result<Buffer<'de>, Self::Error>
     where
@@ -1785,7 +1785,7 @@ where
         if len == 0 {
             visitor.visit_unit()
         } else {
-            let ret = try!(visitor.visit_seq(&mut self));
+            let ret = visitor.visit_seq(&mut self)?;
             let remaining = self.iter.len();
             if remaining == 0 {
                 Ok(ret)
