@@ -1,5 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/serde_derive_internals/0.27.0")]
-#![allow(unknown_lints, bare_trait_objects)]
+#![doc(html_root_url = "https://docs.rs/serde_derive_internals/0.29.0")]
 // Ignored clippy lints
 #![allow(
     clippy::cognitive_complexity,
@@ -30,6 +29,7 @@
     clippy::missing_errors_doc,
     clippy::module_name_repetitions,
     clippy::must_use_candidate,
+    clippy::return_self_not_must_use,
     clippy::similar_names,
     clippy::single_match_else,
     clippy::struct_excessive_bools,
@@ -38,11 +38,9 @@
     clippy::wildcard_imports
 )]
 
-#[macro_use]
-extern crate syn;
-
 extern crate proc_macro2;
 extern crate quote;
+extern crate syn;
 
 #[cfg_attr(serde_build_from_git, path = "../serde_derive/src/internals/mod.rs")]
 #[cfg_attr(not(serde_build_from_git), path = "src/mod.rs")]

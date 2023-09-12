@@ -1,0 +1,11 @@
+error: field must have #[serde(default)] because previous field 0 has #[serde(default)]
+  --> tests/ui/default-attribute/tuple_struct_path.rs:16:39
+   |
+16 | struct T2(#[serde(default = "d")] u8, u8, u8);
+   |                                       ^^
+
+error: field must have #[serde(default)] because previous field 0 has #[serde(default)]
+  --> tests/ui/default-attribute/tuple_struct_path.rs:16:43
+   |
+16 | struct T2(#[serde(default = "d")] u8, u8, u8);
+   |                                           ^^

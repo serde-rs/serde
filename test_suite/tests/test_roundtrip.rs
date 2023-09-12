@@ -1,5 +1,4 @@
 use serde_test::{assert_tokens, Configure, Token};
-
 use std::net;
 
 #[macro_use]

@@ -1,21 +1,22 @@
-use lib::*;
+use crate::de::buffer::{BufferDeserializer, BufferRefDeserializer, EnumDeserializer};
+use crate::lib::*;
 
-use de::value::{BorrowedBytesDeserializer, BytesDeserializer};
-use de::{Deserialize, Deserializer, Error, IntoDeserializer, Visitor};
+use crate::de::value::{BorrowedBytesDeserializer, BytesDeserializer};
+use crate::de::{
+    Deserialize, DeserializeSeed, Deserializer, EnumAccess, Error, IntoDeserializer, VariantAccess,
+    Visitor,
+};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use de::{
-    buffer::{Buffer, BufferDeserializer, BufferRefDeserializer, EnumDeserializer},
-    DeserializeSeed, MapAccess, Unexpected,
-};
+use crate::de::{buffer::Buffer, MapAccess, Unexpected};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::tagged::{
-    InternallyTaggedUnitVisitor, TagContentOtherField, TagContentOtherFieldVisitor,
-    TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
+    InternallyTaggedUnitVisitor, TagBufferOtherField, TagBufferOtherFieldVisitor, TagOrBufferField,
+    TagOrBufferFieldVisitor, TaggedBufferVisitor, UntaggedUnitVisitor,
 };
 
-pub use seed::InPlaceSeed;
+pub use crate::seed::InPlaceSeed;
 
 /// If the missing field is of type `Option<T>` then treat is as `None`,
 /// otherwise it is an error.
@@ -198,12 +199,12 @@ where
 /// Helper structures for tagged enums.
 #[cfg(any(feature = "std", feature = "alloc"))]
 mod tagged {
-    use lib::*;
+    use crate::de::buffer::BufferInner;
+    use crate::lib::*;
 
-    use __private::size_hint;
-    use de::{
-        self, Deserialize, DeserializeSeed, Deserializer, EnumAccess, IgnoredAny, MapAccess,
-        SeqAccess, Unexpected, Visitor,
+    use crate::de::{
+        self, size_hint, Deserialize, DeserializeSeed, Deserializer, EnumAccess, IgnoredAny,
+        MapAccess, SeqAccess, Unexpected, Visitor,
     };
 
     use de::buffer::{Buffer, BufferVisitor};
@@ -211,27 +212,27 @@ mod tagged {
     /// This is the type of the map keys in an internally tagged enum.
     ///
     /// Not public API.
-    pub enum TagOrContent<'de> {
+    pub enum TagOrBuffer<'de> {
         Tag,
-        Content(Buffer<'de>),
+        Buffer(Buffer<'de>),
     }
 
-    struct TagOrContentVisitor<'de> {
+    struct TagOrBufferVisitor<'de> {
         name: &'static str,
-        value: PhantomData<TagOrContent<'de>>,
+        value: PhantomData<TagOrBuffer<'de>>,
     }
 
-    impl<'de> TagOrContentVisitor<'de> {
+    impl<'de> TagOrBufferVisitor<'de> {
         fn new(name: &'static str) -> Self {
-            TagOrContentVisitor {
-                name: name,
+            TagOrBufferVisitor {
+                name,
                 value: PhantomData,
             }
         }
     }
 
-    impl<'de> DeserializeSeed<'de> for TagOrContentVisitor<'de> {
-        type Value = TagOrContent<'de>;
+    impl<'de> DeserializeSeed<'de> for TagOrBufferVisitor<'de> {
+        type Value = TagOrBuffer<'de>;
 
         fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
         where
@@ -243,8 +244,8 @@ mod tagged {
         }
     }
 
-    impl<'de> Visitor<'de> for TagOrContentVisitor<'de> {
-        type Value = TagOrContent<'de>;
+    impl<'de> Visitor<'de> for TagOrBufferVisitor<'de> {
+        type Value = TagOrBuffer<'de>;
 
         fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
             write!(fmt, "a type tag `{}` or any other value", self.name)
@@ -256,7 +257,7 @@ mod tagged {
         {
             BufferVisitor::new()
                 .visit_bool(value)
-                .map(TagOrContent::Content)
+                .map(TagOrBuffer::Buffer)
         }
 
         fn visit_i8<F>(self, value: i8) -> Result<Self::Value, F>
@@ -265,7 +266,7 @@ mod tagged {
         {
             BufferVisitor::new()
                 .visit_i8(value)
-                .map(TagOrContent::Content)
+                .map(TagOrBuffer::Buffer)
         }
 
         fn visit_i16<F>(self, value: i16) -> Result<Self::Value, F>
@@ -274,7 +275,7 @@ mod tagged {
         {
             BufferVisitor::new()
                 .visit_i16(value)
-                .map(TagOrContent::Content)
+                .map(TagOrBuffer::Buffer)
         }
 
         fn visit_i32<F>(self, value: i32) -> Result<Self::Value, F>
@@ -283,7 +284,7 @@ mod tagged {
         {
             BufferVisitor::new()
                 .visit_i32(value)
-                .map(TagOrContent::Content)
+                .map(TagOrBuffer::Buffer)
         }
 
         fn visit_i64<F>(self, value: i64) -> Result<Self::Value, F>
@@ -292,7 +293,7 @@ mod tagged {
         {
             BufferVisitor::new()
                 .visit_i64(value)
-                .map(TagOrContent::Content)
+                .map(TagOrBuffer::Buffer)
         }
 
         fn visit_u8<F>(self, value: u8) -> Result<Self::Value, F>
@@ -301,7 +302,7 @@ mod tagged {
         {
             BufferVisitor::new()
                 .visit_u8(value)
-                .map(TagOrContent::Content)
+                .map(TagOrBuffer::Buffer)
         }
 
         fn visit_u16<F>(self, value: u16) -> Result<Self::Value, F>
@@ -310,7 +311,7 @@ mod tagged {
         {
             BufferVisitor::new()
                 .visit_u16(value)
-                .map(TagOrContent::Content)
+                .map(TagOrBuffer::Buffer)
         }
 
         fn visit_u32<F>(self, value: u32) -> Result<Self::Value, F>
@@ -319,7 +320,7 @@ mod tagged {
         {
             BufferVisitor::new()
                 .visit_u32(value)
-                .map(TagOrContent::Content)
+                .map(TagOrBuffer::Buffer)
         }
 
         fn visit_u64<F>(self, value: u64) -> Result<Self::Value, F>
@@ -328,7 +329,7 @@ mod tagged {
         {
             BufferVisitor::new()
                 .visit_u64(value)
-                .map(TagOrContent::Content)
+                .map(TagOrBuffer::Buffer)
         }
 
         fn visit_f32<F>(self, value: f32) -> Result<Self::Value, F>
@@ -337,7 +338,7 @@ mod tagged {
         {
             BufferVisitor::new()
                 .visit_f32(value)
-                .map(TagOrContent::Content)
+                .map(TagOrBuffer::Buffer)
         }
 
         fn visit_f64<F>(self, value: f64) -> Result<Self::Value, F>
@@ -346,7 +347,7 @@ mod tagged {
         {
             BufferVisitor::new()
                 .visit_f64(value)
-                .map(TagOrContent::Content)
+                .map(TagOrBuffer::Buffer)
         }
 
         fn visit_char<F>(self, value: char) -> Result<Self::Value, F>
@@ -355,7 +356,7 @@ mod tagged {
         {
             BufferVisitor::new()
                 .visit_char(value)
-                .map(TagOrContent::Content)
+                .map(TagOrBuffer::Buffer)
         }
 
         fn visit_str<F>(self, value: &str) -> Result<Self::Value, F>
@@ -363,11 +364,11 @@ mod tagged {
             F: de::Error,
         {
             if value == self.name {
-                Ok(TagOrContent::Tag)
+                Ok(TagOrBuffer::Tag)
             } else {
                 BufferVisitor::new()
                     .visit_str(value)
-                    .map(TagOrContent::Content)
+                    .map(TagOrBuffer::Buffer)
             }
         }
 
@@ -376,11 +377,11 @@ mod tagged {
             F: de::Error,
         {
             if value == self.name {
-                Ok(TagOrContent::Tag)
+                Ok(TagOrBuffer::Tag)
             } else {
                 BufferVisitor::new()
                     .visit_borrowed_str(value)
-                    .map(TagOrContent::Content)
+                    .map(TagOrBuffer::Buffer)
             }
         }
 
@@ -389,11 +390,11 @@ mod tagged {
             F: de::Error,
         {
             if value == self.name {
-                Ok(TagOrContent::Tag)
+                Ok(TagOrBuffer::Tag)
             } else {
                 BufferVisitor::new()
                     .visit_string(value)
-                    .map(TagOrContent::Content)
+                    .map(TagOrBuffer::Buffer)
             }
         }
 
@@ -402,11 +403,11 @@ mod tagged {
             F: de::Error,
         {
             if value == self.name.as_bytes() {
-                Ok(TagOrContent::Tag)
+                Ok(TagOrBuffer::Tag)
             } else {
                 BufferVisitor::new()
                     .visit_bytes(value)
-                    .map(TagOrContent::Content)
+                    .map(TagOrBuffer::Buffer)
             }
         }
 
@@ -415,11 +416,11 @@ mod tagged {
             F: de::Error,
         {
             if value == self.name.as_bytes() {
-                Ok(TagOrContent::Tag)
+                Ok(TagOrBuffer::Tag)
             } else {
                 BufferVisitor::new()
                     .visit_borrowed_bytes(value)
-                    .map(TagOrContent::Content)
+                    .map(TagOrBuffer::Buffer)
             }
         }
 
@@ -428,11 +429,11 @@ mod tagged {
             F: de::Error,
         {
             if value == self.name.as_bytes() {
-                Ok(TagOrContent::Tag)
+                Ok(TagOrBuffer::Tag)
             } else {
                 BufferVisitor::new()
                     .visit_byte_buf(value)
-                    .map(TagOrContent::Content)
+                    .map(TagOrBuffer::Buffer)
             }
         }
 
@@ -440,14 +441,14 @@ mod tagged {
         where
             F: de::Error,
         {
-            BufferVisitor::new().visit_unit().map(TagOrContent::Content)
+            BufferVisitor::new().visit_unit().map(TagOrBuffer::Buffer)
         }
 
         fn visit_none<F>(self) -> Result<Self::Value, F>
         where
             F: de::Error,
         {
-            BufferVisitor::new().visit_none().map(TagOrContent::Content)
+            BufferVisitor::new().visit_none().map(TagOrBuffer::Buffer)
         }
 
         fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
@@ -456,7 +457,7 @@ mod tagged {
         {
             BufferVisitor::new()
                 .visit_some(deserializer)
-                .map(TagOrContent::Content)
+                .map(TagOrBuffer::Buffer)
         }
 
         fn visit_newtype_struct<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
@@ -465,7 +466,7 @@ mod tagged {
         {
             BufferVisitor::new()
                 .visit_newtype_struct(deserializer)
-                .map(TagOrContent::Content)
+                .map(TagOrBuffer::Buffer)
         }
 
         fn visit_seq<V>(self, visitor: V) -> Result<Self::Value, V::Error>
@@ -474,7 +475,7 @@ mod tagged {
         {
             BufferVisitor::new()
                 .visit_seq(visitor)
-                .map(TagOrContent::Content)
+                .map(TagOrBuffer::Buffer)
         }
 
         fn visit_map<V>(self, visitor: V) -> Result<Self::Value, V::Error>
@@ -483,7 +484,7 @@ mod tagged {
         {
             BufferVisitor::new()
                 .visit_map(visitor)
-                .map(TagOrContent::Content)
+                .map(TagOrBuffer::Buffer)
         }
 
         fn visit_enum<V>(self, visitor: V) -> Result<Self::Value, V::Error>
@@ -492,58 +493,36 @@ mod tagged {
         {
             BufferVisitor::new()
                 .visit_enum(visitor)
-                .map(TagOrContent::Content)
+                .map(TagOrBuffer::Buffer)
         }
     }
 
     /// Used by generated code to deserialize an internally tagged enum.
     ///
     /// Not public API.
-    pub struct TaggedContent<'de, T> {
-        pub tag: T,
-        pub content: Buffer<'de>,
-    }
-
-    /// Not public API.
-    pub struct TaggedContentVisitor<'de, T> {
+    pub struct TaggedBufferVisitor<T> {
         tag_name: &'static str,
         expecting: &'static str,
-        value: PhantomData<TaggedContent<'de, T>>,
+        value: PhantomData<T>,
     }
 
-    impl<'de, T> TaggedContentVisitor<'de, T> {
+    impl<T> TaggedBufferVisitor<T> {
         /// Visitor for the content of an internally tagged enum with the given
         /// tag name.
         pub fn new(name: &'static str, expecting: &'static str) -> Self {
-            TaggedContentVisitor {
+            TaggedBufferVisitor {
                 tag_name: name,
-                expecting: expecting,
+                expecting,
                 value: PhantomData,
             }
         }
     }
 
-    impl<'de, T> DeserializeSeed<'de> for TaggedContentVisitor<'de, T>
+    impl<'de, T> Visitor<'de> for TaggedBufferVisitor<T>
     where
         T: Deserialize<'de>,
     {
-        type Value = TaggedContent<'de, T>;
-
-        fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            // Internally tagged enums are only supported in self-describing
-            // formats.
-            deserializer.deserialize_any(self)
-        }
-    }
-
-    impl<'de, T> Visitor<'de> for TaggedContentVisitor<'de, T>
-    where
-        T: Deserialize<'de>,
-    {
-        type Value = TaggedContent<'de, T>;
+        type Value = (T, Buffer<'de>);
 
         fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
             fmt.write_str(self.expecting)
@@ -553,17 +532,14 @@ mod tagged {
         where
             S: SeqAccess<'de>,
         {
-            let tag = match try!(seq.next_element()) {
+            let tag = match tri!(seq.next_element()) {
                 Some(tag) => tag,
                 None => {
                     return Err(de::Error::missing_field(self.tag_name));
                 }
             };
             let rest = de::value::SeqAccessDeserializer::new(seq);
-            Ok(TaggedContent {
-                tag: tag,
-                content: try!(Buffer::deserialize(rest)),
-            })
+            Ok((tag, tri!(Buffer::deserialize(rest))))
         }
 
         fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
@@ -571,27 +547,27 @@ mod tagged {
             M: MapAccess<'de>,
         {
             let mut tag = None;
-            let mut vec = Vec::with_capacity(size_hint::cautious(map.size_hint()));
-            while let Some(k) = try!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
+            let mut vec = Vec::<(Buffer, Buffer)>::with_capacity(size_hint::cautious::<(
+                Buffer,
+                Buffer,
+            )>(map.size_hint()));
+            while let Some(k) = tri!(map.next_key_seed(TagOrBufferVisitor::new(self.tag_name))) {
                 match k {
-                    TagOrContent::Tag => {
+                    TagOrBuffer::Tag => {
                         if tag.is_some() {
                             return Err(de::Error::duplicate_field(self.tag_name));
                         }
-                        tag = Some(try!(map.next_value()));
+                        tag = Some(tri!(map.next_value()));
                     }
-                    TagOrContent::Content(k) => {
-                        let v = try!(map.next_value());
+                    TagOrBuffer::Buffer(k) => {
+                        let v = tri!(map.next_value());
                         vec.push((k, v));
                     }
                 }
             }
             match tag {
                 None => Err(de::Error::missing_field(self.tag_name)),
-                Some(tag) => Ok(TaggedContent {
-                    tag: tag,
-                    content: de::buffer::Buffer(de::buffer::BufferInner::Map(vec)),
-                }),
+                Some(tag) => Ok((tag, Buffer(BufferInner::Map(vec)))),
             }
         }
     }
@@ -599,33 +575,47 @@ mod tagged {
     /// Used by generated code to deserialize an adjacently tagged enum.
     ///
     /// Not public API.
-    pub enum TagOrContentField {
+    pub enum TagOrBufferField {
         Tag,
-        Content,
+        Buffer,
     }
 
     /// Not public API.
-    pub struct TagOrContentFieldVisitor {
+    pub struct TagOrBufferFieldVisitor {
         pub tag: &'static str,
         pub content: &'static str,
     }
 
-    impl<'de> DeserializeSeed<'de> for TagOrContentFieldVisitor {
-        type Value = TagOrContentField;
+    impl<'de> DeserializeSeed<'de> for TagOrBufferFieldVisitor {
+        type Value = TagOrBufferField;
 
         fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
         where
             D: Deserializer<'de>,
         {
-            deserializer.deserialize_str(self)
+            deserializer.deserialize_identifier(self)
         }
     }
 
-    impl<'de> Visitor<'de> for TagOrContentFieldVisitor {
-        type Value = TagOrContentField;
+    impl<'de> Visitor<'de> for TagOrBufferFieldVisitor {
+        type Value = TagOrBufferField;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
             write!(formatter, "{:?} or {:?}", self.tag, self.content)
+        }
+
+        fn visit_u64<E>(self, field_index: u64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            match field_index {
+                0 => Ok(TagOrBufferField::Tag),
+                1 => Ok(TagOrBufferField::Buffer),
+                _ => Err(de::Error::invalid_value(
+                    Unexpected::Unsigned(field_index),
+                    &self,
+                )),
+            }
         }
 
         fn visit_str<E>(self, field: &str) -> Result<Self::Value, E>
@@ -633,11 +623,24 @@ mod tagged {
             E: de::Error,
         {
             if field == self.tag {
-                Ok(TagOrContentField::Tag)
+                Ok(TagOrBufferField::Tag)
             } else if field == self.content {
-                Ok(TagOrContentField::Content)
+                Ok(TagOrBufferField::Buffer)
             } else {
                 Err(de::Error::invalid_value(Unexpected::Str(field), &self))
+            }
+        }
+
+        fn visit_bytes<E>(self, field: &[u8]) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            if field == self.tag.as_bytes() {
+                Ok(TagOrBufferField::Tag)
+            } else if field == self.content.as_bytes() {
+                Ok(TagOrBufferField::Buffer)
+            } else {
+                Err(de::Error::invalid_value(Unexpected::Bytes(field), &self))
             }
         }
     }
@@ -646,31 +649,31 @@ mod tagged {
     /// ignoring unrelated fields is allowed.
     ///
     /// Not public API.
-    pub enum TagContentOtherField {
+    pub enum TagBufferOtherField {
         Tag,
-        Content,
+        Buffer,
         Other,
     }
 
     /// Not public API.
-    pub struct TagContentOtherFieldVisitor {
+    pub struct TagBufferOtherFieldVisitor {
         pub tag: &'static str,
         pub content: &'static str,
     }
 
-    impl<'de> DeserializeSeed<'de> for TagContentOtherFieldVisitor {
-        type Value = TagContentOtherField;
+    impl<'de> DeserializeSeed<'de> for TagBufferOtherFieldVisitor {
+        type Value = TagBufferOtherField;
 
         fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
         where
             D: Deserializer<'de>,
         {
-            deserializer.deserialize_str(self)
+            deserializer.deserialize_identifier(self)
         }
     }
 
-    impl<'de> Visitor<'de> for TagContentOtherFieldVisitor {
-        type Value = TagContentOtherField;
+    impl<'de> Visitor<'de> for TagBufferOtherFieldVisitor {
+        type Value = TagBufferOtherField;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
             write!(
@@ -680,16 +683,34 @@ mod tagged {
             )
         }
 
+        fn visit_u64<E>(self, field_index: u64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            match field_index {
+                0 => Ok(TagBufferOtherField::Tag),
+                1 => Ok(TagBufferOtherField::Buffer),
+                _ => Ok(TagBufferOtherField::Other),
+            }
+        }
+
         fn visit_str<E>(self, field: &str) -> Result<Self::Value, E>
         where
             E: de::Error,
         {
-            if field == self.tag {
-                Ok(TagContentOtherField::Tag)
-            } else if field == self.content {
-                Ok(TagContentOtherField::Content)
+            self.visit_bytes(field.as_bytes())
+        }
+
+        fn visit_bytes<E>(self, field: &[u8]) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            if field == self.tag.as_bytes() {
+                Ok(TagBufferOtherField::Tag)
+            } else if field == self.content.as_bytes() {
+                Ok(TagBufferOtherField::Buffer)
             } else {
-                Ok(TagContentOtherField::Other)
+                Ok(TagBufferOtherField::Other)
             }
         }
     }
@@ -706,8 +727,8 @@ mod tagged {
         /// Not public API.
         pub fn new(type_name: &'a str, variant_name: &'a str) -> Self {
             InternallyTaggedUnitVisitor {
-                type_name: type_name,
-                variant_name: variant_name,
+                type_name,
+                variant_name,
             }
         }
     }
@@ -734,7 +755,7 @@ mod tagged {
         where
             M: MapAccess<'de>,
         {
-            while try!(access.next_entry::<IgnoredAny, IgnoredAny>()).is_some() {}
+            while tri!(access.next_entry::<IgnoredAny, IgnoredAny>()).is_some() {}
             Ok(())
         }
     }
@@ -751,8 +772,8 @@ mod tagged {
         /// Not public API.
         pub fn new(type_name: &'a str, variant_name: &'a str) -> Self {
             UntaggedUnitVisitor {
-                type_name: type_name,
-                variant_name: variant_name,
+                type_name,
+                variant_name,
             }
         }
     }
@@ -956,11 +977,7 @@ where
     where
         V: Visitor<'de>,
     {
-        visitor.visit_map(FlatInternallyTaggedAccess {
-            iter: self.0.iter_mut(),
-            pending: None,
-            _marker: PhantomData,
-        })
+        self.deserialize_map(visitor)
     }
 
     fn deserialize_enum<V>(
@@ -972,17 +989,8 @@ where
     where
         V: Visitor<'de>,
     {
-        for item in self.0.iter_mut() {
-            // items in the vector are nulled out when used.  So we can only use
-            // an item if it's still filled in and if the field is one we care
-            // about.
-            let use_item = match *item {
-                None => false,
-                Some((ref c, _)) => c.as_str().map_or(false, |x| variants.contains(&x)),
-            };
-
-            if use_item {
-                let (key, value) = item.take().unwrap();
+        for entry in self.0 {
+            if let Some((key, value)) = flat_map_take_entry(entry, variants) {
                 return visitor.visit_enum(EnumDeserializer::new(key, Some(value)));
             }
         }
@@ -997,7 +1005,11 @@ where
     where
         V: Visitor<'de>,
     {
-        visitor.visit_map(FlatMapAccess::new(self.0.iter()))
+        visitor.visit_map(FlatMapAccess {
+            iter: self.0.iter(),
+            pending_content: None,
+            _marker: PhantomData,
+        })
     }
 
     fn deserialize_struct<V>(
@@ -1009,7 +1021,12 @@ where
     where
         V: Visitor<'de>,
     {
-        visitor.visit_map(FlatStructAccess::new(self.0.iter_mut(), fields))
+        visitor.visit_map(FlatStructAccess {
+            iter: self.0.iter_mut(),
+            pending_content: None,
+            fields,
+            _marker: PhantomData,
+        })
     }
 
     fn deserialize_newtype_struct<V>(self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
@@ -1030,6 +1047,13 @@ where
     }
 
     fn deserialize_unit<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_unit()
+    }
+
+    fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
@@ -1058,26 +1082,14 @@ where
         deserialize_tuple(usize)
         deserialize_tuple_struct(&'static str, usize)
         deserialize_identifier()
-        deserialize_ignored_any()
     }
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub struct FlatMapAccess<'a, 'de: 'a, E> {
+struct FlatMapAccess<'a, 'de: 'a, E> {
     iter: slice::Iter<'a, Option<(Buffer<'de>, Buffer<'de>)>>,
     pending_content: Option<&'a Buffer<'de>>,
     _marker: PhantomData<E>,
-}
-
-#[cfg(any(feature = "std", feature = "alloc"))]
-impl<'a, 'de, E> FlatMapAccess<'a, 'de, E> {
-    fn new(iter: slice::Iter<'a, Option<(Buffer<'de>, Buffer<'de>)>>) -> FlatMapAccess<'a, 'de, E> {
-        FlatMapAccess {
-            iter: iter,
-            pending_content: None,
-            _marker: PhantomData,
-        }
-    }
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
@@ -1094,6 +1106,10 @@ where
         for item in &mut self.iter {
             // Items in the vector are nulled out when used by a struct.
             if let Some((ref key, ref content)) = *item {
+                // Do not take(), instead borrow this entry. The internally tagged
+                // enum does its own buffering so we can't tell whether this entry
+                // is going to be consumed. Borrowing here leaves the entry
+                // available for later flattened fields.
                 self.pending_content = Some(content);
                 return seed.deserialize(BufferRefDeserializer::new(key)).map(Some);
             }
@@ -1113,26 +1129,11 @@ where
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub struct FlatStructAccess<'a, 'de: 'a, E> {
+struct FlatStructAccess<'a, 'de: 'a, E> {
     iter: slice::IterMut<'a, Option<(Buffer<'de>, Buffer<'de>)>>,
     pending_content: Option<Buffer<'de>>,
     fields: &'static [&'static str],
     _marker: PhantomData<E>,
-}
-
-#[cfg(any(feature = "std", feature = "alloc"))]
-impl<'a, 'de, E> FlatStructAccess<'a, 'de, E> {
-    fn new(
-        iter: slice::IterMut<'a, Option<(Buffer<'de>, Buffer<'de>)>>,
-        fields: &'static [&'static str],
-    ) -> FlatStructAccess<'a, 'de, E> {
-        FlatStructAccess {
-            iter: iter,
-            pending_content: None,
-            fields: fields,
-            _marker: PhantomData,
-        }
-    }
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
@@ -1146,17 +1147,8 @@ where
     where
         T: DeserializeSeed<'de>,
     {
-        while let Some(item) = self.iter.next() {
-            // items in the vector are nulled out when used.  So we can only use
-            // an item if it's still filled in and if the field is one we care
-            // about.  In case we do not know which fields we want, we take them all.
-            let use_item = match *item {
-                None => false,
-                Some((ref c, _)) => c.as_str().map_or(false, |key| self.fields.contains(&key)),
-            };
-
-            if use_item {
-                let (key, content) = item.take().unwrap();
+        for entry in self.iter.by_ref() {
+            if let Some((key, content)) = flat_map_take_entry(entry, self.fields) {
                 self.pending_content = Some(content);
                 return seed.deserialize(BufferDeserializer::new(key)).map(Some);
             }
@@ -1175,44 +1167,76 @@ where
     }
 }
 
+/// Claims one key-value pair from a FlatMapDeserializer's field buffer if the
+/// field name matches any of the recognized ones.
 #[cfg(any(feature = "std", feature = "alloc"))]
-pub struct FlatInternallyTaggedAccess<'a, 'de: 'a, E> {
-    iter: slice::IterMut<'a, Option<(Buffer<'de>, Buffer<'de>)>>,
-    pending: Option<&'a Buffer<'de>>,
-    _marker: PhantomData<E>,
+fn flat_map_take_entry<'de>(
+    entry: &mut Option<(Buffer<'de>, Buffer<'de>)>,
+    recognized: &[&str],
+) -> Option<(Buffer<'de>, Buffer<'de>)> {
+    // Entries in the FlatMapDeserializer buffer are nulled out as they get
+    // claimed for deserialization. We only use an entry if it is still present
+    // and if the field is one recognized by the current data structure.
+    let is_recognized = match entry {
+        None => false,
+        Some((k, _v)) => k.as_str().map_or(false, |name| recognized.contains(&name)),
+    };
+
+    if is_recognized {
+        entry.take()
+    } else {
+        None
+    }
 }
 
-#[cfg(any(feature = "std", feature = "alloc"))]
-impl<'a, 'de, E> MapAccess<'de> for FlatInternallyTaggedAccess<'a, 'de, E>
-where
-    E: Error,
-{
-    type Error = E;
+pub struct AdjacentlyTaggedEnumVariantSeed<F> {
+    pub enum_name: &'static str,
+    pub variants: &'static [&'static str],
+    pub fields_enum: PhantomData<F>,
+}
 
-    fn next_key_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
-    where
-        T: DeserializeSeed<'de>,
-    {
-        for item in &mut self.iter {
-            if let Some((ref key, ref content)) = *item {
-                // Do not take(), instead borrow this entry. The internally tagged
-                // enum does its own buffering so we can't tell whether this entry
-                // is going to be consumed. Borrowing here leaves the entry
-                // available for later flattened fields.
-                self.pending = Some(content);
-                return seed.deserialize(BufferRefDeserializer::new(key)).map(Some);
-            }
-        }
-        Ok(None)
+pub struct AdjacentlyTaggedEnumVariantVisitor<F> {
+    enum_name: &'static str,
+    fields_enum: PhantomData<F>,
+}
+
+impl<'de, F> Visitor<'de> for AdjacentlyTaggedEnumVariantVisitor<F>
+where
+    F: Deserialize<'de>,
+{
+    type Value = F;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "variant of enum {}", self.enum_name)
     }
 
-    fn next_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
+    fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
     where
-        T: DeserializeSeed<'de>,
+        A: EnumAccess<'de>,
     {
-        match self.pending.take() {
-            Some(value) => seed.deserialize(BufferRefDeserializer::new(value)),
-            None => panic!("value is missing"),
-        }
+        let (variant, variant_access) = tri!(data.variant());
+        tri!(variant_access.unit_variant());
+        Ok(variant)
+    }
+}
+
+impl<'de, F> DeserializeSeed<'de> for AdjacentlyTaggedEnumVariantSeed<F>
+where
+    F: Deserialize<'de>,
+{
+    type Value = F;
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_enum(
+            self.enum_name,
+            self.variants,
+            AdjacentlyTaggedEnumVariantVisitor {
+                enum_name: self.enum_name,
+                fields_enum: PhantomData,
+            },
+        )
     }
 }

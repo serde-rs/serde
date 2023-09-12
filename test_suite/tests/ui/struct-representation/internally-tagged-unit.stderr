@@ -1,7 +1,5 @@
 error: #[serde(tag = "...")] can only be used on enums and structs with named fields
- --> tests/ui/struct-representation/internally-tagged-unit.rs:3:10
+ --> tests/ui/struct-representation/internally-tagged-unit.rs:4:9
   |
-3 | #[derive(Serialize)]
-  |          ^^^^^^^^^
-  |
-  = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)
+4 | #[serde(tag = "type")]
+  |         ^^^^^^^^^^^^

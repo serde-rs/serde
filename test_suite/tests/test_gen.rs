@@ -20,9 +20,9 @@
     clippy::type_repetition_in_bounds
 )]
 
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
+use serde::de::{Deserialize, DeserializeOwned, Deserializer};
+use serde::ser::{Serialize, Serializer};
+use serde_derive::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::marker::PhantomData;
 use std::option::Option as StdOption;
@@ -404,7 +404,7 @@ fn test_gen() {
     }
 
     mod vis {
-        use serde::{Deserialize, Serialize};
+        use serde_derive::{Deserialize, Serialize};
 
         pub struct S;
 
@@ -636,7 +636,7 @@ fn test_gen() {
 
     mod restricted {
         mod inner {
-            use serde::{Deserialize, Serialize};
+            use serde_derive::{Deserialize, Serialize};
 
             #[derive(Serialize, Deserialize)]
             struct Restricted {
@@ -662,6 +662,7 @@ fn test_gen() {
 
     #[derive(Deserialize)]
     struct ImplicitlyBorrowedOption<'a> {
+        #[allow(dead_code)]
         option: std::option::Option<&'a str>,
     }
 
@@ -692,7 +693,9 @@ fn test_gen() {
 
     #[derive(Deserialize)]
     struct RelObject<'a> {
+        #[allow(dead_code)]
         ty: &'a str,
+        #[allow(dead_code)]
         id: String,
     }
 
@@ -736,6 +739,7 @@ fn test_gen() {
         ($field:ty) => {
             #[derive(Deserialize)]
             struct MacroRules<'a> {
+                #[allow(dead_code)]
                 field: $field,
             }
         };
@@ -752,6 +756,7 @@ fn test_gen() {
     #[derive(Deserialize)]
     struct BorrowLifetimeInsideMacro<'a> {
         #[serde(borrow = "'a")]
+        #[allow(dead_code)]
         f: mac!(Cow<'a, str>),
     }
 
@@ -760,6 +765,10 @@ fn test_gen() {
         #[serde(serialize_with = "vec_first_element")]
         vec: Vec<Self>,
     }
+
+    #[derive(Deserialize)]
+    #[serde(bound(deserialize = "[&'de str; N]: Copy"))]
+    struct GenericUnitStruct<const N: usize>;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -834,7 +843,7 @@ pub fn is_zero(n: &u8) -> bool {
     *n == 0
 }
 
-fn vec_first_element<T, S>(vec: &Vec<T>, serializer: S) -> StdResult<S::Ok, S::Error>
+fn vec_first_element<T, S>(vec: &[T], serializer: S) -> StdResult<S::Ok, S::Error>
 where
     T: Serialize,
     S: Serializer,
