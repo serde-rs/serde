@@ -1,4 +1,3 @@
-use crate::de::buffer::{BufferDeserializer, BufferRefDeserializer, EnumDeserializer};
 use crate::lib::*;
 
 use crate::de::value::{BorrowedBytesDeserializer, BytesDeserializer};
@@ -8,7 +7,10 @@ use crate::de::{
 };
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use crate::de::{buffer::Buffer, MapAccess, Unexpected};
+use crate::de::{
+    buffer::{Buffer, BufferDeserializer, BufferRefDeserializer, EnumDeserializer, MapAccess},
+    Unexpected,
+};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::tagged::{
