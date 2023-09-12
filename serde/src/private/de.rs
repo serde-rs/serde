@@ -8,8 +8,8 @@ use crate::de::{
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 use crate::de::{
-    buffer::{Buffer, BufferDeserializer, BufferRefDeserializer, EnumDeserializer, MapAccess},
-    Unexpected,
+    buffer::{Buffer, BufferDeserializer, BufferRefDeserializer, EnumDeserializer},
+    MapAccess, Unexpected,
 };
 
 #[cfg(any(feature = "std", feature = "alloc"))]
