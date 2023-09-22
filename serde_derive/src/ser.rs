@@ -905,7 +905,7 @@ enum StructVariant<'a> {
     },
     InternallyTagged {
         tag: &'a str,
-        variant_name: VariantName,
+        variant_name: &'a VariantName,
     },
     Untagged,
 }

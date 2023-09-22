@@ -136,26 +136,46 @@ pub enum VariantName {
     Boolean(bool),
 }
 
-impl VariantName {
-    pub fn as_string(&self) -> Option<&String> {
+pub trait FieldName {
+    fn as_string(&self) -> Option<&str>;
+    fn as_int(&self) -> Option<i64>;
+    fn as_bool(&self) -> Option<bool>;
+}
+
+impl FieldName for VariantName {
+    fn as_string(&self) -> Option<&str> {
         match self {
             VariantName::String(s) => Some(s),
             _ => None,
         }
     }
 
-    pub fn as_int(&self) -> Option<i64> {
+    fn as_int(&self) -> Option<i64> {
         match self {
             VariantName::Integer(i) => Some(*i),
             _ => None,
         }
     }
 
-    pub fn as_bool(&self) -> Option<&bool> {
+    fn as_bool(&self) -> Option<bool> {
         match self {
-            VariantName::Boolean(b) => Some(b),
+            VariantName::Boolean(b) => Some(*b),
             _ => None,
         }
+    }
+}
+
+impl FieldName for String {
+    fn as_string(&self) -> Option<&str> {
+        Some(self)
+    }
+
+    fn as_int(&self) -> Option<i64> {
+        None
+    }
+
+    fn as_bool(&self) -> Option<bool> {
+        None
     }
 }
 
@@ -194,13 +214,10 @@ impl<T: Clone + Ord> Names<T> {
         de_name: Attr<T>,
         de_aliases: Option<VecAttr<T>>,
     ) -> Names<T> {
-        let deserialize_aliases = match de_aliases {
-            Some(de_aliases) => {
-                let mut alias_list = BTreeSet::new();
-                for alias_name in de_aliases.get() {
-                    alias_list.insert(alias_name);
-                }
-                alias_list.into_iter().collect()
+        let mut alias_set = BTreeSet::new();
+        if let Some(de_aliases) = de_aliases {
+            for alias_name in de_aliases.get() {
+                alias_set.insert(alias_name);
             }
         }
 
@@ -218,22 +235,17 @@ impl<T: Clone + Ord> Names<T> {
     }
 
     /// Return the container name for the container when serializing.
-    pub fn serialize_name(&self) -> T {
-        self.serialize.clone()
+    pub fn serialize_name(&self) -> &T {
+        &self.serialize
     }
 
     /// Return the container name for the container when deserializing.
-    pub fn deserialize_name(&self) -> T {
-        self.deserialize.clone()
+    pub fn deserialize_name(&self) -> &T {
+        &self.deserialize
     }
 
-    fn deserialize_aliases(&self) -> Vec<T> {
-        let mut aliases = self.deserialize_aliases.clone();
-        let main_name = self.deserialize_name();
-        if !aliases.contains(&main_name) {
-            aliases.push(main_name);
-        }
-        aliases
+    fn deserialize_aliases(&self) -> &BTreeSet<T> {
+        &self.deserialize_aliases
     }
 }
 

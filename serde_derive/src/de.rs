@@ -1,6 +1,7 @@
 use crate::fragment::{Expr, Fragment, Match, Stmts};
 use crate::internals::ast::{Container, Data, Field, Style, Variant, VariantMix};
-use crate::internals::{attr, replace_receiver, ungroup, Ctxt, Derive};
+use crate::internals::attr::{self, FieldName};
+use crate::internals::{replace_receiver, ungroup, Ctxt, Derive};
 use crate::{bound, dummy, pretend, this};
 use proc_macro2::{Literal, Span, TokenStream};
 use quote::{quote, quote_spanned, ToTokens};
@@ -9,8 +10,6 @@ use std::ptr;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::{parse_quote, Ident, Index, Member};
-
-use crate::internals::attr::VariantName;
 
 pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<TokenStream> {
     replace_receiver(input);
@@ -954,14 +953,9 @@ fn deserialize_struct(
         .filter(|&(_, field)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
         .map(|(i, field)| {
             (
-                VariantName::String(field.attrs.name().deserialize_name()),
+                field.attrs.name().deserialize_name(),
                 field_i(i),
-                field
-                    .attrs
-                    .aliases()
-                    .iter()
-                    .map(|a| VariantName::String(a.clone()))
-                    .collect(),
+                field.attrs.aliases(),
             )
         })
         .collect();
@@ -1117,14 +1111,9 @@ fn deserialize_struct_in_place(
         .filter(|&(_, field)| !field.attrs.skip_deserializing())
         .map(|(i, field)| {
             (
-                VariantName::String(field.attrs.name().deserialize_name()),
+                field.attrs.name().deserialize_name(),
                 field_i(i),
-                field
-                    .attrs
-                    .aliases()
-                    .iter()
-                    .map(|a| VariantName::String(a.clone()))
-                    .collect(),
+                field.attrs.aliases(),
             )
         })
         .collect();
@@ -1998,9 +1987,9 @@ fn deserialize_untagged_newtype_variant(
     }
 }
 
-fn deserialize_generated_identifier(
+fn deserialize_generated_identifier<T: FieldName>(
     mix: VariantMix,
-    fields: &[(VariantName, Ident, &BTreeSet<VariantName>)],
+    fields: &[(&T, Ident, &BTreeSet<T>)],
     cattrs: &attr::Container,
     is_variant: bool,
     ignore_variant: Option<TokenStream>,
@@ -2077,8 +2066,8 @@ fn deserialize_generated_identifier(
 
 /// Generates enum and its `Deserialize` implementation that represents each
 /// non-skipped field of the struct
-fn deserialize_field_identifier(
-    fields: &[(VariantName, Ident, &BTreeSet<VariantName>)],
+fn deserialize_field_identifier<T: FieldName>(
+    fields: &[(&T, Ident, &BTreeSet<T>)],
     cattrs: &attr::Container,
 ) -> Stmts {
     let (ignore_variant, fallthrough) = if cattrs.has_flatten() {
@@ -2218,9 +2207,9 @@ fn deserialize_custom_identifier(
     }
 }
 
-fn deserialize_identifier(
+fn deserialize_identifier<T: FieldName>(
     this_value: &TokenStream,
-    fields: &[(VariantName, Ident, &BTreeSet<VariantName>)],
+    fields: &[(&T, Ident, &BTreeSet<T>)],
     is_variant: bool,
     fallthrough: Option<TokenStream>,
     fallthrough_borrowed: Option<TokenStream>,
@@ -2342,8 +2331,8 @@ fn deserialize_identifier(
     };
 
     let visit_bool = {
-        let missing_true_arm = field_bools.iter().all(|b| !**b);
-        let missing_false_arm = field_bools.iter().all(|b| **b);
+        let missing_true_arm = field_bools.iter().all(|b| !*b);
+        let missing_false_arm = field_bools.iter().all(|b| *b);
 
         let fallthrough_true_arm = if missing_true_arm {
             Some(quote! {
