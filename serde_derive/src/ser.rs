@@ -407,13 +407,19 @@ fn serialize_enum(
 
     let self_var = &params.self_var;
 
-    let arms: Vec<_> = variants
+    let mut arms: Vec<_> = variants
         .iter()
         .enumerate()
         .map(|(variant_index, variant)| {
             serialize_variant(mix, params, variant, variant_index as u32, cattrs)
         })
         .collect();
+
+    if cattrs.remote().is_some() && cattrs.non_exhaustive() {
+        arms.push(quote! {
+            ref unrecognized => _serde::__private::Err(_serde::ser::Error::custom(_serde::__private::ser::CannotSerializeVariant(unrecognized))),
+        });
+    }
 
     quote_expr! {
         match *#self_var {
@@ -580,7 +586,7 @@ fn serialize_externally_tagged_variant(
             },
             params,
             &variant.fields,
-            &type_name,
+            type_name,
         ),
     }
 }
@@ -648,7 +654,7 @@ fn serialize_internally_tagged_variant(
             StructVariant::InternallyTagged { tag, variant_name },
             params,
             &variant.fields,
-            &type_name,
+            type_name,
         ),
         Style::Tuple => unreachable!("checked in serde_derive_internals"),
     }
@@ -729,7 +735,7 @@ fn serialize_adjacently_tagged_variant(
     });
 
     let fields_ty = variant.fields.iter().map(|f| &f.ty);
-    let fields_ident: &Vec<_> = &match variant.style {
+    let fields_ident: &[_] = &match variant.style {
         Style::Unit => {
             if variant.attrs.serialize_with().is_some() {
                 vec![]
@@ -819,16 +825,16 @@ fn serialize_untagged_variant(
         Style::Tuple => serialize_tuple_variant(TupleVariant::Untagged, params, &variant.fields),
         Style::Struct => {
             let type_name = cattrs.name().serialize_name();
-            serialize_struct_variant(StructVariant::Untagged, params, &variant.fields, &type_name)
+            serialize_struct_variant(StructVariant::Untagged, params, &variant.fields, type_name)
         }
     }
 }
 
-enum TupleVariant {
+enum TupleVariant<'a> {
     ExternallyTagged {
-        type_name: String,
+        type_name: &'a str,
         variant_index: u32,
-        variant_name: String,
+        variant_name: &'a str,
     },
     Untagged,
 }
@@ -895,7 +901,7 @@ fn serialize_tuple_variant(
 enum StructVariant<'a> {
     ExternallyTagged {
         variant_index: u32,
-        variant_name: String,
+        variant_name: &'a str,
     },
     InternallyTagged {
         tag: &'a str,

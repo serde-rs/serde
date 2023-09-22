@@ -1,6 +1,6 @@
 [package]
 name = "serde_derive_internals"
-version = "0.28.0" # remember to update html_root_url
+version = "0.29.0" # remember to update html_root_url
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 description = "AST representation used by Serde derive macros. Unstable."
 documentation = "https://docs.rs/serde_derive_internals"

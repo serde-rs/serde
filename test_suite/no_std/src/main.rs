@@ -1,3 +1,4 @@
+#![allow(internal_features)]
 #![feature(lang_items, start)]
 #![no_std]
 

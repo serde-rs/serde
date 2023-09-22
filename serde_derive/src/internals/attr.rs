@@ -184,7 +184,7 @@ pub struct Names<T: Clone + Ord> {
     serialize_renamed: bool,
     deserialize: T,
     deserialize_renamed: bool,
-    deserialize_aliases: Vec<T>,
+    deserialize_aliases: BTreeSet<T>,
 }
 
 impl<T: Clone + Ord> Names<T> {
@@ -202,8 +202,7 @@ impl<T: Clone + Ord> Names<T> {
                 }
                 alias_list.into_iter().collect()
             }
-            None => Vec::new(),
-        };
+        }
 
         let ser_name = ser_name.get();
         let ser_renamed = ser_name.is_some();
@@ -214,7 +213,7 @@ impl<T: Clone + Ord> Names<T> {
             serialize_renamed: ser_renamed,
             deserialize: de_name.unwrap_or(source_name),
             deserialize_renamed: de_renamed,
-            deserialize_aliases,
+            deserialize_aliases: alias_set,
         }
     }
 
@@ -283,6 +282,7 @@ pub struct Container {
     is_packed: bool,
     /// Error message generated when type can't be deserialized
     expecting: Option<String>,
+    non_exhaustive: bool,
 }
 
 /// Styles of representing an enum.
@@ -368,9 +368,12 @@ impl Container {
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
         let mut serde_path = Attr::none(cx, CRATE);
         let mut expecting = Attr::none(cx, EXPECTING);
+        let mut non_exhaustive = false;
 
         for attr in &item.attrs {
             if attr.path() != SERDE {
+                non_exhaustive |=
+                    matches!(&attr.meta, syn::Meta::Path(path) if path == NON_EXHAUSTIVE);
                 continue;
             }
 
@@ -458,20 +461,20 @@ impl Container {
                         if let Some(path) = parse_lit_into_expr_path(cx, DEFAULT, &meta)? {
                             match &item.data {
                                 syn::Data::Struct(syn::DataStruct { fields, .. }) => match fields {
-                                    syn::Fields::Named(_) => {
+                                    syn::Fields::Named(_) | syn::Fields::Unnamed(_) => {
                                         default.set(&meta.path, Default::Path(path));
                                     }
-                                    syn::Fields::Unnamed(_) | syn::Fields::Unit => {
-                                        let msg = "#[serde(default = \"...\")] can only be used on structs with named fields";
+                                    syn::Fields::Unit => {
+                                        let msg = "#[serde(default = \"...\")] can only be used on structs that have fields";
                                         cx.syn_error(meta.error(msg));
                                     }
                                 },
                                 syn::Data::Enum(_) => {
-                                    let msg = "#[serde(default = \"...\")] can only be used on structs with named fields";
+                                    let msg = "#[serde(default = \"...\")] can only be used on structs";
                                     cx.syn_error(meta.error(msg));
                                 }
                                 syn::Data::Union(_) => {
-                                    let msg = "#[serde(default = \"...\")] can only be used on structs with named fields";
+                                    let msg = "#[serde(default = \"...\")] can only be used on structs";
                                     cx.syn_error(meta.error(msg));
                                 }
                             }
@@ -480,20 +483,20 @@ impl Container {
                         // #[serde(default)]
                         match &item.data {
                             syn::Data::Struct(syn::DataStruct { fields, .. }) => match fields {
-                                syn::Fields::Named(_) => {
+                                syn::Fields::Named(_) | syn::Fields::Unnamed(_) => {
                                     default.set(meta.path, Default::Default);
                                 }
-                                syn::Fields::Unnamed(_) | syn::Fields::Unit => {
-                                    let msg = "#[serde(default)] can only be used on structs with named fields";
+                                syn::Fields::Unit => {
+                                    let msg = "#[serde(default)] can only be used on structs that have fields";
                                     cx.error_spanned_by(fields, msg);
                                 }
                             },
                             syn::Data::Enum(_) => {
-                                let msg = "#[serde(default)] can only be used on structs with named fields";
+                                let msg = "#[serde(default)] can only be used on structs";
                                 cx.syn_error(meta.error(msg));
                             }
                             syn::Data::Union(_) => {
-                                let msg = "#[serde(default)] can only be used on structs with named fields";
+                                let msg = "#[serde(default)] can only be used on structs";
                                 cx.syn_error(meta.error(msg));
                             }
                         }
@@ -649,6 +652,7 @@ impl Container {
             serde_path: serde_path.get(),
             is_packed,
             expecting: expecting.get(),
+            non_exhaustive,
         }
     }
 
@@ -734,6 +738,10 @@ impl Container {
     pub fn expecting(&self) -> Option<&str> {
         self.expecting.as_ref().map(String::as_ref)
     }
+
+    pub fn non_exhaustive(&self) -> bool {
+        self.non_exhaustive
+    }
 }
 
 fn decide_tag(
@@ -769,7 +777,7 @@ fn decide_tag(
             }
             TagType::Internal { tag }
         }
-        (Some((untagged_tokens, _)), Some((tag_tokens, _)), None) => {
+        (Some((untagged_tokens, ())), Some((tag_tokens, _)), None) => {
             let msg = "enum cannot be both untagged and internally tagged";
             cx.error_spanned_by(untagged_tokens, msg);
             cx.error_spanned_by(tag_tokens, msg);
@@ -780,14 +788,14 @@ fn decide_tag(
             cx.error_spanned_by(content_tokens, msg);
             TagType::External
         }
-        (Some((untagged_tokens, _)), None, Some((content_tokens, _))) => {
+        (Some((untagged_tokens, ())), None, Some((content_tokens, _))) => {
             let msg = "untagged enum cannot have #[serde(content = \"...\")]";
             cx.error_spanned_by(untagged_tokens, msg);
             cx.error_spanned_by(content_tokens, msg);
             TagType::External
         }
         (None, Some((_, tag)), Some((_, content))) => TagType::Adjacent { tag, content },
-        (Some((untagged_tokens, _)), Some((tag_tokens, _)), Some((content_tokens, _))) => {
+        (Some((untagged_tokens, ())), Some((tag_tokens, _)), Some((content_tokens, _))) => {
             let msg = "untagged enum cannot have #[serde(tag = \"...\", content = \"...\")]";
             cx.error_spanned_by(untagged_tokens, msg);
             cx.error_spanned_by(tag_tokens, msg);
@@ -809,7 +817,7 @@ fn decide_identifier(
         variant_identifier.0.get_with_tokens(),
     ) {
         (_, None, None) => Identifier::No,
-        (_, Some((field_identifier_tokens, _)), Some((variant_identifier_tokens, _))) => {
+        (_, Some((field_identifier_tokens, ())), Some((variant_identifier_tokens, ()))) => {
             let msg =
                 "#[serde(field_identifier)] and #[serde(variant_identifier)] cannot both be set";
             cx.error_spanned_by(field_identifier_tokens, msg);
@@ -1035,7 +1043,7 @@ impl Variant {
         &self.name
     }
 
-    pub fn aliases(&self) -> Vec<VariantName> {
+    pub fn aliases(&self) -> &BTreeSet<VariantName> {
         self.name.deserialize_aliases()
     }
 
@@ -1046,6 +1054,9 @@ impl Variant {
         if !self.name.deserialize_renamed {
             self.name.deserialize = rules.deserialize.apply_to_variant(&self.name.deserialize);
         }
+        self.name
+            .deserialize_aliases
+            .insert(self.name.deserialize.clone());
     }
 
     pub fn rename_all_rules(&self) -> RenameAllRules {
@@ -1374,7 +1385,7 @@ impl Field {
         &self.name
     }
 
-    pub fn aliases(&self) -> Vec<String> {
+    pub fn aliases(&self) -> &BTreeSet<String> {
         self.name.deserialize_aliases()
     }
 
@@ -1385,6 +1396,9 @@ impl Field {
         if !self.name.deserialize_renamed {
             self.name.deserialize = rules.deserialize.apply_to_field(&self.name.deserialize);
         }
+        self.name
+            .deserialize_aliases
+            .insert(self.name.deserialize.clone());
     }
 
     pub fn skip_serializing(&self) -> bool {

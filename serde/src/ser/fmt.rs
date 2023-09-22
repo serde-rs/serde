@@ -52,22 +52,17 @@ impl<'a, 'b> Serializer for &'a mut fmt::Formatter<'b> {
         serialize_i16: i16,
         serialize_i32: i32,
         serialize_i64: i64,
+        serialize_i128: i128,
         serialize_u8: u8,
         serialize_u16: u16,
         serialize_u32: u32,
         serialize_u64: u64,
+        serialize_u128: u128,
         serialize_f32: f32,
         serialize_f64: f64,
         serialize_char: char,
         serialize_str: &str,
         serialize_unit_struct: &'static str,
-    }
-
-    serde_if_integer128! {
-        fmt_primitives! {
-            serialize_i128: i128,
-            serialize_u128: u128,
-        }
     }
 
     fn serialize_unit_variant(

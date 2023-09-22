@@ -488,30 +488,27 @@ pub trait Serializer: Sized {
     /// ```
     fn serialize_i64(self, v: i64) -> Result<Self::Ok, Self::Error>;
 
-    serde_if_integer128! {
-        /// Serialize an `i128` value.
-        ///
-        /// ```edition2021
-        /// # use serde::Serializer;
-        /// #
-        /// # serde::__private_serialize!();
-        /// #
-        /// impl Serialize for i128 {
-        ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        ///     where
-        ///         S: Serializer,
-        ///     {
-        ///         serializer.serialize_i128(*self)
-        ///     }
-        /// }
-        /// ```
-        ///
-        /// This method is available only on Rust compiler versions >=1.26. The
-        /// default behavior unconditionally returns an error.
-        fn serialize_i128(self, v: i128) -> Result<Self::Ok, Self::Error> {
-            let _ = v;
-            Err(Error::custom("i128 is not supported"))
-        }
+    /// Serialize an `i128` value.
+    ///
+    /// ```edition2021
+    /// # use serde::Serializer;
+    /// #
+    /// # serde::__private_serialize!();
+    /// #
+    /// impl Serialize for i128 {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///     where
+    ///         S: Serializer,
+    ///     {
+    ///         serializer.serialize_i128(*self)
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// The default behavior unconditionally returns an error.
+    fn serialize_i128(self, v: i128) -> Result<Self::Ok, Self::Error> {
+        let _ = v;
+        Err(Error::custom("i128 is not supported"))
     }
 
     /// Serialize a `u8` value.
@@ -598,30 +595,27 @@ pub trait Serializer: Sized {
     /// ```
     fn serialize_u64(self, v: u64) -> Result<Self::Ok, Self::Error>;
 
-    serde_if_integer128! {
-        /// Serialize a `u128` value.
-        ///
-        /// ```edition2021
-        /// # use serde::Serializer;
-        /// #
-        /// # serde::__private_serialize!();
-        /// #
-        /// impl Serialize for u128 {
-        ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        ///     where
-        ///         S: Serializer,
-        ///     {
-        ///         serializer.serialize_u128(*self)
-        ///     }
-        /// }
-        /// ```
-        ///
-        /// This method is available only on Rust compiler versions >=1.26. The
-        /// default behavior unconditionally returns an error.
-        fn serialize_u128(self, v: u128) -> Result<Self::Ok, Self::Error> {
-            let _ = v;
-            Err(Error::custom("u128 is not supported"))
-        }
+    /// Serialize a `u128` value.
+    ///
+    /// ```edition2021
+    /// # use serde::Serializer;
+    /// #
+    /// # serde::__private_serialize!();
+    /// #
+    /// impl Serialize for u128 {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///     where
+    ///         S: Serializer,
+    ///     {
+    ///         serializer.serialize_u128(*self)
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// The default behavior unconditionally returns an error.
+    fn serialize_u128(self, v: u128) -> Result<Self::Ok, Self::Error> {
+        let _ = v;
+        Err(Error::custom("u128 is not supported"))
     }
 
     /// Serialize an `f32` value.

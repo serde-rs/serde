@@ -125,6 +125,9 @@ struct Test {
 
     #[serde(with = "EnumConcrete")]
     enum_concrete: remote::EnumGeneric<u8>,
+
+    #[serde(with = "ErrorKindDef")]
+    io_error_kind: ErrorKind,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -195,6 +198,23 @@ struct StructConcrete {
 #[serde(remote = "remote::EnumGeneric<u8>")]
 enum EnumConcrete {
     Variant(u8),
+}
+
+#[derive(Debug)]
+enum ErrorKind {
+    NotFound,
+    PermissionDenied,
+    #[allow(dead_code)]
+    ConnectionRefused,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "ErrorKind")]
+#[non_exhaustive]
+enum ErrorKindDef {
+    NotFound,
+    PermissionDenied,
+    // ...
 }
 
 impl From<PrimitivePrivDef> for remote::PrimitivePriv {
