@@ -1,6 +1,6 @@
 use crate::fragment::{Expr, Fragment, Match, Stmts};
 use crate::internals::ast::{Container, Data, Field, Style, Variant};
-use crate::internals::attr::{self, FieldName, VariantMix};
+use crate::internals::attr::{self, AsVariant, VariantMix};
 use crate::internals::{replace_receiver, ungroup, Ctxt, Derive};
 use crate::{bound, dummy, pretend, this};
 use proc_macro2::{Literal, Span, TokenStream};
@@ -1990,7 +1990,7 @@ fn deserialize_untagged_newtype_variant(
     }
 }
 
-fn deserialize_generated_identifier<T: FieldName>(
+fn deserialize_generated_identifier<T: AsVariant>(
     mix: VariantMix,
     fields: &[(&T, Ident, &BTreeSet<T>)],
     cattrs: &attr::Container,
@@ -2069,7 +2069,7 @@ fn deserialize_generated_identifier<T: FieldName>(
 
 /// Generates enum and its `Deserialize` implementation that represents each
 /// non-skipped field of the struct
-fn deserialize_field_identifier<T: FieldName>(
+fn deserialize_field_identifier<T: AsVariant>(
     fields: &[(&T, Ident, &BTreeSet<T>)],
     cattrs: &attr::Container,
 ) -> Stmts {
@@ -2210,7 +2210,7 @@ fn deserialize_custom_identifier(
     }
 }
 
-fn deserialize_identifier<T: FieldName>(
+fn deserialize_identifier<T: AsVariant>(
     this_value: &TokenStream,
     fields: &[(&T, Ident, &BTreeSet<T>)],
     is_variant: bool,

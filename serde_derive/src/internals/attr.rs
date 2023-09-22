@@ -199,13 +199,13 @@ impl VariantMix {
     }
 }
 
-pub trait FieldName {
+pub trait AsVariant {
     fn as_string(&self) -> Option<&str>;
     fn as_int(&self) -> Option<i64>;
     fn as_bool(&self) -> Option<bool>;
 }
 
-impl FieldName for VariantName {
+impl AsVariant for VariantName {
     fn as_string(&self) -> Option<&str> {
         match self {
             VariantName::String(s) => Some(s),
@@ -228,7 +228,7 @@ impl FieldName for VariantName {
     }
 }
 
-impl FieldName for String {
+impl AsVariant for String {
     fn as_string(&self) -> Option<&str> {
         Some(self)
     }
@@ -252,7 +252,7 @@ impl ToTokens for VariantName {
     }
 }
 
-pub struct FieldNames<T: Clone + Ord> {
+pub struct Names<T: Clone + Ord> {
     serialize: T,
     serialize_renamed: bool,
     deserialize: T,
@@ -260,13 +260,13 @@ pub struct FieldNames<T: Clone + Ord> {
     deserialize_aliases: BTreeSet<T>,
 }
 
-impl<T: Clone + Ord> FieldNames<T> {
+impl<T: Clone + Ord> Names<T> {
     fn from_attrs(
         source_name: T,
         ser_name: Attr<T>,
         de_name: Attr<T>,
         de_aliases: Option<VecAttr<T>>,
-    ) -> FieldNames<T> {
+    ) -> Names<T> {
         let mut alias_set = BTreeSet::new();
         if let Some(de_aliases) = de_aliases {
             for alias_name in de_aliases.get() {
@@ -278,7 +278,7 @@ impl<T: Clone + Ord> FieldNames<T> {
         let ser_renamed = ser_name.is_some();
         let de_name = de_name.get();
         let de_renamed = de_name.is_some();
-        FieldNames {
+        Names {
             serialize: ser_name.unwrap_or_else(|| source_name.clone()),
             serialize_renamed: ser_renamed,
             deserialize: de_name.unwrap_or(source_name),
@@ -302,8 +302,8 @@ impl<T: Clone + Ord> FieldNames<T> {
     }
 }
 
-pub type VariantFieldNames = FieldNames<VariantName>;
-pub type StringFieldNames = FieldNames<String>;
+pub type VariantNames = Names<VariantName>;
+pub type StringNames = Names<String>;
 
 fn unraw(ident: &Ident) -> String {
     ident.to_string().trim_start_matches("r#").to_owned()
@@ -328,7 +328,7 @@ impl RenameAllRules {
 
 /// Represents struct or enum attribute information.
 pub struct Container {
-    name: StringFieldNames,
+    name: StringNames,
     transparent: bool,
     deny_unknown_fields: bool,
     default: Default,
@@ -693,7 +693,7 @@ impl Container {
         }
 
         Container {
-            name: StringFieldNames::from_attrs(unraw(&item.ident), ser_name, de_name, None),
+            name: StringNames::from_attrs(unraw(&item.ident), ser_name, de_name, None),
             transparent: transparent.get(),
             deny_unknown_fields: deny_unknown_fields.get(),
             default: default.get().unwrap_or(Default::None),
@@ -721,7 +721,7 @@ impl Container {
         }
     }
 
-    pub fn name(&self) -> &StringFieldNames {
+    pub fn name(&self) -> &StringNames {
         &self.name
     }
 
@@ -916,7 +916,7 @@ fn decide_identifier(
 
 /// Represents variant attribute information
 pub struct Variant {
-    name: VariantFieldNames,
+    name: VariantNames,
     rename_all_rules: RenameAllRules,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
@@ -1082,7 +1082,7 @@ impl Variant {
         }
 
         Variant {
-            name: VariantFieldNames::from_attrs(
+            name: VariantNames::from_attrs(
                 VariantName::String(unraw(&variant.ident)),
                 ser_name,
                 de_name,
@@ -1104,7 +1104,7 @@ impl Variant {
         }
     }
 
-    pub fn name(&self) -> &VariantFieldNames {
+    pub fn name(&self) -> &VariantNames {
         &self.name
     }
 
@@ -1163,7 +1163,7 @@ impl Variant {
 
 /// Represents field attribute information
 pub struct Field {
-    name: StringFieldNames,
+    name: StringNames,
     skip_serializing: bool,
     skip_deserializing: bool,
     skip_serializing_if: Option<syn::ExprPath>,
@@ -1430,7 +1430,7 @@ impl Field {
         }
 
         Field {
-            name: StringFieldNames::from_attrs(ident, ser_name, de_name, Some(de_aliases)),
+            name: StringNames::from_attrs(ident, ser_name, de_name, Some(de_aliases)),
             skip_serializing: skip_serializing.get(),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing_if: skip_serializing_if.get(),
@@ -1446,7 +1446,7 @@ impl Field {
         }
     }
 
-    pub fn name(&self) -> &StringFieldNames {
+    pub fn name(&self) -> &StringNames {
         &self.name
     }
 

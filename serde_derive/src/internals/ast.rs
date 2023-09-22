@@ -80,7 +80,7 @@ impl<'a> Container<'a> {
         let mut has_flatten = false;
         match &mut data {
             Data::Enum(variants) => {
-                for variant in &mut *variants {
+                for variant in variants {
                     variant.attrs.rename_by_rules(attrs.rename_all_rules());
                     for field in &mut variant.fields {
                         if field.attrs.flatten() {
