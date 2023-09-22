@@ -1,5 +1,5 @@
 use crate::internals::symbol::*;
-use crate::internals::{ungroup, Ctxt};
+use crate::internals::{ast, ungroup, Ctxt};
 use proc_macro2::{Spacing, Span, TokenStream, TokenTree};
 use quote::ToTokens;
 use std::borrow::Cow;
@@ -136,6 +136,69 @@ pub enum VariantName {
     Boolean(bool),
 }
 
+impl VariantName {
+    pub fn to_variant_string(&self) -> String {
+        match self {
+            VariantName::String(s) => s.clone(),
+            VariantName::Integer(i) => i.to_string(),
+            VariantName::Boolean(b) => b.to_string(),
+        }
+    }
+}
+
+/// An enum representing the distribution of different variant names
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum VariantMix {
+    OnlyStrings,
+    OnlyIntegers,
+    OnlyBooleans,
+    Any,
+}
+
+impl VariantMix {
+    fn from_single(variant: &VariantName) -> Self {
+        match variant {
+            VariantName::String(_) => Self::OnlyStrings,
+            VariantName::Integer(_) => Self::OnlyIntegers,
+            VariantName::Boolean(_) => Self::OnlyBooleans,
+        }
+    }
+    pub fn from_ser(variants: &[ast::Variant]) -> Self {
+        let mut iter = variants.iter().map(|v| v.attrs.name.serialize_name());
+        match iter.next() {
+            Some(first) => {
+                let mix = Self::from_single(first);
+                for rest in iter {
+                    if Self::from_single(rest) != mix {
+                        return Self::Any;
+                    }
+                }
+                mix
+            }
+
+            // string variants are the base case as they were the original case
+            None => Self::OnlyStrings,
+        }
+    }
+    pub fn from_de(variants: &[ast::Variant]) -> Self {
+        let mut iter = variants.iter().map(|v| v.attrs.name.deserialize_name());
+        match iter.next() {
+            Some(first) => {
+                let mix = Self::from_single(first);
+                for rest in iter {
+                    if Self::from_single(rest) != mix {
+                        return Self::Any;
+                    }
+                }
+                mix
+            }
+
+            // string variants are the base case as they were the original case
+            None => Self::OnlyStrings,
+        }
+    }
+}
+
 pub trait FieldName {
     fn as_string(&self) -> Option<&str>;
     fn as_int(&self) -> Option<i64>;
@@ -179,16 +242,6 @@ impl FieldName for String {
     }
 }
 
-impl ToString for VariantName {
-    fn to_string(&self) -> String {
-        match self {
-            VariantName::String(s) => s.clone(),
-            VariantName::Integer(i) => i.to_string(),
-            VariantName::Boolean(b) => b.to_string(),
-        }
-    }
-}
-
 impl ToTokens for VariantName {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
@@ -199,7 +252,7 @@ impl ToTokens for VariantName {
     }
 }
 
-pub struct Names<T: Clone + Ord> {
+pub struct FieldNames<T: Clone + Ord> {
     serialize: T,
     serialize_renamed: bool,
     deserialize: T,
@@ -207,13 +260,13 @@ pub struct Names<T: Clone + Ord> {
     deserialize_aliases: BTreeSet<T>,
 }
 
-impl<T: Clone + Ord> Names<T> {
+impl<T: Clone + Ord> FieldNames<T> {
     fn from_attrs(
         source_name: T,
         ser_name: Attr<T>,
         de_name: Attr<T>,
         de_aliases: Option<VecAttr<T>>,
-    ) -> Names<T> {
+    ) -> FieldNames<T> {
         let mut alias_set = BTreeSet::new();
         if let Some(de_aliases) = de_aliases {
             for alias_name in de_aliases.get() {
@@ -225,7 +278,7 @@ impl<T: Clone + Ord> Names<T> {
         let ser_renamed = ser_name.is_some();
         let de_name = de_name.get();
         let de_renamed = de_name.is_some();
-        Names {
+        FieldNames {
             serialize: ser_name.unwrap_or_else(|| source_name.clone()),
             serialize_renamed: ser_renamed,
             deserialize: de_name.unwrap_or(source_name),
@@ -249,8 +302,8 @@ impl<T: Clone + Ord> Names<T> {
     }
 }
 
-pub type VariantNames = Names<VariantName>;
-pub type Name = Names<String>;
+pub type VariantFieldNames = FieldNames<VariantName>;
+pub type StringFieldNames = FieldNames<String>;
 
 fn unraw(ident: &Ident) -> String {
     ident.to_string().trim_start_matches("r#").to_owned()
@@ -275,7 +328,7 @@ impl RenameAllRules {
 
 /// Represents struct or enum attribute information.
 pub struct Container {
-    name: Name,
+    name: StringFieldNames,
     transparent: bool,
     deny_unknown_fields: bool,
     default: Default,
@@ -640,7 +693,7 @@ impl Container {
         }
 
         Container {
-            name: Name::from_attrs(unraw(&item.ident), ser_name, de_name, None),
+            name: StringFieldNames::from_attrs(unraw(&item.ident), ser_name, de_name, None),
             transparent: transparent.get(),
             deny_unknown_fields: deny_unknown_fields.get(),
             default: default.get().unwrap_or(Default::None),
@@ -668,7 +721,7 @@ impl Container {
         }
     }
 
-    pub fn name(&self) -> &Name {
+    pub fn name(&self) -> &StringFieldNames {
         &self.name
     }
 
@@ -863,7 +916,7 @@ fn decide_identifier(
 
 /// Represents variant attribute information
 pub struct Variant {
-    name: VariantNames,
+    name: VariantFieldNames,
     rename_all_rules: RenameAllRules,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
@@ -1029,7 +1082,7 @@ impl Variant {
         }
 
         Variant {
-            name: VariantNames::from_attrs(
+            name: VariantFieldNames::from_attrs(
                 VariantName::String(unraw(&variant.ident)),
                 ser_name,
                 de_name,
@@ -1051,7 +1104,7 @@ impl Variant {
         }
     }
 
-    pub fn name(&self) -> &VariantNames {
+    pub fn name(&self) -> &VariantFieldNames {
         &self.name
     }
 
@@ -1110,7 +1163,7 @@ impl Variant {
 
 /// Represents field attribute information
 pub struct Field {
-    name: Name,
+    name: StringFieldNames,
     skip_serializing: bool,
     skip_deserializing: bool,
     skip_serializing_if: Option<syn::ExprPath>,
@@ -1377,7 +1430,7 @@ impl Field {
         }
 
         Field {
-            name: Name::from_attrs(ident, ser_name, de_name, Some(de_aliases)),
+            name: StringFieldNames::from_attrs(ident, ser_name, de_name, Some(de_aliases)),
             skip_serializing: skip_serializing.get(),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing_if: skip_serializing_if.get(),
@@ -1393,7 +1446,7 @@ impl Field {
         }
     }
 
-    pub fn name(&self) -> &Name {
+    pub fn name(&self) -> &StringFieldNames {
         &self.name
     }
 
@@ -1554,12 +1607,19 @@ fn get_lit_str(
     get_lit_str2(cx, attr_name, attr_name, meta)
 }
 
-fn try_get_lit_str(lit: &syn::Expr) -> Result<&syn::LitStr, ()> {
+fn try_get_lit_str<'a>(cx: &Ctxt, lit: &'a syn::Expr) -> Result<&'a syn::LitStr, ()> {
     if let syn::Expr::Lit(syn::ExprLit {
         lit: syn::Lit::Str(lit),
         ..
     }) = lit
     {
+        let suffix = lit.suffix();
+        if !suffix.is_empty() {
+            cx.error_spanned_by(
+                lit,
+                format!("unexpected suffix `{}` on string literal", suffix),
+            );
+        }
         Ok(lit)
     } else {
         Err(())
@@ -1598,8 +1658,6 @@ fn get_variant_name(
     get_variant_name2(cx, attr_name, attr_name, meta)
 }
 
-// meta_item_name is unused but is present to comply with the contract for
-// get_ser_and_de.
 fn get_variant_name2(
     cx: &Ctxt,
     attr_name: Symbol,
@@ -1611,7 +1669,7 @@ fn get_variant_name2(
     while let syn::Expr::Group(e) = value {
         value = &e.expr;
     }
-    if let Ok(lit) = try_get_lit_str(value) {
+    if let Ok(lit) = try_get_lit_str(cx, value) {
         Ok(Some(VariantName::String(lit.value())))
     } else if let Ok(lit) = try_get_lit_int(value) {
         let parse_result = lit.base10_parse();
@@ -1647,14 +1705,7 @@ fn get_lit_str2(
     while let syn::Expr::Group(e) = value {
         value = &e.expr;
     }
-    if let Ok(lit) = try_get_lit_str(value) {
-        let suffix = lit.suffix();
-        if !suffix.is_empty() {
-            cx.error_spanned_by(
-                lit,
-                format!("unexpected suffix `{}` on string literal", suffix),
-            );
-        }
+    if let Ok(lit) = try_get_lit_str(cx, value) {
         Ok(Some(lit.clone()))
     } else {
         cx.error_spanned_by(

@@ -1,10 +1,10 @@
 use crate::fragment::{Fragment, Match, Stmts};
-use crate::internals::ast::{Container, Data, Field, Style, Variant, VariantMix};
-use crate::internals::attr::VariantName;
-use crate::internals::{attr, replace_receiver, Ctxt, Derive};
+use crate::internals::ast::{Container, Data, Field, Style, Variant};
+use crate::internals::attr::{self, VariantMix, VariantName};
+use crate::internals::{replace_receiver, Ctxt, Derive};
 use crate::{bound, dummy, pretend, this};
 use proc_macro2::{Span, TokenStream};
-use quote::{quote, quote_spanned};
+use quote::{quote, quote_spanned, ToTokens};
 use syn::spanned::Spanned;
 use syn::{parse_quote, Ident, Index, Member};
 
@@ -171,7 +171,10 @@ fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
         serialize_into(params, type_into)
     } else {
         match &cont.data {
-            Data::Enum(mix, variants) => serialize_enum(*mix, params, variants, &cont.attrs),
+            Data::Enum(variants) => {
+                let mix = VariantMix::from_ser(variants);
+                serialize_enum(mix, params, variants, &cont.attrs)
+            }
             Data::Struct(Style::Struct, fields) => serialize_struct(params, fields, &cont.attrs),
             Data::Struct(Style::Tuple, fields) => {
                 serialize_tuple_struct(params, fields, &cont.attrs)
@@ -187,7 +190,7 @@ fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
 fn serialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
     let fields = match &cont.data {
         Data::Struct(_, fields) => fields,
-        Data::Enum(_, _) => unreachable!(),
+        Data::Enum(_) => unreachable!(),
     };
 
     let self_var = &params.self_var;
@@ -523,7 +526,7 @@ fn serialize_externally_tagged_variant(
     let variant_name = match variant.attrs.name().serialize_name() {
         VariantName::String(name) => name,
         // An externally tagged variant with a non-string name will fail to
-        // check, so this branch _should_ be unreachable.
+        // check, so this branch is unreachable.
         _ => unreachable!(),
     };
 
@@ -620,7 +623,7 @@ fn serialize_internally_tagged_variant(
 
     match effective_style(variant) {
         Style::Unit => {
-            let variant_name = serialize_variant_name(&variant_name);
+            let variant_name = variant_name.to_token_stream();
             quote_block! {
                 let mut __struct = _serde::Serializer::serialize_struct(
                     __serializer, #type_name, 1)?;
@@ -684,7 +687,7 @@ fn serialize_adjacently_tagged_variant(
                 }
             }
         }
-        _ => serialize_variant_name(&variant_name),
+        _ => variant_name.to_token_stream(),
     };
 
     let inner = Stmts(if let Some(path) = variant.attrs.serialize_with() {
@@ -729,7 +732,7 @@ fn serialize_adjacently_tagged_variant(
                 StructVariant::Untagged,
                 params,
                 &variant.fields,
-                &variant_name.to_string(),
+                &variant_name.to_variant_string(),
             ),
         }
     });

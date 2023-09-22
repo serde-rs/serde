@@ -1,6 +1,6 @@
 use crate::fragment::{Expr, Fragment, Match, Stmts};
-use crate::internals::ast::{Container, Data, Field, Style, Variant, VariantMix};
-use crate::internals::attr::{self, FieldName};
+use crate::internals::ast::{Container, Data, Field, Style, Variant};
+use crate::internals::attr::{self, FieldName, VariantMix};
 use crate::internals::{replace_receiver, ungroup, Ctxt, Derive};
 use crate::{bound, dummy, pretend, this};
 use proc_macro2::{Literal, Span, TokenStream};
@@ -281,7 +281,10 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
         deserialize_try_from(type_try_from)
     } else if let attr::Identifier::No = cont.attrs.identifier() {
         match &cont.data {
-            Data::Enum(mix, variants) => deserialize_enum(*mix, params, variants, &cont.attrs),
+            Data::Enum(variants) => {
+                let mix = VariantMix::from_de(variants);
+                deserialize_enum(mix, params, variants, &cont.attrs)
+            }
             Data::Struct(Style::Struct, fields) => {
                 deserialize_struct(params, fields, &cont.attrs, StructForm::Struct)
             }
@@ -292,7 +295,7 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
         }
     } else {
         match &cont.data {
-            Data::Enum(_, variants) => deserialize_custom_identifier(params, variants, &cont.attrs),
+            Data::Enum(variants) => deserialize_custom_identifier(params, variants, &cont.attrs),
             Data::Struct(_, _) => unreachable!("checked in serde_derive_internals"),
         }
     }
@@ -323,7 +326,7 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
         Data::Struct(Style::Tuple, fields) | Data::Struct(Style::Newtype, fields) => {
             deserialize_tuple_in_place(params, fields, &cont.attrs)
         }
-        Data::Enum(_, _) | Data::Struct(Style::Unit, _) => {
+        Data::Enum(_) | Data::Struct(Style::Unit, _) => {
             return None;
         }
     };
@@ -351,7 +354,7 @@ fn deserialize_in_place_body(_cont: &Container, _params: &Parameters) -> Option<
 fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
     let fields = match &cont.data {
         Data::Struct(_, fields) => fields,
-        Data::Enum(_, _) => unreachable!(),
+        Data::Enum(_) => unreachable!(),
     };
 
     let this_value = &params.this_value;
@@ -1245,7 +1248,7 @@ fn prepare_enum_variant_enum(
     let variants_stmt = {
         let variant_names = variant_names_idents
             .iter()
-            .map(|(name, _, _)| name.to_string());
+            .map(|(name, _, _)| name.to_variant_string());
         quote! {
             #[doc(hidden)]
             const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
