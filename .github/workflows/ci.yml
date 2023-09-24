@@ -118,6 +118,20 @@ jobs:
       - run: cargo generate-lockfile -Z minimal-versions
       - run: cargo check --locked --workspace
 
+  doc:
+    name: Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      RUSTDOCFLAGS: -Dwarnings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/install@cargo-docs-rs
+      - run: cargo docs-rs -p serde
+      - run: cargo docs-rs -p serde_derive
+      - run: cargo docs-rs -p serde_derive_internals
+
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
