@@ -2719,7 +2719,7 @@ fn test_expecting_message_externally_tagged_enum() {
     // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
     assert_de_tokens_error::<Enum>(
         &[Token::Enum { name: "Enum" }, Token::Unit],
-        r#"invalid type: unit value, expected variant identifier"#,
+        r"invalid type: unit value, expected variant identifier",
     );
 }
 
@@ -2740,7 +2740,7 @@ fn test_expecting_message_internally_tagged_enum() {
     // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
     assert_de_tokens_error::<Enum>(
         &[Token::Map { len: None }, Token::Str("tag"), Token::Unit],
-        r#"invalid type: unit value, expected variant identifier"#,
+        r"invalid type: unit value, expected variant identifier",
     );
 }
 
@@ -2766,7 +2766,7 @@ fn test_expecting_message_adjacently_tagged_enum() {
     // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
     assert_de_tokens_error::<Enum>(
         &[Token::Map { len: None }, Token::Str("tag"), Token::Unit],
-        r#"invalid type: unit value, expected variant of enum Enum"#,
+        r"invalid type: unit value, expected variant of enum Enum",
     );
 }
 
@@ -2779,7 +2779,7 @@ fn test_expecting_message_untagged_tagged_enum() {
         Untagged,
     }
 
-    assert_de_tokens_error::<Enum>(&[Token::Str("Untagged")], r#"something strange..."#);
+    assert_de_tokens_error::<Enum>(&[Token::Str("Untagged")], r"something strange...");
 }
 
 #[test]
@@ -2800,7 +2800,7 @@ fn test_expecting_message_identifier_enum() {
 
     assert_de_tokens_error::<FieldEnum>(
         &[Token::Unit],
-        r#"invalid type: unit value, expected something strange..."#,
+        r"invalid type: unit value, expected something strange...",
     );
 
     assert_de_tokens_error::<FieldEnum>(
@@ -2809,12 +2809,12 @@ fn test_expecting_message_identifier_enum() {
             Token::Str("Unknown"),
             Token::None,
         ],
-        r#"invalid type: map, expected something strange..."#,
+        r"invalid type: map, expected something strange...",
     );
 
     assert_de_tokens_error::<VariantEnum>(
         &[Token::Unit],
-        r#"invalid type: unit value, expected something strange..."#,
+        r"invalid type: unit value, expected something strange...",
     );
 
     assert_de_tokens_error::<VariantEnum>(
@@ -2825,7 +2825,7 @@ fn test_expecting_message_identifier_enum() {
             Token::Str("Unknown"),
             Token::None,
         ],
-        r#"invalid type: map, expected something strange..."#,
+        r"invalid type: map, expected something strange...",
     );
 }
 
