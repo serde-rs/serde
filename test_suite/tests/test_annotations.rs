@@ -18,9 +18,11 @@ use serde_test::{
     assert_tokens, Token,
 };
 use std::collections::{BTreeMap, HashMap};
-use std::convert::TryFrom;
+use std::convert::{Infallible, TryFrom};
 use std::fmt;
+use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
+use std::str::FromStr;
 
 trait MyDefault: Sized {
     fn my_default() -> Self;
@@ -1503,6 +1505,55 @@ fn test_invalid_length_enum() {
         ],
         "invalid length 1, expected tuple variant InvalidLengthEnum::B with 2 elements",
     );
+}
+#[derive(Clone, Serialize, PartialEq, Debug)]
+#[serde(to_string)]
+enum EnumAsToString {
+    One,
+    Two,
+    Three,
+    Other(String),
+}
+impl Display for EnumAsToString {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            EnumAsToString::One => write!(f, "one"),
+            EnumAsToString::Two => write!(f, "two"),
+            EnumAsToString::Three => write!(f, "three"),
+            EnumAsToString::Other(v) => write!(f, "{}", v),
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+#[serde(as_ref = "str", from_str)]
+enum EnumAsRefStr {
+    One,
+    Two,
+    Three,
+    Other(String),
+}
+
+impl AsRef<str> for EnumAsRefStr {
+    fn as_ref(&self) -> &str {
+        match self {
+            EnumAsRefStr::One => "one",
+            EnumAsRefStr::Two => "two",
+            EnumAsRefStr::Three => "three",
+            EnumAsRefStr::Other(v) => v.as_ref(),
+        }
+    }
+}
+impl FromStr for EnumAsRefStr {
+    type Err = Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "one" => Ok(EnumAsRefStr::One),
+            "two" => Ok(EnumAsRefStr::Two),
+            "three" => Ok(EnumAsRefStr::Three),
+            _ => Ok(EnumAsRefStr::Other(s.to_owned())),
+        }
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]

@@ -214,6 +214,9 @@ pub struct Container {
     type_from: Option<syn::Type>,
     type_try_from: Option<syn::Type>,
     type_into: Option<syn::Type>,
+    type_to_string: bool,
+    type_as_ref: Option<syn::Type>,
+    type_from_str: bool,
     remote: Option<syn::Path>,
     identifier: Identifier,
     has_flatten: bool,
@@ -302,6 +305,9 @@ impl Container {
         let mut type_from = Attr::none(cx, FROM);
         let mut type_try_from = Attr::none(cx, TRY_FROM);
         let mut type_into = Attr::none(cx, INTO);
+        let mut type_to_string = BoolAttr::none(cx, TO_STRING);
+        let mut type_as_ref = Attr::none(cx, AS_REF);
+        let mut type_from_str = BoolAttr::none(cx, FROM_STR);
         let mut remote = Attr::none(cx, REMOTE);
         let mut field_identifier = BoolAttr::none(cx, FIELD_IDENTIFIER);
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
@@ -540,7 +546,18 @@ impl Container {
                     if let Some(s) = get_lit_str(cx, EXPECTING, &meta)? {
                         expecting.set(&meta.path, s.value());
                     }
-                } else {
+                } else if meta.path == AS_REF{
+                    // #[serde(as_ref = "Type")]
+                    if let Some(into_ty) = parse_lit_into_ty(cx, AS_REF, &meta)? {
+                        type_as_ref.set_opt(&meta.path, Some(into_ty));
+                    }
+                }else if meta.path == TO_STRING{
+                    // #[serde(to_string)]
+                    type_to_string.set_true(&meta.path);
+                }else if meta.path == FROM_STR{
+                    // #[serde(from_str)]
+                    type_from_str.set_true(&meta.path);
+                }else {
                     let path = meta.path.to_token_stream().to_string().replace(' ', "");
                     return Err(
                         meta.error(format_args!("unknown serde container attribute `{}`", path))
@@ -585,6 +602,9 @@ impl Container {
             type_from: type_from.get(),
             type_try_from: type_try_from.get(),
             type_into: type_into.get(),
+            type_to_string: type_to_string.get(),
+            type_as_ref: type_as_ref.get(),
+            type_from_str: type_from_str.get(),
             remote: remote.get(),
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
             has_flatten: false,
@@ -642,7 +662,15 @@ impl Container {
     pub fn type_into(&self) -> Option<&syn::Type> {
         self.type_into.as_ref()
     }
-
+    pub fn type_as_ref(&self) -> Option<&syn::Type> {
+        self.type_as_ref.as_ref()
+    }
+    pub fn type_to_string(&self) -> bool {
+        self.type_to_string
+    }
+    pub fn type_from_str(&self) -> bool {
+        self.type_from_str
+    }
     pub fn remote(&self) -> Option<&syn::Path> {
         self.remote.as_ref()
     }
