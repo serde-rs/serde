@@ -1506,13 +1506,23 @@ fn test_invalid_length_enum() {
         "invalid length 1, expected tuple variant InvalidLengthEnum::B with 2 elements",
     );
 }
-#[derive(Clone, Serialize, PartialEq, Debug)]
-#[serde(to_string)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+#[serde(to_string, from = "String")]
 enum EnumAsToString {
     One,
     Two,
     Three,
     Other(String),
+}
+impl From<String> for EnumAsToString {
+    fn from(v: String) -> Self {
+        match v.as_str() {
+            "one" => EnumAsToString::One,
+            "two" => EnumAsToString::Two,
+            "three" => EnumAsToString::Three,
+            _ => EnumAsToString::Other(v),
+        }
+    }
 }
 impl Display for EnumAsToString {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
