@@ -1754,18 +1754,18 @@ fn deserialize_untagged_enum_after(
     // need to provide the error type.
     let first_attempt = first_attempt.map(|expr| {
         quote! {
-            if let _serde::__private::Result::<_, __D::Error>::Ok(__ok) = (|| {
-                #expr
-            })() {
+            if let _serde::__private::Result::<_, __D::Error>::Ok(__ok) = (|| #expr)() {
                 return _serde::__private::Ok(__ok);
             }
         }
     });
+
     quote_block! {
         let __content = <_serde::__private::de::Content as _serde::Deserialize>::deserialize(__deserializer)?;
         let __deserializer = _serde::__private::de::ContentRefDeserializer::<__D::Error>::new(&__content);
 
         #first_attempt
+
         #(
             if let _serde::__private::Ok(__ok) = #attempts {
                 return _serde::__private::Ok(__ok);
