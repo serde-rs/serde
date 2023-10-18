@@ -65,10 +65,26 @@ impl<'a> Container<'a> {
     ) -> Option<Container<'a>> {
         let mut attrs = attr::Container::from_ast(cx, item);
 
+        let into_used = if let Some(_) = attrs.type_into() {
+            true
+        } else {
+            false
+        };
+
         let mut data = match &item.data {
             syn::Data::Enum(data) => Data::Enum(enum_from_ast(cx, &data.variants, attrs.default())),
             syn::Data::Struct(data) => {
                 let (style, fields) = struct_from_ast(cx, &data.fields, None, attrs.default());
+
+                if into_used == true {
+                    for field in fields.iter() {
+                        if !field.original.attrs.is_empty() {
+                            field.original.ident.clone().unwrap().span().unwrap()
+                            .warning("#[serde(into)] container attribute will invalidate all field attributes")
+                            .emit();
+                        }
+                    }
+                }
                 Data::Struct(style, fields)
             }
             syn::Data::Union(_) => {

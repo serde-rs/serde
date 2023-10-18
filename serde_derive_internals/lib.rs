@@ -37,7 +37,7 @@
     clippy::unused_self,
     clippy::wildcard_imports
 )]
-
+#![feature(proc_macro_diagnostic)]
 extern crate proc_macro2;
 extern crate quote;
 extern crate syn;
