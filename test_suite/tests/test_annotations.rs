@@ -2381,6 +2381,68 @@ fn test_partially_untagged_enum_desugared() {
 }
 
 #[test]
+fn test_partially_untagged_internally_tagged_enum() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(tag = "t")]
+    enum Data {
+        A,
+        B,
+        #[serde(untagged)]
+        Var(u32),
+    }
+
+    let data = Data::A;
+
+    assert_de_tokens(
+        &data,
+        &[
+            Token::Map { len: None },
+            Token::Str("t"),
+            Token::Str("A"),
+            Token::MapEnd,
+        ],
+    );
+
+    let data = Data::Var(42);
+
+    assert_de_tokens(&data, &[Token::U32(42)]);
+
+    // TODO test error output
+}
+
+#[test]
+fn test_partially_untagged_adjacently_tagged_enum() {
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[serde(tag = "t", content = "c")]
+    enum Data {
+        A(u32),
+        B,
+        #[serde(untagged)]
+        Var(u32),
+    }
+
+    let data = Data::A(7);
+
+    assert_de_tokens(
+        &data,
+        &[
+            Token::Map { len: None },
+            Token::Str("t"),
+            Token::Str("A"),
+            Token::Str("c"),
+            Token::U32(7),
+            Token::MapEnd,
+        ],
+    );
+
+    let data = Data::Var(42);
+
+    assert_de_tokens(&data, &[Token::U32(42)]);
+
+    // TODO test error output
+}
+
+#[test]
 fn test_flatten_option() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     struct Outer {
@@ -2719,7 +2781,7 @@ fn test_expecting_message_externally_tagged_enum() {
     // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
     assert_de_tokens_error::<Enum>(
         &[Token::Enum { name: "Enum" }, Token::Unit],
-        r#"invalid type: unit value, expected variant identifier"#,
+        "invalid type: unit value, expected variant identifier",
     );
 }
 
@@ -2740,7 +2802,7 @@ fn test_expecting_message_internally_tagged_enum() {
     // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
     assert_de_tokens_error::<Enum>(
         &[Token::Map { len: None }, Token::Str("tag"), Token::Unit],
-        r#"invalid type: unit value, expected variant identifier"#,
+        "invalid type: unit value, expected variant identifier",
     );
 }
 
@@ -2766,7 +2828,7 @@ fn test_expecting_message_adjacently_tagged_enum() {
     // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
     assert_de_tokens_error::<Enum>(
         &[Token::Map { len: None }, Token::Str("tag"), Token::Unit],
-        r#"invalid type: unit value, expected variant of enum Enum"#,
+        "invalid type: unit value, expected variant of enum Enum",
     );
 }
 
@@ -2779,7 +2841,7 @@ fn test_expecting_message_untagged_tagged_enum() {
         Untagged,
     }
 
-    assert_de_tokens_error::<Enum>(&[Token::Str("Untagged")], r#"something strange..."#);
+    assert_de_tokens_error::<Enum>(&[Token::Str("Untagged")], "something strange...");
 }
 
 #[test]
@@ -2800,7 +2862,7 @@ fn test_expecting_message_identifier_enum() {
 
     assert_de_tokens_error::<FieldEnum>(
         &[Token::Unit],
-        r#"invalid type: unit value, expected something strange..."#,
+        "invalid type: unit value, expected something strange...",
     );
 
     assert_de_tokens_error::<FieldEnum>(
@@ -2809,12 +2871,12 @@ fn test_expecting_message_identifier_enum() {
             Token::Str("Unknown"),
             Token::None,
         ],
-        r#"invalid type: map, expected something strange..."#,
+        "invalid type: map, expected something strange...",
     );
 
     assert_de_tokens_error::<VariantEnum>(
         &[Token::Unit],
-        r#"invalid type: unit value, expected something strange..."#,
+        "invalid type: unit value, expected something strange...",
     );
 
     assert_de_tokens_error::<VariantEnum>(
@@ -2825,7 +2887,7 @@ fn test_expecting_message_identifier_enum() {
             Token::Str("Unknown"),
             Token::None,
         ],
-        r#"invalid type: map, expected something strange..."#,
+        "invalid type: map, expected something strange...",
     );
 }
 

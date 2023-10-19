@@ -63,6 +63,7 @@
 //!   and from DynamoDB.
 //! - [Hjson], a syntax extension to JSON designed around human reading and
 //!   editing. *(deserialization only)*
+//! - [CSV], Comma-separated values is a tabular text file format.
 //!
 //! [JSON]: https://github.com/serde-rs/json
 //! [Postcard]: https://github.com/jamesmunns/postcard
@@ -89,7 +90,15 @@
 //! [DynamoDB Items]: https://docs.rs/serde_dynamo
 //! [rusoto_dynamodb]: https://docs.rs/rusoto_dynamodb
 //! [Hjson]: https://github.com/Canop/deser-hjson
+//! [CSV]: https://docs.rs/csv
 
+<<<<<<< HEAD
+=======
+////////////////////////////////////////////////////////////////////////////////
+
+// Serde types in rustdoc of other crates get linked to here.
+#![doc(html_root_url = "https://docs.rs/serde/1.0.189")]
+>>>>>>> master
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
 #[doc(inline)]
