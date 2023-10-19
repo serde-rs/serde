@@ -92,13 +92,6 @@
 //! [Hjson]: https://github.com/Canop/deser-hjson
 //! [CSV]: https://docs.rs/csv
 
-<<<<<<< HEAD
-=======
-////////////////////////////////////////////////////////////////////////////////
-
-// Serde types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/serde/1.0.189")]
->>>>>>> master
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
 #[doc(inline)]
