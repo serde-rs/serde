@@ -65,6 +65,7 @@ impl<'a> Container<'a> {
     ) -> Option<Container<'a>> {
         let mut attrs = attr::Container::from_ast(cx, item);
 
+        #[cfg(feature = "unstable")]
         let into_used = if let Some(_) = attrs.type_into() {
             true
         } else {
@@ -76,12 +77,13 @@ impl<'a> Container<'a> {
             syn::Data::Struct(data) => {
                 let (style, fields) = struct_from_ast(cx, &data.fields, None, attrs.default());
 
+                #[cfg(feature = "unstable")]
                 if into_used == true {
                     for field in fields.iter() {
                         if !field.original.attrs.is_empty() {
                             field.original.ident.clone().unwrap().span().unwrap()
-                            .warning("#[serde(into)] container attribute will invalidate all field attributes")
-                            .emit();
+                                .warning("#[serde(into)] container attribute will invalidate all field attributes")
+                                .emit();
                         }
                     }
                 }

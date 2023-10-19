@@ -61,7 +61,7 @@
     clippy::wildcard_imports
 )]
 #![cfg_attr(all(test, exhaustive), feature(non_exhaustive_omitted_patterns_lint))]
-#![feature(proc_macro_diagnostic)]
+#![cfg_attr(feature = "unstable", feature(proc_macro_diagnostic))]
 extern crate proc_macro2;
 extern crate quote;
 extern crate syn;
