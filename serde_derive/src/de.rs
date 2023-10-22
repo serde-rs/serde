@@ -1840,7 +1840,7 @@ fn deserialize_internally_tagged_variant(
             let this_value = &params.this_value;
             let type_name = params.type_name();
             let variant_name = variant.ident.to_string();
-            let default = variant.fields.get(0).map(|field| {
+            let default = variant.fields.first().map(|field| {
                 let default = Expr(expr_is_missing(field, cattrs));
                 quote!((#default))
             });
@@ -1885,7 +1885,7 @@ fn deserialize_untagged_variant(
             let this_value = &params.this_value;
             let type_name = params.type_name();
             let variant_name = variant.ident.to_string();
-            let default = variant.fields.get(0).map(|field| {
+            let default = variant.fields.first().map(|field| {
                 let default = Expr(expr_is_missing(field, cattrs));
                 quote!((#default))
             });
