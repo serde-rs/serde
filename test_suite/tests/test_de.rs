@@ -11,6 +11,7 @@
 #![cfg_attr(feature = "unstable", feature(never_type))]
 
 use fnv::FnvHasher;
+use serde::de::value::{F32Deserializer, F64Deserializer};
 use serde::de::{Deserialize, DeserializeOwned, Deserializer, IntoDeserializer};
 use serde_derive::Deserialize;
 use serde_test::{assert_de_tokens, Configure, Token};
@@ -830,6 +831,26 @@ fn test_f64() {
 
     test(1.11f32 as f64, &[Token::F32(1.11)]);
     test(1.11, &[Token::F64(1.11)]);
+}
+
+#[test]
+fn test_nan() {
+    let f32_deserializer = F32Deserializer::<serde::de::value::Error>::new;
+    let f64_deserializer = F64Deserializer::<serde::de::value::Error>::new;
+
+    let pos_f32_nan = f32_deserializer(f32::NAN.copysign(1.0));
+    let pos_f64_nan = f64_deserializer(f64::NAN.copysign(1.0));
+    assert!(f32::deserialize(pos_f32_nan).unwrap().is_sign_positive());
+    assert!(f32::deserialize(pos_f64_nan).unwrap().is_sign_positive());
+    assert!(f64::deserialize(pos_f32_nan).unwrap().is_sign_positive());
+    assert!(f64::deserialize(pos_f64_nan).unwrap().is_sign_positive());
+
+    let neg_f32_nan = f32_deserializer(f32::NAN.copysign(-1.0));
+    let neg_f64_nan = f64_deserializer(f64::NAN.copysign(-1.0));
+    assert!(f32::deserialize(neg_f32_nan).unwrap().is_sign_negative());
+    assert!(f32::deserialize(neg_f64_nan).unwrap().is_sign_negative());
+    assert!(f64::deserialize(neg_f32_nan).unwrap().is_sign_negative());
+    assert!(f64::deserialize(neg_f64_nan).unwrap().is_sign_negative());
 }
 
 #[test]
