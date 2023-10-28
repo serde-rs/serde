@@ -42,6 +42,12 @@ struct StructSkipAllDenyUnknown {
     a: i32,
 }
 
+#[derive(PartialEq, Debug, Deserialize)]
+#[serde(strict_or_some_other_name)]
+struct StructStrictOrSomeOtherName {
+    a: i32,
+}
+
 #[derive(Default, PartialEq, Debug)]
 struct NotDeserializable;
 
@@ -1176,6 +1182,14 @@ fn test_skip_all_deny_unknown() {
             Token::Str("a"),
         ],
         "unknown field `a`, there are no fields",
+    );
+}
+
+#[test]
+fn test_strict_or_some_other_name() {
+    assert_de_tokens_error::<StructStrictOrSomeOtherName>(
+        &[Token::Seq { len: Some(1) }],
+        "invalid type: sequence, expected struct StructStrictOrSomeOtherName",
     );
 }
 

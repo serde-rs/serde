@@ -210,6 +210,7 @@ pub struct Container {
     rename_all_fields_rules: RenameAllRules,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
+    is_strict_or_some_other_name: bool,
     tag: TagType,
     type_from: Option<syn::Type>,
     type_try_from: Option<syn::Type>,
@@ -296,6 +297,7 @@ impl Container {
         let mut rename_all_fields_de_rule = Attr::none(cx, RENAME_ALL_FIELDS);
         let mut ser_bound = Attr::none(cx, BOUND);
         let mut de_bound = Attr::none(cx, BOUND);
+        let mut strict_or_some_other_name = BoolAttr::none(cx, STRICT_OR_SOME_OTHER_NAME);
         let mut untagged = BoolAttr::none(cx, UNTAGGED);
         let mut internal_tag = Attr::none(cx, TAG);
         let mut content = Attr::none(cx, CONTENT);
@@ -446,6 +448,24 @@ impl Container {
                     let (ser, de) = get_where_predicates(cx, &meta)?;
                     ser_bound.set_opt(&meta.path, ser);
                     de_bound.set_opt(&meta.path, de);
+                } else if meta.path == STRICT_OR_SOME_OTHER_NAME {
+                    // #[serde(strict_or_some_other_name)]
+                    let msg = "#[serde(strict_or_some_other_name)] can only be used on structs with named fields";
+                    match &item.data {
+                        syn::Data::Struct(syn::DataStruct { fields, .. }) => {
+                            match fields {
+                                syn::Fields::Named(_) => {
+                                    strict_or_some_other_name.set_true(&meta.path);
+                                }
+                                _ => {
+                                    cx.syn_error(meta.error(msg));
+                                }
+                            };
+                        }
+                        _ => {
+                            cx.syn_error(meta.error(msg));
+                        }
+                    }
                 } else if meta.path == UNTAGGED {
                     // #[serde(untagged)]
                     match item.data {
@@ -581,6 +601,7 @@ impl Container {
             },
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
+            is_strict_or_some_other_name: strict_or_some_other_name.get(),
             tag: decide_tag(cx, item, untagged, internal_tag, content),
             type_from: type_from.get(),
             type_try_from: type_try_from.get(),
@@ -625,6 +646,10 @@ impl Container {
 
     pub fn de_bound(&self) -> Option<&[syn::WherePredicate]> {
         self.de_bound.as_ref().map(|vec| &vec[..])
+    }
+
+    pub fn is_strict_or_some_other_name(&self) -> bool {
+        self.is_strict_or_some_other_name
     }
 
     pub fn tag(&self) -> &TagType {

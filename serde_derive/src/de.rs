@@ -961,10 +961,10 @@ fn deserialize_struct(
     let field_visitor = deserialize_field_identifier(&field_names_idents, cattrs);
 
     // untagged struct variants do not get a visit_seq method. The same applies to
-    // structs that only have a map representation.
+    // structs that only have a map representation or are deserialized strict_or_some_other_name_ly.
     let visit_seq = match form {
         StructForm::Untagged(..) => None,
-        _ if cattrs.has_flatten() => None,
+        _ if cattrs.has_flatten() || cattrs.is_strict_or_some_other_name() => None,
         _ => {
             let mut_seq = if field_names_idents.is_empty() {
                 quote!(_)
@@ -1090,8 +1090,8 @@ fn deserialize_struct_in_place(
     cattrs: &attr::Container,
 ) -> Option<Fragment> {
     // for now we do not support in_place deserialization for structs that
-    // are represented as map.
-    if cattrs.has_flatten() {
+    // are represented as map or are deserialized strict_or_some_other_name_ly.
+    if cattrs.has_flatten() || cattrs.is_strict_or_some_other_name() {
         return None;
     }
 
@@ -2001,6 +2001,7 @@ fn deserialize_generated_identifier(
         None,
         !is_variant && cattrs.has_flatten(),
         None,
+        cattrs.is_strict_or_some_other_name(),
     ));
 
     let lifetime = if !is_variant && cattrs.has_flatten() {
@@ -2155,6 +2156,7 @@ fn deserialize_custom_identifier(
         fallthrough_borrowed,
         false,
         cattrs.expecting(),
+        false,
     ));
 
     quote_block! {
@@ -2188,6 +2190,7 @@ fn deserialize_identifier(
     fallthrough_borrowed: Option<TokenStream>,
     collect_other_fields: bool,
     expecting: Option<&str>,
+    is_strict_or_some_other_name: bool,
 ) -> Fragment {
     let str_mapping = fields.iter().map(|(_, ident, aliases)| {
         // `aliases` also contains a main name
@@ -2255,7 +2258,7 @@ fn deserialize_identifier(
     };
 
     let visit_other = if collect_other_fields {
-        quote! {
+        Some(quote! {
             fn visit_bool<__E>(self, __value: bool) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
@@ -2346,8 +2349,8 @@ fn deserialize_identifier(
             {
                 _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Unit))
             }
-        }
-    } else {
+        })
+    } else if !is_strict_or_some_other_name {
         let u64_mapping = fields.iter().enumerate().map(|(i, (_, ident, _))| {
             let i = i as u64;
             quote!(#i => _serde::__private::Ok(#this_value::#ident))
@@ -2368,7 +2371,7 @@ fn deserialize_identifier(
             &u64_fallthrough_arm_tokens
         };
 
-        quote! {
+        Some(quote! {
             fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
@@ -2378,7 +2381,9 @@ fn deserialize_identifier(
                     _ => #u64_fallthrough_arm,
                 }
             }
-        }
+        })
+    } else {
+        None
     };
 
     let visit_borrowed = if fallthrough_borrowed.is_some() || collect_other_fields {
