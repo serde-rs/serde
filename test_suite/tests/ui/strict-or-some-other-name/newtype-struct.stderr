@@ -1,4 +1,4 @@
-error: #[serde(strict_or_some_other_name)] can only be used on structs with named fields
+error: #[serde(strict_or_some_other_name)] can only be used on structs with named fields or enums
  --> tests/ui/strict-or-some-other-name/newtype-struct.rs:4:9
   |
 4 | #[serde(strict_or_some_other_name)]

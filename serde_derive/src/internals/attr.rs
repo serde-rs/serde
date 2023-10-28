@@ -450,7 +450,7 @@ impl Container {
                     de_bound.set_opt(&meta.path, de);
                 } else if meta.path == STRICT_OR_SOME_OTHER_NAME {
                     // #[serde(strict_or_some_other_name)]
-                    let msg = "#[serde(strict_or_some_other_name)] can only be used on structs with named fields";
+                    let msg = "#[serde(strict_or_some_other_name)] can only be used on structs with named fields or enums";
                     match &item.data {
                         syn::Data::Struct(syn::DataStruct { fields, .. }) => {
                             match fields {
@@ -461,6 +461,9 @@ impl Container {
                                     cx.syn_error(meta.error(msg));
                                 }
                             };
+                        }
+                        syn::Data::Enum(_) => {
+                            strict_or_some_other_name.set_true(&meta.path);
                         }
                         _ => {
                             cx.syn_error(meta.error(msg));
