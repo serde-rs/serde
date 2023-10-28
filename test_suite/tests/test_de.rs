@@ -1381,15 +1381,6 @@ fn test_struct() {
             Token::StructEnd,
         ],
     );
-    test(
-        Struct { a: 1, b: 2, c: 0 },
-        &[
-            Token::Seq { len: Some(3) },
-            Token::I32(1),
-            Token::I32(2),
-            Token::SeqEnd,
-        ],
-    );
 }
 
 #[test]

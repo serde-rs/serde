@@ -2963,33 +2963,6 @@ mod flatten {
             }
 
             // Reaches crate::private::de::content::VariantDeserializer::struct_variant
-            // Content::Seq case
-            // via FlatMapDeserializer::deserialize_enum
-            #[test]
-            fn struct_from_seq() {
-                assert_de_tokens(
-                    &Flatten {
-                        data: Enum::Struct {
-                            index: 0,
-                            value: 42,
-                        },
-                        extra: HashMap::from_iter([("extra_key".into(), "extra value".into())]),
-                    },
-                    &[
-                        Token::Map { len: None },
-                        Token::Str("Struct"), // variant
-                        Token::Seq { len: Some(2) },
-                        Token::U32(0),  // index
-                        Token::U32(42), // value
-                        Token::SeqEnd,
-                        Token::Str("extra_key"),
-                        Token::Str("extra value"),
-                        Token::MapEnd,
-                    ],
-                );
-            }
-
-            // Reaches crate::private::de::content::VariantDeserializer::struct_variant
             // Content::Map case
             // via FlatMapDeserializer::deserialize_enum
             #[test]

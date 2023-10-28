@@ -960,33 +960,6 @@ fn deserialize_struct(
         .collect();
     let field_visitor = deserialize_field_identifier(&field_names_idents, cattrs);
 
-    // untagged struct variants do not get a visit_seq method. The same applies to
-    // structs that only have a map representation.
-    let visit_seq = match form {
-        StructForm::Untagged(..) => None,
-        _ if cattrs.has_flatten() => None,
-        _ => {
-            let mut_seq = if field_names_idents.is_empty() {
-                quote!(_)
-            } else {
-                quote!(mut __seq)
-            };
-
-            let visit_seq = Stmts(deserialize_seq(
-                &type_path, params, fields, true, cattrs, expecting,
-            ));
-
-            Some(quote! {
-                #[inline]
-                fn visit_seq<__A>(self, #mut_seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
-                where
-                    __A: _serde::de::SeqAccess<#delife>,
-                {
-                    #visit_seq
-                }
-            })
-        }
-    };
     let visit_map = Stmts(deserialize_map(&type_path, params, fields, cattrs));
 
     let visitor_seed = match form {
@@ -1064,8 +1037,6 @@ fn deserialize_struct(
                 _serde::__private::Formatter::write_str(__formatter, #expecting)
             }
 
-            #visit_seq
-
             #[inline]
             fn visit_map<__A>(self, mut __map: __A) -> _serde::__private::Result<Self::Value, __A::Error>
             where
@@ -1118,12 +1089,6 @@ fn deserialize_struct_in_place(
 
     let field_visitor = deserialize_field_identifier(&field_names_idents, cattrs);
 
-    let mut_seq = if field_names_idents.is_empty() {
-        quote!(_)
-    } else {
-        quote!(mut __seq)
-    };
-    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
     let visit_map = Stmts(deserialize_map_in_place(params, fields, cattrs));
     let field_names = field_names_idents
         .iter()
@@ -1148,14 +1113,6 @@ fn deserialize_struct_in_place(
 
             fn expecting(&self, __formatter: &mut _serde::__private::Formatter) -> _serde::__private::fmt::Result {
                 _serde::__private::Formatter::write_str(__formatter, #expecting)
-            }
-
-            #[inline]
-            fn visit_seq<__A>(self, #mut_seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
-            where
-                __A: _serde::de::SeqAccess<#delife>,
-            {
-                #visit_seq
             }
 
             #[inline]
