@@ -1090,8 +1090,8 @@ fn deserialize_struct_in_place(
     cattrs: &attr::Container,
 ) -> Option<Fragment> {
     // for now we do not support in_place deserialization for structs that
-    // are represented as map or are deserialized strict_or_some_other_name_ly.
-    if cattrs.has_flatten() || cattrs.is_strict_or_some_other_name() {
+    // are represented as map.
+    if cattrs.has_flatten() {
         return None;
     }
 
@@ -1118,12 +1118,26 @@ fn deserialize_struct_in_place(
 
     let field_visitor = deserialize_field_identifier(&field_names_idents, cattrs);
 
-    let mut_seq = if field_names_idents.is_empty() {
-        quote!(_)
+    let visit_seq_fn = if !cattrs.is_strict_or_some_other_name() {
+        let mut_seq = if field_names_idents.is_empty() {
+            quote!(_)
+        } else {
+            quote!(mut __seq)
+        };
+        let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
+
+        Some(quote!(
+            #[inline]
+            fn visit_seq<__A>(self, #mut_seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
+            where
+                __A: _serde::de::SeqAccess<#delife>,
+            {
+                #visit_seq
+            }
+        ))
     } else {
-        quote!(mut __seq)
+        None
     };
-    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
     let visit_map = Stmts(deserialize_map_in_place(params, fields, cattrs));
     let field_names = field_names_idents
         .iter()
@@ -1150,13 +1164,7 @@ fn deserialize_struct_in_place(
                 _serde::__private::Formatter::write_str(__formatter, #expecting)
             }
 
-            #[inline]
-            fn visit_seq<__A>(self, #mut_seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
-            where
-                __A: _serde::de::SeqAccess<#delife>,
-            {
-                #visit_seq
-            }
+            #visit_seq_fn
 
             #[inline]
             fn visit_map<__A>(self, mut __map: __A) -> _serde::__private::Result<Self::Value, __A::Error>
