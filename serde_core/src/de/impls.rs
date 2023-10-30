@@ -180,6 +180,28 @@ macro_rules! num_as_self {
     };
 }
 
+macro_rules! num_as_copysign_self {
+    ($ty:ident : $visit:ident) => {
+        #[inline]
+        fn $visit<E>(self, v: $ty) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            #[cfg(any(no_float_copysign, not(feature = "std")))]
+            {
+                Ok(v as Self::Value)
+            }
+
+            #[cfg(all(not(no_float_copysign), feature = "std"))]
+            {
+                // Preserve sign of NaN. The `as` produces a nondeterministic sign.
+                let sign = if v.is_sign_positive() { 1.0 } else { -1.0 };
+                Ok((v as Self::Value).copysign(sign))
+            }
+        }
+    };
+}
+
 macro_rules! int_to_int {
     ($ty:ident : $visit:ident) => {
         #[inline]
@@ -351,7 +373,7 @@ impl_deserialize_num! {
 impl_deserialize_num! {
     f32, deserialize_f32
     num_self!(f32:visit_f32);
-    num_as_self!(f64:visit_f64);
+    num_as_copysign_self!(f64:visit_f64);
     num_as_self!(i8:visit_i8 i16:visit_i16 i32:visit_i32 i64:visit_i64);
     num_as_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32 u64:visit_u64);
 }
@@ -359,7 +381,7 @@ impl_deserialize_num! {
 impl_deserialize_num! {
     f64, deserialize_f64
     num_self!(f64:visit_f64);
-    num_as_self!(f32:visit_f32);
+    num_as_copysign_self!(f32:visit_f32);
     num_as_self!(i8:visit_i8 i16:visit_i16 i32:visit_i32 i64:visit_i64);
     num_as_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32 u64:visit_u64);
 }
