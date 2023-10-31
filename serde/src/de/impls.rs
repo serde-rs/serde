@@ -2903,6 +2903,113 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#[cfg(not(no_task_poll))]
+impl<'de, T> Deserialize<'de> for Poll<T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // If this were outside of the serde crate, it would just use:
+        //
+        //    #[derive(Deserialize)]
+        //    #[serde(variant_identifier)]
+        enum Field {
+            Ready,
+            Pending,
+        }
+
+        impl<'de> Deserialize<'de> for Field {
+            #[inline]
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                struct FieldVisitor;
+
+                impl<'de> Visitor<'de> for FieldVisitor {
+                    type Value = Field;
+
+                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                        formatter.write_str("`Ready` or `Pending`")
+                    }
+
+                    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+                    where
+                        E: Error,
+                    {
+                        match value {
+                            0 => Ok(Field::Pending),
+                            1 => Ok(Field::Ready),
+                            _ => Err(Error::invalid_value(Unexpected::Unsigned(value), &self)),
+                        }
+                    }
+
+                    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+                    where
+                        E: Error,
+                    {
+                        match value {
+                            "Pending" => Ok(Field::Pending),
+                            "Ready" => Ok(Field::Ready),
+                            _ => Err(Error::unknown_variant(value, VARIANTS)),
+                        }
+                    }
+
+                    fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
+                    where
+                        E: Error,
+                    {
+                        match value {
+                            b"Pending" => Ok(Field::Pending),
+                            b"Ready" => Ok(Field::Ready),
+                            _ => match str::from_utf8(value) {
+                                Ok(value) => Err(Error::unknown_variant(value, VARIANTS)),
+                                Err(_) => {
+                                    Err(Error::invalid_value(Unexpected::Bytes(value), &self))
+                                }
+                            },
+                        }
+                    }
+                }
+
+                deserializer.deserialize_identifier(FieldVisitor)
+            }
+        }
+
+        struct PollVisitor<T>(PhantomData<Poll<T>>);
+
+        impl<'de, T> Visitor<'de> for PollVisitor<T>
+        where
+            T: Deserialize<'de>,
+        {
+            type Value = Poll<T>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("enum Poll")
+            }
+
+            fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
+            where
+                A: EnumAccess<'de>,
+            {
+                match tri!(data.variant()) {
+                    (Field::Ready, v) => v.newtype_variant().map(Poll::Ready),
+                    (Field::Pending, v) => v.unit_variant().map(|()| Poll::Pending),
+                }
+            }
+        }
+
+        const VARIANTS: &[&str] = &["Ready", "Pending"];
+
+        deserializer.deserialize_enum("Poll", VARIANTS, PollVisitor(PhantomData))
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 impl<'de, T> Deserialize<'de> for Wrapping<T>
 where
     T: Deserialize<'de>,

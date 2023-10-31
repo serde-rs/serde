@@ -33,6 +33,12 @@ fn main() {
         println!("cargo:rustc-cfg=no_float_copysign");
     }
 
+    // core::task::Poll stabilized in Rust 1.36.
+    // https://blog.rust-lang.org/2019/07/04/Rust-1.36.0.html#the-future-is-here
+    if minor < 36 {
+        println!("cargo:rustc-cfg=no_task_poll");
+    }
+
     // Current minimum supported version of serde_derive crate is Rust 1.56.
     if minor < 56 {
         println!("cargo:rustc-cfg=no_serde_derive");

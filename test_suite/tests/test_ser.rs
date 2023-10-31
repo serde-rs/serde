@@ -21,6 +21,8 @@ use std::sync::atomic::{
 #[cfg(target_arch = "x86_64")]
 use std::sync::atomic::{AtomicI64, AtomicU64};
 use std::sync::{Arc, Mutex, RwLock, Weak as ArcWeak};
+#[cfg(not(no_task_poll))]
+use std::task::Poll;
 use std::time::{Duration, UNIX_EPOCH};
 
 #[macro_use]
@@ -441,6 +443,31 @@ fn test_duration() {
             Token::Str("nanos"),
             Token::U32(2),
             Token::StructEnd,
+        ],
+    );
+}
+
+#[cfg(not(no_task_poll))]
+#[test]
+fn test_poll() {
+    let poll = Poll::Ready(());
+    assert_ser_tokens(
+        &poll,
+        &[
+            Token::NewtypeVariant {
+                name: "Poll",
+                variant: "Ready",
+            },
+            Token::Unit,
+        ],
+    );
+    let poll: Poll<()> = Poll::Pending;
+    assert_ser_tokens(
+        &poll,
+        &[
+            Token::Enum { name: "Poll" },
+            Token::Str("Pending"),
+            Token::Unit,
         ],
     );
 }

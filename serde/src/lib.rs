@@ -187,6 +187,8 @@ mod lib {
     pub use self::core::ops::{Bound, Range, RangeFrom, RangeInclusive, RangeTo};
     pub use self::core::option::{self, Option};
     pub use self::core::result::{self, Result};
+    #[cfg(not(no_task_poll))]
+    pub use self::core::task::Poll;
     pub use self::core::time::Duration;
 
     #[cfg(all(feature = "alloc", not(feature = "std")))]

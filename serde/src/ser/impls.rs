@@ -660,6 +660,27 @@ impl Serialize for Duration {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#[cfg(not(no_task_poll))]
+impl<T> Serialize for Poll<T>
+where
+    T: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match *self {
+            Poll::Pending => serializer.serialize_unit_variant("Poll", 0, "Pending"),
+
+            Poll::Ready(ref value) => {
+                serializer.serialize_newtype_variant("Poll", 1, "Ready", value)
+            }
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 #[cfg(feature = "std")]
 impl Serialize for SystemTime {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

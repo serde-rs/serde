@@ -35,6 +35,8 @@ use std::sync::atomic::{
 #[cfg(target_arch = "x86_64")]
 use std::sync::atomic::{AtomicI64, AtomicU64};
 use std::sync::{Arc, Weak as ArcWeak};
+#[cfg(not(no_task_poll))]
+use std::task::Poll;
 use std::time::{Duration, UNIX_EPOCH};
 
 #[macro_use]
@@ -1813,6 +1815,29 @@ fn test_duration() {
             Token::I64(1),
             Token::I64(2),
             Token::SeqEnd,
+        ],
+    );
+}
+
+#[cfg(not(no_task_poll))]
+#[test]
+fn test_poll() {
+    test(
+        Poll::Ready(()),
+        &[
+            Token::NewtypeVariant {
+                name: "Poll",
+                variant: "Ready",
+            },
+            Token::Unit,
+        ],
+    );
+    test(
+        Poll::<()>::Pending,
+        &[
+            Token::Enum { name: "Poll" },
+            Token::Str("Pending"),
+            Token::Unit,
         ],
     );
 }
