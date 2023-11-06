@@ -750,10 +750,10 @@ impl<'de> Deserialize<'de> for CString {
 
 macro_rules! forwarded_impl {
     (
-        $(#[doc = $doc:tt])*
+        $(#[$attr:meta])*
         ($($id:ident),*), $ty:ty, $func:expr
     ) => {
-        $(#[doc = $doc])*
+        $(#[$attr])*
         impl<'de $(, $id : Deserialize<'de>,)*> Deserialize<'de> for $ty {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
@@ -765,10 +765,14 @@ macro_rules! forwarded_impl {
     }
 }
 
-#[cfg(any(feature = "std", all(not(no_core_cstr), feature = "alloc")))]
-forwarded_impl!((), Box<CStr>, CString::into_boxed_c_str);
+forwarded_impl! {
+    #[cfg(any(feature = "std", all(not(no_core_cstr), feature = "alloc")))]
+    (), Box<CStr>, CString::into_boxed_c_str
+}
 
-forwarded_impl!((T), Reverse<T>, Reverse);
+forwarded_impl! {
+    (T), Reverse<T>, Reverse
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1728,8 +1732,10 @@ impl<'de> Deserialize<'de> for PathBuf {
     }
 }
 
-#[cfg(feature = "std")]
-forwarded_impl!((), Box<Path>, PathBuf::into_boxed_path);
+forwarded_impl! {
+    #[cfg(feature = "std")]
+    (), Box<Path>, PathBuf::into_boxed_path
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1800,17 +1806,25 @@ impl<'de> Deserialize<'de> for OsString {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(feature = "std", feature = "alloc"))]
-forwarded_impl!((T), Box<T>, Box::new);
+forwarded_impl! {
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    (T), Box<T>, Box::new
+}
 
-#[cfg(any(feature = "std", feature = "alloc"))]
-forwarded_impl!((T), Box<[T]>, Vec::into_boxed_slice);
+forwarded_impl! {
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    (T), Box<[T]>, Vec::into_boxed_slice
+}
 
-#[cfg(any(feature = "std", feature = "alloc"))]
-forwarded_impl!((), Box<str>, String::into_boxed_str);
+forwarded_impl! {
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    (), Box<str>, String::into_boxed_str
+}
 
-#[cfg(all(feature = "std", any(unix, windows)))]
-forwarded_impl!((), Box<OsStr>, OsString::into_boxed_os_str);
+forwarded_impl! {
+    #[cfg(all(feature = "std", any(unix, windows)))]
+    (), Box<OsStr>, OsString::into_boxed_os_str
+}
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 impl<'de, 'a, T: ?Sized> Deserialize<'de> for Cow<'a, T>
@@ -1867,13 +1881,12 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
 macro_rules! box_forwarded_impl {
     (
-        $(#[doc = $doc:tt])*
+        $(#[$attr:meta])*
         $t:ident
     ) => {
-        $(#[doc = $doc])*
+        $(#[$attr])*
         impl<'de, T: ?Sized> Deserialize<'de> for $t<T>
         where
             Box<T>: Deserialize<'de>,
@@ -1888,7 +1901,6 @@ macro_rules! box_forwarded_impl {
     };
 }
 
-#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
 box_forwarded_impl! {
     /// This impl requires the [`"rc"`] Cargo feature of Serde.
     ///
@@ -1897,10 +1909,10 @@ box_forwarded_impl! {
     /// will end up with a strong count of 1.
     ///
     /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
+    #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
     Rc
 }
 
-#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
 box_forwarded_impl! {
     /// This impl requires the [`"rc"`] Cargo feature of Serde.
     ///
@@ -1909,6 +1921,7 @@ box_forwarded_impl! {
     /// will end up with a strong count of 1.
     ///
     /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
+    #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
     Arc
 }
 
@@ -1926,13 +1939,19 @@ where
     }
 }
 
-forwarded_impl!((T), RefCell<T>, RefCell::new);
+forwarded_impl! {
+    (T), RefCell<T>, RefCell::new
+}
 
-#[cfg(feature = "std")]
-forwarded_impl!((T), Mutex<T>, Mutex::new);
+forwarded_impl! {
+    #[cfg(feature = "std")]
+    (T), Mutex<T>, Mutex::new
+}
 
-#[cfg(feature = "std")]
-forwarded_impl!((T), RwLock<T>, RwLock::new);
+forwarded_impl! {
+    #[cfg(feature = "std")]
+    (T), RwLock<T>, RwLock::new
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
