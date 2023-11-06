@@ -1446,9 +1446,12 @@ map_impl! {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(feature = "std")]
 macro_rules! parse_ip_impl {
-    ($expecting:tt $ty:ty; $size:tt) => {
+    (
+        $(#[$attr:meta])*
+        $ty:ty, $expecting:expr, $size:tt
+    ) => {
+        $(#[$attr])*
         impl<'de> Deserialize<'de> for $ty {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
@@ -1595,15 +1598,23 @@ impl<'de> Deserialize<'de> for net::IpAddr {
     }
 }
 
-#[cfg(feature = "std")]
-parse_ip_impl!("IPv4 address" net::Ipv4Addr; 4);
+parse_ip_impl! {
+    #[cfg(feature = "std")]
+    net::Ipv4Addr, "IPv4 address", 4
+}
 
-#[cfg(feature = "std")]
-parse_ip_impl!("IPv6 address" net::Ipv6Addr; 16);
+parse_ip_impl! {
+    #[cfg(feature = "std")]
+    net::Ipv6Addr, "IPv6 address", 16
+}
 
-#[cfg(feature = "std")]
 macro_rules! parse_socket_impl {
-    ($expecting:tt $ty:ty, $new:expr) => {
+    (
+        $(#[$attr:meta])*
+        $ty:ty, $expecting:tt,
+        $new:expr,
+    ) => {
+        $(#[$attr])*
         impl<'de> Deserialize<'de> for $ty {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
@@ -1638,11 +1649,17 @@ impl<'de> Deserialize<'de> for net::SocketAddr {
     }
 }
 
-#[cfg(feature = "std")]
-parse_socket_impl!("IPv4 socket address" net::SocketAddrV4, |(ip, port)| net::SocketAddrV4::new(ip, port));
+parse_socket_impl! {
+    #[cfg(feature = "std")]
+    net::SocketAddrV4, "IPv4 socket address",
+    |(ip, port)| net::SocketAddrV4::new(ip, port),
+}
 
-#[cfg(feature = "std")]
-parse_socket_impl!("IPv6 socket address" net::SocketAddrV6, |(ip, port)| net::SocketAddrV6::new(ip, port, 0, 0));
+parse_socket_impl! {
+    #[cfg(feature = "std")]
+    net::SocketAddrV6, "IPv6 socket address",
+    |(ip, port)| net::SocketAddrV6::new(ip, port, 0, 0),
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
