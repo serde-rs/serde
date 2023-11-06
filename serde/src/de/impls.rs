@@ -878,9 +878,9 @@ impl<'de, T: ?Sized> Deserialize<'de> for PhantomData<T> {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(feature = "std", feature = "alloc"))]
 macro_rules! seq_impl {
     (
+        $(#[$attr:meta])*
         $ty:ident <T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound1:ident $(+ $bound2:ident)*)*>,
         $access:ident,
         $clear:expr,
@@ -888,6 +888,7 @@ macro_rules! seq_impl {
         $reserve:expr,
         $insert:expr
     ) => {
+        $(#[$attr])*
         impl<'de, T $(, $typaram)*> Deserialize<'de> for $ty<T $(, $typaram)*>
         where
             T: Deserialize<'de> $(+ $tbound1 $(+ $tbound2)*)*,
@@ -975,8 +976,8 @@ macro_rules! seq_impl {
 #[cfg(any(feature = "std", feature = "alloc"))]
 fn nop_reserve<T>(_seq: T, _n: usize) {}
 
-#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(
+    #[cfg(any(feature = "std", feature = "alloc"))]
     BinaryHeap<T: Ord>,
     seq,
     BinaryHeap::clear,
@@ -985,8 +986,8 @@ seq_impl!(
     BinaryHeap::push
 );
 
-#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(
+    #[cfg(any(feature = "std", feature = "alloc"))]
     BTreeSet<T: Eq + Ord>,
     seq,
     BTreeSet::clear,
@@ -995,8 +996,8 @@ seq_impl!(
     BTreeSet::insert
 );
 
-#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(
+    #[cfg(any(feature = "std", feature = "alloc"))]
     LinkedList<T>,
     seq,
     LinkedList::clear,
@@ -1005,8 +1006,8 @@ seq_impl!(
     LinkedList::push_back
 );
 
-#[cfg(feature = "std")]
 seq_impl!(
+    #[cfg(feature = "std")]
     HashSet<T: Eq + Hash, S: BuildHasher + Default>,
     seq,
     HashSet::clear,
@@ -1015,8 +1016,8 @@ seq_impl!(
     HashSet::insert
 );
 
-#[cfg(any(feature = "std", feature = "alloc"))]
 seq_impl!(
+    #[cfg(any(feature = "std", feature = "alloc"))]
     VecDeque<T>,
     seq,
     VecDeque::clear,
@@ -1373,13 +1374,14 @@ tuple_impls! {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(feature = "std", feature = "alloc"))]
 macro_rules! map_impl {
     (
+        $(#[$attr:meta])*
         $ty:ident <K $(: $kbound1:ident $(+ $kbound2:ident)*)*, V $(, $typaram:ident : $bound1:ident $(+ $bound2:ident)*)*>,
         $access:ident,
-        $with_capacity:expr
+        $with_capacity:expr,
     ) => {
+        $(#[$attr])*
         impl<'de, K, V $(, $typaram)*> Deserialize<'de> for $ty<K, V $(, $typaram)*>
         where
             K: Deserialize<'de> $(+ $kbound1 $(+ $kbound2)*)*,
@@ -1428,15 +1430,19 @@ macro_rules! map_impl {
     }
 }
 
-#[cfg(any(feature = "std", feature = "alloc"))]
-map_impl!(BTreeMap<K: Ord, V>, map, BTreeMap::new());
+map_impl! {
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    BTreeMap<K: Ord, V>,
+    map,
+    BTreeMap::new(),
+}
 
-#[cfg(feature = "std")]
-map_impl!(
+map_impl! {
+    #[cfg(feature = "std")]
     HashMap<K: Eq + Hash, V, S: BuildHasher + Default>,
     map,
-    HashMap::with_capacity_and_hasher(size_hint::cautious::<(K, V)>(map.size_hint()), S::default())
-);
+    HashMap::with_capacity_and_hasher(size_hint::cautious::<(K, V)>(map.size_hint()), S::default()),
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 

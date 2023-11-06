@@ -179,9 +179,13 @@ where
     }
 }
 
-#[cfg(all(any(feature = "std", feature = "alloc"), not(no_relaxed_trait_bounds)))]
+#[cfg(not(no_relaxed_trait_bounds))]
 macro_rules! seq_impl {
-    ($ty:ident <T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound:ident)*>) => {
+    (
+        $(#[$attr:meta])*
+        $ty:ident <T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound:ident)*>
+    ) => {
+        $(#[$attr])*
         impl<T $(, $typaram)*> Serialize for $ty<T $(, $typaram)*>
         where
             T: Serialize,
@@ -197,9 +201,13 @@ macro_rules! seq_impl {
     }
 }
 
-#[cfg(all(any(feature = "std", feature = "alloc"), no_relaxed_trait_bounds))]
+#[cfg(no_relaxed_trait_bounds)]
 macro_rules! seq_impl {
-    ($ty:ident <T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound:ident)*>) => {
+    (
+        $(#[$attr:meta])*
+        $ty:ident <T $(: $tbound1:ident $(+ $tbound2:ident)*)* $(, $typaram:ident : $bound:ident)*>
+    ) => {
+        $(#[$attr])*
         impl<T $(, $typaram)*> Serialize for $ty<T $(, $typaram)*>
         where
             T: Serialize $(+ $tbound1 $(+ $tbound2)*)*,
@@ -216,23 +224,35 @@ macro_rules! seq_impl {
     }
 }
 
-#[cfg(any(feature = "std", feature = "alloc"))]
-seq_impl!(BinaryHeap<T: Ord>);
+seq_impl! {
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    BinaryHeap<T: Ord>
+}
 
-#[cfg(any(feature = "std", feature = "alloc"))]
-seq_impl!(BTreeSet<T: Ord>);
+seq_impl! {
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    BTreeSet<T: Ord>
+}
 
-#[cfg(feature = "std")]
-seq_impl!(HashSet<T: Eq + Hash, H: BuildHasher>);
+seq_impl! {
+    #[cfg(feature = "std")]
+    HashSet<T: Eq + Hash, H: BuildHasher>
+}
 
-#[cfg(any(feature = "std", feature = "alloc"))]
-seq_impl!(LinkedList<T>);
+seq_impl! {
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    LinkedList<T>
+}
 
-#[cfg(any(feature = "std", feature = "alloc"))]
-seq_impl!(Vec<T>);
+seq_impl! {
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    Vec<T>
+}
 
-#[cfg(any(feature = "std", feature = "alloc"))]
-seq_impl!(VecDeque<T>);
+seq_impl! {
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    VecDeque<T>
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -394,9 +414,13 @@ tuple_impls! {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(all(any(feature = "std", feature = "alloc"), not(no_relaxed_trait_bounds)))]
+#[cfg(not(no_relaxed_trait_bounds))]
 macro_rules! map_impl {
-    ($ty:ident <K $(: $kbound1:ident $(+ $kbound2:ident)*)*, V $(, $typaram:ident : $bound:ident)*>) => {
+    (
+        $(#[$attr:meta])*
+        $ty:ident <K $(: $kbound1:ident $(+ $kbound2:ident)*)*, V $(, $typaram:ident : $bound:ident)*>
+    ) => {
+        $(#[$attr])*
         impl<K, V $(, $typaram)*> Serialize for $ty<K, V $(, $typaram)*>
         where
             K: Serialize,
@@ -413,9 +437,13 @@ macro_rules! map_impl {
     }
 }
 
-#[cfg(all(any(feature = "std", feature = "alloc"), no_relaxed_trait_bounds))]
+#[cfg(no_relaxed_trait_bounds)]
 macro_rules! map_impl {
-    ($ty:ident <K $(: $kbound1:ident $(+ $kbound2:ident)*)*, V $(, $typaram:ident : $bound:ident)*>) => {
+    (
+        $(#[$attr:meta])*
+        $ty:ident <K $(: $kbound1:ident $(+ $kbound2:ident)*)*, V $(, $typaram:ident : $bound:ident)*>
+    ) => {
+        $(#[$attr])*
         impl<K, V $(, $typaram)*> Serialize for $ty<K, V $(, $typaram)*>
         where
             K: Serialize $(+ $kbound1 $(+ $kbound2)*)*,
@@ -433,11 +461,15 @@ macro_rules! map_impl {
     }
 }
 
-#[cfg(any(feature = "std", feature = "alloc"))]
-map_impl!(BTreeMap<K: Ord, V>);
+map_impl! {
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    BTreeMap<K: Ord, V>
+}
 
-#[cfg(feature = "std")]
-map_impl!(HashMap<K: Eq + Hash, V, H: BuildHasher>);
+map_impl! {
+    #[cfg(feature = "std")]
+    HashMap<K: Eq + Hash, V, H: BuildHasher>
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
