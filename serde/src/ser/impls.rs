@@ -475,10 +475,10 @@ map_impl! {
 
 macro_rules! deref_impl {
     (
-        $(#[doc = $doc:tt])*
+        $(#[$attr:meta])*
         <$($desc:tt)+
     ) => {
-        $(#[doc = $doc])*
+        $(#[$attr])*
         impl <$($desc)+ {
             #[inline]
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -491,13 +491,19 @@ macro_rules! deref_impl {
     };
 }
 
-deref_impl!(<'a, T: ?Sized> Serialize for &'a T where T: Serialize);
-deref_impl!(<'a, T: ?Sized> Serialize for &'a mut T where T: Serialize);
+deref_impl! {
+    <'a, T: ?Sized> Serialize for &'a T where T: Serialize
+}
 
-#[cfg(any(feature = "std", feature = "alloc"))]
-deref_impl!(<T: ?Sized> Serialize for Box<T> where T: Serialize);
+deref_impl! {
+    <'a, T: ?Sized> Serialize for &'a mut T where T: Serialize
+}
 
-#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
+deref_impl! {
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    <T: ?Sized> Serialize for Box<T> where T: Serialize
+}
+
 deref_impl! {
     /// This impl requires the [`"rc"`] Cargo feature of Serde.
     ///
@@ -507,10 +513,10 @@ deref_impl! {
     /// repeated data.
     ///
     /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
+    #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
     <T: ?Sized> Serialize for Rc<T> where T: Serialize
 }
 
-#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
 deref_impl! {
     /// This impl requires the [`"rc"`] Cargo feature of Serde.
     ///
@@ -520,11 +526,14 @@ deref_impl! {
     /// repeated data.
     ///
     /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
+    #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
     <T: ?Sized> Serialize for Arc<T> where T: Serialize
 }
 
-#[cfg(any(feature = "std", feature = "alloc"))]
-deref_impl!(<'a, T: ?Sized> Serialize for Cow<'a, T> where T: Serialize + ToOwned);
+deref_impl! {
+    #[cfg(any(feature = "std", feature = "alloc"))]
+    <'a, T: ?Sized> Serialize for Cow<'a, T> where T: Serialize + ToOwned
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
