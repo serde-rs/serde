@@ -2509,7 +2509,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        let end = tri!(deserializer.deserialize_struct(
+        let start = tri!(deserializer.deserialize_struct(
             "RangeFrom",
             range_from::FIELDS,
             range_from::RangeFromVisitor {
@@ -2517,7 +2517,7 @@ where
                 phantom: PhantomData,
             },
         ));
-        Ok(end..)
+        Ok(start..)
     }
 }
 
@@ -2637,7 +2637,7 @@ mod range_from {
 //     #[derive(Deserialize)]
 //     #[serde(deny_unknown_fields)]
 //     struct RangeTo<Idx> {
-//         start: Idx,
+//         end: Idx,
 //     }
 impl<'de, Idx> Deserialize<'de> for RangeTo<Idx>
 where
@@ -2647,7 +2647,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        let start = tri!(deserializer.deserialize_struct(
+        let end = tri!(deserializer.deserialize_struct(
             "RangeTo",
             range_to::FIELDS,
             range_to::RangeToVisitor {
@@ -2655,7 +2655,7 @@ where
                 phantom: PhantomData,
             },
         ));
-        Ok(..start)
+        Ok(..end)
     }
 }
 
