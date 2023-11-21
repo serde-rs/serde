@@ -501,6 +501,38 @@ fn test_range_inclusive() {
 }
 
 #[test]
+fn test_range_from() {
+    assert_ser_tokens(
+        &(1u32..),
+        &[
+            Token::Struct {
+                name: "RangeFrom",
+                len: 1,
+            },
+            Token::Str("start"),
+            Token::U32(1),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_range_to() {
+    assert_ser_tokens(
+        &(..2u32),
+        &[
+            Token::Struct {
+                name: "RangeTo",
+                len: 1,
+            },
+            Token::Str("end"),
+            Token::U32(2),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_bound() {
     assert_ser_tokens(
         &Bound::Unbounded::<()>,
