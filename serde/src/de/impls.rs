@@ -2509,7 +2509,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        let start = tri!(deserializer.deserialize_struct(
+        let end = tri!(deserializer.deserialize_struct(
             "RangeFrom",
             range_from::FIELDS,
             range_from::RangeFromVisitor {
@@ -2517,149 +2517,11 @@ where
                 phantom: PhantomData,
             },
         ));
-        Ok(start..)
+        Ok(end..)
     }
 }
 
 mod range_from {
-    use crate::lib::*;
-
-    use crate::de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
-
-    pub const FIELDS: &[&str] = &["end"];
-
-    // If this were outside of the serde crate, it would just use:
-    //
-    //    #[derive(Deserialize)]
-    //    #[serde(field_identifier, rename_all = "lowercase")]
-    enum Field {
-        End,
-    }
-
-    impl<'de> Deserialize<'de> for Field {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            struct FieldVisitor;
-
-            impl<'de> Visitor<'de> for FieldVisitor {
-                type Value = Field;
-
-                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                    formatter.write_str("`end`")
-                }
-
-                fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-                where
-                    E: Error,
-                {
-                    match value {
-                        "end" => Ok(Field::End),
-                        _ => Err(Error::unknown_field(value, FIELDS)),
-                    }
-                }
-
-                fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
-                where
-                    E: Error,
-                {
-                    match value {
-                        b"end" => Ok(Field::End),
-                        _ => {
-                            let value = crate::__private::from_utf8_lossy(value);
-                            Err(Error::unknown_field(&*value, FIELDS))
-                        }
-                    }
-                }
-            }
-
-            deserializer.deserialize_identifier(FieldVisitor)
-        }
-    }
-
-    pub struct RangeFromVisitor<Idx> {
-        pub expecting: &'static str,
-        pub phantom: PhantomData<Idx>,
-    }
-
-    impl<'de, Idx> Visitor<'de> for RangeFromVisitor<Idx>
-    where
-        Idx: Deserialize<'de>,
-    {
-        type Value = Idx;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str(self.expecting)
-        }
-
-        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-        where
-            A: SeqAccess<'de>,
-        {
-            let end: Idx = match tri!(seq.next_element()) {
-                Some(value) => value,
-                None => {
-                    return Err(Error::invalid_length(0, &self));
-                }
-            };
-            Ok(end)
-        }
-
-        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-        where
-            A: MapAccess<'de>,
-        {
-            let mut end: Option<Idx> = None;
-            while let Some(key) = tri!(map.next_key()) {
-                match key {
-                    Field::End => {
-                        if end.is_some() {
-                            return Err(<A::Error as Error>::duplicate_field("end"));
-                        }
-                        end = Some(tri!(map.next_value()));
-                    }
-                }
-            }
-            let end = match end {
-                Some(end) => end,
-                None => return Err(<A::Error as Error>::missing_field("end")),
-            };
-            Ok(end)
-        }
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-// Similar to:
-//
-//     #[derive(Deserialize)]
-//     #[serde(deny_unknown_fields)]
-//     struct RangeTo<Idx> {
-//         start: Idx,
-//     }
-impl<'de, Idx> Deserialize<'de> for RangeTo<Idx>
-where
-    Idx: Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let end = tri!(deserializer.deserialize_struct(
-            "RangeTo",
-            range_to::FIELDS,
-            range_to::RangeToVisitor {
-                expecting: "struct RangeTo",
-                phantom: PhantomData,
-            },
-        ));
-        Ok(..end)
-    }
-}
-
-mod range_to {
     use crate::lib::*;
 
     use crate::de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
@@ -2716,12 +2578,12 @@ mod range_to {
         }
     }
 
-    pub struct RangeToVisitor<Idx> {
+    pub struct RangeFromVisitor<Idx> {
         pub expecting: &'static str,
         pub phantom: PhantomData<Idx>,
     }
 
-    impl<'de, Idx> Visitor<'de> for RangeToVisitor<Idx>
+    impl<'de, Idx> Visitor<'de> for RangeFromVisitor<Idx>
     where
         Idx: Deserialize<'de>,
     {
@@ -2764,6 +2626,144 @@ mod range_to {
                 None => return Err(<A::Error as Error>::missing_field("start")),
             };
             Ok(start)
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+// Similar to:
+//
+//     #[derive(Deserialize)]
+//     #[serde(deny_unknown_fields)]
+//     struct RangeTo<Idx> {
+//         start: Idx,
+//     }
+impl<'de, Idx> Deserialize<'de> for RangeTo<Idx>
+where
+    Idx: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let start = tri!(deserializer.deserialize_struct(
+            "RangeTo",
+            range_to::FIELDS,
+            range_to::RangeToVisitor {
+                expecting: "struct RangeTo",
+                phantom: PhantomData,
+            },
+        ));
+        Ok(..start)
+    }
+}
+
+mod range_to {
+    use crate::lib::*;
+
+    use crate::de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
+
+    pub const FIELDS: &[&str] = &["end"];
+
+    // If this were outside of the serde crate, it would just use:
+    //
+    //    #[derive(Deserialize)]
+    //    #[serde(field_identifier, rename_all = "lowercase")]
+    enum Field {
+        End,
+    }
+
+    impl<'de> Deserialize<'de> for Field {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            struct FieldVisitor;
+
+            impl<'de> Visitor<'de> for FieldVisitor {
+                type Value = Field;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                    formatter.write_str("`end`")
+                }
+
+                fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+                where
+                    E: Error,
+                {
+                    match value {
+                        "end" => Ok(Field::End),
+                        _ => Err(Error::unknown_field(value, FIELDS)),
+                    }
+                }
+
+                fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
+                where
+                    E: Error,
+                {
+                    match value {
+                        b"end" => Ok(Field::End),
+                        _ => {
+                            let value = crate::__private::from_utf8_lossy(value);
+                            Err(Error::unknown_field(&*value, FIELDS))
+                        }
+                    }
+                }
+            }
+
+            deserializer.deserialize_identifier(FieldVisitor)
+        }
+    }
+
+    pub struct RangeToVisitor<Idx> {
+        pub expecting: &'static str,
+        pub phantom: PhantomData<Idx>,
+    }
+
+    impl<'de, Idx> Visitor<'de> for RangeToVisitor<Idx>
+    where
+        Idx: Deserialize<'de>,
+    {
+        type Value = Idx;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str(self.expecting)
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let end: Idx = match tri!(seq.next_element()) {
+                Some(value) => value,
+                None => {
+                    return Err(Error::invalid_length(0, &self));
+                }
+            };
+            Ok(end)
+        }
+
+        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+        where
+            A: MapAccess<'de>,
+        {
+            let mut end: Option<Idx> = None;
+            while let Some(key) = tri!(map.next_key()) {
+                match key {
+                    Field::End => {
+                        if end.is_some() {
+                            return Err(<A::Error as Error>::duplicate_field("end"));
+                        }
+                        end = Some(tri!(map.next_value()));
+                    }
+                }
+            }
+            let end = match end {
+                Some(end) => end,
+                None => return Err(<A::Error as Error>::missing_field("end")),
+            };
+            Ok(end)
         }
     }
 }
