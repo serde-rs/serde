@@ -2006,6 +2006,20 @@ fn test_rename_all() {
         serialize_seq: bool,
     }
 
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(rename_all = "space case")]
+    struct Space {
+        serialize: bool,
+        serialize_seq: bool,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(rename_all = "SCREAMING SPACE CASE")]
+    struct ScreamingSpace {
+        serialize: bool,
+        serialize_seq: bool,
+    }
+
     assert_tokens(
         &E::Serialize {
             serialize: true,
@@ -2091,6 +2105,42 @@ fn test_rename_all() {
             Token::Str("SERIALIZE"),
             Token::Bool(true),
             Token::Str("SERIALIZE-SEQ"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &Space {
+            serialize: true,
+            serialize_seq: true,
+        },
+        &[
+            Token::Struct {
+                name: "Space",
+                len: 2,
+            },
+            Token::Str("serialize"),
+            Token::Bool(true),
+            Token::Str("serialize seq"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &ScreamingSpace {
+            serialize: true,
+            serialize_seq: true,
+        },
+        &[
+            Token::Struct {
+                name: "ScreamingSpace",
+                len: 2,
+            },
+            Token::Str("SERIALIZE"),
+            Token::Bool(true),
+            Token::Str("SERIALIZE SEQ"),
             Token::Bool(true),
             Token::StructEnd,
         ],
