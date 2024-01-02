@@ -15,9 +15,9 @@ rust-version = "1.56"
 path = "lib.rs"
 
 [dependencies]
-proc-macro2 = "1.0"
-quote = "1.0"
-syn = { version = "2.0.28", default-features = false, features = ["clone-impls", "derive", "parsing", "printing"] }
+proc-macro2 = "1.0.74"
+quote = "1.0.35"
+syn = { version = "2.0.46", default-features = false, features = ["clone-impls", "derive", "parsing", "printing"] }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
