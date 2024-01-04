@@ -1829,7 +1829,10 @@ fn collect_lifetimes(ty: &syn::Type, out: &mut BTreeSet<syn::Lifetime>) {
                             syn::GenericArgument::AssocType(binding) => {
                                 collect_lifetimes(&binding.ty, out);
                             }
-                            _ => {}
+                            syn::GenericArgument::Const(_)
+                            | syn::GenericArgument::AssocConst(_)
+                            | syn::GenericArgument::Constraint(_)
+                            | _ => {}
                         }
                     }
                 }
