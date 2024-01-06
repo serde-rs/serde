@@ -387,7 +387,6 @@ fn test_gen() {
 
     #[derive(Serialize, Deserialize)]
     #[serde(remote = "Str")]
-    #[allow(dead_code)] // FIXME
     struct StrDef<'a>(&'a str);
 
     #[derive(Serialize, Deserialize)]

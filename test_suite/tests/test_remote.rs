@@ -140,7 +140,6 @@ struct PrimitivePrivDef(#[serde(getter = "remote::PrimitivePriv::get")] u8);
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::PrimitivePub")]
-#[allow(dead_code)] // FIXME
 struct PrimitivePubDef(u8);
 
 #[derive(Serialize, Deserialize)]
@@ -160,7 +159,6 @@ struct TuplePrivDef(
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::TuplePub")]
-#[allow(dead_code)] // FIXME
 struct TuplePubDef(u8, #[serde(with = "UnitDef")] remote::Unit);
 
 #[derive(Serialize, Deserialize)]
@@ -198,7 +196,6 @@ struct StructConcrete {
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::EnumGeneric<u8>")]
-#[allow(dead_code)] // FIXME
 enum EnumConcrete {
     Variant(u8),
 }
