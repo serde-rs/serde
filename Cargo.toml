@@ -8,3 +8,8 @@ members = [
 
 [patch.crates-io]
 serde = { path = "serde" }
+
+[workspace.dependencies]
+syn = "2.0.46"
+quote = "1.0.35"
+proc-macro2 = "1.0.74"
