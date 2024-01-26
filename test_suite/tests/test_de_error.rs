@@ -1434,7 +1434,7 @@ fn test_number_from_string() {
 fn test_integer_from_float() {
     assert_de_tokens_error::<isize>(
         &[Token::F32(0.0)],
-        "invalid type: floating point `0`, expected isize",
+        "invalid type: floating point `0.0`, expected isize",
     );
 }
 

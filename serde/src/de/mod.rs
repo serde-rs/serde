@@ -402,7 +402,7 @@ impl<'a> fmt::Display for Unexpected<'a> {
             Bool(b) => write!(formatter, "boolean `{}`", b),
             Unsigned(i) => write!(formatter, "integer `{}`", i),
             Signed(i) => write!(formatter, "integer `{}`", i),
-            Float(f) => write!(formatter, "floating point `{}`", f),
+            Float(f) => write!(formatter, "floating point `{:.1}`", f),
             Char(c) => write!(formatter, "character `{}`", c),
             Str(s) => write!(formatter, "string {:?}", s),
             Bytes(_) => write!(formatter, "byte array"),
