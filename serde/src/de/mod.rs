@@ -402,7 +402,7 @@ impl<'a> fmt::Display for Unexpected<'a> {
             Bool(b) => write!(formatter, "boolean `{}`", b),
             Unsigned(i) => write!(formatter, "integer `{}`", i),
             Signed(i) => write!(formatter, "integer `{}`", i),
-            Float(f) => write!(formatter, "floating point `{}`", f),
+            Float(f) => write!(formatter, "floating point `{}`", WithDecimalPoint(f)),
             Char(c) => write!(formatter, "character `{}`", c),
             Str(s) => write!(formatter, "string {:?}", s),
             Bytes(_) => write!(formatter, "byte array"),
@@ -2288,5 +2288,38 @@ impl Display for OneOf {
                 Ok(())
             }
         }
+    }
+}
+
+struct WithDecimalPoint(f64);
+
+impl Display for WithDecimalPoint {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        struct LookForDecimalPoint<'f, 'a> {
+            formatter: &'f mut fmt::Formatter<'a>,
+            has_decimal_point: bool,
+        }
+
+        impl<'f, 'a> fmt::Write for LookForDecimalPoint<'f, 'a> {
+            fn write_str(&mut self, fragment: &str) -> fmt::Result {
+                self.has_decimal_point |= fragment.contains('.');
+                self.formatter.write_str(fragment)
+            }
+
+            fn write_char(&mut self, ch: char) -> fmt::Result {
+                self.has_decimal_point |= ch == '.';
+                self.formatter.write_char(ch)
+            }
+        }
+
+        let mut writer = LookForDecimalPoint {
+            formatter,
+            has_decimal_point: false,
+        };
+        tri!(write!(writer, "{}", self.0));
+        if !writer.has_decimal_point {
+            tri!(formatter.write_str(".0"));
+        }
+        Ok(())
     }
 }
