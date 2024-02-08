@@ -2296,7 +2296,7 @@ fn deserialize_identifier<T: AsVariant>(
         .collect();
     let constructor_ints_positive: &Vec<_> = &flat_fields
         .iter()
-        .filter(|(name, _)| name.as_int().is_some_and(|i| !i.negative))
+        .filter(|(name, _)| name.as_int().map(|i| !i.negative).unwrap_or(false))
         .map(|(_, ident)| quote!(#this_value::#ident))
         .collect();
 
