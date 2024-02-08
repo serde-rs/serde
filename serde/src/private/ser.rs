@@ -1356,9 +1356,21 @@ where
     }
 }
 
+pub enum Integer {
+    U8(u8),
+    U16(u16),
+    U32(u32),
+    U64(u64),
+
+    I8(i8),
+    I16(i16),
+    I32(i32),
+    I64(i64),
+}
+
 pub enum VariantName {
     String(&'static str),
-    Integer(i64),
+    Integer(Integer),
     Boolean(bool),
 }
 
@@ -1369,7 +1381,17 @@ impl Serialize for VariantName {
     {
         match self {
             VariantName::String(s) => serializer.serialize_str(s),
-            VariantName::Integer(i) => serializer.serialize_i64(*i),
+            VariantName::Integer(i) => match *i {
+                Integer::U8(i) => serializer.serialize_u8(i),
+                Integer::U16(i) => serializer.serialize_u16(i),
+                Integer::U32(i) => serializer.serialize_u32(i),
+                Integer::U64(i) => serializer.serialize_u64(i),
+
+                Integer::I8(i) => serializer.serialize_i8(i),
+                Integer::I16(i) => serializer.serialize_i16(i),
+                Integer::I32(i) => serializer.serialize_i32(i),
+                Integer::I64(i) => serializer.serialize_i64(i),
+            },
             VariantName::Boolean(b) => serializer.serialize_bool(*b),
         }
     }

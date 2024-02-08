@@ -2834,7 +2834,7 @@ fn test_non_string_renames() {
     #[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
     #[serde(tag = "op")]
     enum SpecialEnum {
-        #[serde(rename = 1)]
+        #[serde(rename = -1)]
         A,
         #[serde(rename = true)]
         B,
@@ -2845,7 +2845,7 @@ fn test_non_string_renames() {
         &[
             Token::Map { len: None },
             Token::Str("op"),
-            Token::I32(1),
+            Token::I64(-1),
             Token::MapEnd,
         ],
     );
@@ -2868,7 +2868,7 @@ fn test_non_string_renames() {
                 len: 1,
             },
             Token::Str("op"),
-            Token::I64(1),
+            Token::I64(-1),
             Token::StructEnd,
         ],
     );
@@ -2889,7 +2889,7 @@ fn test_non_string_renames() {
     #[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
     #[serde(tag = "op", content = "d")]
     enum AdjacentEnum {
-        #[serde(rename = 1)]
+        #[serde(rename = -1i64)]
         A { a: u64 },
         #[serde(rename = true)]
         B,
@@ -2900,7 +2900,7 @@ fn test_non_string_renames() {
         &[
             Token::Map { len: None },
             Token::Str("op"),
-            Token::I32(1),
+            Token::I64(-1),
             Token::Str("d"),
             Token::Map { len: Some(1) },
             Token::Str("a"),
@@ -2928,9 +2928,12 @@ fn test_non_string_renames() {
                 len: 2,
             },
             Token::Str("op"),
-            Token::I64(1),
+            Token::I64(-1),
             Token::Str("d"),
-            Token::Struct { name: "1", len: 1 },
+            Token::Struct {
+                name: "-1i64",
+                len: 1,
+            },
             Token::Str("a"),
             Token::U64(1),
             Token::StructEnd,
