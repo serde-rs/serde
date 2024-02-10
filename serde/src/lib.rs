@@ -130,6 +130,7 @@
     clippy::derive_partial_eq_without_eq,
     clippy::enum_glob_use,
     clippy::explicit_auto_deref,
+    clippy::incompatible_msrv,
     clippy::let_underscore_untyped,
     clippy::map_err_ignore,
     clippy::new_without_default,
