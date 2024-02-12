@@ -983,7 +983,7 @@ struct ExpectedInSeq(usize);
 impl Expected for ExpectedInSeq {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         if self.0 == 1 {
-            write!(formatter, "1 element in sequence")
+            formatter.write_str("1 element in sequence")
         } else {
             write!(formatter, "{} elements in sequence", self.0)
         }
@@ -1411,7 +1411,7 @@ struct ExpectedInMap(usize);
 impl Expected for ExpectedInMap {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         if self.0 == 1 {
-            write!(formatter, "1 element in map")
+            formatter.write_str("1 element in map")
         } else {
             write!(formatter, "{} elements in map", self.0)
         }
