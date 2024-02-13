@@ -1,0 +1,5 @@
+error: serde key attribute cannot be a float
+ --> tests/ui/key/float.rs:5:19
+  |
+5 |     #[serde(key = 1.1)]
+  |                   ^^^

@@ -1871,6 +1871,25 @@ pub trait SerializeStruct {
         Ok(())
     }
 
+    /// Serialize a struct field consisting of a typed key and value.
+    ///
+    /// This method is similar to `serialize_field`, but it allows the key to be
+    /// a type that is not a string. This is useful for formats that support
+    /// non-string keys such as CBOR.
+    fn serialize_typed_field<K: ?Sized, V: ?Sized>(
+        &mut self,
+        key: &K,
+        value: &V,
+    ) -> Result<(), Self::Error>
+    where
+        K: Serialize,
+        V: Serialize,
+    {
+        let _ = key;
+        let _ = value;
+        Ok(())
+    }
+
     /// Finish serializing a struct.
     fn end(self) -> Result<Self::Ok, Self::Error>;
 }
