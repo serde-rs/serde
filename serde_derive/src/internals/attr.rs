@@ -222,6 +222,7 @@ pub struct Container {
     /// Error message generated when type can't be deserialized
     expecting: Option<String>,
     non_exhaustive: bool,
+    has_keys: bool,
 }
 
 /// Styles of representing an enum.
@@ -592,6 +593,7 @@ impl Container {
             is_packed,
             expecting: expecting.get(),
             non_exhaustive,
+            has_keys: false,
         }
     }
 
@@ -659,8 +661,16 @@ impl Container {
         self.has_flatten
     }
 
+    pub fn has_keys(&self) -> bool {
+        self.has_keys
+    }
+
     pub fn mark_has_flatten(&mut self) {
         self.has_flatten = true;
+    }
+
+    pub fn mark_has_keys(&mut self) {
+        self.has_keys = true;
     }
 
     pub fn custom_serde_path(&self) -> Option<&syn::Path> {
@@ -1045,6 +1055,7 @@ pub struct Field {
     getter: Option<syn::ExprPath>,
     flatten: bool,
     transparent: bool,
+    key: Option<syn::Lit>,
 }
 
 /// Represents the default to use for a field when deserializing.
@@ -1089,6 +1100,7 @@ impl Field {
         let mut borrowed_lifetimes = Attr::none(cx, BORROW);
         let mut getter = Attr::none(cx, GETTER);
         let mut flatten = BoolAttr::none(cx, FLATTEN);
+        let mut key = Attr::none(cx, KEY);
 
         let ident = match &field.ident {
             Some(ident) => unraw(ident),
@@ -1225,6 +1237,34 @@ impl Field {
                 } else if meta.path == FLATTEN {
                     // #[serde(flatten)]
                     flatten.set_true(&meta.path);
+                } else if meta.path == KEY {
+                    // #[serde(key = ...)]
+                    let expr: syn::Expr = meta.value()?.parse()?;
+                    if let syn::Expr::Lit(syn::ExprLit { lit, .. }) = expr {
+                        match lit {
+                            syn::Lit::Bool(_)
+                            | syn::Lit::Char(_)
+                            | syn::Lit::Byte(_)
+                            | syn::Lit::Int(_) => key.set(&meta.path, lit),
+                            syn::Lit::ByteStr(_) | syn::Lit::Str(_) => cx.error_spanned_by(
+                                lit,
+                                format!("use the serde {} attribute instead", RENAME),
+                            ),
+                            syn::Lit::Float(_) => cx.error_spanned_by(
+                                lit,
+                                format!("serde {} attribute cannot be a float", KEY),
+                            ),
+                            _ => cx.error_spanned_by(
+                                lit,
+                                format!("expected serde {} attribute to be a literal", KEY),
+                            ),
+                        }
+                    } else {
+                        cx.error_spanned_by(
+                            expr,
+                            format!("expected serde {} attribute to be a literal", KEY),
+                        );
+                    }
                 } else {
                     let path = meta.path.to_token_stream().to_string().replace(' ', "");
                     return Err(
@@ -1312,6 +1352,7 @@ impl Field {
             getter: getter.get(),
             flatten: flatten.get(),
             transparent: false,
+            key: key.get(),
         }
     }
 
@@ -1385,6 +1426,10 @@ impl Field {
 
     pub fn mark_transparent(&mut self) {
         self.transparent = true;
+    }
+
+    pub fn key(&self) -> Option<&syn::Lit> {
+        self.key.as_ref()
     }
 }
 
