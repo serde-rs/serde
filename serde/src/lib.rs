@@ -179,16 +179,16 @@ mod lib {
     pub use self::core::{cmp, mem, slice};
 
     pub use self::core::cell::{Cell, RefCell};
-    pub use self::core::clone::{self, Clone};
+    pub use self::core::clone;
     pub use self::core::cmp::Reverse;
-    pub use self::core::convert::{self, From, Into};
-    pub use self::core::default::{self, Default};
+    pub use self::core::convert;
+    pub use self::core::default;
     pub use self::core::fmt::{self, Debug, Display, Write as FmtWrite};
     pub use self::core::marker::{self, PhantomData};
     pub use self::core::num::Wrapping;
     pub use self::core::ops::{Bound, Range, RangeFrom, RangeInclusive, RangeTo};
-    pub use self::core::option::{self, Option};
-    pub use self::core::result::{self, Result};
+    pub use self::core::option;
+    pub use self::core::result;
     pub use self::core::time::Duration;
 
     #[cfg(all(feature = "alloc", not(feature = "std")))]
