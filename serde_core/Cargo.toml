@@ -1,7 +1,10 @@
 [package]
 name = "serde_core"
 version = "1.0.188" # remember to update html_root_url and serde_derive dependency
-authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
+authors = [
+    "Erick Tryzelaar <erick.tryzelaar@gmail.com>",
+    "David Tolnay <dtolnay@gmail.com>",
+]
 build = "build.rs"
 categories = ["encoding", "no-std", "no-std::no-alloc"]
 description = "A generic serialization/deserialization framework"
@@ -16,16 +19,15 @@ rust-version = "1.31"
 
 [dev-dependencies]
 serde_derive = { version = "1", path = "../serde_derive" }
-serde = {version = "1", path = "../serde"}
+serde = { version = "1", path = "../serde" }
 
 [lib]
 doc-scrape-examples = false
 
 [package.metadata.playground]
-features = ["derive", "rc"]
+features = ["rc"]
 
 [package.metadata.docs.rs]
-features = ["derive"]
 targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--generate-link-to-definition"]
 
