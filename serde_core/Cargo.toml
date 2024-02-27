@@ -7,7 +7,7 @@ authors = [
 ]
 build = "build.rs"
 categories = ["encoding", "no-std", "no-std::no-alloc"]
-description = "A generic serialization/deserialization framework"
+description = "Core functionalities and abstractions for the Serde serialization/deserialization framework"
 documentation = "https://docs.rs/serde_core"
 edition = "2018"
 homepage = "https://serde.rs"
