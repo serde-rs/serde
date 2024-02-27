@@ -1,6 +1,6 @@
 [package]
 name = "serde_core"
-version = "1.0.188" # remember to update html_root_url and serde_derive dependency
+version = "1.0.197" # remember to update html_root_url and serde_derive dependency
 authors = [
     "Erick Tryzelaar <erick.tryzelaar@gmail.com>",
     "David Tolnay <dtolnay@gmail.com>",
