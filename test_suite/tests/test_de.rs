@@ -1899,6 +1899,46 @@ fn test_range_inclusive() {
 }
 
 #[test]
+fn test_range_from() {
+    test(
+        1u32..,
+        &[
+            Token::Struct {
+                name: "RangeFrom",
+                len: 1,
+            },
+            Token::Str("start"),
+            Token::U32(1),
+            Token::StructEnd,
+        ],
+    );
+    test(
+        1u32..,
+        &[Token::Seq { len: Some(1) }, Token::U32(1), Token::SeqEnd],
+    );
+}
+
+#[test]
+fn test_range_to() {
+    test(
+        ..2u32,
+        &[
+            Token::Struct {
+                name: "RangeTo",
+                len: 1,
+            },
+            Token::Str("end"),
+            Token::U32(2),
+            Token::StructEnd,
+        ],
+    );
+    test(
+        ..2u32,
+        &[Token::Seq { len: Some(1) }, Token::U32(2), Token::SeqEnd],
+    );
+}
+
+#[test]
 fn test_bound() {
     test(
         Bound::Unbounded::<()>,

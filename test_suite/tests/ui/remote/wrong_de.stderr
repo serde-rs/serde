@@ -12,7 +12,3 @@ note: tuple struct defined here
 4 |     pub struct S(pub u16);
   |                ^
   = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)
-help: you can convert a `u8` to a `u16`
-  |
-7 | #[derive(Deserialize.into())]
-  |                     +++++++

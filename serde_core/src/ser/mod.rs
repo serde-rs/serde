@@ -61,8 +61,8 @@
 //!    - RefCell\<T\>
 //!    - Mutex\<T\>
 //!    - RwLock\<T\>
-//!    - Rc\<T\>&emsp;*(if* features = ["rc"] *is enabled)*
-//!    - Arc\<T\>&emsp;*(if* features = ["rc"] *is enabled)*
+//!    - Rc\<T\>&emsp;*(if* features = \["rc"\] *is enabled)*
+//!    - Arc\<T\>&emsp;*(if* features = \["rc"\] *is enabled)*
 //!  - **Collection types**:
 //!    - BTreeMap\<K, V\>
 //!    - BTreeSet\<T\>

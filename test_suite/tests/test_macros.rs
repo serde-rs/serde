@@ -815,6 +815,100 @@ fn test_internally_tagged_enum() {
 }
 
 #[test]
+fn test_internally_tagged_enum_with_untagged_variant() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "kind")]
+    enum InternallyTagged {
+        Tagged {
+            a: u8,
+        },
+        #[serde(untagged)]
+        Untagged {
+            kind: String,
+            b: u8,
+        },
+    }
+
+    assert_de_tokens(
+        &InternallyTagged::Tagged { a: 1 },
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("kind"),
+            Token::Str("Tagged"),
+            Token::Str("a"),
+            Token::U8(1),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::Tagged { a: 1 },
+        &[
+            Token::Struct {
+                name: "InternallyTagged",
+                len: 2,
+            },
+            Token::Str("kind"),
+            Token::Str("Tagged"),
+            Token::Str("a"),
+            Token::U8(1),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &InternallyTagged::Untagged {
+            kind: "Foo".to_owned(),
+            b: 2,
+        },
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("kind"),
+            Token::Str("Foo"),
+            Token::Str("b"),
+            Token::U8(2),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::Untagged {
+            kind: "Foo".to_owned(),
+            b: 2,
+        },
+        &[
+            Token::Struct {
+                name: "InternallyTagged",
+                len: 2,
+            },
+            Token::Str("kind"),
+            Token::Str("Foo"),
+            Token::Str("b"),
+            Token::U8(2),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_tokens(
+        &InternallyTagged::Untagged {
+            kind: "Tagged".to_owned(),
+            b: 2,
+        },
+        &[
+            Token::Struct {
+                name: "InternallyTagged",
+                len: 2,
+            },
+            Token::Str("kind"),
+            Token::Str("Tagged"),
+            Token::Str("b"),
+            Token::U8(2),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_internally_tagged_bytes() {
     #[derive(Debug, PartialEq, Deserialize)]
     #[serde(tag = "type")]

@@ -144,6 +144,7 @@ pub fn with_bound(
 
         fn visit_type(&mut self, ty: &'ast syn::Type) {
             match ty {
+                #![cfg_attr(all(test, exhaustive), deny(non_exhaustive_omitted_patterns))]
                 syn::Type::Array(ty) => self.visit_type(&ty.elem),
                 syn::Type::BareFn(ty) => {
                     for arg in &ty.inputs {
@@ -181,7 +182,6 @@ pub fn with_bound(
 
                 syn::Type::Infer(_) | syn::Type::Never(_) | syn::Type::Verbatim(_) => {}
 
-                #[cfg_attr(all(test, exhaustive), deny(non_exhaustive_omitted_patterns))]
                 _ => {}
             }
         }
@@ -196,16 +196,13 @@ pub fn with_bound(
                 syn::PathArguments::AngleBracketed(arguments) => {
                     for arg in &arguments.args {
                         match arg {
+                            #![cfg_attr(all(test, exhaustive), deny(non_exhaustive_omitted_patterns))]
                             syn::GenericArgument::Type(arg) => self.visit_type(arg),
                             syn::GenericArgument::AssocType(arg) => self.visit_type(&arg.ty),
                             syn::GenericArgument::Lifetime(_)
                             | syn::GenericArgument::Const(_)
                             | syn::GenericArgument::AssocConst(_)
                             | syn::GenericArgument::Constraint(_) => {}
-                            #[cfg_attr(
-                                all(test, exhaustive),
-                                deny(non_exhaustive_omitted_patterns)
-                            )]
                             _ => {}
                         }
                     }
@@ -228,9 +225,9 @@ pub fn with_bound(
 
         fn visit_type_param_bound(&mut self, bound: &'ast syn::TypeParamBound) {
             match bound {
+                #![cfg_attr(all(test, exhaustive), deny(non_exhaustive_omitted_patterns))]
                 syn::TypeParamBound::Trait(bound) => self.visit_path(&bound.path),
                 syn::TypeParamBound::Lifetime(_) | syn::TypeParamBound::Verbatim(_) => {}
-                #[cfg_attr(all(test, exhaustive), deny(non_exhaustive_omitted_patterns))]
                 _ => {}
             }
         }
