@@ -29,7 +29,7 @@ features = ["rc"]
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
-rustdoc-args = ["--generate-link-to-definition"]
+rustdoc-args = ["--cfg", "doc_cfg", "--generate-link-to-definition"]
 
 ### FEATURES #################################################################
 
