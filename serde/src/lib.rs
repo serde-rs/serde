@@ -92,8 +92,12 @@
 //! [Hjson]: https://github.com/Canop/deser-hjson
 //! [CSV]: https://docs.rs/csv
 
+// Serde types in rustdoc of other crates get linked to here.
+#![doc(html_root_url = "https://docs.rs/serde/1.0.197")]
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
+// Show which crate feature enables conditionally compiled APIs in documentation.
+#![cfg_attr(doc_cfg, feature(doc_cfg))]
 #[doc(inline)]
 pub use serde_core::*;
 
