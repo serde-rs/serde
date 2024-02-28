@@ -1908,7 +1908,7 @@ where
     doc_cfg,
     doc(cfg(all(feature = "rc", any(feature = "std", feature = "alloc"))))
 )]
-impl<'de, T: ?Sized> Deserialize<'de> for RcWeak<T>
+impl<'de, T> Deserialize<'de> for RcWeak<T>
 where
     T: Deserialize<'de>,
 {
@@ -1930,7 +1930,7 @@ where
     doc_cfg,
     doc(cfg(all(feature = "rc", any(feature = "std", feature = "alloc"))))
 )]
-impl<'de, T: ?Sized> Deserialize<'de> for ArcWeak<T>
+impl<'de, T> Deserialize<'de> for ArcWeak<T>
 where
     T: Deserialize<'de>,
 {
