@@ -714,16 +714,6 @@ fn test_internally_tagged_enum() {
         ],
     );
 
-    assert_de_tokens(
-        &InternallyTagged::A { a: 1 },
-        &[
-            Token::Seq { len: Some(2) },
-            Token::Str("A"),
-            Token::U8(1),
-            Token::SeqEnd,
-        ],
-    );
-
     assert_tokens(
         &InternallyTagged::B,
         &[
@@ -785,16 +775,6 @@ fn test_internally_tagged_enum() {
             Token::Str("f"),
             Token::U8(6),
             Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &InternallyTagged::E(Struct { f: 6 }),
-        &[
-            Token::Seq { len: Some(2) },
-            Token::Str("E"),
-            Token::U8(6),
-            Token::SeqEnd,
         ],
     );
 
@@ -1105,16 +1085,6 @@ fn test_internally_tagged_struct_variant_containing_unit_variant() {
             Token::Str("level"),
             Token::BorrowedStr("Info"),
             Token::MapEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &Message::Log { level: Level::Info },
-        &[
-            Token::Seq { len: Some(2) },
-            Token::Str("Log"),
-            Token::BorrowedStr("Info"),
-            Token::SeqEnd,
         ],
     );
 }
@@ -1615,23 +1585,6 @@ fn test_enum_in_internally_tagged_enum() {
             Token::Str("f"),
             Token::U8(1),
             Token::StructEnd,
-            Token::MapEnd,
-        ],
-    );
-
-    // Reaches crate::private::de::content::VariantDeserializer::struct_variant
-    // Content::Seq case
-    // via ContentDeserializer::deserialize_enum
-    assert_de_tokens(
-        &Outer::Inner(Inner::Struct { f: 1 }),
-        &[
-            Token::Map { len: Some(2) },
-            Token::Str("type"),
-            Token::Str("Inner"),
-            Token::Str("Struct"),
-            Token::Seq { len: Some(1) },
-            Token::U8(1), // f
-            Token::SeqEnd,
             Token::MapEnd,
         ],
     );
