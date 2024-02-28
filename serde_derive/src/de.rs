@@ -1387,8 +1387,8 @@ fn deserialize_internally_tagged_enum(
 
         let (__tag, __content) = _serde::Deserializer::deserialize_any(
             __deserializer,
-            _serde::__private::de::TaggedContentVisitor::<__Field>::new(#tag, #expecting))?;
-        let __deserializer = _serde::__private::de::ContentDeserializer::<__D::Error>::new(__content);
+            _serde::__private::de::TaggedBufferVisitor::<__Field>::new(#tag, #expecting))?;
+        let __deserializer = _serde::de::buffer::BufferDeserializer::<__D::Error>::new(__content);
 
         match __tag {
             #(#variant_arms)*
@@ -1440,9 +1440,9 @@ fn deserialize_adjacently_tagged_enum(
     // If unknown fields are allowed, we pick the visitor that can step over
     // those. Otherwise we pick the visitor that fails on unknown keys.
     let field_visitor_ty = if deny_unknown_fields {
-        quote! { _serde::__private::de::TagOrContentFieldVisitor }
+        quote! { _serde::__private::de::TagOrBufferFieldVisitor }
     } else {
-        quote! { _serde::__private::de::TagContentOtherFieldVisitor }
+        quote! { _serde::__private::de::TagBufferOtherFieldVisitor }
     };
 
     let tag_or_content = quote! {
@@ -1517,19 +1517,19 @@ fn deserialize_adjacently_tagged_enum(
         next_key
     } else {
         quote!({
-            let mut __rk : _serde::__private::Option<_serde::__private::de::TagOrContentField> = _serde::__private::None;
+            let mut __rk : _serde::__private::Option<_serde::__private::de::TagOrBufferField> = _serde::__private::None;
             while let _serde::__private::Some(__k) = #next_key {
                 match __k {
-                    _serde::__private::de::TagContentOtherField::Other => {
+                    _serde::__private::de::TagBufferOtherField::Other => {
                         let _ = _serde::de::MapAccess::next_value::<_serde::de::IgnoredAny>(&mut __map)?;
                         continue;
                     },
-                    _serde::__private::de::TagContentOtherField::Tag => {
-                        __rk = _serde::__private::Some(_serde::__private::de::TagOrContentField::Tag);
+                    _serde::__private::de::TagBufferOtherField::Tag => {
+                        __rk = _serde::__private::Some(_serde::__private::de::TagOrBufferField::Tag);
                         break;
                     }
-                    _serde::__private::de::TagContentOtherField::Content => {
-                        __rk = _serde::__private::Some(_serde::__private::de::TagOrContentField::Content);
+                    _serde::__private::de::TagBufferOtherField::Buffer => {
+                        __rk = _serde::__private::Some(_serde::__private::de::TagOrBufferField::Buffer);
                         break;
                     }
                 }
@@ -1544,10 +1544,10 @@ fn deserialize_adjacently_tagged_enum(
     // at this point immediately produce an error.
     let visit_remaining_keys = quote! {
         match #next_relevant_key {
-            _serde::__private::Some(_serde::__private::de::TagOrContentField::Tag) => {
+            _serde::__private::Some(_serde::__private::de::TagOrBufferField::Tag) => {
                 _serde::__private::Err(<__A::Error as _serde::de::Error>::duplicate_field(#tag))
             }
-            _serde::__private::Some(_serde::__private::de::TagOrContentField::Content) => {
+            _serde::__private::Some(_serde::__private::de::TagOrBufferField::Buffer) => {
                 _serde::__private::Err(<__A::Error as _serde::de::Error>::duplicate_field(#content))
             }
             _serde::__private::None => _serde::__private::Ok(__ret),
@@ -1614,17 +1614,17 @@ fn deserialize_adjacently_tagged_enum(
                 // Visit the first relevant key.
                 match #next_relevant_key {
                     // First key is the tag.
-                    _serde::__private::Some(_serde::__private::de::TagOrContentField::Tag) => {
+                    _serde::__private::Some(_serde::__private::de::TagOrBufferField::Tag) => {
                         // Parse the tag.
                         let __field = #variant_from_map;
                         // Visit the second key.
                         match #next_relevant_key {
                             // Second key is a duplicate of the tag.
-                            _serde::__private::Some(_serde::__private::de::TagOrContentField::Tag) => {
+                            _serde::__private::Some(_serde::__private::de::TagOrBufferField::Tag) => {
                                 _serde::__private::Err(<__A::Error as _serde::de::Error>::duplicate_field(#tag))
                             }
                             // Second key is the content.
-                            _serde::__private::Some(_serde::__private::de::TagOrContentField::Content) => {
+                            _serde::__private::Some(_serde::__private::de::TagOrBufferField::Buffer) => {
                                 let __ret = _serde::de::MapAccess::next_value_seed(&mut __map,
                                     __Seed {
                                         field: __field,
@@ -1639,18 +1639,18 @@ fn deserialize_adjacently_tagged_enum(
                         }
                     }
                     // First key is the content.
-                    _serde::__private::Some(_serde::__private::de::TagOrContentField::Content) => {
+                    _serde::__private::Some(_serde::__private::de::TagOrBufferField::Buffer) => {
                         // Buffer up the content.
-                        let __content = _serde::de::MapAccess::next_value::<_serde::__private::de::Content>(&mut __map)?;
+                        let __content = _serde::de::MapAccess::next_value::<_serde::de::buffer::Buffer>(&mut __map)?;
                         // Visit the second key.
                         match #next_relevant_key {
                             // Second key is the tag.
-                            _serde::__private::Some(_serde::__private::de::TagOrContentField::Tag) => {
-                                let __deserializer = _serde::__private::de::ContentDeserializer::<__A::Error>::new(__content);
+                            _serde::__private::Some(_serde::__private::de::TagOrBufferField::Tag) => {
+                                let __deserializer = _serde::de::buffer::BufferDeserializer::<__A::Error>::new(__content);
                                 #finish_content_then_tag
                             }
                             // Second key is a duplicate of the content.
-                            _serde::__private::Some(_serde::__private::de::TagOrContentField::Content) => {
+                            _serde::__private::Some(_serde::__private::de::TagOrBufferField::Buffer) => {
                                 _serde::__private::Err(<__A::Error as _serde::de::Error>::duplicate_field(#content))
                             }
                             // There is no second key.
@@ -1761,8 +1761,8 @@ fn deserialize_untagged_enum_after(
     });
 
     quote_block! {
-        let __content = <_serde::__private::de::Content as _serde::Deserialize>::deserialize(__deserializer)?;
-        let __deserializer = _serde::__private::de::ContentRefDeserializer::<__D::Error>::new(&__content);
+        let __content = <_serde::de::buffer::Buffer as _serde::Deserialize>::deserialize(__deserializer)?;
+        let __deserializer = _serde::de::buffer::BufferRefDeserializer::<__D::Error>::new(&__content);
 
         #first_attempt
 
@@ -2045,7 +2045,7 @@ fn deserialize_field_identifier(
     cattrs: &attr::Container,
 ) -> Stmts {
     let (ignore_variant, fallthrough) = if cattrs.has_flatten() {
-        let ignore_variant = quote!(__other(_serde::__private::de::Content<'de>),);
+        let ignore_variant = quote!(__other(_serde::de::buffer::Buffer<'de>),);
         let fallthrough = quote!(_serde::__private::Ok(__Field::__other(__value)));
         (Some(ignore_variant), Some(fallthrough))
     } else if cattrs.deny_unknown_fields() {
@@ -2223,16 +2223,16 @@ fn deserialize_identifier(
     ) = if collect_other_fields {
         (
             Some(quote! {
-                let __value = _serde::__private::de::Content::String(_serde::__private::ToString::to_string(__value));
+                let __value = _serde::de::buffer::Buffer::from(_serde::__private::ToString::to_string(__value));
             }),
             Some(quote! {
-                let __value = _serde::__private::de::Content::Str(__value);
+                let __value = _serde::de::buffer::Buffer::from(__value);
             }),
             Some(quote! {
-                let __value = _serde::__private::de::Content::ByteBuf(__value.to_vec());
+                let __value = _serde::de::buffer::Buffer::from(__value.to_vec());
             }),
             Some(quote! {
-                let __value = _serde::__private::de::Content::Bytes(__value);
+                let __value = _serde::de::buffer::Buffer::from(__value);
             }),
         )
     } else {
@@ -2260,91 +2260,91 @@ fn deserialize_identifier(
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Bool(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_bool(__value).map(__Field::__other)
             }
 
             fn visit_i8<__E>(self, __value: i8) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I8(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_i8(__value).map(__Field::__other)
             }
 
             fn visit_i16<__E>(self, __value: i16) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I16(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_i16(__value).map(__Field::__other)
             }
 
             fn visit_i32<__E>(self, __value: i32) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I32(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_i32(__value).map(__Field::__other)
             }
 
             fn visit_i64<__E>(self, __value: i64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I64(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_i64(__value).map(__Field::__other)
             }
 
             fn visit_u8<__E>(self, __value: u8) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U8(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_u8(__value).map(__Field::__other)
             }
 
             fn visit_u16<__E>(self, __value: u16) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U16(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_u16(__value).map(__Field::__other)
             }
 
             fn visit_u32<__E>(self, __value: u32) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U32(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_u32(__value).map(__Field::__other)
             }
 
             fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U64(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_u64(__value).map(__Field::__other)
             }
 
             fn visit_f32<__E>(self, __value: f32) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::F32(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_f32(__value).map(__Field::__other)
             }
 
             fn visit_f64<__E>(self, __value: f64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::F64(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_f64(__value).map(__Field::__other)
             }
 
             fn visit_char<__E>(self, __value: char) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Char(__value)))
+                _serde::de::buffer::BufferVisitor::new().visit_char(__value).map(__Field::__other)
             }
 
             fn visit_unit<__E>(self) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
             {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Unit))
+                _serde::de::buffer::BufferVisitor::new().visit_unit().map(__Field::__other)
             }
         }
     } else {
@@ -2483,8 +2483,8 @@ fn deserialize_map(
     let let_collect = if cattrs.has_flatten() {
         Some(quote! {
             let mut __collect = _serde::__private::Vec::<_serde::__private::Option<(
-                _serde::__private::de::Content,
-                _serde::__private::de::Content
+                _serde::de::buffer::Buffer,
+                _serde::de::buffer::Buffer
             )>>::new();
         })
     } else {

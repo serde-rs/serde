@@ -329,7 +329,7 @@ extern crate serde_derive;
 #[cfg_attr(doc_cfg, doc(cfg(feature = "derive")))]
 pub use serde_derive::{Deserialize, Serialize};
 
-#[cfg(all(not(no_serde_derive), any(feature = "std", feature = "alloc")))]
+#[cfg(any(feature = "std", feature = "alloc"))]
 mod actually_private {
     pub struct T;
 }

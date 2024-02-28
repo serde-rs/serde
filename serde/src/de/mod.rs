@@ -118,6 +118,9 @@ use crate::lib::*;
 
 pub mod value;
 
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub mod buffer;
+
 mod format;
 mod ignored_any;
 mod impls;
@@ -1218,15 +1221,15 @@ pub trait Deserializer<'de>: Sized {
     }
 
     // Not public API.
-    #[cfg(all(not(no_serde_derive), any(feature = "std", feature = "alloc")))]
+    #[cfg(any(feature = "std", feature = "alloc"))]
     #[doc(hidden)]
-    fn __deserialize_content<V>(
+    fn __deserialize_buffer<V>(
         self,
         _: crate::actually_private::T,
         visitor: V,
-    ) -> Result<crate::__private::de::Content<'de>, Self::Error>
+    ) -> Result<buffer::Buffer<'de>, Self::Error>
     where
-        V: Visitor<'de, Value = crate::__private::de::Content<'de>>,
+        V: Visitor<'de, Value = buffer::Buffer<'de>>,
     {
         self.deserialize_any(visitor)
     }
