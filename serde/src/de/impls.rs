@@ -852,7 +852,10 @@ struct PhantomDataVisitor<T: ?Sized> {
     marker: PhantomData<T>,
 }
 
-impl<'de, T: ?Sized> Visitor<'de> for PhantomDataVisitor<T> {
+impl<'de, T> Visitor<'de> for PhantomDataVisitor<T>
+where
+    T: ?Sized,
+{
     type Value = PhantomData<T>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -868,7 +871,10 @@ impl<'de, T: ?Sized> Visitor<'de> for PhantomDataVisitor<T> {
     }
 }
 
-impl<'de, T: ?Sized> Deserialize<'de> for PhantomData<T> {
+impl<'de, T> Deserialize<'de> for PhantomData<T>
+where
+    T: ?Sized,
+{
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -1877,9 +1883,9 @@ forwarded_impl! {
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 #[cfg_attr(doc_cfg, doc(cfg(any(feature = "std", feature = "alloc"))))]
-impl<'de, 'a, T: ?Sized> Deserialize<'de> for Cow<'a, T>
+impl<'de, 'a, T> Deserialize<'de> for Cow<'a, T>
 where
-    T: ToOwned,
+    T: ?Sized + ToOwned,
     T::Owned: Deserialize<'de>,
 {
     #[inline]
@@ -1945,8 +1951,9 @@ macro_rules! box_forwarded_impl {
         $t:ident
     ) => {
         $(#[$attr])*
-        impl<'de, T: ?Sized> Deserialize<'de> for $t<T>
+        impl<'de, T> Deserialize<'de> for $t<T>
         where
+            T: ?Sized,
             Box<T>: Deserialize<'de>,
         {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
