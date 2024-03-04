@@ -3004,6 +3004,19 @@ where
     }
 }
 
+#[cfg(not(no_core_num_saturating))]
+impl<'de, T> Deserialize<'de> for Saturating<T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Deserialize::deserialize(deserializer).map(Saturating)
+    }
+}
+
 #[cfg(all(feature = "std", not(no_std_atomic)))]
 macro_rules! atomic_impl {
     ($($ty:ident $size:expr)*) => {

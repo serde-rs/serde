@@ -12,7 +12,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ffi::{CStr, CString};
 use std::num::{
     NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
-    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize, Wrapping,
+    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize, Saturating, Wrapping,
 };
 use std::time::{Duration, SystemTime};
 
@@ -1449,6 +1449,14 @@ fn test_unit_struct_from_seq() {
 #[test]
 fn test_wrapping_overflow() {
     assert_de_tokens_error::<Wrapping<u16>>(
+        &[Token::U32(65_536)],
+        "invalid value: integer `65536`, expected u16",
+    );
+}
+
+#[test]
+fn test_saturating_overflow() {
+    assert_de_tokens_error::<Saturating<u16>>(
         &[Token::U32(65_536)],
         "invalid value: integer `65536`, expected u16",
     );

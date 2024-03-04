@@ -274,6 +274,9 @@ mod lib {
     pub use std::sync::atomic::{AtomicI64, AtomicU64};
     #[cfg(all(feature = "std", not(no_target_has_atomic), target_has_atomic = "ptr"))]
     pub use std::sync::atomic::{AtomicIsize, AtomicUsize};
+
+    #[cfg(not(no_core_num_saturating))]
+    pub use self::core::num::Saturating;
 }
 
 // None of this crate's error handling needs the `From::from` error conversion

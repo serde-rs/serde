@@ -23,7 +23,7 @@ use std::iter;
 use std::net;
 use std::num::{
     NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
-    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize, Wrapping,
+    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize, Saturating, Wrapping,
 };
 use std::ops::Bound;
 use std::path::{Path, PathBuf};
@@ -2063,6 +2063,12 @@ fn test_arc_weak_none() {
 fn test_wrapping() {
     test(Wrapping(1usize), &[Token::U32(1)]);
     test(Wrapping(1usize), &[Token::U64(1)]);
+}
+
+#[test]
+fn test_saturating() {
+    test(Saturating(1usize), &[Token::U32(1)]);
+    test(Saturating(1usize), &[Token::U64(1)]);
 }
 
 #[test]
