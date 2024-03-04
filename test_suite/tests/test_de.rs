@@ -23,7 +23,7 @@ use std::iter;
 use std::net;
 use std::num::{
     NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
-    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize, Wrapping,
+    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize, Saturating, Wrapping,
 };
 use std::ops::Bound;
 use std::path::{Path, PathBuf};
@@ -2063,6 +2063,43 @@ fn test_arc_weak_none() {
 fn test_wrapping() {
     test(Wrapping(1usize), &[Token::U32(1)]);
     test(Wrapping(1usize), &[Token::U64(1)]);
+}
+
+#[test]
+fn test_saturating() {
+    test(Saturating(1usize), &[Token::U32(1)]);
+    test(Saturating(1usize), &[Token::U64(1)]);
+    test(Saturating(0u8), &[Token::I8(0)]);
+    test(Saturating(0u16), &[Token::I16(0)]);
+
+    // saturate input values at the minimum or maximum value
+    test(Saturating(u8::MAX), &[Token::U16(u16::MAX)]);
+    test(Saturating(u8::MAX), &[Token::U16(u8::MAX as u16 + 1)]);
+    test(Saturating(u16::MAX), &[Token::U32(u32::MAX)]);
+    test(Saturating(u32::MAX), &[Token::U64(u64::MAX)]);
+    test(Saturating(u8::MIN), &[Token::I8(i8::MIN)]);
+    test(Saturating(u16::MIN), &[Token::I16(i16::MIN)]);
+    test(Saturating(u32::MIN), &[Token::I32(i32::MIN)]);
+    test(Saturating(i8::MIN), &[Token::I16(i16::MIN)]);
+    test(Saturating(i16::MIN), &[Token::I32(i32::MIN)]);
+    test(Saturating(i32::MIN), &[Token::I64(i64::MIN)]);
+
+    test(Saturating(u8::MIN), &[Token::I8(-1)]);
+    test(Saturating(u16::MIN), &[Token::I16(-1)]);
+
+    #[cfg(target_pointer_width = "64")]
+    {
+        test(Saturating(usize::MIN), &[Token::U64(u64::MIN)]);
+        test(Saturating(usize::MAX), &[Token::U64(u64::MAX)]);
+        test(Saturating(isize::MIN), &[Token::I64(i64::MIN)]);
+        test(Saturating(isize::MAX), &[Token::I64(i64::MAX)]);
+        test(Saturating(0usize), &[Token::I64(i64::MIN)]);
+
+        test(
+            Saturating(9_223_372_036_854_775_807usize),
+            &[Token::I64(i64::MAX)],
+        );
+    }
 }
 
 #[test]
