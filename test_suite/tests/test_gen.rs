@@ -730,6 +730,7 @@ fn test_gen() {
 
     #[derive(Serialize)]
     #[repr(packed)]
+    #[allow(dead_code)]
     struct Packed {
         x: u8,
         y: u16,
@@ -761,6 +762,7 @@ fn test_gen() {
     }
 
     #[derive(Serialize)]
+    #[allow(dead_code)]
     struct Struct {
         #[serde(serialize_with = "vec_first_element")]
         vec: Vec<Self>,
