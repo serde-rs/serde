@@ -1170,7 +1170,8 @@ pub trait Serializer: Sized {
     /// then a call to `end`.
     ///
     /// The `name` is the name of the struct and the `len` is the number of
-    /// data fields that will be serialized.
+    /// data fields that will be serialized. `len` does not include fields
+    /// which are skipped with [`SerializeStruct::skip_field`].
     ///
     /// ```edition2021
     /// use serde::ser::{Serialize, SerializeStruct, Serializer};
@@ -1207,6 +1208,8 @@ pub trait Serializer: Sized {
     /// The `name` is the name of the enum, the `variant_index` is the index of
     /// this variant within the enum, the `variant` is the name of the variant,
     /// and the `len` is the number of data fields that will be serialized.
+    /// `len` does not include fields which are skipped with
+    /// [`SerializeStructVariant::skip_field`].
     ///
     /// ```edition2021
     /// use serde::ser::{Serialize, SerializeStructVariant, Serializer};
@@ -1857,6 +1860,8 @@ pub trait SerializeStruct {
         T: ?Sized + Serialize;
 
     /// Indicate that a struct field has been skipped.
+    ///
+    /// The default implementation does nothing.
     #[inline]
     fn skip_field(&mut self, key: &'static str) -> Result<(), Self::Error> {
         let _ = key;
@@ -1919,6 +1924,8 @@ pub trait SerializeStructVariant {
         T: ?Sized + Serialize;
 
     /// Indicate that a struct variant field has been skipped.
+    ///
+    /// The default implementation does nothing.
     #[inline]
     fn skip_field(&mut self, key: &'static str) -> Result<(), Self::Error> {
         let _ = key;
