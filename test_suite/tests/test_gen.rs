@@ -687,8 +687,16 @@ fn test_gen() {
     #[derive(Deserialize)]
     #[serde(untagged)]
     pub enum UntaggedWithBorrow<'a> {
-        Single(#[serde(borrow)] RelObject<'a>),
-        Many(#[serde(borrow)] Vec<RelObject<'a>>),
+        Single(
+            #[serde(borrow)]
+            #[allow(dead_code)]
+            RelObject<'a>,
+        ),
+        Many(
+            #[serde(borrow)]
+            #[allow(dead_code)]
+            Vec<RelObject<'a>>,
+        ),
     }
 
     #[derive(Deserialize)]
