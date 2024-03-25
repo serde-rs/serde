@@ -782,7 +782,7 @@ fn test_unknown_field_rename_enum() {
             variant: "SailorMoon",
             len: 3,
         }],
-        "unknown variant `SailorMoon`, expected `sailor_moon`",
+        "unknown variant `SailorMoon`, expected `sailor_moon` or `usagi_tsukino`",
     );
 
     assert_de_tokens_error::<AliasEnum>(
