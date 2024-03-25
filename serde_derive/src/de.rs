@@ -3,6 +3,7 @@ use crate::internals::ast::{Container, Data, Field, Style, Variant};
 use crate::internals::{attr, replace_receiver, ungroup, Ctxt, Derive};
 use crate::{bound, dummy, pretend, this};
 use proc_macro2::{Literal, Span, TokenStream};
+use quote::format_ident;
 use quote::{quote, quote_spanned, ToTokens};
 use std::collections::BTreeSet;
 use std::ptr;
@@ -1214,7 +1215,7 @@ fn prepare_enum_variant_enum(
     variants: &[Variant],
     cattrs: &attr::Container,
 ) -> (TokenStream, Stmts) {
-    let mut deserialized_variants = variants
+    let deserialized_variants = variants
         .iter()
         .enumerate()
         .filter(|&(_, variant)| !variant.attrs.skip_deserializing());
@@ -1231,6 +1232,7 @@ fn prepare_enum_variant_enum(
         .collect();
 
     let fallthrough = deserialized_variants
+        .clone()
         .position(|(_, variant)| variant.attrs.other())
         .map(|other_idx| {
             let ignore_variant = variant_names_idents[other_idx].1.clone();
@@ -1245,12 +1247,62 @@ fn prepare_enum_variant_enum(
         }
     };
 
+    let repr = match (cattrs.use_repr(), cattrs.repr_type().map(|ty| ty.clone())) {
+        (true, Some(repr_type)) => {
+            let mut discriminants = Vec::new();
+            let mut last_discriminant = None;
+            let mut iterations_without_discriminant = 0;
+            for (_, variant) in deserialized_variants.clone() {
+                let discriminant = variant.original.discriminant.as_ref().map(|(_, d)| d);
+                let discriminant = if let Some(expr) = discriminant {
+                    last_discriminant = Some(expr);
+                    parse_quote!(#expr)
+                } else if let Some(expr) = last_discriminant {
+                    match expr {
+                        syn::Expr::Lit(syn::ExprLit {
+                            lit: syn::Lit::Int(lit_int),
+                            ..
+                        }) => {
+                            let value = lit_int.base10_parse::<u64>().unwrap();
+                            let value = value + iterations_without_discriminant;
+                            let value = syn::Lit::Int(syn::LitInt::new(
+                                &value.to_string(),
+                                Span::call_site(),
+                            ));
+                            parse_quote!(#value)
+                        }
+                        _ => {
+                            let iterations_without_discriminant = syn::Lit::Int(syn::LitInt::new(
+                                &iterations_without_discriminant.to_string(),
+                                Span::call_site(),
+                            ));
+                            parse_quote!(#expr + #iterations_without_discriminant)
+                        }
+                    }
+                } else {
+                    let iterations_without_discriminant = syn::Lit::Int(syn::LitInt::new(
+                        &iterations_without_discriminant.to_string(),
+                        Span::call_site(),
+                    ));
+                    parse_quote!(#iterations_without_discriminant)
+                };
+
+                discriminants.push(discriminant);
+                iterations_without_discriminant += 1;
+            }
+
+            Some((discriminants, repr_type))
+        }
+        _ => None,
+    };
+
     let variant_visitor = Stmts(deserialize_generated_identifier(
         &variant_names_idents,
         cattrs,
         true,
         None,
         fallthrough,
+        repr,
     ));
 
     (variants_stmt, variant_visitor)
@@ -1989,6 +2041,7 @@ fn deserialize_generated_identifier(
     is_variant: bool,
     ignore_variant: Option<TokenStream>,
     fallthrough: Option<TokenStream>,
+    repr: Option<(Vec<syn::Expr>, syn::Type)>,
 ) -> Fragment {
     let this_value = quote!(__Field);
     let field_idents: &Vec<_> = &fields.iter().map(|(_, ident, _)| ident).collect();
@@ -2001,6 +2054,7 @@ fn deserialize_generated_identifier(
         None,
         !is_variant && cattrs.has_flatten(),
         None,
+        repr,
     ));
 
     let lifetime = if !is_variant && cattrs.has_flatten() {
@@ -2062,6 +2116,7 @@ fn deserialize_field_identifier(
         false,
         ignore_variant,
         fallthrough,
+        None,
     ))
 }
 
@@ -2144,6 +2199,53 @@ fn deserialize_custom_identifier(
         Some(fields)
     };
 
+    let repr = match (cattrs.use_repr(), cattrs.repr_type().map(|ty| ty.clone())) {
+        (true, Some(repr_type)) => {
+            let mut discriminants = Vec::new();
+
+            let mut last_discriminant = None;
+            let mut iterations_without_discriminant = 0;
+
+            for variant in ordinary {
+                let discriminant = variant.original.discriminant.as_ref().map(|(_, d)| d);
+                let discriminant = if let Some(expr) = discriminant {
+                    last_discriminant = Some(expr);
+                    parse_quote!(#expr)
+                } else if let Some(expr) = last_discriminant {
+                    match expr {
+                        syn::Expr::Lit(syn::ExprLit {
+                            lit: syn::Lit::Int(lit_int),
+                            ..
+                        }) => {
+                            let value = lit_int.base10_parse::<u64>().unwrap();
+                            let value = value + iterations_without_discriminant;
+                            parse_quote!(#value)
+                        }
+                        _ => {
+                            let iterations_without_discriminant = syn::Lit::Int(syn::LitInt::new(
+                                &iterations_without_discriminant.to_string(),
+                                Span::call_site(),
+                            ));
+                            parse_quote!(#expr + #iterations_without_discriminant)
+                        }
+                    }
+                } else {
+                    let iterations_without_discriminant = syn::Lit::Int(syn::LitInt::new(
+                        &iterations_without_discriminant.to_string(),
+                        Span::call_site(),
+                    ));
+                    parse_quote!(#iterations_without_discriminant)
+                };
+
+                discriminants.push(discriminant);
+                iterations_without_discriminant += 1;
+            }
+
+            Some((discriminants, repr_type))
+        }
+        _ => None,
+    };
+
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
@@ -2155,6 +2257,7 @@ fn deserialize_custom_identifier(
         fallthrough_borrowed,
         false,
         cattrs.expecting(),
+        repr,
     ));
 
     quote_block! {
@@ -2180,6 +2283,34 @@ fn deserialize_custom_identifier(
     }
 }
 
+fn filter_repr_by_type(
+    repr: &Option<(Vec<syn::Expr>, syn::Type)>,
+    ty_symbol: &str,
+) -> Option<Vec<syn::Expr>> {
+    if let Some((discriminants, repr_type)) = repr {
+        match repr_type {
+            syn::Type::Path(syn::TypePath {
+                path: syn::Path { segments, .. },
+                ..
+            }) => {
+                if segments.len() == 1 {
+                    let segment = &segments[0];
+                    if segment.ident.to_string() == ty_symbol {
+                        Some(discriminants.clone())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    } else {
+        None
+    }
+}
+
 fn deserialize_identifier(
     this_value: &TokenStream,
     fields: &[(&str, Ident, &BTreeSet<String>)],
@@ -2188,6 +2319,7 @@ fn deserialize_identifier(
     fallthrough_borrowed: Option<TokenStream>,
     collect_other_fields: bool,
     expecting: Option<&str>,
+    repr: Option<(Vec<syn::Expr>, syn::Type)>,
 ) -> Fragment {
     let str_mapping = fields.iter().map(|(_, ident, aliases)| {
         // `aliases` also contains a main name
@@ -2201,11 +2333,29 @@ fn deserialize_identifier(
         quote!(#(#aliases)|* => _serde::__private::Ok(#this_value::#ident))
     });
 
+    let discriminant_identifiers: Vec<_> = fields
+        .iter()
+        .enumerate()
+        .map(|(i, _)| Ident::new(&format!("__DISCRIMINANT_{}", i), Span::call_site()))
+        .collect();
+
+    let constructors: &Vec<_> = &fields
+        .iter()
+        .map(|(_, ident, _)| quote!(#this_value::#ident))
+        .collect();
+
+    let main_constructors: Vec<_> = fields
+        .iter()
+        .map(|(_, ident, _)| quote!(#this_value::#ident))
+        .collect();
+
     let expecting = expecting.unwrap_or(if is_variant {
         "variant identifier"
     } else {
         "field identifier"
     });
+
+    let index_expecting = if is_variant { "variant" } else { "field" };
 
     let bytes_to_str = if fallthrough.is_some() || collect_other_fields {
         None
@@ -2240,7 +2390,7 @@ fn deserialize_identifier(
     };
 
     let fallthrough_arm_tokens;
-    let fallthrough_arm = if let Some(fallthrough) = &fallthrough {
+    let fallthrough_arm: &TokenStream = if let Some(fallthrough) = &fallthrough {
         fallthrough
     } else if is_variant {
         fallthrough_arm_tokens = quote! {
@@ -2254,6 +2404,225 @@ fn deserialize_identifier(
         &fallthrough_arm_tokens
     };
 
+    let field_str: Option<Vec<syn::Expr>> = if let Some((discriminants, _)) = &repr {
+        discriminants
+            .iter()
+            .map(|expr| match expr {
+                syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Int(lit_int),
+                    ..
+                }) => {
+                    let value = lit_int.base10_parse::<u64>().unwrap();
+                    let value = value.to_string();
+                    Some(syn::Expr::Lit(syn::ExprLit {
+                        attrs: vec![],
+                        lit: syn::Lit::Str(syn::LitStr::new(&value, Span::call_site())),
+                    }))
+                }
+                _ => None,
+            })
+            .collect()
+    } else {
+        Some(
+            fields
+                .iter()
+                .map(|(name, _, _)| {
+                    syn::Expr::Lit(syn::ExprLit {
+                        attrs: vec![],
+                        lit: syn::Lit::Str(syn::LitStr::new(*name, Span::call_site())),
+                    })
+                })
+                .collect(),
+        )
+    };
+    let field_byte: Option<Vec<syn::Expr>> = if let Some((discriminants, _)) = &repr {
+        discriminants
+            .iter()
+            .map(|expr| match expr {
+                syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Int(lit_int),
+                    ..
+                }) => {
+                    let value = lit_int.base10_parse::<u64>().unwrap();
+                    let value = value.to_string();
+                    Some(syn::Expr::Lit(syn::ExprLit {
+                        attrs: vec![],
+                        lit: syn::Lit::ByteStr(syn::LitByteStr::new(
+                            value.as_bytes(),
+                            Span::call_site(),
+                        )),
+                    }))
+                }
+                _ => None,
+            })
+            .collect()
+    } else {
+        Some(
+            fields
+                .iter()
+                .map(|(name, _, _)| {
+                    syn::Expr::Lit(syn::ExprLit {
+                        attrs: vec![],
+                        lit: syn::Lit::ByteStr(syn::LitByteStr::new(
+                            name.as_bytes(),
+                            Span::call_site(),
+                        )),
+                    })
+                })
+                .collect(),
+        )
+    };
+    let field_strs: &Vec<_> = &fields.iter().map(|(name, _, _)| name).collect();
+    let field_bytes: &Vec<_> = &fields
+        .iter()
+        .map(|(name, _, _)| Literal::byte_string(name.as_bytes()))
+        .collect();
+
+    let visit_generator = |ty_str, content, signed| {
+        let ty = format_ident!("{ty_str}");
+        let visit_name = format_ident!("visit_{ty}");
+        let content = format_ident!("{content}");
+        let value = if signed {
+            quote! {
+                _serde::de::Unexpected::Signed(__value as i64)
+            }
+        } else {
+            quote! {
+                _serde::de::Unexpected::Unsigned(__value as u64)
+            }
+        };
+
+        if let Some(fields) = filter_repr_by_type(&repr, ty_str) {
+            let fallthrough_arm_tokens;
+            let fallthrough = if let Some(fallthrough) = &fallthrough {
+                fallthrough
+            } else {
+                let fallthrough_msg = format!("{} discriminant", index_expecting);
+                fallthrough_arm_tokens = quote! {
+                    _serde::__private::Err(_serde::de::Error::invalid_value(
+                        #value,
+                        &#fallthrough_msg,
+                    ))
+                };
+                &fallthrough_arm_tokens
+            };
+
+            quote! {
+                fn #visit_name<__E>(self, __value: #ty) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    struct __Discriminants;
+                    impl __Discriminants {
+                        #(const #discriminant_identifiers: #ty = #fields;)*
+                    }
+
+                    match __value {
+                        #(
+                            __Discriminants::#discriminant_identifiers => _serde::__private::Ok(#main_constructors),
+                        )*
+                        _ => #fallthrough,
+                    }
+                }
+            }
+        } else if collect_other_fields {
+            quote! {
+                fn #visit_name<__E>(self, __value: #ty) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::#content(__value)))
+                }
+            }
+        } else {
+            quote! {}
+        }
+    };
+
+    let visit_i8 = visit_generator("i8", "I8", true);
+    let visit_i16 = visit_generator("i16", "I16", true);
+    let visit_i32 = visit_generator("i32", "I32", true);
+    let visit_i64 = visit_generator("i64", "I64", true);
+
+    let visit_u8 = visit_generator("u8", "U8", false);
+    let visit_u16 = visit_generator("u16", "U16", false);
+    let visit_u32 = visit_generator("u32", "U32", false);
+    let visit_u64 = visit_generator("u64", "U64", false);
+
+    let visit_str = if let Some(field_str) = &field_str {
+        quote! {
+            fn visit_str<__E>(self, __value: &str) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                match __value {
+                    #(
+                        #field_str => _serde::__private::Ok(#constructors),
+                    )*
+                    _ => {
+                        #value_as_str_content
+                        #fallthrough_arm
+                    }
+                }
+            }
+        }
+    } else {
+        quote! {
+            fn visit_str<__E>(self, __value: &str) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                match __value {
+                    #(
+                        #field_strs => _serde::__private::Ok(#constructors),
+                    )*
+                    _ => {
+                        #value_as_str_content
+                        #fallthrough_arm
+                    }
+                }
+            }
+        }
+    };
+
+    let visit_bytes = if let Some(field_byte) = &field_byte {
+        quote! {
+            fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                match __value {
+                    #(
+                        #field_byte => _serde::__private::Ok(#constructors),
+                    )*
+                    _ => {
+                        #bytes_to_str
+                        #value_as_bytes_content
+                        #fallthrough_arm
+                    }
+                }
+            }
+        }
+    } else {
+        quote! {
+            fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                match __value {
+                    #(
+                        #field_bytes => _serde::__private::Ok(#constructors),
+                    )*
+                    _ => {
+                        #bytes_to_str
+                        #value_as_bytes_content
+                        #fallthrough_arm
+                    }
+                }
+            }
+        }
+    };
+
     let visit_other = if collect_other_fields {
         quote! {
             fn visit_bool<__E>(self, __value: bool) -> _serde::__private::Result<Self::Value, __E>
@@ -2261,62 +2630,6 @@ fn deserialize_identifier(
                 __E: _serde::de::Error,
             {
                 _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Bool(__value)))
-            }
-
-            fn visit_i8<__E>(self, __value: i8) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I8(__value)))
-            }
-
-            fn visit_i16<__E>(self, __value: i16) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I16(__value)))
-            }
-
-            fn visit_i32<__E>(self, __value: i32) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I32(__value)))
-            }
-
-            fn visit_i64<__E>(self, __value: i64) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I64(__value)))
-            }
-
-            fn visit_u8<__E>(self, __value: u8) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U8(__value)))
-            }
-
-            fn visit_u16<__E>(self, __value: u16) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U16(__value)))
-            }
-
-            fn visit_u32<__E>(self, __value: u32) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U32(__value)))
-            }
-
-            fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
-            where
-                __E: _serde::de::Error,
-            {
-                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U64(__value)))
             }
 
             fn visit_f32<__E>(self, __value: f32) -> _serde::__private::Result<Self::Value, __E>
@@ -2357,7 +2670,6 @@ fn deserialize_identifier(
         let u64_fallthrough_arm = if let Some(fallthrough) = &fallthrough {
             fallthrough
         } else {
-            let index_expecting = if is_variant { "variant" } else { "field" };
             let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
             u64_fallthrough_arm_tokens = quote! {
                 _serde::__private::Err(_serde::de::Error::invalid_value(
@@ -2422,35 +2734,17 @@ fn deserialize_identifier(
             _serde::__private::Formatter::write_str(__formatter, #expecting)
         }
 
+        #visit_i8
+        #visit_u8
+        #visit_i16
+        #visit_u16
+        #visit_i32
+        #visit_u32
+        #visit_i64
+        #visit_u64
         #visit_other
-
-        fn visit_str<__E>(self, __value: &str) -> _serde::__private::Result<Self::Value, __E>
-        where
-            __E: _serde::de::Error,
-        {
-            match __value {
-                #(#str_mapping,)*
-                _ => {
-                    #value_as_str_content
-                    #fallthrough_arm
-                }
-            }
-        }
-
-        fn visit_bytes<__E>(self, __value: &[u8]) -> _serde::__private::Result<Self::Value, __E>
-        where
-            __E: _serde::de::Error,
-        {
-            match __value {
-                #(#bytes_mapping,)*
-                _ => {
-                    #bytes_to_str
-                    #value_as_bytes_content
-                    #fallthrough_arm
-                }
-            }
-        }
-
+        #visit_str
+        #visit_bytes
         #visit_borrowed
     }
 }
