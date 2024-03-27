@@ -1,0 +1,5 @@
+error: expected serde key attribute to be a literal
+ --> tests/ui/key/unknown.rs:5:19
+  |
+5 |     #[serde(key = g)]
+  |                   ^

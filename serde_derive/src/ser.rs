@@ -302,7 +302,7 @@ fn serialize_struct_tag_field(cattrs: &attr::Container, struct_trait: &StructTra
     match cattrs.tag() {
         attr::TagType::Internal { tag } => {
             let type_name = cattrs.name().serialize_name();
-            let func = struct_trait.serialize_field(Span::call_site());
+            let func = struct_trait.serialize_field(Span::call_site(), None);
             quote! {
                 #func(&mut __serde_state, #tag, #type_name)?;
             }
@@ -1122,7 +1122,12 @@ fn serialize_struct_visitor(
                 get_member(params, field, member)
             };
 
-            let key_expr = field.attrs.name().serialize_name();
+            let key_expr = if let Some(key) = field.attrs.key() {
+                quote!(&#key)
+            } else {
+                let name = field.attrs.name().serialize_name();
+                quote!(#name)
+            };
 
             let skip = field
                 .attrs
@@ -1140,7 +1145,7 @@ fn serialize_struct_visitor(
                     #func(&#field_expr, _serde::__private::ser::FlatMapSerializer(&mut __serde_state))?;
                 }
             } else {
-                let func = struct_trait.serialize_field(span);
+                let func = struct_trait.serialize_field(span, field.attrs.key());
                 quote! {
                     #func(&mut __serde_state, #key_expr, #field_expr)?;
                 }
@@ -1309,13 +1314,17 @@ enum StructTrait {
 }
 
 impl StructTrait {
-    fn serialize_field(&self, span: Span) -> TokenStream {
+    fn serialize_field(&self, span: Span, key_hint: Option<&syn::Lit>) -> TokenStream {
         match *self {
             StructTrait::SerializeMap => {
                 quote_spanned!(span=> _serde::ser::SerializeMap::serialize_entry)
             }
             StructTrait::SerializeStruct => {
-                quote_spanned!(span=> _serde::ser::SerializeStruct::serialize_field)
+                if key_hint.is_some() {
+                    quote_spanned!(span=> _serde::ser::SerializeStruct::serialize_typed_field)
+                } else {
+                    quote_spanned!(span=> _serde::ser::SerializeStruct::serialize_field)
+                }
             }
             StructTrait::SerializeStructVariant => {
                 quote_spanned!(span=> _serde::ser::SerializeStructVariant::serialize_field)
