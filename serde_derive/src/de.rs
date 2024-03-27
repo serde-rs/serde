@@ -955,6 +955,7 @@ fn deserialize_struct(
                 field.attrs.name().deserialize_name(),
                 field_i(i),
                 field.attrs.aliases(),
+                field.attrs.key(),
             )
         })
         .collect();
@@ -1010,7 +1011,7 @@ fn deserialize_struct(
     } else {
         let field_names = field_names_idents
             .iter()
-            .flat_map(|&(_, _, aliases)| aliases);
+            .flat_map(|&(_, _, aliases, _)| aliases);
 
         Some(quote! {
             #[doc(hidden)]
@@ -1112,6 +1113,7 @@ fn deserialize_struct_in_place(
                 field.attrs.name().deserialize_name(),
                 field_i(i),
                 field.attrs.aliases(),
+                field.attrs.key(),
             )
         })
         .collect();
@@ -1127,7 +1129,7 @@ fn deserialize_struct_in_place(
     let visit_map = Stmts(deserialize_map_in_place(params, fields, cattrs));
     let field_names = field_names_idents
         .iter()
-        .flat_map(|&(_, _, aliases)| aliases);
+        .flat_map(|&(_, _, aliases, _)| aliases);
     let type_name = cattrs.name().deserialize_name();
 
     let in_place_impl_generics = de_impl_generics.in_place();
@@ -1226,6 +1228,7 @@ fn prepare_enum_variant_enum(
                 variant.attrs.name().deserialize_name(),
                 field_i(i),
                 variant.attrs.aliases(),
+                None,
             )
         })
         .collect();
@@ -1238,7 +1241,7 @@ fn prepare_enum_variant_enum(
         });
 
     let variants_stmt = {
-        let variant_names = variant_names_idents.iter().map(|(name, _, _)| name);
+        let variant_names = variant_names_idents.iter().map(|(name, _, _, _)| name);
         quote! {
             #[doc(hidden)]
             const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
@@ -1984,14 +1987,14 @@ fn deserialize_untagged_newtype_variant(
 }
 
 fn deserialize_generated_identifier(
-    fields: &[(&str, Ident, &BTreeSet<String>)],
+    fields: &[(&str, Ident, &BTreeSet<String>, Option<&syn::Lit>)],
     cattrs: &attr::Container,
     is_variant: bool,
     ignore_variant: Option<TokenStream>,
     fallthrough: Option<TokenStream>,
 ) -> Fragment {
     let this_value = quote!(__Field);
-    let field_idents: &Vec<_> = &fields.iter().map(|(_, ident, _)| ident).collect();
+    let field_idents: &Vec<_> = &fields.iter().map(|(_, ident, _, _)| ident).collect();
 
     let visitor_impl = Stmts(deserialize_identifier(
         &this_value,
@@ -2041,7 +2044,7 @@ fn deserialize_generated_identifier(
 /// Generates enum and its `Deserialize` implementation that represents each
 /// non-skipped field of the struct
 fn deserialize_field_identifier(
-    fields: &[(&str, Ident, &BTreeSet<String>)],
+    fields: &[(&str, Ident, &BTreeSet<String>, Option<&syn::Lit>)],
     cattrs: &attr::Container,
 ) -> Stmts {
     let (ignore_variant, fallthrough) = if cattrs.has_flatten() {
@@ -2122,11 +2125,12 @@ fn deserialize_custom_identifier(
                 variant.attrs.name().deserialize_name(),
                 variant.ident.clone(),
                 variant.attrs.aliases(),
+                None,
             )
         })
         .collect();
 
-    let names = names_idents.iter().flat_map(|&(_, _, aliases)| aliases);
+    let names = names_idents.iter().flat_map(|&(_, _, aliases, _)| aliases);
 
     let names_const = if fallthrough.is_some() {
         None
@@ -2182,18 +2186,18 @@ fn deserialize_custom_identifier(
 
 fn deserialize_identifier(
     this_value: &TokenStream,
-    fields: &[(&str, Ident, &BTreeSet<String>)],
+    fields: &[(&str, Ident, &BTreeSet<String>, Option<&syn::Lit>)],
     is_variant: bool,
     fallthrough: Option<TokenStream>,
     fallthrough_borrowed: Option<TokenStream>,
     collect_other_fields: bool,
     expecting: Option<&str>,
 ) -> Fragment {
-    let str_mapping = fields.iter().map(|(_, ident, aliases)| {
+    let str_mapping = fields.iter().map(|(_, ident, aliases, _)| {
         // `aliases` also contains a main name
         quote!(#(#aliases)|* => _serde::__private::Ok(#this_value::#ident))
     });
-    let bytes_mapping = fields.iter().map(|(_, ident, aliases)| {
+    let bytes_mapping = fields.iter().map(|(_, ident, aliases, _)| {
         // `aliases` also contains a main name
         let aliases = aliases
             .iter()
@@ -2347,8 +2351,8 @@ fn deserialize_identifier(
                 _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Unit))
             }
         }
-    } else {
-        let u64_mapping = fields.iter().enumerate().map(|(i, (_, ident, _))| {
+    } else if fields.iter().all(|(_, _, _, key)| key.is_none()) {
+        let u64_mapping = fields.iter().enumerate().map(|(i, (_, ident, _, _))| {
             let i = i as u64;
             quote!(#i => _serde::__private::Ok(#this_value::#ident))
         });
@@ -2379,6 +2383,109 @@ fn deserialize_identifier(
                 }
             }
         }
+    } else {
+        let mut visits = Vec::new();
+
+        let char_mapping = fields
+            .iter()
+            .enumerate()
+            .filter_map(|(_, (_, ident, _, key))| {
+                if let Some(syn::Lit::Char(key)) = key {
+                    Some(quote!(#key => _serde::__private::Ok(#this_value::#ident)))
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        if !char_mapping.is_empty() {
+            visits.push(quote! {
+                fn visit_char<__E>(self, __value: char) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    match __value {
+                        #(#char_mapping,)*
+                        _ => #fallthrough_arm,
+                    }
+                }
+            });
+        }
+
+        let bool_mapping = fields
+            .iter()
+            .enumerate()
+            .filter_map(|(_, (_, ident, _, key))| {
+                if let Some(syn::Lit::Bool(key)) = key {
+                    return Some(quote!(#key => _serde::__private::Ok(#this_value::#ident)));
+                }
+                None
+            })
+            .collect::<Vec<_>>();
+        if !bool_mapping.is_empty() {
+            visits.push(quote! {
+                fn visit_bool<__E>(self, __value: bool) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    match __value {
+                        #(#bool_mapping,)*
+                        _ => #fallthrough_arm,
+                    }
+                }
+            });
+        }
+
+        let byte_mapping = fields
+            .iter()
+            .enumerate()
+            .filter_map(|(_, (_, ident, _, key))| {
+                if let Some(syn::Lit::Byte(key)) = key {
+                    return Some(quote!(#key => _serde::__private::Ok(#this_value::#ident)));
+                }
+                None
+            })
+            .collect::<Vec<_>>();
+        if !byte_mapping.is_empty() {
+            visits.push(quote! {
+                fn visit_u8<__E>(self, __value: u8) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    match __value {
+                        #(#byte_mapping,)*
+                        _ => #fallthrough_arm,
+                    }
+                }
+            });
+        }
+
+        let u64_mapping = fields
+            .iter()
+            .enumerate()
+            .filter_map(|(_, (_, ident, _, key))| {
+                if let Some(syn::Lit::Int(key)) = key {
+                    if let Ok(key) = key.base10_parse::<u64>() {
+                        return Some(quote!(#key => _serde::__private::Ok(#this_value::#ident)));
+                    }
+                }
+                None
+            })
+            .collect::<Vec<_>>();
+        if !u64_mapping.is_empty() {
+            visits.push(quote! {
+                fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
+                where
+                    __E: _serde::de::Error,
+                {
+                    match __value {
+                        #(#u64_mapping,)*
+                        _ => #fallthrough_arm,
+                    }
+                }
+            });
+        }
+
+        quote!(#( #visits )*)
     };
 
     let visit_borrowed = if fallthrough_borrowed.is_some() || collect_other_fields {
