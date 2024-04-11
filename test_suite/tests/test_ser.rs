@@ -8,7 +8,7 @@ use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ffi::CString;
 use std::net;
-use std::num::Wrapping;
+use std::num::{Saturating, Wrapping};
 use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak as RcWeak};
@@ -622,6 +622,11 @@ fn test_arc_weak_none() {
 #[test]
 fn test_wrapping() {
     assert_ser_tokens(&Wrapping(1usize), &[Token::U64(1)]);
+}
+
+#[test]
+fn test_saturating() {
+    assert_ser_tokens(&Saturating(1usize), &[Token::U64(1)]);
 }
 
 #[test]
