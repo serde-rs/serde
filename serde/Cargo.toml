@@ -1,6 +1,6 @@
 [package]
 name = "serde"
-version = "1.0.197"
+version = "1.0.198"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 build = "build.rs"
 categories = ["encoding", "no-std", "no-std::no-alloc"]
