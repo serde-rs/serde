@@ -410,7 +410,7 @@ macro_rules! visit_saturating {
 }
 
 macro_rules! impl_deserialize_saturating_num {
-    ($primitive:ident, $deserialize:ident ) => {
+    ($primitive:ident, $deserialize:ident) => {
         #[cfg(not(no_core_num_saturating))]
         impl<'de> Deserialize<'de> for Saturating<$primitive> {
             #[inline]
@@ -424,7 +424,7 @@ macro_rules! impl_deserialize_saturating_num {
                     type Value = Saturating<$primitive>;
 
                     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                        formatter.write_str("An integer with support for saturating semantics")
+                        formatter.write_str("integer with support for saturating semantics")
                     }
 
                     visit_saturating!($primitive, u8:visit_u8);
