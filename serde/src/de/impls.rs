@@ -104,6 +104,28 @@ macro_rules! impl_deserialize_num {
                 deserializer.$deserialize(NonZeroVisitor)
             }
         }
+
+        #[cfg(not(no_core_num_saturating))]
+        impl<'de> Deserialize<'de> for Saturating<$primitive> {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                struct SaturatingVisitor;
+
+                impl<'de> Visitor<'de> for SaturatingVisitor {
+                    type Value = Saturating<$primitive>;
+
+                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                        formatter.write_str("integer with support for saturating semantics")
+                    }
+
+                    $($($method!(saturating $primitive $val : $visit);)*)*
+                }
+
+                deserializer.$deserialize(SaturatingVisitor)
+            }
+        }
     };
 
     ($primitive:ident, $deserialize:ident $($method:ident!($($val:ident : $visit:ident)*);)*) => {
@@ -154,6 +176,15 @@ macro_rules! num_self {
             }
         }
     };
+
+    (saturating $primitive:ident $ty:ident : $visit:ident) => {
+        fn $visit<E>(self, v: $ty) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            Ok(Saturating(v))
+        }
+    };
 }
 
 macro_rules! num_as_self {
@@ -177,6 +208,15 @@ macro_rules! num_as_self {
             } else {
                 Err(Error::invalid_value(Unexpected::Unsigned(0), &self))
             }
+        }
+    };
+
+    (saturating $primitive:ident $ty:ident : $visit:ident) => {
+        fn $visit<E>(self, v: $ty) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            Ok(Saturating(v as $primitive))
         }
     };
 }
@@ -235,6 +275,21 @@ macro_rules! int_to_int {
             Err(Error::invalid_value(Unexpected::Signed(v as i64), &self))
         }
     };
+
+    (saturating $primitive:ident $ty:ident : $visit:ident) => {
+        fn $visit<E>(self, v: $ty) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            if (v as i64) < $primitive::MIN as i64 {
+                Ok(Saturating($primitive::MIN))
+            } else if ($primitive::MAX as i64) < v as i64 {
+                Ok(Saturating($primitive::MAX))
+            } else {
+                Ok(Saturating(v as $primitive))
+            }
+        }
+    };
 }
 
 macro_rules! int_to_uint {
@@ -265,6 +320,21 @@ macro_rules! int_to_uint {
             Err(Error::invalid_value(Unexpected::Signed(v as i64), &self))
         }
     };
+
+    (saturating $primitive:ident $ty:ident : $visit:ident) => {
+        fn $visit<E>(self, v: $ty) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            if v < 0 {
+                Ok(Saturating(0))
+            } else if ($primitive::MAX as u64) < v as u64 {
+                Ok(Saturating($primitive::MAX))
+            } else {
+                Ok(Saturating(v as $primitive))
+            }
+        }
+    };
 }
 
 macro_rules! uint_to_self {
@@ -293,6 +363,19 @@ macro_rules! uint_to_self {
                 }
             }
             Err(Error::invalid_value(Unexpected::Unsigned(v as u64), &self))
+        }
+    };
+
+    (saturating $primitive:ident $ty:ident : $visit:ident) => {
+        fn $visit<E>(self, v: $ty) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            if v as u64 <= $primitive::MAX as u64 {
+                Ok(Saturating(v as $primitive))
+            } else {
+                Ok(Saturating($primitive::MAX))
+            }
         }
     };
 }
@@ -387,73 +470,6 @@ impl_deserialize_num! {
     num_as_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32 u64:visit_u64);
 }
 
-#[cfg(not(no_core_num_saturating))]
-macro_rules! visit_saturating {
-    ($primitive:ident, $ty:ident : $visit:ident) => {
-        #[inline]
-        fn $visit<E>(self, v: $ty) -> Result<Saturating<$primitive>, E>
-        where
-            E: Error,
-        {
-            let out: $primitive = core::convert::TryFrom::<$ty>::try_from(v).unwrap_or_else(|_| {
-                #[allow(unused_comparisons)]
-                if v < 0 {
-                    // never true for unsigned values
-                    $primitive::MIN
-                } else {
-                    $primitive::MAX
-                }
-            });
-            Ok(Saturating(out))
-        }
-    };
-}
-
-macro_rules! impl_deserialize_saturating_num {
-    ($primitive:ident, $deserialize:ident) => {
-        #[cfg(not(no_core_num_saturating))]
-        impl<'de> Deserialize<'de> for Saturating<$primitive> {
-            #[inline]
-            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            where
-                D: Deserializer<'de>,
-            {
-                struct SaturatingVisitor;
-
-                impl<'de> Visitor<'de> for SaturatingVisitor {
-                    type Value = Saturating<$primitive>;
-
-                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                        formatter.write_str("integer with support for saturating semantics")
-                    }
-
-                    visit_saturating!($primitive, u8:visit_u8);
-                    visit_saturating!($primitive, u16:visit_u16);
-                    visit_saturating!($primitive, u32:visit_u32);
-                    visit_saturating!($primitive, u64:visit_u64);
-                    visit_saturating!($primitive, i8:visit_i8);
-                    visit_saturating!($primitive, i16:visit_i16);
-                    visit_saturating!($primitive, i32:visit_i32);
-                    visit_saturating!($primitive, i64:visit_i64);
-                }
-
-                deserializer.$deserialize(SaturatingVisitor)
-            }
-        }
-    };
-}
-
-impl_deserialize_saturating_num!(u8, deserialize_u8);
-impl_deserialize_saturating_num!(u16, deserialize_u16);
-impl_deserialize_saturating_num!(u32, deserialize_u32);
-impl_deserialize_saturating_num!(u64, deserialize_u64);
-impl_deserialize_saturating_num!(usize, deserialize_u64);
-impl_deserialize_saturating_num!(i8, deserialize_i8);
-impl_deserialize_saturating_num!(i16, deserialize_i16);
-impl_deserialize_saturating_num!(i32, deserialize_i32);
-impl_deserialize_saturating_num!(i64, deserialize_i64);
-impl_deserialize_saturating_num!(isize, deserialize_i64);
-
 macro_rules! num_128 {
     ($ty:ident : $visit:ident) => {
         fn $visit<E>(self, v: $ty) -> Result<Self::Value, E>
@@ -491,6 +507,21 @@ macro_rules! num_128 {
                     Unexpected::Other(stringify!($ty)),
                     &self,
                 ))
+            }
+        }
+    };
+
+    (saturating $primitive:ident $ty:ident : $visit:ident) => {
+        fn $visit<E>(self, v: $ty) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            if (v as i128) < $primitive::MIN as i128 {
+                Ok(Saturating($primitive::MIN))
+            } else if ($primitive::MAX as u128) < v as u128 {
+                Ok(Saturating($primitive::MAX))
+            } else {
+                Ok(Saturating(v as $primitive))
             }
         }
     };
