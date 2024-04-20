@@ -118,6 +118,7 @@
     // integer and float ser/de requires these sorts of casts
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
     clippy::cast_sign_loss,
     // things are often more readable this way
     clippy::cast_lossless,
