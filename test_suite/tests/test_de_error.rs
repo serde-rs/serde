@@ -1439,6 +1439,14 @@ fn test_integer_from_float() {
 }
 
 #[test]
+fn test_nan_no_decimal_point() {
+    assert_de_tokens_error::<isize>(
+        &[Token::F32(f32::NAN)],
+        "invalid type: floating point `NaN`, expected isize",
+    );
+}
+
+#[test]
 fn test_unit_struct_from_seq() {
     assert_de_tokens_error::<UnitStruct>(
         &[Token::Seq { len: Some(0) }, Token::SeqEnd],
