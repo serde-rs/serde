@@ -1524,7 +1524,6 @@ fn test_systemtime_overflow_struct() {
     );
 }
 
-#[cfg(not(no_systemtime_checked_add))]
 #[test]
 fn test_systemtime_overflow() {
     assert_de_tokens_error::<SystemTime>(
