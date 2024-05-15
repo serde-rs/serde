@@ -27,6 +27,7 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
     let body = Stmts(deserialize_body(&cont, &params));
     let delife = params.borrowed.de_lifetime();
     let serde = cont.attrs.serde_path();
+    let required_features = required_serde_features(&cont);
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
         let vis = &input.vis;
@@ -37,6 +38,7 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
                 where
                     __D: #serde::Deserializer<#delife>,
                 {
+                    #required_features
                     #used
                     #body
                 }
@@ -52,6 +54,7 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
                 where
                     __D: #serde::Deserializer<#delife>,
                 {
+                    #required_features
                     #body
                 }
 
@@ -269,6 +272,38 @@ fn borrowed_lifetimes(cont: &Container) -> BorrowedLifetimes {
     } else {
         BorrowedLifetimes::Borrowed(lifetimes)
     }
+}
+
+fn required_serde_features(cont: &Container) -> TokenStream {
+    let mut requirements = TokenStream::new();
+
+    if let Data::Enum(variants) = &cont.data {
+        let mut tagged = false;
+        let mut untagged = false;
+        match cont.attrs.tag() {
+            attr::TagType::External => {}
+            attr::TagType::Internal { .. } | attr::TagType::Adjacent { .. } => tagged = true,
+            attr::TagType::None => untagged = true,
+        }
+
+        if tagged {
+            requirements.extend(quote! {
+                _serde::__require_alloc_or_std!(
+                    "Serde's `tag` attribute requires either \"alloc\" or \"std\" feature to be enabled on the serde crate"
+                );
+            });
+        }
+
+        if untagged || variants.iter().any(|var| var.attrs.untagged()) {
+            requirements.extend(quote! {
+                _serde::__require_alloc_or_std!(
+                    "Serde's `untagged` attribute requires either \"alloc\" or \"std\" feature to be enabled on the serde crate"
+                );
+            });
+        }
+    }
+
+    requirements
 }
 
 fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {

@@ -182,6 +182,7 @@ mod lib {
     pub use self::core::cell::{Cell, RefCell};
     pub use self::core::clone;
     pub use self::core::cmp::Reverse;
+    pub use self::core::compile_error;
     pub use self::core::convert;
     pub use self::core::default;
     pub use self::core::fmt::{self, Debug, Display, Write as FmtWrite};

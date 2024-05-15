@@ -7,6 +7,7 @@ pub mod ser;
 pub mod doc;
 
 pub use crate::lib::clone::Clone;
+pub use crate::lib::compile_error;
 pub use crate::lib::convert::{From, Into};
 pub use crate::lib::default::Default;
 pub use crate::lib::fmt::{self, Formatter};
@@ -45,4 +46,18 @@ mod string {
         // UTF-8.
         str::from_utf8(bytes).unwrap_or("\u{fffd}\u{fffd}\u{fffd}")
     }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+#[macro_export]
+macro_rules! __require_alloc_or_std {
+    ($msg:tt) => {};
+}
+
+#[cfg(not(any(feature = "std", feature = "alloc")))]
+#[macro_export]
+macro_rules! __require_alloc_or_std {
+    ($msg:tt) => {
+        $crate::__private::compile_error!($msg);
+    };
 }
