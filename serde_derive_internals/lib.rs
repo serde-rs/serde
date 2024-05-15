@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/serde_derive_internals/0.29.0")]
+#![doc(html_root_url = "https://docs.rs/serde_derive_internals/0.29.1")]
 #![cfg_attr(not(check_cfg), allow(unexpected_cfgs))]
 // Ignored clippy lints
 #![allow(
