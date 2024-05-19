@@ -39,7 +39,7 @@ impl<'de> Deserialize<'de> for () {
 }
 
 #[cfg(feature = "unstable")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "unstable")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "unstable")))]
 impl<'de> Deserialize<'de> for ! {
     fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
     where
@@ -695,7 +695,7 @@ impl<'a, 'de> Visitor<'de> for StringInPlaceVisitor<'a> {
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-#[cfg_attr(doc_cfg, doc(cfg(any(feature = "std", feature = "alloc"))))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
 impl<'de> Deserialize<'de> for String {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -839,7 +839,7 @@ impl<'de> Visitor<'de> for CStringVisitor {
 }
 
 #[cfg(any(feature = "std", all(not(no_core_cstr), feature = "alloc")))]
-#[cfg_attr(doc_cfg, doc(cfg(any(feature = "std", feature = "alloc"))))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
 impl<'de> Deserialize<'de> for CString {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -868,7 +868,7 @@ macro_rules! forwarded_impl {
 
 forwarded_impl! {
     #[cfg(any(feature = "std", all(not(no_core_cstr), feature = "alloc")))]
-    #[cfg_attr(doc_cfg, doc(cfg(any(feature = "std", feature = "alloc"))))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
     (), Box<CStr>, CString::into_boxed_c_str
 }
 
@@ -1086,7 +1086,7 @@ fn nop_reserve<T>(_seq: T, _n: usize) {}
 
 seq_impl!(
     #[cfg(any(feature = "std", feature = "alloc"))]
-    #[cfg_attr(doc_cfg, doc(cfg(any(feature = "std", feature = "alloc"))))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
     BinaryHeap<T: Ord>,
     seq,
     BinaryHeap::clear,
@@ -1097,7 +1097,7 @@ seq_impl!(
 
 seq_impl!(
     #[cfg(any(feature = "std", feature = "alloc"))]
-    #[cfg_attr(doc_cfg, doc(cfg(any(feature = "std", feature = "alloc"))))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
     BTreeSet<T: Eq + Ord>,
     seq,
     BTreeSet::clear,
@@ -1108,7 +1108,7 @@ seq_impl!(
 
 seq_impl!(
     #[cfg(any(feature = "std", feature = "alloc"))]
-    #[cfg_attr(doc_cfg, doc(cfg(any(feature = "std", feature = "alloc"))))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
     LinkedList<T>,
     seq,
     LinkedList::clear,
@@ -1119,7 +1119,7 @@ seq_impl!(
 
 seq_impl!(
     #[cfg(feature = "std")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     HashSet<T: Eq + Hash, S: BuildHasher + Default>,
     seq,
     HashSet::clear,
@@ -1130,7 +1130,7 @@ seq_impl!(
 
 seq_impl!(
     #[cfg(any(feature = "std", feature = "alloc"))]
-    #[cfg_attr(doc_cfg, doc(cfg(any(feature = "std", feature = "alloc"))))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
     VecDeque<T>,
     seq,
     VecDeque::clear,
@@ -1142,7 +1142,7 @@ seq_impl!(
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-#[cfg_attr(doc_cfg, doc(cfg(any(feature = "std", feature = "alloc"))))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
 impl<'de, T> Deserialize<'de> for Vec<T>
 where
     T: Deserialize<'de>,
@@ -1546,7 +1546,7 @@ macro_rules! map_impl {
 
 map_impl! {
     #[cfg(any(feature = "std", feature = "alloc"))]
-    #[cfg_attr(doc_cfg, doc(cfg(any(feature = "std", feature = "alloc"))))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
     BTreeMap<K: Ord, V>,
     map,
     BTreeMap::new(),
@@ -1554,7 +1554,7 @@ map_impl! {
 
 map_impl! {
     #[cfg(feature = "std")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     HashMap<K: Eq + Hash, V, S: BuildHasher + Default>,
     map,
     HashMap::with_capacity_and_hasher(size_hint::cautious::<(K, V)>(map.size_hint()), S::default()),
@@ -1696,7 +1696,7 @@ macro_rules! deserialize_enum {
 }
 
 #[cfg(feature = "std")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl<'de> Deserialize<'de> for net::IpAddr {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -1717,13 +1717,13 @@ impl<'de> Deserialize<'de> for net::IpAddr {
 
 parse_ip_impl! {
     #[cfg(feature = "std")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     net::Ipv4Addr, "IPv4 address", 4
 }
 
 parse_ip_impl! {
     #[cfg(feature = "std")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     net::Ipv6Addr, "IPv6 address", 16
 }
 
@@ -1750,7 +1750,7 @@ macro_rules! parse_socket_impl {
 }
 
 #[cfg(feature = "std")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl<'de> Deserialize<'de> for net::SocketAddr {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -1771,14 +1771,14 @@ impl<'de> Deserialize<'de> for net::SocketAddr {
 
 parse_socket_impl! {
     #[cfg(feature = "std")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     net::SocketAddrV4, "IPv4 socket address",
     |(ip, port)| net::SocketAddrV4::new(ip, port),
 }
 
 parse_socket_impl! {
     #[cfg(feature = "std")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     net::SocketAddrV6, "IPv6 socket address",
     |(ip, port)| net::SocketAddrV6::new(ip, port, 0, 0),
 }
@@ -1814,7 +1814,7 @@ impl<'a> Visitor<'a> for PathVisitor {
 }
 
 #[cfg(feature = "std")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl<'de: 'a, 'a> Deserialize<'de> for &'a Path {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -1869,7 +1869,7 @@ impl<'de> Visitor<'de> for PathBufVisitor {
 }
 
 #[cfg(feature = "std")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl<'de> Deserialize<'de> for PathBuf {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -1881,7 +1881,7 @@ impl<'de> Deserialize<'de> for PathBuf {
 
 forwarded_impl! {
     #[cfg(feature = "std")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     (), Box<Path>, PathBuf::into_boxed_path
 }
 
@@ -1943,7 +1943,7 @@ impl<'de> Visitor<'de> for OsStringVisitor {
 }
 
 #[cfg(all(feature = "std", any(unix, windows)))]
-#[cfg_attr(doc_cfg, doc(cfg(all(feature = "std", any(unix, windows)))))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "std", any(unix, windows)))))]
 impl<'de> Deserialize<'de> for OsString {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -1957,30 +1957,30 @@ impl<'de> Deserialize<'de> for OsString {
 
 forwarded_impl! {
     #[cfg(any(feature = "std", feature = "alloc"))]
-    #[cfg_attr(doc_cfg, doc(cfg(any(feature = "std", feature = "alloc"))))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
     (T), Box<T>, Box::new
 }
 
 forwarded_impl! {
     #[cfg(any(feature = "std", feature = "alloc"))]
-    #[cfg_attr(doc_cfg, doc(cfg(any(feature = "std", feature = "alloc"))))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
     (T), Box<[T]>, Vec::into_boxed_slice
 }
 
 forwarded_impl! {
     #[cfg(any(feature = "std", feature = "alloc"))]
-    #[cfg_attr(doc_cfg, doc(cfg(any(feature = "std", feature = "alloc"))))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
     (), Box<str>, String::into_boxed_str
 }
 
 forwarded_impl! {
     #[cfg(all(feature = "std", any(unix, windows)))]
-    #[cfg_attr(doc_cfg, doc(cfg(all(feature = "std", any(unix, windows)))))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "std", any(unix, windows)))))]
     (), Box<OsStr>, OsString::into_boxed_os_str
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-#[cfg_attr(doc_cfg, doc(cfg(any(feature = "std", feature = "alloc"))))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
 impl<'de, 'a, T> Deserialize<'de> for Cow<'a, T>
 where
     T: ?Sized + ToOwned,
@@ -2003,7 +2003,7 @@ where
 /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
 #[cfg_attr(
-    doc_cfg,
+    docsrs,
     doc(cfg(all(feature = "rc", any(feature = "std", feature = "alloc"))))
 )]
 impl<'de, T> Deserialize<'de> for RcWeak<T>
@@ -2025,7 +2025,7 @@ where
 /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
 #[cfg_attr(
-    doc_cfg,
+    docsrs,
     doc(cfg(all(feature = "rc", any(feature = "std", feature = "alloc"))))
 )]
 impl<'de, T> Deserialize<'de> for ArcWeak<T>
@@ -2073,7 +2073,7 @@ box_forwarded_impl! {
     ///
     /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
     #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
-    #[cfg_attr(doc_cfg, doc(cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))))]
     Rc
 }
 
@@ -2086,7 +2086,7 @@ box_forwarded_impl! {
     ///
     /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
     #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
-    #[cfg_attr(doc_cfg, doc(cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))))]
     Arc
 }
 
@@ -2110,13 +2110,13 @@ forwarded_impl! {
 
 forwarded_impl! {
     #[cfg(feature = "std")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     (T), Mutex<T>, Mutex::new
 }
 
 forwarded_impl! {
     #[cfg(feature = "std")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     (T), RwLock<T>, RwLock::new
 }
 
@@ -2271,7 +2271,7 @@ impl<'de> Deserialize<'de> for Duration {
 ////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(feature = "std")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl<'de> Deserialize<'de> for SystemTime {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -3107,7 +3107,7 @@ macro_rules! atomic_impl {
     ($($ty:ident $size:expr)*) => {
         $(
             #[cfg(any(no_target_has_atomic, target_has_atomic = $size))]
-            #[cfg_attr(doc_cfg, doc(cfg(all(feature = "std", target_has_atomic = $size))))]
+            #[cfg_attr(docsrs, doc(cfg(all(feature = "std", target_has_atomic = $size))))]
             impl<'de> Deserialize<'de> for $ty {
                 fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
                 where
