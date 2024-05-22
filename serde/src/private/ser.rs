@@ -1,6 +1,6 @@
 use crate::lib::*;
-
 use crate::ser::{self, Impossible, Serialize, SerializeMap, SerializeStruct, Serializer};
+use crate::tri;
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 use self::content::{
@@ -337,7 +337,7 @@ where
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 mod content {
-    use crate::lib::*;
+    use crate::{lib::*, tri};
 
     use crate::ser::{self, Serialize, Serializer};
 

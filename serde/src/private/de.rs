@@ -1,4 +1,6 @@
 use crate::lib::*;
+use crate::tri;
+use serde_core::forward_to_deserialize_any;
 
 use crate::de::value::{BorrowedBytesDeserializer, BytesDeserializer};
 use crate::de::{
@@ -206,14 +208,16 @@ mod content {
     // This issue is tracking making some of this stuff public:
     // https://github.com/serde-rs/serde/issues/741
 
+    use serde_core::forward_to_deserialize_any;
+
     use crate::lib::*;
 
-    use crate::actually_private;
     use crate::de::value::{MapDeserializer, SeqDeserializer};
     use crate::de::{
         self, size_hint, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected,
         IgnoredAny, MapAccess, SeqAccess, Unexpected, Visitor,
     };
+    use crate::tri;
 
     /// Used from generated code to buffer the contents of the Deserializer when
     /// deserializing untagged enums and internally tagged enums.
@@ -298,7 +302,7 @@ mod content {
             // Untagged and internally tagged enums are only supported in
             // self-describing formats.
             let visitor = ContentVisitor { value: PhantomData };
-            deserializer.__deserialize_content(actually_private::T, visitor)
+            deserializer.deserialize_any(visitor)
         }
     }
 
@@ -1048,7 +1052,7 @@ mod content {
         E: de::Error,
     {
         #[cold]
-        fn invalid_type(self, exp: &Expected) -> E {
+        fn invalid_type(self, exp: &dyn Expected) -> E {
             de::Error::invalid_type(self.content.unexpected(), exp)
         }
 
@@ -1484,18 +1488,6 @@ mod content {
             drop(self);
             visitor.visit_unit()
         }
-
-        fn __deserialize_content<V>(
-            self,
-            _: actually_private::T,
-            visitor: V,
-        ) -> Result<Content<'de>, Self::Error>
-        where
-            V: Visitor<'de, Value = Content<'de>>,
-        {
-            let _ = visitor;
-            Ok(self.content)
-        }
     }
 
     impl<'de, E> ContentDeserializer<'de, E> {
@@ -1641,7 +1633,7 @@ mod content {
         E: de::Error,
     {
         #[cold]
-        fn invalid_type(self, exp: &Expected) -> E {
+        fn invalid_type(self, exp: &dyn Expected) -> E {
             de::Error::invalid_type(self.content.unexpected(), exp)
         }
 
@@ -2056,18 +2048,6 @@ mod content {
             V: Visitor<'de>,
         {
             visitor.visit_unit()
-        }
-
-        fn __deserialize_content<V>(
-            self,
-            _: actually_private::T,
-            visitor: V,
-        ) -> Result<Content<'de>, Self::Error>
-        where
-            V: Visitor<'de, Value = Content<'de>>,
-        {
-            let _ = visitor;
-            Ok(self.content.clone())
         }
     }
 

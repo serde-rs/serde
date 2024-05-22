@@ -121,7 +121,8 @@ pub mod value;
 mod format;
 mod ignored_any;
 mod impls;
-pub(crate) mod size_hint;
+#[doc(hidden)]
+pub mod size_hint;
 
 pub use self::ignored_any::IgnoredAny;
 
@@ -1215,20 +1216,6 @@ pub trait Deserializer<'de>: Sized {
     #[inline]
     fn is_human_readable(&self) -> bool {
         true
-    }
-
-    // Not public API.
-    #[cfg(all(not(no_serde_derive), any(feature = "std", feature = "alloc")))]
-    #[doc(hidden)]
-    fn __deserialize_content<V>(
-        self,
-        _: crate::actually_private::T,
-        visitor: V,
-    ) -> Result<crate::__private::de::Content<'de>, Self::Error>
-    where
-        V: Visitor<'de, Value = crate::__private::de::Content<'de>>,
-    {
-        self.deserialize_any(visitor)
     }
 }
 
