@@ -399,17 +399,17 @@ macro_rules! tuple_impls {
 
 macro_rules! tuple_impl_body {
     ($len:expr => ($($n:tt)+)) => {
-                #[inline]
-                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-                where
-                    S: Serializer,
-                {
-                    let mut tuple = tri!(serializer.serialize_tuple($len));
-                    $(
-                        tri!(tuple.serialize_element(&self.$n));
-                    )+
-                    tuple.end()
-                }
+        #[inline]
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            let mut tuple = tri!(serializer.serialize_tuple($len));
+            $(
+                tri!(tuple.serialize_element(&self.$n));
+            )+
+            tuple.end()
+        }
     };
 }
 
