@@ -1393,82 +1393,103 @@ array_impls! {
 macro_rules! tuple_impls {
     ($($len:tt => ($($n:tt $name:ident)+))+) => {
         $(
-            impl<'de, $($name: Deserialize<'de>),+> Deserialize<'de> for ($($name,)+) {
-                #[inline]
-                fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-                where
-                    D: Deserializer<'de>,
-                {
-                    struct TupleVisitor<$($name,)+> {
-                        marker: PhantomData<($($name,)+)>,
-                    }
-
-                    impl<'de, $($name: Deserialize<'de>),+> Visitor<'de> for TupleVisitor<$($name,)+> {
-                        type Value = ($($name,)+);
-
-                        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                            formatter.write_str(concat!("a tuple of size ", $len))
-                        }
-
-                        #[inline]
-                        #[allow(non_snake_case)]
-                        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-                        where
-                            A: SeqAccess<'de>,
-                        {
-                            $(
-                                let $name = match tri!(seq.next_element()) {
-                                    Some(value) => value,
-                                    None => return Err(Error::invalid_length($n, &self)),
-                                };
-                            )+
-
-                            Ok(($($name,)+))
-                        }
-                    }
-
-                    deserializer.deserialize_tuple($len, TupleVisitor { marker: PhantomData })
-                }
-
-                #[inline]
-                fn deserialize_in_place<D>(deserializer: D, place: &mut Self) -> Result<(), D::Error>
-                where
-                    D: Deserializer<'de>,
-                {
-                    struct TupleInPlaceVisitor<'a, $($name: 'a,)+>(&'a mut ($($name,)+));
-
-                    impl<'a, 'de, $($name: Deserialize<'de>),+> Visitor<'de> for TupleInPlaceVisitor<'a, $($name,)+> {
-                        type Value = ();
-
-                        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                            formatter.write_str(concat!("a tuple of size ", $len))
-                        }
-
-                        #[inline]
-                        #[allow(non_snake_case)]
-                        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-                        where
-                            A: SeqAccess<'de>,
-                        {
-                            $(
-                                if tri!(seq.next_element_seed(InPlaceSeed(&mut (self.0).$n))).is_none() {
-                                    return Err(Error::invalid_length($n, &self));
-                                }
-                            )+
-
-                            Ok(())
-                        }
-                    }
-
-                    deserializer.deserialize_tuple($len, TupleInPlaceVisitor(place))
-                }
+            #[cfg_attr(docsrs, doc(hidden))]
+            impl<'de, $($name),+> Deserialize<'de> for ($($name,)+)
+            where
+                $($name: Deserialize<'de>,)+
+            {
+                tuple_impl_body!($len => ($($n $name)+));
             }
         )+
-    }
+    };
+}
+
+macro_rules! tuple_impl_body {
+    ($len:tt => ($($n:tt $name:ident)+)) => {
+        #[inline]
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            struct TupleVisitor<$($name,)+> {
+                marker: PhantomData<($($name,)+)>,
+            }
+
+            impl<'de, $($name: Deserialize<'de>),+> Visitor<'de> for TupleVisitor<$($name,)+> {
+                type Value = ($($name,)+);
+
+                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                    formatter.write_str(concat!("a tuple of size ", $len))
+                }
+
+                #[inline]
+                #[allow(non_snake_case)]
+                fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+                where
+                    A: SeqAccess<'de>,
+                {
+                    $(
+                        let $name = match tri!(seq.next_element()) {
+                            Some(value) => value,
+                            None => return Err(Error::invalid_length($n, &self)),
+                        };
+                    )+
+
+                    Ok(($($name,)+))
+                }
+            }
+
+            deserializer.deserialize_tuple($len, TupleVisitor { marker: PhantomData })
+        }
+
+        #[inline]
+        fn deserialize_in_place<D>(deserializer: D, place: &mut Self) -> Result<(), D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            struct TupleInPlaceVisitor<'a, $($name: 'a,)+>(&'a mut ($($name,)+));
+
+            impl<'a, 'de, $($name: Deserialize<'de>),+> Visitor<'de> for TupleInPlaceVisitor<'a, $($name,)+> {
+                type Value = ();
+
+                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                    formatter.write_str(concat!("a tuple of size ", $len))
+                }
+
+                #[inline]
+                #[allow(non_snake_case)]
+                fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+                where
+                    A: SeqAccess<'de>,
+                {
+                    $(
+                        if tri!(seq.next_element_seed(InPlaceSeed(&mut (self.0).$n))).is_none() {
+                            return Err(Error::invalid_length($n, &self));
+                        }
+                    )+
+
+                    Ok(())
+                }
+            }
+
+            deserializer.deserialize_tuple($len, TupleInPlaceVisitor(place))
+        }
+    };
+}
+
+#[cfg_attr(docsrs, doc(fake_variadic))]
+#[cfg_attr(
+    docsrs,
+    doc = "This trait is implemented for tuples up to 16 items long."
+)]
+impl<'de, T> Deserialize<'de> for (T,)
+where
+    T: Deserialize<'de>,
+{
+    tuple_impl_body!(1 => (0 T));
 }
 
 tuple_impls! {
-    1  => (0 T0)
     2  => (0 T0 1 T1)
     3  => (0 T0 1 T1 2 T2)
     4  => (0 T0 1 T1 2 T2 3 T3)
