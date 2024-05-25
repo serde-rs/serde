@@ -386,10 +386,19 @@ impl Serialize for ! {
 macro_rules! tuple_impls {
     ($($len:expr => ($($n:tt $name:ident)+))+) => {
         $(
+            #[cfg_attr(docsrs, doc(hidden))]
             impl<$($name),+> Serialize for ($($name,)+)
             where
                 $($name: Serialize,)+
             {
+                tuple_impl_body!($len => ($($n)+));
+            }
+        )+
+    };
+}
+
+macro_rules! tuple_impl_body {
+    ($len:expr => ($($n:tt)+)) => {
                 #[inline]
                 fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
                 where
@@ -401,13 +410,22 @@ macro_rules! tuple_impls {
                     )+
                     tuple.end()
                 }
-            }
-        )+
-    }
+    };
+}
+
+#[cfg_attr(docsrs, doc(fake_variadic))]
+#[cfg_attr(
+    docsrs,
+    doc = "This trait is implemented for tuples up to 16 items long."
+)]
+impl<T> Serialize for (T,)
+where
+    T: Serialize,
+{
+    tuple_impl_body!(1 => (0));
 }
 
 tuple_impls! {
-    1 => (0 T0)
     2 => (0 T0 1 T1)
     3 => (0 T0 1 T1 2 T2)
     4 => (0 T0 1 T1 2 T2 3 T3)

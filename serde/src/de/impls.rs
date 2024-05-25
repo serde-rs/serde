@@ -1393,7 +1393,19 @@ array_impls! {
 macro_rules! tuple_impls {
     ($($len:tt => ($($n:tt $name:ident)+))+) => {
         $(
-            impl<'de, $($name: Deserialize<'de>),+> Deserialize<'de> for ($($name,)+) {
+            #[cfg_attr(docsrs, doc(hidden))]
+            impl<'de, $($name),+> Deserialize<'de> for ($($name,)+)
+            where
+                $($name: Deserialize<'de>,)+
+            {
+                tuple_impl_body!($len => ($($n $name)+));
+            }
+        )+
+    };
+}
+
+macro_rules! tuple_impl_body {
+    ($len:tt => ($($n:tt $name:ident)+)) => {
                 #[inline]
                 fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
                 where
@@ -1462,13 +1474,22 @@ macro_rules! tuple_impls {
 
                     deserializer.deserialize_tuple($len, TupleInPlaceVisitor(place))
                 }
-            }
-        )+
-    }
+    };
+}
+
+#[cfg_attr(docsrs, doc(fake_variadic))]
+#[cfg_attr(
+    docsrs,
+    doc = "This trait is implemented for tuples up to 16 items long."
+)]
+impl<'de, T> Deserialize<'de> for (T,)
+where
+    T: Deserialize<'de>,
+{
+    tuple_impl_body!(1 => (0 T));
 }
 
 tuple_impls! {
-    1  => (0 T0)
     2  => (0 T0 1 T1)
     3  => (0 T0 1 T1 2 T2)
     4  => (0 T0 1 T1 2 T2 3 T3)
