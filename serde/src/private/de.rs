@@ -2872,29 +2872,15 @@ where
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-impl<E> std::fmt::Display for FlatStructError<E> {
+impl<E> Display for FlatStructError<E> {
     fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
         unreachable!()
     }
 }
 
-#[cfg(any(feature = "std", feature = "alloc"))]
-impl<E> std::error::Error for FlatStructError<E>
-where
-    E: Error,
-{
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        unreachable!()
-    }
-
-    fn description(&self) -> &str {
-        unreachable!()
-    }
-
-    fn cause(&self) -> Option<&dyn error::Error> {
-        unreachable!()
-    }
-}
+#[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+impl<E> error::Error for FlatStructError<E> where E: Error {}
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 struct OptionFlatMapDeserializer<'a, 'de: 'a, E>(FlatMapDeserializer<'a, 'de, E>);
