@@ -2699,7 +2699,7 @@ where
     {
         match visitor.visit_some(OptionFlatMapDeserializer(self)) {
             Ok(value) => Ok(value),
-            Err(FlatStructError::FieldNotPresent) => V::__private_make_none(),
+            Err(FlatStructError::NotPresent) => V::__private_make_none(),
             Err(FlatStructError::Inner(e)) => Err(e),
         }
     }
@@ -2850,7 +2850,7 @@ fn flat_map_take_entry<'de>(
 #[cfg(any(feature = "std", feature = "alloc"))]
 #[derive(Debug)]
 enum FlatStructError<E> {
-    FieldNotPresent,
+    NotPresent,
     Inner(E),
 }
 
@@ -2867,7 +2867,7 @@ where
     }
 
     fn missing_field(_field: &'static str) -> Self {
-        Self::FieldNotPresent
+        Self::NotPresent
     }
 }
 
@@ -2906,6 +2906,26 @@ where
 {
     type Error = FlatStructError<E>;
 
+    fn deserialize_enum<V>(
+        self,
+        _name: &'static str,
+        variants: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        for entry in self.0 .0 {
+            if let Some((key, value)) = flat_map_take_entry(entry, variants) {
+                return visitor
+                    .visit_enum(EnumDeserializer::new(key, Some(value)))
+                    .map_err(FlatStructError::Inner);
+            }
+        }
+
+        Err(FlatStructError::NotPresent)
+    }
+
     fn deserialize_struct<V>(
         self,
         _: &'static str,
@@ -2932,7 +2952,6 @@ where
 
     forward_to_deserialize_inner! {
         deserialize_any()
-        deserialize_enum(name: &'static str, variants: &'static [&'static str])
         deserialize_map()
         deserialize_option()
         deserialize_ignored_any()
