@@ -1,0 +1,37 @@
+error[E0308]: mismatched types
+ --> tests/ui/default-attribute/incorrect_type_newtype.rs:5:19
+  |
+5 | #[serde(default = "main")]
+  |                   ^^^^^^
+  |                   |
+  |                   expected `Newtype`, found `()`
+  |                   expected due to this
+
+error[E0308]: `match` arms have incompatible types
+ --> tests/ui/default-attribute/incorrect_type_newtype.rs:6:34
+  |
+4 | #[derive(Deserialize)]
+  |          -----------
+  |          |
+  |          this is found to be of type `u8`
+  |          `match` arms have incompatible types
+5 | #[serde(default = "main")]
+6 | struct Newtype(#[serde(default = "main")] u8);
+  |                                  ^^^^^^ expected `u8`, found `()`
+
+error[E0308]: mismatched types
+ --> tests/ui/default-attribute/incorrect_type_newtype.rs:5:19
+  |
+5 | #[serde(default = "main")]
+  |                   ^^^^^^ expected `Newtype`, found `()`
+6 | struct Newtype(#[serde(default = "main")] u8);
+  |        ------- expected due to this
+
+error[E0308]: mismatched types
+ --> tests/ui/default-attribute/incorrect_type_newtype.rs:6:34
+  |
+4 | #[derive(Deserialize)]
+  |          ----------- expected due to the type of this binding
+5 | #[serde(default = "main")]
+6 | struct Newtype(#[serde(default = "main")] u8);
+  |                                  ^^^^^^ expected `u8`, found `()`

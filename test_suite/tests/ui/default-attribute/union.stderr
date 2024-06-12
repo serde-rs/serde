@@ -1,0 +1,14 @@
+error: #[serde(default)] can only be used on structs
+ --> tests/ui/default-attribute/union.rs:4:9
+  |
+4 | #[serde(default)]
+  |         ^^^^^^^
+
+error: Serde does not support derive for unions
+ --> tests/ui/default-attribute/union.rs:4:1
+  |
+4 | / #[serde(default)]
+5 | | union Union {
+6 | |     f: u8,
+7 | | }
+  | |_^
