@@ -216,6 +216,22 @@ pub struct Container {
     type_into: Option<syn::Type>,
     remote: Option<syn::Path>,
     identifier: Identifier,
+    /// `true` if container is a `struct` and it has a field with `#[serde(flatten)]`
+    /// attribute or it is an `enum` with a struct variant which has a field with
+    /// `#[serde(flatten)]` attribute. Examples:
+    ///
+    /// ```ignore
+    /// struct Container {
+    ///     #[serde(flatten)]
+    ///     some_field: (),
+    /// }
+    /// enum Container {
+    ///     Variant {
+    ///         #[serde(flatten)]
+    ///         some_field: (),
+    ///     },
+    /// }
+    /// ```
     has_flatten: bool,
     serde_path: Option<syn::Path>,
     is_packed: bool,
@@ -794,6 +810,18 @@ pub struct Variant {
     rename_all_rules: RenameAllRules,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
+    /// `true` if variant is a struct variant which contains a field with `#[serde(flatten)]`
+    /// attribute. Examples:
+    ///
+    /// ```ignore
+    /// enum Enum {
+    ///     Variant {
+    ///         #[serde(flatten)]
+    ///         some_field: (),
+    ///     },
+    /// }
+    /// ```
+    has_flatten: bool,
     skip_deserializing: bool,
     skip_serializing: bool,
     other: bool,
@@ -963,6 +991,7 @@ impl Variant {
             },
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
+            has_flatten: false,
             skip_deserializing: skip_deserializing.get(),
             skip_serializing: skip_serializing.get(),
             other: other.get(),
@@ -1003,6 +1032,14 @@ impl Variant {
 
     pub fn de_bound(&self) -> Option<&[syn::WherePredicate]> {
         self.de_bound.as_ref().map(|vec| &vec[..])
+    }
+
+    pub fn has_flatten(&self) -> bool {
+        self.has_flatten
+    }
+
+    pub fn mark_has_flatten(&mut self) {
+        self.has_flatten = true;
     }
 
     pub fn skip_deserializing(&self) -> bool {
