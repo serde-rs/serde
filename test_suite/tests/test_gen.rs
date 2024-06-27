@@ -422,6 +422,7 @@ fn test_gen() {
 
     #[derive(Serialize, Deserialize)]
     #[serde(remote = "Self")]
+    #[allow(dead_code)]
     struct RemoteSelf;
 
     #[derive(Serialize, Deserialize)]
