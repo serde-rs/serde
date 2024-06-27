@@ -12,13 +12,13 @@ pub enum Fragment {
 
 macro_rules! quote_expr {
     ($($tt:tt)*) => {
-        $crate::fragment::Fragment::Expr(quote!($($tt)*))
+        $crate::implementation::fragment::Fragment::Expr(quote!($($tt)*))
     }
 }
 
 macro_rules! quote_block {
     ($($tt:tt)*) => {
-        $crate::fragment::Fragment::Block(quote!($($tt)*))
+        $crate::implementation::fragment::Fragment::Block(quote!($($tt)*))
     }
 }
 
