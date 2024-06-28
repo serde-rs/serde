@@ -1,7 +1,7 @@
-use crate::fragment::{Fragment, Match, Stmts};
+use crate::implementation::fragment::{Fragment, Match, Stmts};
+use crate::implementation::{bound, dummy, pretend, this};
 use crate::internals::ast::{Container, Data, Field, Style, Variant};
 use crate::internals::{attr, replace_receiver, Ctxt, Derive};
-use crate::{bound, dummy, pretend, this};
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;

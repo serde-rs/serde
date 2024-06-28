@@ -1,7 +1,7 @@
-use crate::fragment::{Expr, Fragment, Match, Stmts};
+use crate::implementation::fragment::{Expr, Fragment, Match, Stmts};
+use crate::implementation::{bound, dummy, pretend, this};
 use crate::internals::ast::{Container, Data, Field, Style, Variant};
 use crate::internals::{attr, replace_receiver, ungroup, Ctxt, Derive};
-use crate::{bound, dummy, pretend, this};
 use proc_macro2::{Literal, Span, TokenStream};
 use quote::{quote, quote_spanned, ToTokens};
 use std::collections::BTreeSet;

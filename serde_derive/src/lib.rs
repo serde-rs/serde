@@ -68,22 +68,14 @@ extern crate syn;
 
 extern crate proc_macro;
 
+mod implementation;
 mod internals;
 
 use proc_macro::TokenStream;
 use syn::parse_macro_input;
 use syn::DeriveInput;
 
-#[macro_use]
-mod bound;
-#[macro_use]
-mod fragment;
-
-mod de;
-mod dummy;
-mod pretend;
-mod ser;
-mod this;
+use implementation::{de, ser};
 
 #[proc_macro_derive(Serialize, attributes(serde))]
 pub fn derive_serialize(input: TokenStream) -> TokenStream {
