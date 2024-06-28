@@ -1,10 +1,6 @@
 [package]
 name = "serde"
-<<<<<<< master
-version = "1.0.198"
-=======
 version = "1.0.203"
->>>>>>> master
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 build = "build.rs"
 categories = ["encoding", "no-std", "no-std::no-alloc"]
@@ -41,11 +37,7 @@ rustdoc-args = ["--generate-link-to-definition"]
 # is compatible with exactly one serde release because the generated code
 # involves nonpublic APIs which are not bound by semver.
 [target.'cfg(any())'.dependencies]
-<<<<<<< master
-serde_derive = { version = "=1.0.198", path = "../serde_derive" }
-=======
 serde_derive = { version = "=1.0.203", path = "../serde_derive" }
->>>>>>> master
 
 
 ### FEATURES #################################################################
