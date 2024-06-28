@@ -95,16 +95,17 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Serde types in rustdoc of other crates get linked to here.
-#![doc(html_root_url = "https://docs.rs/serde/1.0.197")]
+#![doc(html_root_url = "https://docs.rs/serde/1.0.203")]
 // Support using Serde without the standard library!
 #![cfg_attr(not(feature = "std"), no_std)]
 // Show which crate feature enables conditionally compiled APIs in documentation.
-#![cfg_attr(doc_cfg, feature(doc_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg, rustdoc_internals))]
+#![cfg_attr(docsrs, allow(internal_features))]
 // Unstable functionality only if the user asks for it. For tracking and
 // discussion of these features please refer to this issue:
 //
 //    https://github.com/serde-rs/serde/issues/812
-#![cfg_attr(feature = "unstable", feature(error_in_core, never_type))]
+#![cfg_attr(feature = "unstable", feature(never_type))]
 #![allow(unknown_lints, bare_trait_objects, deprecated)]
 // Ignored clippy and clippy_pedantic lints
 #![allow(
@@ -118,6 +119,7 @@
     // integer and float ser/de requires these sorts of casts
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
     clippy::cast_sign_loss,
     // things are often more readable this way
     clippy::cast_lossless,
@@ -329,7 +331,7 @@ extern crate serde_derive;
 
 /// Derive macro available if serde is built with `features = ["derive"]`.
 #[cfg(feature = "serde_derive")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "derive")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
 pub use serde_derive::{Deserialize, Serialize};
 
 #[cfg(all(not(no_serde_derive), any(feature = "std", feature = "alloc")))]
