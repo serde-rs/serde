@@ -69,6 +69,17 @@ struct StructDefault<T> {
     b: T,
 }
 
+#[derive(PartialEq, Debug, Deserialize)]
+struct StructNonStrictOrSomeOtherName {
+    a: i32,
+}
+
+#[derive(PartialEq, Debug, Deserialize)]
+#[serde(strict_or_some_other_name)]
+struct StructStrictOrSomeOtherName {
+    a: i32,
+}
+
 impl Default for StructDefault<String> {
     fn default() -> Self {
         StructDefault {
@@ -1587,6 +1598,30 @@ fn test_struct_default() {
                 name: "StructDefault",
                 len: 2,
             },
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_struct_non_strict_or_some_other_name() {
+    test(
+        StructNonStrictOrSomeOtherName { a: 50 },
+        &[Token::Seq { len: Some(1) }, Token::I32(50), Token::SeqEnd],
+    );
+}
+
+#[test]
+fn test_struct_strict_or_some_other_name() {
+    test(
+        StructStrictOrSomeOtherName { a: 50 },
+        &[
+            Token::Struct {
+                name: "StructStrictOrSomeOtherName",
+                len: 1,
+            },
+            Token::Str("a"),
+            Token::I32(50),
             Token::StructEnd,
         ],
     );
