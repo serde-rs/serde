@@ -13,6 +13,20 @@ fn main() {
         None => return,
     };
 
+    if minor >= 77 {
+        println!("cargo:rustc-check-cfg=cfg(no_core_cstr)");
+        println!("cargo:rustc-check-cfg=cfg(no_core_num_saturating)");
+        println!("cargo:rustc-check-cfg=cfg(no_core_try_from)");
+        println!("cargo:rustc-check-cfg=cfg(no_float_copysign)");
+        println!("cargo:rustc-check-cfg=cfg(no_num_nonzero_signed)");
+        println!("cargo:rustc-check-cfg=cfg(no_relaxed_trait_bounds)");
+        println!("cargo:rustc-check-cfg=cfg(no_serde_derive)");
+        println!("cargo:rustc-check-cfg=cfg(no_std_atomic)");
+        println!("cargo:rustc-check-cfg=cfg(no_std_atomic64)");
+        println!("cargo:rustc-check-cfg=cfg(no_systemtime_checked_add)");
+        println!("cargo:rustc-check-cfg=cfg(no_target_has_atomic)");
+    }
+
     let target = env::var("TARGET").unwrap();
     let emscripten = target == "asmjs-unknown-emscripten" || target == "wasm32-unknown-emscripten";
 
@@ -25,6 +39,12 @@ fn main() {
         println!("cargo:rustc-cfg=no_num_nonzero_signed");
         println!("cargo:rustc-cfg=no_systemtime_checked_add");
         println!("cargo:rustc-cfg=no_relaxed_trait_bounds");
+    }
+
+    // f32::copysign and f64::copysign stabilized in Rust 1.35.
+    // https://blog.rust-lang.org/2019/05/23/Rust-1.35.0.html#copy-the-sign-of-a-floating-point-number-onto-another
+    if minor < 35 {
+        println!("cargo:rustc-cfg=no_float_copysign");
     }
 
     // Current minimum supported version of serde_derive crate is Rust 1.56.
@@ -57,6 +77,12 @@ fn main() {
     // https://blog.rust-lang.org/2022/09/22/Rust-1.64.0.html#c-compatible-ffi-types-in-core-and-alloc
     if minor < 64 {
         println!("cargo:rustc-cfg=no_core_cstr");
+    }
+
+    // Support for core::num::Saturating and std::num::Saturating stabilized in Rust 1.74
+    // https://blog.rust-lang.org/2023/11/16/Rust-1.74.0.html#stabilized-apis
+    if minor < 74 {
+        println!("cargo:rustc-cfg=no_core_num_saturating");
     }
 }
 

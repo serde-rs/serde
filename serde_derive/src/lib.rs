@@ -13,7 +13,8 @@
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
-#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.188")]
+#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.203")]
+#![cfg_attr(not(check_cfg), allow(unexpected_cfgs))]
 // Ignored clippy lints
 #![allow(
     // clippy false positive: https://github.com/rust-lang/rust-clippy/issues/7054
@@ -50,7 +51,6 @@
     clippy::match_wildcard_for_single_variants,
     clippy::module_name_repetitions,
     clippy::must_use_candidate,
-    clippy::option_if_let_else,
     clippy::similar_names,
     clippy::single_match_else,
     clippy::struct_excessive_bools,

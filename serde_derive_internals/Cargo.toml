@@ -1,9 +1,10 @@
 [package]
 name = "serde_derive_internals"
-version = "0.29.0" # remember to update html_root_url
+version = "0.29.1"
 authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
 description = "AST representation used by Serde derive macros. Unstable."
 documentation = "https://docs.rs/serde_derive_internals"
+edition = "2015"
 exclude = ["build.rs"]
 homepage = "https://serde.rs"
 keywords = ["serde", "serialization"]
@@ -15,9 +16,9 @@ rust-version = "1.56"
 path = "lib.rs"
 
 [dependencies]
-proc-macro2 = "1.0"
-quote = "1.0"
-syn = { version = "2.0.28", default-features = false, features = ["clone-impls", "derive", "parsing", "printing"] }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true, features = ["clone-impls", "derive", "parsing", "printing"] }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

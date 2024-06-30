@@ -8,7 +8,7 @@ use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ffi::CString;
 use std::net;
-use std::num::Wrapping;
+use std::num::{Saturating, Wrapping};
 use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak as RcWeak};
@@ -501,6 +501,38 @@ fn test_range_inclusive() {
 }
 
 #[test]
+fn test_range_from() {
+    assert_ser_tokens(
+        &(1u32..),
+        &[
+            Token::Struct {
+                name: "RangeFrom",
+                len: 1,
+            },
+            Token::Str("start"),
+            Token::U32(1),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_range_to() {
+    assert_ser_tokens(
+        &(..2u32),
+        &[
+            Token::Struct {
+                name: "RangeTo",
+                len: 1,
+            },
+            Token::Str("end"),
+            Token::U32(2),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_bound() {
     assert_ser_tokens(
         &Bound::Unbounded::<()>,
@@ -590,6 +622,11 @@ fn test_arc_weak_none() {
 #[test]
 fn test_wrapping() {
     assert_ser_tokens(&Wrapping(1usize), &[Token::U64(1)]);
+}
+
+#[test]
+fn test_saturating() {
+    assert_ser_tokens(&Saturating(1usize), &[Token::U64(1)]);
 }
 
 #[test]

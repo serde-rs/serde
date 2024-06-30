@@ -11,6 +11,7 @@
 #![cfg_attr(feature = "unstable", feature(never_type))]
 
 use fnv::FnvHasher;
+use serde::de::value::{F32Deserializer, F64Deserializer};
 use serde::de::{Deserialize, DeserializeOwned, Deserializer, IntoDeserializer};
 use serde_derive::Deserialize;
 use serde_test::{assert_de_tokens, Configure, Token};
@@ -22,7 +23,7 @@ use std::iter;
 use std::net;
 use std::num::{
     NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
-    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize, Wrapping,
+    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize, Saturating, Wrapping,
 };
 use std::ops::Bound;
 use std::path::{Path, PathBuf};
@@ -830,6 +831,26 @@ fn test_f64() {
 
     test(1.11f32 as f64, &[Token::F32(1.11)]);
     test(1.11, &[Token::F64(1.11)]);
+}
+
+#[test]
+fn test_nan() {
+    let f32_deserializer = F32Deserializer::<serde::de::value::Error>::new;
+    let f64_deserializer = F64Deserializer::<serde::de::value::Error>::new;
+
+    let pos_f32_nan = f32_deserializer(f32::NAN.copysign(1.0));
+    let pos_f64_nan = f64_deserializer(f64::NAN.copysign(1.0));
+    assert!(f32::deserialize(pos_f32_nan).unwrap().is_sign_positive());
+    assert!(f32::deserialize(pos_f64_nan).unwrap().is_sign_positive());
+    assert!(f64::deserialize(pos_f32_nan).unwrap().is_sign_positive());
+    assert!(f64::deserialize(pos_f64_nan).unwrap().is_sign_positive());
+
+    let neg_f32_nan = f32_deserializer(f32::NAN.copysign(-1.0));
+    let neg_f64_nan = f64_deserializer(f64::NAN.copysign(-1.0));
+    assert!(f32::deserialize(neg_f32_nan).unwrap().is_sign_negative());
+    assert!(f32::deserialize(neg_f64_nan).unwrap().is_sign_negative());
+    assert!(f64::deserialize(neg_f32_nan).unwrap().is_sign_negative());
+    assert!(f64::deserialize(neg_f64_nan).unwrap().is_sign_negative());
 }
 
 #[test]
@@ -1878,6 +1899,46 @@ fn test_range_inclusive() {
 }
 
 #[test]
+fn test_range_from() {
+    test(
+        1u32..,
+        &[
+            Token::Struct {
+                name: "RangeFrom",
+                len: 1,
+            },
+            Token::Str("start"),
+            Token::U32(1),
+            Token::StructEnd,
+        ],
+    );
+    test(
+        1u32..,
+        &[Token::Seq { len: Some(1) }, Token::U32(1), Token::SeqEnd],
+    );
+}
+
+#[test]
+fn test_range_to() {
+    test(
+        ..2u32,
+        &[
+            Token::Struct {
+                name: "RangeTo",
+                len: 1,
+            },
+            Token::Str("end"),
+            Token::U32(2),
+            Token::StructEnd,
+        ],
+    );
+    test(
+        ..2u32,
+        &[Token::Seq { len: Some(1) }, Token::U32(2), Token::SeqEnd],
+    );
+}
+
+#[test]
 fn test_bound() {
     test(
         Bound::Unbounded::<()>,
@@ -2002,6 +2063,43 @@ fn test_arc_weak_none() {
 fn test_wrapping() {
     test(Wrapping(1usize), &[Token::U32(1)]);
     test(Wrapping(1usize), &[Token::U64(1)]);
+}
+
+#[test]
+fn test_saturating() {
+    test(Saturating(1usize), &[Token::U32(1)]);
+    test(Saturating(1usize), &[Token::U64(1)]);
+    test(Saturating(0u8), &[Token::I8(0)]);
+    test(Saturating(0u16), &[Token::I16(0)]);
+
+    // saturate input values at the minimum or maximum value
+    test(Saturating(u8::MAX), &[Token::U16(u16::MAX)]);
+    test(Saturating(u8::MAX), &[Token::U16(u8::MAX as u16 + 1)]);
+    test(Saturating(u16::MAX), &[Token::U32(u32::MAX)]);
+    test(Saturating(u32::MAX), &[Token::U64(u64::MAX)]);
+    test(Saturating(u8::MIN), &[Token::I8(i8::MIN)]);
+    test(Saturating(u16::MIN), &[Token::I16(i16::MIN)]);
+    test(Saturating(u32::MIN), &[Token::I32(i32::MIN)]);
+    test(Saturating(i8::MIN), &[Token::I16(i16::MIN)]);
+    test(Saturating(i16::MIN), &[Token::I32(i32::MIN)]);
+    test(Saturating(i32::MIN), &[Token::I64(i64::MIN)]);
+
+    test(Saturating(u8::MIN), &[Token::I8(-1)]);
+    test(Saturating(u16::MIN), &[Token::I16(-1)]);
+
+    #[cfg(target_pointer_width = "64")]
+    {
+        test(Saturating(usize::MIN), &[Token::U64(u64::MIN)]);
+        test(Saturating(usize::MAX), &[Token::U64(u64::MAX)]);
+        test(Saturating(isize::MIN), &[Token::I64(i64::MIN)]);
+        test(Saturating(isize::MAX), &[Token::I64(i64::MAX)]);
+        test(Saturating(0usize), &[Token::I64(i64::MIN)]);
+
+        test(
+            Saturating(9_223_372_036_854_775_807usize),
+            &[Token::I64(i64::MAX)],
+        );
+    }
 }
 
 #[test]

@@ -422,6 +422,7 @@ fn test_gen() {
 
     #[derive(Serialize, Deserialize)]
     #[serde(remote = "Self")]
+    #[allow(dead_code)]
     struct RemoteSelf;
 
     #[derive(Serialize, Deserialize)]
@@ -686,9 +687,17 @@ fn test_gen() {
 
     #[derive(Deserialize)]
     #[serde(untagged)]
-    enum UntaggedWithBorrow<'a> {
-        Single(#[serde(borrow)] RelObject<'a>),
-        Many(#[serde(borrow)] Vec<RelObject<'a>>),
+    pub enum UntaggedWithBorrow<'a> {
+        Single(
+            #[serde(borrow)]
+            #[allow(dead_code)]
+            RelObject<'a>,
+        ),
+        Many(
+            #[serde(borrow)]
+            #[allow(dead_code)]
+            Vec<RelObject<'a>>,
+        ),
     }
 
     #[derive(Deserialize)]
@@ -730,6 +739,7 @@ fn test_gen() {
 
     #[derive(Serialize)]
     #[repr(packed)]
+    #[allow(dead_code)]
     struct Packed {
         x: u8,
         y: u16,
@@ -761,6 +771,7 @@ fn test_gen() {
     }
 
     #[derive(Serialize)]
+    #[allow(dead_code)]
     struct Struct {
         #[serde(serialize_with = "vec_first_element")]
         vec: Vec<Self>,

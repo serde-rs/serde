@@ -64,8 +64,8 @@
 //!    - RefCell\<T\>
 //!    - Mutex\<T\>
 //!    - RwLock\<T\>
-//!    - Rc\<T\>&emsp;*(if* features = ["rc"] *is enabled)*
-//!    - Arc\<T\>&emsp;*(if* features = ["rc"] *is enabled)*
+//!    - Rc\<T\>&emsp;*(if* features = \["rc"\] *is enabled)*
+//!    - Arc\<T\>&emsp;*(if* features = \["rc"\] *is enabled)*
 //!  - **Collection types**:
 //!    - BTreeMap\<K, V\>
 //!    - BTreeSet\<T\>
@@ -402,20 +402,20 @@ impl<'a> fmt::Display for Unexpected<'a> {
             Bool(b) => write!(formatter, "boolean `{}`", b),
             Unsigned(i) => write!(formatter, "integer `{}`", i),
             Signed(i) => write!(formatter, "integer `{}`", i),
-            Float(f) => write!(formatter, "floating point `{}`", f),
+            Float(f) => write!(formatter, "floating point `{}`", WithDecimalPoint(f)),
             Char(c) => write!(formatter, "character `{}`", c),
             Str(s) => write!(formatter, "string {:?}", s),
-            Bytes(_) => write!(formatter, "byte array"),
-            Unit => write!(formatter, "unit value"),
-            Option => write!(formatter, "Option value"),
-            NewtypeStruct => write!(formatter, "newtype struct"),
-            Seq => write!(formatter, "sequence"),
-            Map => write!(formatter, "map"),
-            Enum => write!(formatter, "enum"),
-            UnitVariant => write!(formatter, "unit variant"),
-            NewtypeVariant => write!(formatter, "newtype variant"),
-            TupleVariant => write!(formatter, "tuple variant"),
-            StructVariant => write!(formatter, "struct variant"),
+            Bytes(_) => formatter.write_str("byte array"),
+            Unit => formatter.write_str("unit value"),
+            Option => formatter.write_str("Option value"),
+            NewtypeStruct => formatter.write_str("newtype struct"),
+            Seq => formatter.write_str("sequence"),
+            Map => formatter.write_str("map"),
+            Enum => formatter.write_str("enum"),
+            UnitVariant => formatter.write_str("unit variant"),
+            NewtypeVariant => formatter.write_str("newtype variant"),
+            TupleVariant => formatter.write_str("tuple variant"),
+            StructVariant => formatter.write_str("struct variant"),
             Other(other) => formatter.write_str(other),
         }
     }
@@ -1525,6 +1525,7 @@ pub trait Visitor<'de>: Sized {
     /// `String`.
     #[inline]
     #[cfg(any(feature = "std", feature = "alloc"))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
     fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
     where
         E: Error,
@@ -1583,6 +1584,7 @@ pub trait Visitor<'de>: Sized {
     /// The default implementation forwards to `visit_bytes` and then drops the
     /// `Vec<u8>`.
     #[cfg(any(feature = "std", feature = "alloc"))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", feature = "alloc"))))]
     fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
     where
         E: Error,
@@ -1733,9 +1735,9 @@ pub trait SeqAccess<'de> {
     }
 }
 
-impl<'de, 'a, A: ?Sized> SeqAccess<'de> for &'a mut A
+impl<'de, 'a, A> SeqAccess<'de> for &'a mut A
 where
-    A: SeqAccess<'de>,
+    A: ?Sized + SeqAccess<'de>,
 {
     type Error = A::Error;
 
@@ -1886,9 +1888,9 @@ pub trait MapAccess<'de> {
     }
 }
 
-impl<'de, 'a, A: ?Sized> MapAccess<'de> for &'a mut A
+impl<'de, 'a, A> MapAccess<'de> for &'a mut A
 where
-    A: MapAccess<'de>,
+    A: ?Sized + MapAccess<'de>,
 {
     type Error = A::Error;
 
@@ -2276,15 +2278,52 @@ impl Display for OneOf {
             1 => write!(formatter, "`{}`", self.names[0]),
             2 => write!(formatter, "`{}` or `{}`", self.names[0], self.names[1]),
             _ => {
-                tri!(write!(formatter, "one of "));
+                tri!(formatter.write_str("one of "));
                 for (i, alt) in self.names.iter().enumerate() {
                     if i > 0 {
-                        tri!(write!(formatter, ", "));
+                        tri!(formatter.write_str(", "));
                     }
                     tri!(write!(formatter, "`{}`", alt));
                 }
                 Ok(())
             }
         }
+    }
+}
+
+struct WithDecimalPoint(f64);
+
+impl Display for WithDecimalPoint {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        struct LookForDecimalPoint<'f, 'a> {
+            formatter: &'f mut fmt::Formatter<'a>,
+            has_decimal_point: bool,
+        }
+
+        impl<'f, 'a> fmt::Write for LookForDecimalPoint<'f, 'a> {
+            fn write_str(&mut self, fragment: &str) -> fmt::Result {
+                self.has_decimal_point |= fragment.contains('.');
+                self.formatter.write_str(fragment)
+            }
+
+            fn write_char(&mut self, ch: char) -> fmt::Result {
+                self.has_decimal_point |= ch == '.';
+                self.formatter.write_char(ch)
+            }
+        }
+
+        if self.0.is_finite() {
+            let mut writer = LookForDecimalPoint {
+                formatter,
+                has_decimal_point: false,
+            };
+            tri!(write!(writer, "{}", self.0));
+            if !writer.has_decimal_point {
+                tri!(formatter.write_str(".0"));
+            }
+        } else {
+            tri!(write!(formatter, "{}", self.0));
+        }
+        Ok(())
     }
 }
