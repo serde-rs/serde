@@ -4,6 +4,8 @@
 use self::RenameRule::*;
 use std::fmt::{self, Debug, Display};
 
+use super::attr::VariantName;
+
 /// The different possible ways to change case of fields in a struct, or variants in an enum.
 #[derive(Copy, Clone, PartialEq)]
 pub enum RenameRule {
@@ -54,7 +56,7 @@ impl RenameRule {
     }
 
     /// Apply a renaming rule to an enum variant, returning the version expected in the source.
-    pub fn apply_to_variant(self, variant: &str) -> String {
+    fn apply_to_variant_str(self, variant: &str) -> String {
         match self {
             None | PascalCase => variant.to_owned(),
             LowerCase => variant.to_ascii_lowercase(),
@@ -70,11 +72,21 @@ impl RenameRule {
                 }
                 snake
             }
-            ScreamingSnakeCase => SnakeCase.apply_to_variant(variant).to_ascii_uppercase(),
-            KebabCase => SnakeCase.apply_to_variant(variant).replace('_', "-"),
+            ScreamingSnakeCase => SnakeCase.apply_to_variant_str(variant).to_ascii_uppercase(),
+            KebabCase => SnakeCase.apply_to_variant_str(variant).replace('_', "-"),
             ScreamingKebabCase => ScreamingSnakeCase
-                .apply_to_variant(variant)
+                .apply_to_variant_str(variant)
                 .replace('_', "-"),
+        }
+    }
+
+    /// Apply a renaming rule to an enum variant, returning the version expected in the source.
+    pub fn apply_to_variant(&self, variant: &VariantName) -> VariantName {
+        match variant {
+            VariantName::String(variant) => {
+                VariantName::String(self.apply_to_variant_str(&variant))
+            }
+            _ => variant.clone(),
         }
     }
 
@@ -155,16 +167,16 @@ fn rename_variants() {
         ("A", "a", "A", "a", "a", "A", "a", "A"),
         ("Z42", "z42", "Z42", "z42", "z42", "Z42", "z42", "Z42"),
     ] {
-        assert_eq!(None.apply_to_variant(original), original);
-        assert_eq!(LowerCase.apply_to_variant(original), lower);
-        assert_eq!(UpperCase.apply_to_variant(original), upper);
-        assert_eq!(PascalCase.apply_to_variant(original), original);
-        assert_eq!(CamelCase.apply_to_variant(original), camel);
-        assert_eq!(SnakeCase.apply_to_variant(original), snake);
-        assert_eq!(ScreamingSnakeCase.apply_to_variant(original), screaming);
-        assert_eq!(KebabCase.apply_to_variant(original), kebab);
+        assert_eq!(None.apply_to_variant_str(original), original);
+        assert_eq!(LowerCase.apply_to_variant_str(original), lower);
+        assert_eq!(UpperCase.apply_to_variant_str(original), upper);
+        assert_eq!(PascalCase.apply_to_variant_str(original), original);
+        assert_eq!(CamelCase.apply_to_variant_str(original), camel);
+        assert_eq!(SnakeCase.apply_to_variant_str(original), snake);
+        assert_eq!(ScreamingSnakeCase.apply_to_variant_str(original), screaming);
+        assert_eq!(KebabCase.apply_to_variant_str(original), kebab);
         assert_eq!(
-            ScreamingKebabCase.apply_to_variant(original),
+            ScreamingKebabCase.apply_to_variant_str(original),
             screaming_kebab
         );
     }

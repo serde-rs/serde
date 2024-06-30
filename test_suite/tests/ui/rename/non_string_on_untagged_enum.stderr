@@ -1,0 +1,6 @@
+error: #[serde(rename)] must use a string name in untagged enums
+ --> $DIR/non_string_on_untagged_enum.rs:6:5
+  |
+6 | /     #[serde(rename = 1)]
+7 | |     A,
+  | |_____^
