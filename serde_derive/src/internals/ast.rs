@@ -78,6 +78,7 @@ impl<'a> Container<'a> {
         };
 
         let mut has_flatten = false;
+        let mut has_keys = false;
         match &mut data {
             Data::Enum(variants) => {
                 for variant in variants {
@@ -85,6 +86,9 @@ impl<'a> Container<'a> {
                     for field in &mut variant.fields {
                         if field.attrs.flatten() {
                             has_flatten = true;
+                        }
+                        if field.attrs.key().is_some() {
+                            has_keys = true;
                         }
                         field.attrs.rename_by_rules(
                             variant
@@ -100,6 +104,9 @@ impl<'a> Container<'a> {
                     if field.attrs.flatten() {
                         has_flatten = true;
                     }
+                    if field.attrs.key().is_some() {
+                        has_keys = true;
+                    }
                     field.attrs.rename_by_rules(attrs.rename_all_rules());
                 }
             }
@@ -107,6 +114,9 @@ impl<'a> Container<'a> {
 
         if has_flatten {
             attrs.mark_has_flatten();
+        }
+        if has_keys {
+            attrs.mark_has_keys();
         }
 
         let mut item = Container {

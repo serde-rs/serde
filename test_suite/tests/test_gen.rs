@@ -780,6 +780,18 @@ fn test_gen() {
     #[derive(Deserialize)]
     #[serde(bound(deserialize = "[&'de str; N]: Copy"))]
     struct GenericUnitStruct<const N: usize>;
+
+    #[derive(Serialize, Deserialize)]
+    struct KeyedStruct<'se> {
+        #[serde(key = b'a')]
+        a: &'se str,
+        #[serde(key = 8)]
+        b: u16,
+        #[serde(key = 8i16)]
+        c: u32,
+        #[serde(key = 'c')]
+        d: u64,
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
