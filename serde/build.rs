@@ -25,6 +25,7 @@ fn main() {
         println!("cargo:rustc-check-cfg=cfg(no_std_atomic64)");
         println!("cargo:rustc-check-cfg=cfg(no_systemtime_checked_add)");
         println!("cargo:rustc-check-cfg=cfg(no_target_has_atomic)");
+        println!("cargo:rustc-check-cfg=cfg(no_diagnostic_namespace)");
     }
 
     let target = env::var("TARGET").unwrap();
@@ -83,6 +84,12 @@ fn main() {
     // https://blog.rust-lang.org/2023/11/16/Rust-1.74.0.html#stabilized-apis
     if minor < 74 {
         println!("cargo:rustc-cfg=no_core_num_saturating");
+    }
+
+    // Support for the `#[diagnostic]` tool attribute namespace
+    // https://blog.rust-lang.org/2024/05/02/Rust-1.78.0.html#diagnostic-attributes
+    if minor < 78 {
+        println!("cargo:rustc-cfg=no_diagnostic_namespace");
     }
 }
 
