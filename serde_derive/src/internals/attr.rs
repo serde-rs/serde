@@ -8,7 +8,7 @@ use std::iter::FromIterator;
 use syn::meta::ParseNestedMeta;
 use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
-use syn::{parse_quote, token, Ident, Lifetime, Token};
+use syn::{parse_quote, token, Ident, Lifetime, Meta, Token};
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
 // are `attr::Container::from_ast`, `attr::Variant::from_ast`, and
@@ -219,6 +219,8 @@ pub struct Container {
     has_flatten: bool,
     serde_path: Option<syn::Path>,
     is_packed: bool,
+    repr_type: Option<syn::Type>,
+    use_repr: bool,
     /// Error message generated when type can't be deserialized
     expecting: Option<String>,
     non_exhaustive: bool,
@@ -307,6 +309,7 @@ impl Container {
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
         let mut serde_path = Attr::none(cx, CRATE);
         let mut expecting = Attr::none(cx, EXPECTING);
+        let mut use_repr = BoolAttr::none(cx, USE_REPR);
         let mut non_exhaustive = false;
 
         for attr in &item.attrs {
@@ -530,6 +533,9 @@ impl Container {
                 } else if meta.path == VARIANT_IDENTIFIER {
                     // #[serde(variant_identifier)]
                     variant_identifier.set_true(&meta.path);
+                } else if meta.path == USE_REPR {
+                     // #[serde(use_repr)]
+                    use_repr.set_true(&meta.path);
                 } else if meta.path == CRATE {
                     // #[serde(crate = "foo")]
                     if let Some(path) = parse_lit_into_path(cx, CRATE, &meta)? {
@@ -566,6 +572,14 @@ impl Container {
             }
         }
 
+        let repr_type = item
+            .attrs
+            .iter()
+            .flat_map(|attr| get_repr_type(cx, attr))
+            .filter(Option::is_some)
+            .map(Option::unwrap)
+            .next();
+
         Container {
             name: Name::from_attrs(unraw(&item.ident), ser_name, de_name, None),
             transparent: transparent.get(),
@@ -590,6 +604,8 @@ impl Container {
             has_flatten: false,
             serde_path: serde_path.get(),
             is_packed,
+            repr_type,
+            use_repr: use_repr.get(),
             expecting: expecting.get(),
             non_exhaustive,
         }
@@ -670,6 +686,14 @@ impl Container {
     pub fn serde_path(&self) -> Cow<syn::Path> {
         self.custom_serde_path()
             .map_or_else(|| Cow::Owned(parse_quote!(_serde)), Cow::Borrowed)
+    }
+
+    pub fn repr_type(&self) -> Option<&syn::Type> {
+        self.repr_type.as_ref()
+    }
+
+    pub fn use_repr(&self) -> bool {
+        self.use_repr
     }
 
     /// Error message generated when type can't be deserialized.
@@ -1458,6 +1482,34 @@ fn get_where_predicates(
 ) -> syn::Result<SerAndDe<Vec<syn::WherePredicate>>> {
     let (ser, de) = get_ser_and_de(cx, BOUND, meta, parse_lit_into_where)?;
     Ok((ser.at_most_one(), de.at_most_one()))
+}
+
+pub fn get_repr_type(cx: &Ctxt, attr: &syn::Attribute) -> Result<Option<syn::Type>, ()> {
+    fn get_repr_type_inner(attr: &syn::Attribute) -> syn::Result<Option<syn::Type>> {
+        if attr.path() == REPR {
+            let nested = attr.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)?;
+
+            for meta in nested {
+                if let Meta::Path(path) = meta {
+                    if let Ok(ty_) = syn::parse::<Ident>(path.to_token_stream().into()) {
+                        if matches!(
+                            ty_.to_string().as_str(),
+                            "i8" | "i16" | "i32" | "i64" | "u8" | "u16" | "u32" | "u64"
+                        ) {
+                            return Ok(Some(syn::parse(ty_.to_token_stream().into())?));
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
+    get_repr_type_inner(attr).map_err(|err| {
+        cx.syn_error(err);
+        ()
+    })
 }
 
 fn get_lit_str(

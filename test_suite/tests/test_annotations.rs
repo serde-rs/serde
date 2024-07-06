@@ -3232,3 +3232,179 @@ mod flatten {
         }
     }
 }
+
+#[test]
+fn test_externally_tagged_enum_with_repr() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(use_repr)]
+    #[repr(u8)]
+    enum ReprExternalEnum {
+        A { a: u32 } = 0x42,
+        B(u32),
+        C = 0x52,
+        D(u32, u32)
+    }
+
+    assert_tokens(
+        &ReprExternalEnum::A { a: 42 },
+        &[
+            Token::StructVariant {
+                name: "ReprExternalEnum",
+                variant: "66",
+                len: 1,
+            },
+            Token::Str("a"),
+            Token::U32(42),
+            Token::StructVariantEnd,
+        ],
+    );
+    assert_tokens(
+        &ReprExternalEnum::B(0),
+        &[
+            Token::NewtypeVariant {
+                name: "ReprExternalEnum",
+                variant: "67",
+            },
+            Token::U32(0),
+        ],
+    );
+    assert_tokens(
+        &ReprExternalEnum::C,
+        &[Token::UnitVariant {
+            name: "ReprExternalEnum",
+            variant: "82",
+        }],
+    );
+}
+
+#[test]
+fn test_internally_tagged_enum_with_repr() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(use_repr, tag = "tag")]
+    #[repr(u8)]
+    enum ReprExternalEnum {
+        A { a: u32 } = 0x42,
+        B(u32) = 0x43,
+        C = 0x52,
+    }
+
+    assert_tokens(
+        &ReprExternalEnum::A { a: 0 },
+        &[
+            Token::Struct {
+                name: "ReprExternalEnum",
+                len: 2,
+            },
+            Token::Str("tag"),
+            Token::U8(0x42),
+            Token::Str("a"),
+            Token::U32(0),
+            Token::StructEnd,
+        ],
+    );
+    assert_tokens(
+        &ReprExternalEnum::B(1337),
+        &[
+            Token::Struct {
+                name: "ReprExternalEnum",
+                len: 2,
+            },
+            Token::Str("tag"),
+            Token::U8(0x43),
+            Token::Seq { len: Some(1) },
+            Token::U32(1337),
+            Token::SeqEnd,
+            Token::StructEnd,
+        ],
+    );
+    assert_tokens(
+        &ReprExternalEnum::C,
+        &[
+            Token::Struct {
+                name: "ReprExternalEnum",
+                len: 1,
+            },
+            Token::Str("tag"),
+            Token::U8(0x52),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_adjacently_tagged_enum_with_repr() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(use_repr, tag = "tag", content = "content")]
+    #[repr(u8)]
+    enum ReprExternalEnum {
+        A { a: u32 } = 0x42,
+        B(u32),
+        C = 0x52,
+        D(u32, u32),
+    }
+
+    assert_tokens(
+        &ReprExternalEnum::A { a: 0 },
+        &[
+            Token::Struct {
+                name: "ReprExternalEnum",
+                len: 2,
+            },
+            Token::Str("tag"),
+            Token::Str("66"),
+
+            Token::Str("content"),
+            Token::Struct { name: "A", len: 1 },
+            Token::Str("a"),
+            Token::U32(0),
+            Token::StructEnd,
+            
+            Token::StructEnd,
+        ],
+    );
+    assert_tokens(
+        &ReprExternalEnum::B(0),
+        &[
+            Token::Struct {
+                name: "ReprExternalEnum",
+                len: 2,
+            },
+            Token::Str("tag"),
+            Token::Str("67"),
+            Token::Str("content"),
+            Token::U32(0),
+            Token::StructEnd,
+        ],
+    );
+    assert_tokens(
+        &ReprExternalEnum::C,
+        &[
+            Token::Struct {
+                name: "ReprExternalEnum",
+                len: 1,
+            },
+            Token::Str("tag"),
+            Token::Str("82"),
+            Token::StructEnd,
+        ],
+    );
+    assert_tokens(
+        &ReprExternalEnum::D(1, 2),
+        &[
+            Token::Struct {
+                name: "ReprExternalEnum",
+                len: 2,
+            },
+            Token::Str("tag"),
+            Token::Str("83"),
+
+            Token::Str("content"),
+            Token::Seq { len: Some(2) },
+            Token::U32(1),
+            Token::U32(2),
+            Token::SeqEnd,
+
+            Token::StructEnd,
+        ],
+    );
+}
