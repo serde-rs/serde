@@ -6,6 +6,8 @@ error[E0277]: the trait bound `MyStruct: Serialize` is not satisfied
    |     |
    |     required by a bound introduced by this call
    |
+   = note: for local types consider adding `#[derive(serde::Serialize)]` to your `MyStruct` type
+   = note: for types from other crates check whether the crate offers a `serde` feature flag
    = help: the following other types implement trait `Serialize`:
              &'a T
              &'a mut T
@@ -31,6 +33,8 @@ error[E0277]: the trait bound `MyStruct: Deserialize<'_>` is not satisfied
 22 |     let _: MyStruct = from_str("");
    |                       ^^^^^^^^^^^^ the trait `Deserialize<'_>` is not implemented for `MyStruct`
    |
+   = note: for local types consider adding `#[derive(serde::Deserialize)]` to your `MyStruct` type
+   = note: for types from other crates check whether the crate offers a `serde` feature flag
    = help: the following other types implement trait `Deserialize<'de>`:
              &'a Path
              &'a [u8]
