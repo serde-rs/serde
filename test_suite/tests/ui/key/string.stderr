@@ -1,0 +1,5 @@
+error: use the serde rename attribute instead
+ --> tests/ui/key/string.rs:5:19
+  |
+5 |     #[serde(key = "a")]
+  |                   ^^^
