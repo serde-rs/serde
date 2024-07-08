@@ -1,5 +1,5 @@
-use lib::*;
-use ser::{Error, Impossible, Serialize, Serializer};
+use crate::lib::*;
+use crate::ser::{Error, Impossible, Serialize, Serializer};
 
 impl Error for fmt::Error {
     fn custom<T: Display>(_msg: T) -> Self {
@@ -17,8 +17,9 @@ macro_rules! fmt_primitives {
     };
 }
 
-/// ```edition2018
-/// use serde::Serialize;
+/// ```edition2021
+/// use serde::ser::Serialize;
+/// use serde_derive::Serialize;
 /// use std::fmt::{self, Display};
 ///
 /// #[derive(Serialize)]
@@ -51,22 +52,17 @@ impl<'a, 'b> Serializer for &'a mut fmt::Formatter<'b> {
         serialize_i16: i16,
         serialize_i32: i32,
         serialize_i64: i64,
+        serialize_i128: i128,
         serialize_u8: u8,
         serialize_u16: u16,
         serialize_u32: u32,
         serialize_u64: u64,
+        serialize_u128: u128,
         serialize_f32: f32,
         serialize_f64: f64,
         serialize_char: char,
         serialize_str: &str,
         serialize_unit_struct: &'static str,
-    }
-
-    serde_if_integer128! {
-        fmt_primitives! {
-            serialize_i128: i128,
-            serialize_u128: u128,
-        }
     }
 
     fn serialize_unit_variant(
@@ -78,9 +74,9 @@ impl<'a, 'b> Serializer for &'a mut fmt::Formatter<'b> {
         Display::fmt(variant, self)
     }
 
-    fn serialize_newtype_struct<T: ?Sized>(self, _name: &'static str, value: &T) -> fmt::Result
+    fn serialize_newtype_struct<T>(self, _name: &'static str, value: &T) -> fmt::Result
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
         Serialize::serialize(value, self)
     }
@@ -93,9 +89,9 @@ impl<'a, 'b> Serializer for &'a mut fmt::Formatter<'b> {
         Err(fmt::Error)
     }
 
-    fn serialize_some<T: ?Sized>(self, _value: &T) -> fmt::Result
+    fn serialize_some<T>(self, _value: &T) -> fmt::Result
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
         Err(fmt::Error)
     }
@@ -104,7 +100,7 @@ impl<'a, 'b> Serializer for &'a mut fmt::Formatter<'b> {
         Err(fmt::Error)
     }
 
-    fn serialize_newtype_variant<T: ?Sized>(
+    fn serialize_newtype_variant<T>(
         self,
         _name: &'static str,
         _variant_index: u32,
@@ -112,7 +108,7 @@ impl<'a, 'b> Serializer for &'a mut fmt::Formatter<'b> {
         _value: &T,
     ) -> fmt::Result
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
         Err(fmt::Error)
     }
@@ -165,9 +161,9 @@ impl<'a, 'b> Serializer for &'a mut fmt::Formatter<'b> {
         Err(fmt::Error)
     }
 
-    fn collect_str<T: ?Sized>(self, value: &T) -> fmt::Result
+    fn collect_str<T>(self, value: &T) -> fmt::Result
     where
-        T: Display,
+        T: ?Sized + Display,
     {
         Display::fmt(value, self)
     }

@@ -1,8 +1,8 @@
 //! This module contains `Impossible` serializer and its implementations.
 
-use lib::*;
+use crate::lib::*;
 
-use ser::{
+use crate::ser::{
     self, Serialize, SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant,
     SerializeTuple, SerializeTupleStruct, SerializeTupleVariant,
 };
@@ -15,7 +15,7 @@ use ser::{
 /// [`SerializeTuple`], [`SerializeTupleStruct`], [`SerializeTupleVariant`],
 /// [`SerializeMap`], [`SerializeStruct`], and [`SerializeStructVariant`].
 ///
-/// ```edition2018
+/// ```edition2021
 /// # use serde::ser::{Serializer, Impossible};
 /// # use serde::__private::doc::Error;
 /// #
@@ -72,9 +72,9 @@ where
     type Ok = Ok;
     type Error = Error;
 
-    fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Error>
+    fn serialize_element<T>(&mut self, value: &T) -> Result<(), Error>
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
         let _ = value;
         match self.void {}
@@ -92,9 +92,9 @@ where
     type Ok = Ok;
     type Error = Error;
 
-    fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), Error>
+    fn serialize_element<T>(&mut self, value: &T) -> Result<(), Error>
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
         let _ = value;
         match self.void {}
@@ -112,9 +112,9 @@ where
     type Ok = Ok;
     type Error = Error;
 
-    fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), Error>
+    fn serialize_field<T>(&mut self, value: &T) -> Result<(), Error>
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
         let _ = value;
         match self.void {}
@@ -132,9 +132,9 @@ where
     type Ok = Ok;
     type Error = Error;
 
-    fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), Error>
+    fn serialize_field<T>(&mut self, value: &T) -> Result<(), Error>
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
         let _ = value;
         match self.void {}
@@ -152,17 +152,17 @@ where
     type Ok = Ok;
     type Error = Error;
 
-    fn serialize_key<T: ?Sized>(&mut self, key: &T) -> Result<(), Error>
+    fn serialize_key<T>(&mut self, key: &T) -> Result<(), Error>
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
         let _ = key;
         match self.void {}
     }
 
-    fn serialize_value<T: ?Sized>(&mut self, value: &T) -> Result<(), Error>
+    fn serialize_value<T>(&mut self, value: &T) -> Result<(), Error>
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
         let _ = value;
         match self.void {}
@@ -180,9 +180,9 @@ where
     type Ok = Ok;
     type Error = Error;
 
-    fn serialize_field<T: ?Sized>(&mut self, key: &'static str, value: &T) -> Result<(), Error>
+    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Error>
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
         let _ = key;
         let _ = value;
@@ -201,9 +201,9 @@ where
     type Ok = Ok;
     type Error = Error;
 
-    fn serialize_field<T: ?Sized>(&mut self, key: &'static str, value: &T) -> Result<(), Error>
+    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Error>
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
         let _ = key;
         let _ = value;

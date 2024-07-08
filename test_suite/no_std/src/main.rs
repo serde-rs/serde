@@ -1,3 +1,4 @@
+#![allow(internal_features)]
 #![feature(lang_items, start)]
 #![no_std]
 
@@ -19,24 +20,24 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
 
 //////////////////////////////////////////////////////////////////////////////
 
-use serde::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
-struct Unit;
+pub struct Unit;
 
 #[derive(Serialize, Deserialize)]
-struct Newtype(u8);
+pub struct Newtype(u8);
 
 #[derive(Serialize, Deserialize)]
-struct Tuple(u8, u8);
+pub struct Tuple(u8, u8);
 
 #[derive(Serialize, Deserialize)]
-struct Struct {
+pub struct Struct {
     f: u8,
 }
 
 #[derive(Serialize, Deserialize)]
-enum Enum {
+pub enum Enum {
     Unit,
     Newtype(u8),
     Tuple(u8, u8),

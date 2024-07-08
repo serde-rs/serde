@@ -1,8 +1,8 @@
 // Used only by Serde doc tests. Not public API.
 
-use lib::*;
+use crate::lib::*;
 
-use ser;
+use crate::ser;
 
 #[doc(hidden)]
 #[derive(Debug)]
@@ -56,7 +56,10 @@ macro_rules! __serialize_unimplemented {
 #[macro_export]
 macro_rules! __serialize_unimplemented_method {
     ($func:ident $(<$t:ident>)* ($($arg:ty),*) -> $ret:ident) => {
-        fn $func $(<$t: ?Sized + $crate::Serialize>)* (self $(, _: $arg)*) -> $crate::__private::Result<Self::$ret, Self::Error> {
+        fn $func $(<$t>)* (self $(, _: $arg)*) -> $crate::__private::Result<Self::$ret, Self::Error>
+        where
+            $($t: ?Sized + $crate::Serialize,)*
+        {
             unimplemented!()
         }
     };

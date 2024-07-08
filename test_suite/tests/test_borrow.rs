@@ -1,6 +1,13 @@
-use serde::{Deserialize, Deserializer};
-use serde_test::{assert_de_tokens, assert_de_tokens_error, Token};
+#![allow(
+    clippy::derive_partial_eq_without_eq,
+    clippy::items_after_statements,
+    clippy::used_underscore_binding
+)]
 
+use serde::de::value::{BorrowedStrDeserializer, MapDeserializer};
+use serde::de::{Deserialize, Deserializer, IntoDeserializer};
+use serde_derive::Deserialize;
+use serde_test::{assert_de_tokens, assert_de_tokens_error, Token};
 use std::borrow::Cow;
 
 #[test]
@@ -124,20 +131,22 @@ fn test_cow() {
         borrowed: Cow<'b, str>,
     }
 
-    let tokens = &[
-        Token::Struct {
-            name: "Cows",
-            len: 2,
-        },
-        Token::Str("copied"),
-        Token::BorrowedStr("copied"),
-        Token::Str("borrowed"),
-        Token::BorrowedStr("borrowed"),
-        Token::StructEnd,
-    ];
+    struct BorrowedStr(&'static str);
 
-    let mut de = serde_test::Deserializer::new(tokens);
-    let cows = Cows::deserialize(&mut de).unwrap();
+    impl<'de> IntoDeserializer<'de> for BorrowedStr {
+        type Deserializer = BorrowedStrDeserializer<'de, serde::de::value::Error>;
+
+        fn into_deserializer(self) -> Self::Deserializer {
+            BorrowedStrDeserializer::new(self.0)
+        }
+    }
+
+    let de = MapDeserializer::new(IntoIterator::into_iter([
+        ("copied", BorrowedStr("copied")),
+        ("borrowed", BorrowedStr("borrowed")),
+    ]));
+
+    let cows = Cows::deserialize(de).unwrap();
 
     match cows.copied {
         Cow::Owned(ref s) if s == "copied" => {}
@@ -153,7 +162,7 @@ fn test_cow() {
 #[test]
 fn test_lifetimes() {
     #[derive(Deserialize)]
-    struct Cows<'a, 'b> {
+    pub struct Cows<'a, 'b> {
         _copied: Cow<'a, str>,
 
         #[serde(borrow)]
@@ -169,7 +178,7 @@ fn test_lifetimes() {
     }
 
     #[derive(Deserialize)]
-    struct Wrap<'a, 'b> {
+    pub struct Wrap<'a, 'b> {
         #[serde(borrow = "'b")]
         _cows: Cows<'a, 'b>,
     }

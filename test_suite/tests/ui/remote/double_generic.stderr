@@ -1,0 +1,5 @@
+error: remove generic parameters from this path
+  --> tests/ui/remote/double_generic.rs:11:18
+   |
+11 | #[serde(remote = "remote::StructGeneric<u8>")]
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -1,7 +1,6 @@
+use crate::internals::ast::{Container, Data, Field, Style, Variant};
 use proc_macro2::TokenStream;
-use quote::format_ident;
-
-use internals::ast::{Container, Data, Field, Style, Variant};
+use quote::{format_ident, quote};
 
 // Suppress dead_code warnings that would otherwise appear when using a remote
 // derive. Other than this pretend code, a struct annotated with remote derive
@@ -65,14 +64,14 @@ pub fn pretend_used(cont: &Container, is_packed: bool) -> TokenStream {
 fn pretend_fields_used(cont: &Container, is_packed: bool) -> TokenStream {
     match &cont.data {
         Data::Enum(variants) => pretend_fields_used_enum(cont, variants),
-        Data::Struct(Style::Struct, fields) => {
+        Data::Struct(Style::Struct | Style::Tuple | Style::Newtype, fields) => {
             if is_packed {
                 pretend_fields_used_struct_packed(cont, fields)
             } else {
                 pretend_fields_used_struct(cont, fields)
             }
         }
-        Data::Struct(_, _) => quote!(),
+        Data::Struct(Style::Unit, _) => quote!(),
     }
 }
 
@@ -97,29 +96,14 @@ fn pretend_fields_used_struct_packed(cont: &Container, fields: &[Field]) -> Toke
 
     let members = fields.iter().map(|field| &field.member).collect::<Vec<_>>();
 
-    #[cfg(ptr_addr_of)]
-    {
-        quote! {
-            match _serde::__private::None::<&#type_ident #ty_generics> {
-                _serde::__private::Some(__v @ #type_ident { #(#members: _),* }) => {
-                    #(
-                        let _ = _serde::__private::ptr::addr_of!(__v.#members);
-                    )*
-                }
-                _ => {}
+    quote! {
+        match _serde::__private::None::<&#type_ident #ty_generics> {
+            _serde::__private::Some(__v @ #type_ident { #(#members: _),* }) => {
+                #(
+                    let _ = _serde::__private::ptr::addr_of!(__v.#members);
+                )*
             }
-        }
-    }
-
-    #[cfg(not(ptr_addr_of))]
-    {
-        let placeholders = (0usize..).map(|i| format_ident!("__v{}", i));
-
-        quote! {
-            match _serde::__private::None::<#type_ident #ty_generics> {
-                _serde::__private::Some(#type_ident { #(#members: #placeholders),* }) => {}
-                _ => {}
-            }
+            _ => {}
         }
     }
 }
@@ -131,13 +115,13 @@ fn pretend_fields_used_enum(cont: &Container, variants: &[Variant]) -> TokenStre
     let patterns = variants
         .iter()
         .filter_map(|variant| match variant.style {
-            Style::Struct => {
+            Style::Struct | Style::Tuple | Style::Newtype => {
                 let variant_ident = &variant.ident;
                 let members = variant.fields.iter().map(|field| &field.member);
                 let placeholders = (0usize..).map(|i| format_ident!("__v{}", i));
                 Some(quote!(#type_ident::#variant_ident { #(#members: #placeholders),* }))
             }
-            _ => None,
+            Style::Unit => None,
         })
         .collect::<Vec<_>>();
 

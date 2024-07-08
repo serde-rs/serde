@@ -1,12 +1,9 @@
-use std::collections::HashSet;
-
-use syn;
-use syn::punctuated::{Pair, Punctuated};
-
-use internals::ast::{Container, Data};
-use internals::{attr, ungroup};
-
+use crate::internals::ast::{Container, Data};
+use crate::internals::{attr, ungroup};
 use proc_macro2::Span;
+use std::collections::HashSet;
+use syn::punctuated::{Pair, Punctuated};
+use syn::Token;
 
 // Remove the default from every type parameter because in the generated impls
 // they look like associated types: "error: associated type bindings are not
@@ -147,6 +144,7 @@ pub fn with_bound(
 
         fn visit_type(&mut self, ty: &'ast syn::Type) {
             match ty {
+                #![cfg_attr(all(test, exhaustive), deny(non_exhaustive_omitted_patterns))]
                 syn::Type::Array(ty) => self.visit_type(&ty.elem),
                 syn::Type::BareFn(ty) => {
                     for arg in &ty.inputs {
@@ -184,9 +182,6 @@ pub fn with_bound(
 
                 syn::Type::Infer(_) | syn::Type::Never(_) | syn::Type::Verbatim(_) => {}
 
-                #[cfg(test)]
-                syn::Type::__TestExhaustive(_) => unimplemented!(),
-                #[cfg(not(test))]
                 _ => {}
             }
         }
@@ -201,11 +196,14 @@ pub fn with_bound(
                 syn::PathArguments::AngleBracketed(arguments) => {
                     for arg in &arguments.args {
                         match arg {
+                            #![cfg_attr(all(test, exhaustive), deny(non_exhaustive_omitted_patterns))]
                             syn::GenericArgument::Type(arg) => self.visit_type(arg),
-                            syn::GenericArgument::Binding(arg) => self.visit_type(&arg.ty),
+                            syn::GenericArgument::AssocType(arg) => self.visit_type(&arg.ty),
                             syn::GenericArgument::Lifetime(_)
-                            | syn::GenericArgument::Constraint(_)
-                            | syn::GenericArgument::Const(_) => {}
+                            | syn::GenericArgument::Const(_)
+                            | syn::GenericArgument::AssocConst(_)
+                            | syn::GenericArgument::Constraint(_) => {}
+                            _ => {}
                         }
                     }
                 }
@@ -227,8 +225,10 @@ pub fn with_bound(
 
         fn visit_type_param_bound(&mut self, bound: &'ast syn::TypeParamBound) {
             match bound {
+                #![cfg_attr(all(test, exhaustive), deny(non_exhaustive_omitted_patterns))]
                 syn::TypeParamBound::Trait(bound) => self.visit_path(&bound.path),
-                syn::TypeParamBound::Lifetime(_) => {}
+                syn::TypeParamBound::Lifetime(_) | syn::TypeParamBound::Verbatim(_) => {}
+                _ => {}
             }
         }
 
@@ -253,7 +253,7 @@ pub fn with_bound(
     };
     match &cont.data {
         Data::Enum(variants) => {
-            for variant in variants.iter() {
+            for variant in variants {
                 let relevant_fields = variant
                     .fields
                     .iter()
@@ -336,7 +336,7 @@ pub fn with_self_bound(
 
 pub fn with_lifetime_bound(generics: &syn::Generics, lifetime: &str) -> syn::Generics {
     let bound = syn::Lifetime::new(lifetime, Span::call_site());
-    let def = syn::LifetimeDef {
+    let def = syn::LifetimeParam {
         attrs: Vec::new(),
         lifetime: bound.clone(),
         colon_token: None,

@@ -3,22 +3,31 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
   schedule: [cron: "40 1 * * *"]
+
+permissions:
+  contents: read
+
+env:
+  RUSTFLAGS: -Dwarnings
 
 jobs:
   test:
     name: Test suite
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
       - run: cd test_suite && cargo test --features unstable
 
   windows:
     name: Test suite (windows)
     runs-on: windows-latest
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
       - run: cd test_suite && cargo test --features unstable -- --skip ui --exact
 
@@ -29,15 +38,14 @@ jobs:
       fail-fast: false
       matrix:
         rust: [stable, beta]
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{matrix.rust}}
       - run: cd serde && cargo build --features rc
       - run: cd serde && cargo build --no-default-features
-      - run: cd serde_test && cargo build
-      - run: cd serde_test && cargo test --features serde/derive,serde/rc
 
   nightly:
     name: Rust nightly ${{matrix.os == 'windows' && '(windows)' || ''}}
@@ -46,33 +54,22 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu, windows]
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
       - run: cd serde && cargo build
       - run: cd serde && cargo build --no-default-features
       - run: cd serde && cargo build --no-default-features --features alloc
       - run: cd serde && cargo build --no-default-features --features rc,alloc
+      - run: cd serde && cargo build --no-default-features --features unstable
       - run: cd serde && cargo test --features derive,rc,unstable
       - run: cd test_suite/no_std && cargo build
         if: matrix.os != 'windows'
-
-  msrv:
-    name: Rust 1.13.0
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dtolnay/rust-toolchain@1.13.0
-      - name: Get timestamp for cache
-        id: date
-        run: echo ::set-output name=yearmo::$(date +%Y%m)
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry/index
-          key: cargo-registry-index-${{steps.date.outputs.yearmo}}
-      - run: cd serde && cargo build --features rc
-      - run: cd serde && cargo build --no-default-features
-      - run: cd serde_test && cargo build
+      - run: cd serde_derive && cargo check --tests
+        env:
+          RUSTFLAGS: --cfg exhaustive ${{env.RUSTFLAGS}}
+        if: matrix.os != 'windows'
 
   build:
     name: Rust ${{matrix.rust}}
@@ -80,38 +77,26 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [1.19.0, 1.20.0, 1.21.0, 1.25.0, 1.26.0, 1.34.0]
+        rust: [1.31.0, 1.34.0]
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{matrix.rust}}
-      - run: cd serde && cargo build --no-default-features
-      - run: cd serde && cargo build
-
-  more:
-    name: Rust ${{matrix.rust}}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        rust: [1.27.0, 1.28.0]
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{matrix.rust}}
-        # Work around failing to parse manifest because editions are unstable.
-      - run: sed -i /test_suite/d Cargo.toml
+      - run: sed -i '/"test_suite"/d' Cargo.toml
+      - run: cd serde && cargo build --features rc
       - run: cd serde && cargo build --no-default-features
       - run: cd serde && cargo build
 
   derive:
-    name: Rust 1.31.0
+    name: Rust 1.56.0
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v2
-      - uses: dtolnay/rust-toolchain@1.31.0
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.56.0
+      - run: sed -i '/"test_suite"/d' Cargo.toml
       - run: cd serde && cargo check --no-default-features
       - run: cd serde && cargo check
       - run: cd serde_derive && cargo check
@@ -119,45 +104,73 @@ jobs:
   alloc:
     name: Rust 1.36.0
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.36.0
+      - run: sed -i '/"test_suite"/d' Cargo.toml
       - run: cd serde && cargo build --no-default-features --features alloc
 
-  emscripten:
-    name: Emscripten
+  minimal:
+    name: Minimal versions
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
-      - uses: actions/setup-node@v1
-        with:
-          node-version: 9
-      - name: Install cargo-web
-        run: |
-          CARGO_WEB_RELEASE=$(curl -L -s -H Accept:application/json https://github.com/koute/cargo-web/releases/latest)
-          CARGO_WEB_VERSION=$(echo "${CARGO_WEB_RELEASE}" | jq -r .tag_name)
-          CARGO_WEB_URL="https://github.com/koute/cargo-web/releases/download/${CARGO_WEB_VERSION}/cargo-web-x86_64-unknown-linux-gnu.gz"
-          mkdir -p ~/.cargo/bin
-          curl -L "${CARGO_WEB_URL}" | gzip -d > ~/.cargo/bin/cargo-web
-          chmod +x ~/.cargo/bin/cargo-web
-      - run: cd test_suite && cargo web test --target=asmjs-unknown-emscripten --nodejs
-        continue-on-error: true
-      - run: cd test_suite && cargo web test --target=wasm32-unknown-emscripten --nodejs
-        continue-on-error: true
+      - run: cargo generate-lockfile -Z minimal-versions
+      - run: cargo check --locked --workspace
+
+  doc:
+    name: Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      RUSTDOCFLAGS: -Dwarnings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/install@cargo-docs-rs
+      - run: cargo docs-rs -p serde
+      - run: cargo docs-rs -p serde_derive
+      - run: cargo docs-rs -p serde_derive_internals
 
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@clippy
-        # The need for -Aredundant_field_names here is a Clippy bug.
-        # https://github.com/rust-lang/rust-clippy/issues/5356
-      - run: cd serde && cargo clippy --features rc,unstable -- -D clippy::all -A clippy::redundant_field_names
-      - run: cd serde_derive && cargo clippy -- -D clippy::all
-      - run: cd serde_derive_internals && cargo clippy -- -D clippy::all
-      - run: cd serde_test && cargo clippy -- -D clippy::all -A clippy::redundant_field_names
-      - run: cd test_suite && cargo clippy --tests --features unstable -- -D clippy::all -A clippy::redundant_field_names
-      - run: cd test_suite/no_std && cargo clippy -- -D clippy::all -A clippy::redundant_field_names
+      - run: cd serde && cargo clippy --features rc,unstable -- -Dclippy::all -Dclippy::pedantic
+      - run: cd serde_derive && cargo clippy -- -Dclippy::all -Dclippy::pedantic
+      - run: cd serde_derive_internals && cargo clippy -- -Dclippy::all -Dclippy::pedantic
+      - run: cd test_suite && cargo clippy --tests --features unstable -- -Dclippy::all -Dclippy::pedantic
+      - run: cd test_suite/no_std && cargo clippy -- -Dclippy::all -Dclippy::pedantic
+
+  miri:
+    name: Miri
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@miri
+      - run: cargo miri setup
+      - run: cd serde && cargo miri test --features derive,rc,unstable
+        env:
+          MIRIFLAGS: -Zmiri-strict-provenance
+      - run: cd test_suite && cargo miri test --features unstable
+        env:
+          MIRIFLAGS: -Zmiri-strict-provenance
+
+  outdated:
+    name: Outdated
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/install@cargo-outdated
+      - run: cargo outdated --workspace --exit-code 1

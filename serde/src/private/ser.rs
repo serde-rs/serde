@@ -1,6 +1,6 @@
-use lib::*;
+use crate::lib::*;
 
-use ser::{self, Impossible, Serialize, SerializeMap, SerializeStruct, Serializer};
+use crate::ser::{self, Impossible, Serialize, SerializeMap, SerializeStruct, Serializer};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 use self::content::{
@@ -27,10 +27,10 @@ where
     T: Serialize,
 {
     value.serialize(TaggedSerializer {
-        type_ident: type_ident,
-        variant_ident: variant_ident,
-        tag: tag,
-        variant_name: variant_name,
+        type_ident,
+        variant_ident,
+        tag,
+        variant_name,
         delegate: serializer,
     })
 }
@@ -51,7 +51,6 @@ enum Unsupported {
     String,
     ByteArray,
     Optional,
-    Unit,
     #[cfg(any(feature = "std", feature = "alloc"))]
     UnitStruct,
     Sequence,
@@ -70,7 +69,6 @@ impl Display for Unsupported {
             Unsupported::String => formatter.write_str("a string"),
             Unsupported::ByteArray => formatter.write_str("a byte array"),
             Unsupported::Optional => formatter.write_str("an optional"),
-            Unsupported::Unit => formatter.write_str("unit"),
             #[cfg(any(feature = "std", feature = "alloc"))]
             Unsupported::UnitStruct => formatter.write_str("unit struct"),
             Unsupported::Sequence => formatter.write_str("a sequence"),
@@ -176,20 +174,22 @@ where
         Err(self.bad_type(Unsupported::Optional))
     }
 
-    fn serialize_some<T: ?Sized>(self, _: &T) -> Result<Self::Ok, Self::Error>
+    fn serialize_some<T>(self, _: &T) -> Result<Self::Ok, Self::Error>
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
         Err(self.bad_type(Unsupported::Optional))
     }
 
     fn serialize_unit(self) -> Result<Self::Ok, Self::Error> {
-        Err(self.bad_type(Unsupported::Unit))
+        let mut map = tri!(self.delegate.serialize_map(Some(1)));
+        tri!(map.serialize_entry(self.tag, self.variant_name));
+        map.end()
     }
 
     fn serialize_unit_struct(self, _: &'static str) -> Result<Self::Ok, Self::Error> {
-        let mut map = try!(self.delegate.serialize_map(Some(1)));
-        try!(map.serialize_entry(self.tag, self.variant_name));
+        let mut map = tri!(self.delegate.serialize_map(Some(1)));
+        tri!(map.serialize_entry(self.tag, self.variant_name));
         map.end()
     }
 
@@ -199,24 +199,24 @@ where
         _: u32,
         inner_variant: &'static str,
     ) -> Result<Self::Ok, Self::Error> {
-        let mut map = try!(self.delegate.serialize_map(Some(2)));
-        try!(map.serialize_entry(self.tag, self.variant_name));
-        try!(map.serialize_entry(inner_variant, &()));
+        let mut map = tri!(self.delegate.serialize_map(Some(2)));
+        tri!(map.serialize_entry(self.tag, self.variant_name));
+        tri!(map.serialize_entry(inner_variant, &()));
         map.end()
     }
 
-    fn serialize_newtype_struct<T: ?Sized>(
+    fn serialize_newtype_struct<T>(
         self,
         _: &'static str,
         value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
         value.serialize(self)
     }
 
-    fn serialize_newtype_variant<T: ?Sized>(
+    fn serialize_newtype_variant<T>(
         self,
         _: &'static str,
         _: u32,
@@ -224,11 +224,11 @@ where
         inner_value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
-        let mut map = try!(self.delegate.serialize_map(Some(2)));
-        try!(map.serialize_entry(self.tag, self.variant_name));
-        try!(map.serialize_entry(inner_variant, inner_value));
+        let mut map = tri!(self.delegate.serialize_map(Some(2)));
+        tri!(map.serialize_entry(self.tag, self.variant_name));
+        tri!(map.serialize_entry(inner_variant, inner_value));
         map.end()
     }
 
@@ -269,9 +269,9 @@ where
         inner_variant: &'static str,
         len: usize,
     ) -> Result<Self::SerializeTupleVariant, Self::Error> {
-        let mut map = try!(self.delegate.serialize_map(Some(2)));
-        try!(map.serialize_entry(self.tag, self.variant_name));
-        try!(map.serialize_key(inner_variant));
+        let mut map = tri!(self.delegate.serialize_map(Some(2)));
+        tri!(map.serialize_entry(self.tag, self.variant_name));
+        tri!(map.serialize_key(inner_variant));
         Ok(SerializeTupleVariantAsMapValue::new(
             map,
             inner_variant,
@@ -280,8 +280,8 @@ where
     }
 
     fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
-        let mut map = try!(self.delegate.serialize_map(len.map(|len| len + 1)));
-        try!(map.serialize_entry(self.tag, self.variant_name));
+        let mut map = tri!(self.delegate.serialize_map(len.map(|len| len + 1)));
+        tri!(map.serialize_entry(self.tag, self.variant_name));
         Ok(map)
     }
 
@@ -290,8 +290,8 @@ where
         name: &'static str,
         len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error> {
-        let mut state = try!(self.delegate.serialize_struct(name, len + 1));
-        try!(state.serialize_field(self.tag, self.variant_name));
+        let mut state = tri!(self.delegate.serialize_struct(name, len + 1));
+        tri!(state.serialize_field(self.tag, self.variant_name));
         Ok(state)
     }
 
@@ -316,9 +316,9 @@ where
         inner_variant: &'static str,
         len: usize,
     ) -> Result<Self::SerializeStructVariant, Self::Error> {
-        let mut map = try!(self.delegate.serialize_map(Some(2)));
-        try!(map.serialize_entry(self.tag, self.variant_name));
-        try!(map.serialize_key(inner_variant));
+        let mut map = tri!(self.delegate.serialize_map(Some(2)));
+        tri!(map.serialize_entry(self.tag, self.variant_name));
+        tri!(map.serialize_key(inner_variant));
         Ok(SerializeStructVariantAsMapValue::new(
             map,
             inner_variant,
@@ -327,9 +327,9 @@ where
     }
 
     #[cfg(not(any(feature = "std", feature = "alloc")))]
-    fn collect_str<T: ?Sized>(self, _: &T) -> Result<Self::Ok, Self::Error>
+    fn collect_str<T>(self, _: &T) -> Result<Self::Ok, Self::Error>
     where
-        T: Display,
+        T: ?Sized + Display,
     {
         Err(self.bad_type(Unsupported::String))
     }
@@ -337,9 +337,9 @@ where
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 mod content {
-    use lib::*;
+    use crate::lib::*;
 
-    use ser::{self, Serialize, Serializer};
+    use crate::ser::{self, Serialize, Serializer};
 
     pub struct SerializeTupleVariantAsMapValue<M> {
         map: M,
@@ -350,8 +350,8 @@ mod content {
     impl<M> SerializeTupleVariantAsMapValue<M> {
         pub fn new(map: M, name: &'static str, len: usize) -> Self {
             SerializeTupleVariantAsMapValue {
-                map: map,
-                name: name,
+                map,
+                name,
                 fields: Vec::with_capacity(len),
             }
         }
@@ -364,17 +364,17 @@ mod content {
         type Ok = M::Ok;
         type Error = M::Error;
 
-        fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), M::Error>
+        fn serialize_field<T>(&mut self, value: &T) -> Result<(), M::Error>
         where
-            T: Serialize,
+            T: ?Sized + Serialize,
         {
-            let value = try!(value.serialize(ContentSerializer::<M::Error>::new()));
+            let value = tri!(value.serialize(ContentSerializer::<M::Error>::new()));
             self.fields.push(value);
             Ok(())
         }
 
         fn end(mut self) -> Result<M::Ok, M::Error> {
-            try!(self
+            tri!(self
                 .map
                 .serialize_value(&Content::TupleStruct(self.name, self.fields)));
             self.map.end()
@@ -390,8 +390,8 @@ mod content {
     impl<M> SerializeStructVariantAsMapValue<M> {
         pub fn new(map: M, name: &'static str, len: usize) -> Self {
             SerializeStructVariantAsMapValue {
-                map: map,
-                name: name,
+                map,
+                name,
                 fields: Vec::with_capacity(len),
             }
         }
@@ -404,21 +404,17 @@ mod content {
         type Ok = M::Ok;
         type Error = M::Error;
 
-        fn serialize_field<T: ?Sized>(
-            &mut self,
-            key: &'static str,
-            value: &T,
-        ) -> Result<(), M::Error>
+        fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), M::Error>
         where
-            T: Serialize,
+            T: ?Sized + Serialize,
         {
-            let value = try!(value.serialize(ContentSerializer::<M::Error>::new()));
+            let value = tri!(value.serialize(ContentSerializer::<M::Error>::new()));
             self.fields.push((key, value));
             Ok(())
         }
 
         fn end(mut self) -> Result<M::Ok, M::Error> {
-            try!(self
+            tri!(self
                 .map
                 .serialize_value(&Content::Struct(self.name, self.fields)));
             self.map.end()
@@ -499,50 +495,50 @@ mod content {
                 }
                 Content::Seq(ref elements) => elements.serialize(serializer),
                 Content::Tuple(ref elements) => {
-                    use ser::SerializeTuple;
-                    let mut tuple = try!(serializer.serialize_tuple(elements.len()));
+                    use crate::ser::SerializeTuple;
+                    let mut tuple = tri!(serializer.serialize_tuple(elements.len()));
                     for e in elements {
-                        try!(tuple.serialize_element(e));
+                        tri!(tuple.serialize_element(e));
                     }
                     tuple.end()
                 }
                 Content::TupleStruct(n, ref fields) => {
-                    use ser::SerializeTupleStruct;
-                    let mut ts = try!(serializer.serialize_tuple_struct(n, fields.len()));
+                    use crate::ser::SerializeTupleStruct;
+                    let mut ts = tri!(serializer.serialize_tuple_struct(n, fields.len()));
                     for f in fields {
-                        try!(ts.serialize_field(f));
+                        tri!(ts.serialize_field(f));
                     }
                     ts.end()
                 }
                 Content::TupleVariant(n, i, v, ref fields) => {
-                    use ser::SerializeTupleVariant;
-                    let mut tv = try!(serializer.serialize_tuple_variant(n, i, v, fields.len()));
+                    use crate::ser::SerializeTupleVariant;
+                    let mut tv = tri!(serializer.serialize_tuple_variant(n, i, v, fields.len()));
                     for f in fields {
-                        try!(tv.serialize_field(f));
+                        tri!(tv.serialize_field(f));
                     }
                     tv.end()
                 }
                 Content::Map(ref entries) => {
-                    use ser::SerializeMap;
-                    let mut map = try!(serializer.serialize_map(Some(entries.len())));
-                    for &(ref k, ref v) in entries {
-                        try!(map.serialize_entry(k, v));
+                    use crate::ser::SerializeMap;
+                    let mut map = tri!(serializer.serialize_map(Some(entries.len())));
+                    for (k, v) in entries {
+                        tri!(map.serialize_entry(k, v));
                     }
                     map.end()
                 }
                 Content::Struct(n, ref fields) => {
-                    use ser::SerializeStruct;
-                    let mut s = try!(serializer.serialize_struct(n, fields.len()));
+                    use crate::ser::SerializeStruct;
+                    let mut s = tri!(serializer.serialize_struct(n, fields.len()));
                     for &(k, ref v) in fields {
-                        try!(s.serialize_field(k, v));
+                        tri!(s.serialize_field(k, v));
                     }
                     s.end()
                 }
                 Content::StructVariant(n, i, v, ref fields) => {
-                    use ser::SerializeStructVariant;
-                    let mut sv = try!(serializer.serialize_struct_variant(n, i, v, fields.len()));
+                    use crate::ser::SerializeStructVariant;
+                    let mut sv = tri!(serializer.serialize_struct_variant(n, i, v, fields.len()));
                     for &(k, ref v) in fields {
-                        try!(sv.serialize_field(k, v));
+                        tri!(sv.serialize_field(k, v));
                     }
                     sv.end()
                 }
@@ -635,11 +631,11 @@ mod content {
             Ok(Content::None)
         }
 
-        fn serialize_some<T: ?Sized>(self, value: &T) -> Result<Content, E>
+        fn serialize_some<T>(self, value: &T) -> Result<Content, E>
         where
-            T: Serialize,
+            T: ?Sized + Serialize,
         {
-            Ok(Content::Some(Box::new(try!(value.serialize(self)))))
+            Ok(Content::Some(Box::new(tri!(value.serialize(self)))))
         }
 
         fn serialize_unit(self) -> Result<Content, E> {
@@ -659,21 +655,17 @@ mod content {
             Ok(Content::UnitVariant(name, variant_index, variant))
         }
 
-        fn serialize_newtype_struct<T: ?Sized>(
-            self,
-            name: &'static str,
-            value: &T,
-        ) -> Result<Content, E>
+        fn serialize_newtype_struct<T>(self, name: &'static str, value: &T) -> Result<Content, E>
         where
-            T: Serialize,
+            T: ?Sized + Serialize,
         {
             Ok(Content::NewtypeStruct(
                 name,
-                Box::new(try!(value.serialize(self))),
+                Box::new(tri!(value.serialize(self))),
             ))
         }
 
-        fn serialize_newtype_variant<T: ?Sized>(
+        fn serialize_newtype_variant<T>(
             self,
             name: &'static str,
             variant_index: u32,
@@ -681,13 +673,13 @@ mod content {
             value: &T,
         ) -> Result<Content, E>
         where
-            T: Serialize,
+            T: ?Sized + Serialize,
         {
             Ok(Content::NewtypeVariant(
                 name,
                 variant_index,
                 variant,
-                Box::new(try!(value.serialize(self))),
+                Box::new(tri!(value.serialize(self))),
             ))
         }
 
@@ -711,7 +703,7 @@ mod content {
             len: usize,
         ) -> Result<Self::SerializeTupleStruct, E> {
             Ok(SerializeTupleStruct {
-                name: name,
+                name,
                 fields: Vec::with_capacity(len),
                 error: PhantomData,
             })
@@ -725,9 +717,9 @@ mod content {
             len: usize,
         ) -> Result<Self::SerializeTupleVariant, E> {
             Ok(SerializeTupleVariant {
-                name: name,
-                variant_index: variant_index,
-                variant: variant,
+                name,
+                variant_index,
+                variant,
                 fields: Vec::with_capacity(len),
                 error: PhantomData,
             })
@@ -747,7 +739,7 @@ mod content {
             len: usize,
         ) -> Result<Self::SerializeStruct, E> {
             Ok(SerializeStruct {
-                name: name,
+                name,
                 fields: Vec::with_capacity(len),
                 error: PhantomData,
             })
@@ -761,9 +753,9 @@ mod content {
             len: usize,
         ) -> Result<Self::SerializeStructVariant, E> {
             Ok(SerializeStructVariant {
-                name: name,
-                variant_index: variant_index,
-                variant: variant,
+                name,
+                variant_index,
+                variant,
                 fields: Vec::with_capacity(len),
                 error: PhantomData,
             })
@@ -782,11 +774,11 @@ mod content {
         type Ok = Content;
         type Error = E;
 
-        fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), E>
+        fn serialize_element<T>(&mut self, value: &T) -> Result<(), E>
         where
-            T: Serialize,
+            T: ?Sized + Serialize,
         {
-            let value = try!(value.serialize(ContentSerializer::<E>::new()));
+            let value = tri!(value.serialize(ContentSerializer::<E>::new()));
             self.elements.push(value);
             Ok(())
         }
@@ -808,11 +800,11 @@ mod content {
         type Ok = Content;
         type Error = E;
 
-        fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<(), E>
+        fn serialize_element<T>(&mut self, value: &T) -> Result<(), E>
         where
-            T: Serialize,
+            T: ?Sized + Serialize,
         {
-            let value = try!(value.serialize(ContentSerializer::<E>::new()));
+            let value = tri!(value.serialize(ContentSerializer::<E>::new()));
             self.elements.push(value);
             Ok(())
         }
@@ -835,11 +827,11 @@ mod content {
         type Ok = Content;
         type Error = E;
 
-        fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), E>
+        fn serialize_field<T>(&mut self, value: &T) -> Result<(), E>
         where
-            T: Serialize,
+            T: ?Sized + Serialize,
         {
-            let value = try!(value.serialize(ContentSerializer::<E>::new()));
+            let value = tri!(value.serialize(ContentSerializer::<E>::new()));
             self.fields.push(value);
             Ok(())
         }
@@ -864,11 +856,11 @@ mod content {
         type Ok = Content;
         type Error = E;
 
-        fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<(), E>
+        fn serialize_field<T>(&mut self, value: &T) -> Result<(), E>
         where
-            T: Serialize,
+            T: ?Sized + Serialize,
         {
-            let value = try!(value.serialize(ContentSerializer::<E>::new()));
+            let value = tri!(value.serialize(ContentSerializer::<E>::new()));
             self.fields.push(value);
             Ok(())
         }
@@ -896,24 +888,24 @@ mod content {
         type Ok = Content;
         type Error = E;
 
-        fn serialize_key<T: ?Sized>(&mut self, key: &T) -> Result<(), E>
+        fn serialize_key<T>(&mut self, key: &T) -> Result<(), E>
         where
-            T: Serialize,
+            T: ?Sized + Serialize,
         {
-            let key = try!(key.serialize(ContentSerializer::<E>::new()));
+            let key = tri!(key.serialize(ContentSerializer::<E>::new()));
             self.key = Some(key);
             Ok(())
         }
 
-        fn serialize_value<T: ?Sized>(&mut self, value: &T) -> Result<(), E>
+        fn serialize_value<T>(&mut self, value: &T) -> Result<(), E>
         where
-            T: Serialize,
+            T: ?Sized + Serialize,
         {
             let key = self
                 .key
                 .take()
                 .expect("serialize_value called before serialize_key");
-            let value = try!(value.serialize(ContentSerializer::<E>::new()));
+            let value = tri!(value.serialize(ContentSerializer::<E>::new()));
             self.entries.push((key, value));
             Ok(())
         }
@@ -922,13 +914,13 @@ mod content {
             Ok(Content::Map(self.entries))
         }
 
-        fn serialize_entry<K: ?Sized, V: ?Sized>(&mut self, key: &K, value: &V) -> Result<(), E>
+        fn serialize_entry<K, V>(&mut self, key: &K, value: &V) -> Result<(), E>
         where
-            K: Serialize,
-            V: Serialize,
+            K: ?Sized + Serialize,
+            V: ?Sized + Serialize,
         {
-            let key = try!(key.serialize(ContentSerializer::<E>::new()));
-            let value = try!(value.serialize(ContentSerializer::<E>::new()));
+            let key = tri!(key.serialize(ContentSerializer::<E>::new()));
+            let value = tri!(value.serialize(ContentSerializer::<E>::new()));
             self.entries.push((key, value));
             Ok(())
         }
@@ -947,11 +939,11 @@ mod content {
         type Ok = Content;
         type Error = E;
 
-        fn serialize_field<T: ?Sized>(&mut self, key: &'static str, value: &T) -> Result<(), E>
+        fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), E>
         where
-            T: Serialize,
+            T: ?Sized + Serialize,
         {
-            let value = try!(value.serialize(ContentSerializer::<E>::new()));
+            let value = tri!(value.serialize(ContentSerializer::<E>::new()));
             self.fields.push((key, value));
             Ok(())
         }
@@ -976,11 +968,11 @@ mod content {
         type Ok = Content;
         type Error = E;
 
-        fn serialize_field<T: ?Sized>(&mut self, key: &'static str, value: &T) -> Result<(), E>
+        fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), E>
         where
-            T: Serialize,
+            T: ?Sized + Serialize,
         {
-            let value = try!(value.serialize(ContentSerializer::<E>::new()));
+            let value = tri!(value.serialize(ContentSerializer::<E>::new()));
             self.fields.push((key, value));
             Ok(())
         }
@@ -1025,7 +1017,7 @@ where
     type SerializeTupleStruct = Impossible<Self::Ok, M::Error>;
     type SerializeMap = FlatMapSerializeMap<'a, M>;
     type SerializeStruct = FlatMapSerializeStruct<'a, M>;
-    type SerializeTupleVariant = Impossible<Self::Ok, M::Error>;
+    type SerializeTupleVariant = FlatMapSerializeTupleVariantAsMapValue<'a, M>;
     type SerializeStructVariant = FlatMapSerializeStructVariantAsMapValue<'a, M>;
 
     fn serialize_bool(self, _: bool) -> Result<Self::Ok, Self::Error> {
@@ -1088,9 +1080,9 @@ where
         Ok(())
     }
 
-    fn serialize_some<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error>
+    fn serialize_some<T>(self, value: &T) -> Result<Self::Ok, Self::Error>
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
         value.serialize(self)
     }
@@ -1112,18 +1104,18 @@ where
         Err(Self::bad_type(Unsupported::Enum))
     }
 
-    fn serialize_newtype_struct<T: ?Sized>(
+    fn serialize_newtype_struct<T>(
         self,
         _: &'static str,
         value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
         value.serialize(self)
     }
 
-    fn serialize_newtype_variant<T: ?Sized>(
+    fn serialize_newtype_variant<T>(
         self,
         _: &'static str,
         _: u32,
@@ -1131,9 +1123,9 @@ where
         value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
-        try!(self.0.serialize_key(variant));
+        tri!(self.0.serialize_key(variant));
         self.0.serialize_value(value)
     }
 
@@ -1157,10 +1149,11 @@ where
         self,
         _: &'static str,
         _: u32,
-        _: &'static str,
+        variant: &'static str,
         _: usize,
     ) -> Result<Self::SerializeTupleVariant, Self::Error> {
-        Err(Self::bad_type(Unsupported::Enum))
+        tri!(self.0.serialize_key(variant));
+        Ok(FlatMapSerializeTupleVariantAsMapValue::new(self.0))
     }
 
     fn serialize_map(self, _: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
@@ -1182,7 +1175,7 @@ where
         inner_variant: &'static str,
         _: usize,
     ) -> Result<Self::SerializeStructVariant, Self::Error> {
-        try!(self.0.serialize_key(inner_variant));
+        tri!(self.0.serialize_key(inner_variant));
         Ok(FlatMapSerializeStructVariantAsMapValue::new(
             self.0,
             inner_variant,
@@ -1201,28 +1194,24 @@ where
     type Ok = ();
     type Error = M::Error;
 
-    fn serialize_key<T: ?Sized>(&mut self, key: &T) -> Result<(), Self::Error>
+    fn serialize_key<T>(&mut self, key: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
         self.0.serialize_key(key)
     }
 
-    fn serialize_value<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
+    fn serialize_value<T>(&mut self, value: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
         self.0.serialize_value(value)
     }
 
-    fn serialize_entry<K: ?Sized, V: ?Sized>(
-        &mut self,
-        key: &K,
-        value: &V,
-    ) -> Result<(), Self::Error>
+    fn serialize_entry<K, V>(&mut self, key: &K, value: &V) -> Result<(), Self::Error>
     where
-        K: Serialize,
-        V: Serialize,
+        K: ?Sized + Serialize,
+        V: ?Sized + Serialize,
     {
         self.0.serialize_entry(key, value)
     }
@@ -1243,13 +1232,9 @@ where
     type Ok = ();
     type Error = M::Error;
 
-    fn serialize_field<T: ?Sized>(
-        &mut self,
-        key: &'static str,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
         self.0.serialize_entry(key, value)
     }
@@ -1258,6 +1243,52 @@ where
         Ok(())
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub struct FlatMapSerializeTupleVariantAsMapValue<'a, M: 'a> {
+    map: &'a mut M,
+    fields: Vec<Content>,
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, M> FlatMapSerializeTupleVariantAsMapValue<'a, M>
+where
+    M: SerializeMap + 'a,
+{
+    fn new(map: &'a mut M) -> Self {
+        FlatMapSerializeTupleVariantAsMapValue {
+            map,
+            fields: Vec::new(),
+        }
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, M> ser::SerializeTupleVariant for FlatMapSerializeTupleVariantAsMapValue<'a, M>
+where
+    M: SerializeMap + 'a,
+{
+    type Ok = ();
+    type Error = M::Error;
+
+    fn serialize_field<T>(&mut self, value: &T) -> Result<(), Self::Error>
+    where
+        T: ?Sized + Serialize,
+    {
+        let value = tri!(value.serialize(ContentSerializer::<M::Error>::new()));
+        self.fields.push(value);
+        Ok(())
+    }
+
+    fn end(self) -> Result<(), Self::Error> {
+        tri!(self.map.serialize_value(&Content::Seq(self.fields)));
+        Ok(())
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub struct FlatMapSerializeStructVariantAsMapValue<'a, M: 'a> {
@@ -1273,8 +1304,8 @@ where
 {
     fn new(map: &'a mut M, name: &'static str) -> FlatMapSerializeStructVariantAsMapValue<'a, M> {
         FlatMapSerializeStructVariantAsMapValue {
-            map: map,
-            name: name,
+            map,
+            name,
             fields: Vec::new(),
         }
     }
@@ -1288,23 +1319,47 @@ where
     type Ok = ();
     type Error = M::Error;
 
-    fn serialize_field<T: ?Sized>(
-        &mut self,
-        key: &'static str,
-        value: &T,
-    ) -> Result<(), Self::Error>
+    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
     where
-        T: Serialize,
+        T: ?Sized + Serialize,
     {
-        let value = try!(value.serialize(ContentSerializer::<M::Error>::new()));
+        let value = tri!(value.serialize(ContentSerializer::<M::Error>::new()));
         self.fields.push((key, value));
         Ok(())
     }
 
     fn end(self) -> Result<(), Self::Error> {
-        try!(self
+        tri!(self
             .map
             .serialize_value(&Content::Struct(self.name, self.fields)));
         Ok(())
+    }
+}
+
+pub struct AdjacentlyTaggedEnumVariant {
+    pub enum_name: &'static str,
+    pub variant_index: u32,
+    pub variant_name: &'static str,
+}
+
+impl Serialize for AdjacentlyTaggedEnumVariant {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_unit_variant(self.enum_name, self.variant_index, self.variant_name)
+    }
+}
+
+// Error when Serialize for a non_exhaustive remote enum encounters a variant
+// that is not recognized.
+pub struct CannotSerializeVariant<T>(pub T);
+
+impl<T> Display for CannotSerializeVariant<T>
+where
+    T: Debug,
+{
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "enum variant cannot be serialized: {:?}", self.0)
     }
 }

@@ -1,6 +1,11 @@
+#![allow(
+    clippy::extra_unused_type_parameters,
+    clippy::type_repetition_in_bounds
+)]
+
 #[test]
 fn test_gen_custom_serde() {
-    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
     #[serde(crate = "fake_serde")]
     struct Foo;
 
@@ -22,19 +27,21 @@ mod fake_serde {
     {
     }
 
+    #[allow(dead_code)]
     pub trait Serialize {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>;
     }
 
+    #[allow(dead_code)]
     pub trait Deserialize<'a>: Sized {
         fn deserialize<D: Deserializer<'a>>(deserializer: D) -> Result<Self, D::Error>;
     }
 }
 
-trait AssertNotSerdeSerialize {}
+pub trait AssertNotSerdeSerialize {}
 
 impl<T: serde::Serialize> AssertNotSerdeSerialize for T {}
 
-trait AssertNotSerdeDeserialize<'a> {}
+pub trait AssertNotSerdeDeserialize<'a> {}
 
 impl<'a, T: serde::Deserialize<'a>> AssertNotSerdeDeserialize<'a> for T {}

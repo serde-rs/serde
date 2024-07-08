@@ -1,6 +1,8 @@
+#![allow(clippy::derive_partial_eq_without_eq, clippy::similar_names)]
+
 use serde::de::value::{self, MapAccessDeserializer};
-use serde::de::{IntoDeserializer, MapAccess, Visitor};
-use serde::{Deserialize, Deserializer};
+use serde::de::{Deserialize, Deserializer, IntoDeserializer, MapAccess, Visitor};
+use serde_derive::Deserialize;
 use serde_test::{assert_de_tokens, Token};
 use std::fmt;
 
@@ -17,7 +19,6 @@ fn test_u32_to_enum() {
     assert_eq!(E::B, e);
 }
 
-#[cfg(not(any(target_arch = "asmjs", target_arch = "wasm32")))]
 #[test]
 fn test_integer128() {
     let de_u128 = IntoDeserializer::<value::Error>::into_deserializer(1u128);
@@ -62,7 +63,7 @@ fn test_map_access_to_enum() {
                 type Value = Potential;
 
                 fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                    write!(formatter, "a map")
+                    formatter.write_str("a map")
                 }
 
                 fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
