@@ -1,6 +1,6 @@
 use crate::internals::ast::{Container, Data, Field, Style};
 use crate::internals::attr::{Default, Identifier, TagType, VariantName};
-use crate::internals::{ungroup, Ctxt, Derive};
+use crate::internals::{symbol, ungroup, Ctxt, Derive};
 use syn::{Member, Type};
 
 // Cross-cutting checks that require looking at more than a single attrs object.
@@ -462,10 +462,28 @@ fn check_non_string_renames(cx: &Ctxt, cont: &mut Container) {
         let ser_name = name.serialize_name();
         let de_name = name.deserialize_name();
 
+        let attr = v
+            .original
+            .attrs
+            .iter()
+            .filter_map(|attr| {
+                if attr.path() != symbol::SERDE {
+                    None?
+                }
+
+                let meta: syn::Meta = attr.parse_args().ok()?;
+                if meta.path() != symbol::RENAME {
+                    None?
+                }
+
+                Some(meta)
+            })
+            .next();
+
         match ser_name {
             VariantName::String(_) => {}
             _ => cx.error_spanned_by(
-                v.original,
+                attr.as_ref().unwrap(),
                 format!("#[serde(rename)] must use a string name in {}", details),
             ),
         }
@@ -473,7 +491,7 @@ fn check_non_string_renames(cx: &Ctxt, cont: &mut Container) {
         match de_name {
             VariantName::String(_) => {}
             _ => cx.error_spanned_by(
-                v.original,
+                attr.as_ref().unwrap(),
                 format!("#[serde(rename)] must use a string name in {}", details),
             ),
         }
@@ -482,7 +500,7 @@ fn check_non_string_renames(cx: &Ctxt, cont: &mut Container) {
             match alias {
                 VariantName::String(_) => {}
                 _ => cx.error_spanned_by(
-                    v.original,
+                    attr.as_ref().unwrap(),
                     format!("#[serde(rename)] must use a string name in {}", details),
                 ),
             }
