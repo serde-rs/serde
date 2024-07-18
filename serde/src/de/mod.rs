@@ -1630,6 +1630,17 @@ pub trait Visitor<'de>: Sized {
         Err(Error::invalid_type(Unexpected::Unit, &self))
     }
 
+    /// The input contains a unit struct.
+    ///
+    /// The default implementation forwards to `visit_unit`.
+    fn visit_unit_struct<E>(self, name: &'static str) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        let _ = name;
+        self.visit_unit()
+    }
+
     /// The input contains a newtype struct.
     ///
     /// The content of the newtype struct may be read from the given
@@ -1655,6 +1666,27 @@ pub trait Visitor<'de>: Sized {
         Err(Error::invalid_type(Unexpected::Seq, &self))
     }
 
+    /// The input contains a tuple.
+    ///
+    /// The default implementation forwards to `visit_seq`.
+    fn visit_tuple<A>(self, tup: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        self.visit_seq(tup)
+    }
+
+    /// The input contains a tuple struct.
+    ///
+    /// The default implementation forwards to `visit_seq`.
+    fn visit_tuple_struct<A>(self, name: &'static str, tup: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let _ = name;
+        self.visit_seq(tup)
+    }
+
     /// The input contains a key-value map.
     ///
     /// The default implementation fails with a type error.
@@ -1664,6 +1696,23 @@ pub trait Visitor<'de>: Sized {
     {
         let _ = map;
         Err(Error::invalid_type(Unexpected::Map, &self))
+    }
+
+    /// The input contains a struct.
+    ///
+    /// The default implementation forwards to `visit_map`.
+    fn visit_struct<A>(
+        self,
+        name: &'static str,
+        fields: &[&'static str],
+        data: A,
+    ) -> Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let _ = name;
+        let _ = fields;
+        self.visit_map(data)
     }
 
     /// The input contains an enum.
