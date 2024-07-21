@@ -1655,6 +1655,24 @@ pub trait Visitor<'de>: Sized {
         Err(Error::invalid_type(Unexpected::NewtypeStruct, &self))
     }
 
+    /// The input contains a newtype struct.
+    ///
+    /// `name` is the name of the struct. The content of the newtype struct may
+    /// be read from the given `Deserializer`.
+    ///
+    /// The default implementation forwards to `visit_newtype_struct`.
+    fn visit_newtype_struct_with_name<D>(
+        self,
+        name: &'static str,
+        deserializer: D,
+    ) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let _ = name;
+        self.visit_newtype_struct(deserializer)
+    }
+
     /// The input contains a sequence of elements.
     ///
     /// The default implementation fails with a type error.
