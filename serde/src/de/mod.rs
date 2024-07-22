@@ -1641,6 +1641,25 @@ pub trait Visitor<'de>: Sized {
         self.visit_unit()
     }
 
+    /// The input contains a unit variant.
+    ///
+    /// The default implementation forwards to `visit_enum`.
+    fn visit_unit_variant<A>(
+        self,
+        name: &'static str,
+        variant_index: u32,
+        variant: &'static str,
+        data: A,
+    ) -> Result<Self::Value, A::Error>
+    where
+        A: EnumAccess<'de>,
+    {
+        let _ = name;
+        let _ = variant_index;
+        let _ = variant;
+        self.visit_enum(data)
+    }
+
     /// The input contains a newtype struct.
     ///
     /// The content of the newtype struct may be read from the given
@@ -1671,6 +1690,25 @@ pub trait Visitor<'de>: Sized {
     {
         let _ = name;
         self.visit_newtype_struct(deserializer)
+    }
+
+    /// The input contains a newtype variant.
+    ///
+    /// The default implementation forwards to `visit_enum`.
+    fn visit_newtype_variant<A>(
+        self,
+        name: &'static str,
+        variant_index: u32,
+        variant: &'static str,
+        data: A,
+    ) -> Result<Self::Value, A::Error>
+    where
+        A: EnumAccess<'de>,
+    {
+        let _ = name;
+        let _ = variant_index;
+        let _ = variant;
+        self.visit_enum(data)
     }
 
     /// The input contains a sequence of elements.
@@ -1705,6 +1743,27 @@ pub trait Visitor<'de>: Sized {
         self.visit_seq(tup)
     }
 
+    /// The input contains a tuple variant.
+    ///
+    /// The default implementation forwards to `visit_enum`.
+    fn visit_tuple_variant<A>(
+        self,
+        name: &'static str,
+        variant_index: u32,
+        variant: &'static str,
+        len: usize,
+        data: A,
+    ) -> Result<Self::Value, A::Error>
+    where
+        A: EnumAccess<'de>,
+    {
+        let _ = name;
+        let _ = variant_index;
+        let _ = variant;
+        let _ = len;
+        self.visit_enum(data)
+    }
+
     /// The input contains a key-value map.
     ///
     /// The default implementation fails with a type error.
@@ -1731,6 +1790,27 @@ pub trait Visitor<'de>: Sized {
         let _ = name;
         let _ = fields;
         self.visit_map(data)
+    }
+
+    /// The input contains a struct variant.
+    ///
+    /// The default implementation forwards to `visit_enum`.
+    fn visit_struct_variant<A>(
+        self,
+        name: &'static str,
+        variant_index: u32,
+        variant: &'static str,
+        fields: &[&'static str],
+        data: A,
+    ) -> Result<Self::Value, A::Error>
+    where
+        A: EnumAccess<'de>,
+    {
+        let _ = name;
+        let _ = variant_index;
+        let _ = variant;
+        let _ = fields;
+        self.visit_enum(data)
     }
 
     /// The input contains an enum.
