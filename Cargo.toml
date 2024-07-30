@@ -6,6 +6,10 @@ members = [
     "test_suite",
 ]
 
+[workspace.package]
+edition = "2018"
+
+
 [patch.crates-io]
 serde = { path = "serde" }
 
