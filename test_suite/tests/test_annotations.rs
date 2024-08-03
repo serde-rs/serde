@@ -2939,7 +2939,7 @@ mod flatten {
 
             #[test]
             fn unit_enum_with_unknown_fields() {
-                #[derive(Debug, PartialEq, Deserialize)]
+                #[derive(Debug, PartialEq, Serialize, Deserialize)]
                 struct Flatten {
                     #[serde(flatten)]
                     x: X,
@@ -2947,19 +2947,19 @@ mod flatten {
                     y: Y,
                 }
 
-                #[derive(Debug, PartialEq, Deserialize)]
+                #[derive(Debug, PartialEq, Serialize, Deserialize)]
                 #[serde(tag = "typeX")]
                 enum X {
                     A,
                 }
 
-                #[derive(Debug, PartialEq, Deserialize)]
+                #[derive(Debug, PartialEq, Serialize, Deserialize)]
                 #[serde(tag = "typeY")]
                 enum Y {
                     B { c: u32 },
                 }
 
-                assert_de_tokens(
+                assert_tokens(
                     &Flatten {
                         x: X::A,
                         y: Y::B { c: 0 },
@@ -2971,7 +2971,7 @@ mod flatten {
                         Token::Str("typeY"),
                         Token::Str("B"),
                         Token::Str("c"),
-                        Token::I32(0),
+                        Token::U32(0),
                         Token::MapEnd,
                     ],
                 );
