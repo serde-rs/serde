@@ -2898,6 +2898,7 @@ mod flatten {
             #[derive(Debug, PartialEq, Serialize, Deserialize)]
             #[serde(tag = "tag", content = "content")]
             enum Enum {
+                Unit,
                 Newtype(NewtypeVariant),
                 Struct { index: u32, value: u32 },
             }
@@ -2905,6 +2906,170 @@ mod flatten {
             #[derive(Debug, PartialEq, Serialize, Deserialize)]
             struct NewtypeVariant {
                 value: u32,
+            }
+
+            #[test]
+            fn unit() {
+                let value = Flatten {
+                    outer: 42,
+                    data: NewtypeWrapper(Enum::Unit),
+                };
+                // Field order: outer, [tag]
+                assert_tokens(
+                    &value,
+                    &[
+                        Token::Map { len: None },
+                        // outer
+                        Token::Str("outer"),
+                        Token::U32(42),
+                        // tag
+                        Token::Str("tag"),
+                        Token::UnitVariant {
+                            name: "Enum",
+                            variant: "Unit",
+                        },
+                        // content missing
+                        Token::MapEnd,
+                    ],
+                );
+                // Field order: [tag], outer
+                assert_de_tokens(
+                    &value,
+                    &[
+                        Token::Map { len: None },
+                        // tag
+                        Token::Str("tag"),
+                        Token::UnitVariant {
+                            name: "Enum",
+                            variant: "Unit",
+                        },
+                        // content missing
+                        // outer
+                        Token::Str("outer"),
+                        Token::U32(42),
+                        Token::MapEnd,
+                    ],
+                );
+                // Field order: outer, [tag, content]
+                assert_de_tokens(
+                    &value,
+                    &[
+                        Token::Map { len: None },
+                        // outer
+                        Token::Str("outer"),
+                        Token::U32(42),
+                        // tag
+                        Token::Str("tag"),
+                        Token::UnitVariant {
+                            name: "Enum",
+                            variant: "Unit",
+                        },
+                        // content
+                        Token::Str("content"),
+                        Token::Unit,
+                        Token::MapEnd,
+                    ],
+                );
+                // Field order: outer, [content, tag]
+                assert_de_tokens(
+                    &value,
+                    &[
+                        Token::Map { len: None },
+                        // outer
+                        Token::Str("outer"),
+                        Token::U32(42),
+                        // content
+                        Token::Str("content"),
+                        Token::Unit,
+                        // tag
+                        Token::Str("tag"),
+                        Token::UnitVariant {
+                            name: "Enum",
+                            variant: "Unit",
+                        },
+                        Token::MapEnd,
+                    ],
+                );
+                // Field order: [tag, content], outer
+                assert_de_tokens(
+                    &value,
+                    &[
+                        Token::Map { len: None },
+                        // tag
+                        Token::Str("tag"),
+                        Token::UnitVariant {
+                            name: "Enum",
+                            variant: "Unit",
+                        },
+                        // content
+                        Token::Str("content"),
+                        Token::Unit,
+                        // outer
+                        Token::Str("outer"),
+                        Token::U32(42),
+                        Token::MapEnd,
+                    ],
+                );
+                // Field order: [content, tag], outer - did not work
+                assert_de_tokens(
+                    &value,
+                    &[
+                        Token::Map { len: None },
+                        // content
+                        Token::Str("content"),
+                        Token::Unit,
+                        // tag
+                        Token::Str("tag"),
+                        Token::UnitVariant {
+                            name: "Enum",
+                            variant: "Unit",
+                        },
+                        // outer
+                        Token::Str("outer"),
+                        Token::U32(42),
+                        Token::MapEnd,
+                    ],
+                );
+                // Field order: [tag], outer, [content]
+                assert_de_tokens(
+                    &value,
+                    &[
+                        Token::Map { len: None },
+                        // tag
+                        Token::Str("tag"),
+                        Token::UnitVariant {
+                            name: "Enum",
+                            variant: "Unit",
+                        },
+                        // outer
+                        Token::Str("outer"),
+                        Token::U32(42),
+                        // content
+                        Token::Str("content"),
+                        Token::Unit,
+                        Token::MapEnd,
+                    ],
+                );
+                // Field order: [content], outer, [tag] - did not work
+                assert_de_tokens(
+                    &value,
+                    &[
+                        Token::Map { len: None },
+                        // content
+                        Token::Str("content"),
+                        Token::Unit,
+                        // outer
+                        Token::Str("outer"),
+                        Token::U32(42),
+                        // tag
+                        Token::Str("tag"),
+                        Token::UnitVariant {
+                            name: "Enum",
+                            variant: "Unit",
+                        },
+                        Token::MapEnd,
+                    ],
+                );
             }
 
             #[test]
