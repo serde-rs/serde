@@ -2827,6 +2827,35 @@ mod flatten {
             }
 
             #[test]
+            fn newtype() {
+                assert_tokens(
+                    &Flatten {
+                        outer: 42,
+                        data: NewtypeWrapper(Enum::Newtype(NewtypeVariant { value: 23 })),
+                    },
+                    &[
+                        Token::Map { len: None },
+                        Token::Str("outer"),
+                        Token::U32(42),
+                        Token::Str("tag"),
+                        Token::UnitVariant {
+                            name: "Enum",
+                            variant: "Newtype",
+                        },
+                        Token::Str("content"),
+                        Token::Struct {
+                            len: 1,
+                            name: "NewtypeVariant",
+                        },
+                        Token::Str("value"),
+                        Token::U32(23),
+                        Token::StructEnd,
+                        Token::MapEnd,
+                    ],
+                );
+            }
+
+            #[test]
             fn struct_() {
                 assert_tokens(
                     &Flatten {
@@ -2854,35 +2883,6 @@ mod flatten {
                         Token::U32(0),
                         Token::Str("value"),
                         Token::U32(42),
-                        Token::StructEnd,
-                        Token::MapEnd,
-                    ],
-                );
-            }
-
-            #[test]
-            fn newtype() {
-                assert_tokens(
-                    &Flatten {
-                        outer: 42,
-                        data: NewtypeWrapper(Enum::Newtype(NewtypeVariant { value: 23 })),
-                    },
-                    &[
-                        Token::Map { len: None },
-                        Token::Str("outer"),
-                        Token::U32(42),
-                        Token::Str("tag"),
-                        Token::UnitVariant {
-                            name: "Enum",
-                            variant: "Newtype",
-                        },
-                        Token::Str("content"),
-                        Token::Struct {
-                            len: 1,
-                            name: "NewtypeVariant",
-                        },
-                        Token::Str("value"),
-                        Token::U32(23),
                         Token::StructEnd,
                         Token::MapEnd,
                     ],
