@@ -134,6 +134,7 @@ jobs:
       - run: cargo docs-rs -p serde
       - run: cargo docs-rs -p serde_derive
       - run: cargo docs-rs -p serde_derive_internals
+      - run: cargo docs-rs -p serde_derive_implementation
 
   clippy:
     name: Clippy
@@ -146,6 +147,7 @@ jobs:
       - run: cd serde && cargo clippy --features rc,unstable -- -Dclippy::all -Dclippy::pedantic
       - run: cd serde_derive && cargo clippy -- -Dclippy::all -Dclippy::pedantic
       - run: cd serde_derive_internals && cargo clippy -- -Dclippy::all -Dclippy::pedantic
+      - run: cd serde_derive_implementation && cargo clippy -- -Dclippy::all -Dclippy::pedantic
       - run: cd test_suite && cargo clippy --tests --features unstable -- -Dclippy::all -Dclippy::pedantic
       - run: cd test_suite/no_std && cargo clippy -- -Dclippy::all -Dclippy::pedantic
 
