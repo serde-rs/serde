@@ -174,7 +174,9 @@ fn build_generics(cont: &Container, borrowed: &BorrowedLifetimes) -> syn::Generi
                     &generics,
                     &parse_quote!(_serde::__private::Default),
                 ),
-                attr::Default::None | attr::Default::Path(_) => generics,
+                attr::Default::None | 
+                attr::Default::Expr(_) |
+                attr::Default::Path(_) => generics,
             };
 
             let delife = borrowed.de_lifetime();
@@ -373,6 +375,7 @@ fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
                 attr::Default::Default => quote!(_serde::__private::Default::default()),
                 attr::Default::Path(path) => quote!(#path()),
                 attr::Default::None => quote!(_serde::__private::PhantomData),
+                attr::Default::Expr(lit) => quote!(#lit),
             };
             quote!(#member: #value)
         }
@@ -754,6 +757,9 @@ fn deserialize_seq(
         attr::Default::Path(path) => Some(quote!(
             let __default: Self::Value = #path();
         )),
+        attr::Default::Expr(lit) => Some(quote!(
+            let __default: Self::Value = #lit;
+        )),
         attr::Default::None => {
             // We don't need the default value, to prevent an unused variable warning
             // we'll leave the line empty.
@@ -835,6 +841,9 @@ fn deserialize_seq_in_place(
         )),
         attr::Default::Path(path) => Some(quote!(
             let __default: #this_type #ty_generics = #path();
+        )),
+        attr::Default::Expr(lit) => Some(quote!(
+            let __default: #this_type #ty_generics = #lit;
         )),
         attr::Default::None => {
             // We don't need the default value, to prevent an unused variable warning
@@ -2637,6 +2646,9 @@ fn deserialize_map(
         attr::Default::Path(path) => Some(quote!(
             let __default: Self::Value = #path();
         )),
+        attr::Default::Expr(lit) => Some(quote!(
+            let __default: Self::Value = #lit
+        )),
         attr::Default::None => {
             // We don't need the default value, to prevent an unused variable warning
             // we'll leave the line empty.
@@ -2804,6 +2816,9 @@ fn deserialize_map_in_place(
         attr::Default::Path(path) => Some(quote!(
             let __default: #this_type #ty_generics = #path();
         )),
+        attr::Default::Expr(lit) => Some(quote!(
+            let __default: #this_type #ty_generics = #lit;
+        )),
         attr::Default::None => {
             // We don't need the default value, to prevent an unused variable warning
             // we'll leave the line empty.
@@ -2947,11 +2962,16 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
         attr::Default::Path(path) => {
             return quote_expr!(#path());
         }
+        attr::Default::Expr(lit) => {
+            return quote_expr!(#lit);
+        }
         attr::Default::None => { /* below */ }
     }
 
     match *cattrs.default() {
-        attr::Default::Default | attr::Default::Path(_) => {
+        attr::Default::Default |
+        attr::Default::Path(_) |
+        attr::Default::Expr(_) => {
             let member = &field.member;
             return quote_expr!(__default.#member);
         }
@@ -2990,11 +3010,16 @@ fn expr_is_missing_seq(
         attr::Default::Path(path) => {
             return quote_spanned!(path.span()=> #assign_to #path());
         }
+        attr::Default::Expr(lit) => {
+            return quote_spanned!(lit.span()=> #assign_to #lit);
+        }
         attr::Default::None => { /* below */ }
     }
 
     match *cattrs.default() {
-        attr::Default::Default | attr::Default::Path(_) => {
+        attr::Default::Default |
+        attr::Default::Path(_) |
+        attr::Default::Expr(_) => {
             let member = &field.member;
             quote!(#assign_to __default.#member)
         }
