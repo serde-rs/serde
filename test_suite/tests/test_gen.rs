@@ -4,6 +4,7 @@
 
 #![deny(warnings)]
 #![allow(
+    confusable_idents,
     unknown_lints,
     mixed_script_confusables,
     clippy::derive_partial_eq_without_eq,
