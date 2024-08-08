@@ -19,6 +19,7 @@
     clippy::trivially_copy_pass_by_ref,
     clippy::type_repetition_in_bounds
 )]
+#![deny(clippy::collection_is_never_read)]
 
 use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 use serde::ser::{Serialize, Serializer};
