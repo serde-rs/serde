@@ -725,6 +725,19 @@ fn test_gen() {
         flat: T,
     }
 
+    #[derive(Serialize, Deserialize)]
+    #[serde(untagged)]
+    pub enum Inner<T> {
+        Builder {
+            s: T,
+            #[serde(flatten)]
+            o: T,
+        },
+        Default {
+            s: T,
+        },
+    }
+
     // https://github.com/serde-rs/serde/issues/1804
     #[derive(Serialize, Deserialize)]
     pub enum Message {
