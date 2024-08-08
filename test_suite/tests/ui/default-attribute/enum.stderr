@@ -3,3 +3,15 @@ error: #[serde(default)] can only be used on structs
   |
 4 | #[serde(default)]
   |         ^^^^^^^
+
+error: field must have #[serde(default)] because previous field 0 has #[serde(default)]
+  --> tests/ui/default-attribute/enum.rs:16:30
+   |
+16 |     T2(#[serde(default)] u8, u8, u8),
+   |                              ^^
+
+error: field must have #[serde(default)] because previous field 0 has #[serde(default)]
+  --> tests/ui/default-attribute/enum.rs:16:34
+   |
+16 |     T2(#[serde(default)] u8, u8, u8),
+   |                                  ^^
