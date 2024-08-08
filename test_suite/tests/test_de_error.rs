@@ -42,8 +42,26 @@ struct StructSkipAllDenyUnknown {
     a: i32,
 }
 
+#[derive(PartialEq, Debug, Deserialize)]
+#[serde(strict_or_some_other_name)]
+struct StructStrictOrSomeOtherName {
+    a: i32,
+}
+
 #[derive(Default, PartialEq, Debug)]
 struct NotDeserializable;
+
+#[derive(Debug, PartialEq, Deserialize)]
+struct FlattenStrictStrictOrSomeOtherName {
+    #[serde(flatten)]
+    data: EnumStrictStrictOrSomeOtherName,
+}
+
+#[derive(PartialEq, Debug, Deserialize)]
+#[serde(strict_or_some_other_name)]
+enum EnumStrictStrictOrSomeOtherName {
+    Map { a: i32, b: i32, c: i32 },
+}
 
 #[derive(PartialEq, Debug, Deserialize)]
 enum Enum {
@@ -66,6 +84,26 @@ enum EnumSkipAll {
     #[allow(dead_code)]
     #[serde(skip_deserializing)]
     Skipped,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(tag = "type")]
+#[serde(strict_or_some_other_name)]
+enum InternallyTaggedStrictOrSomeOtherName {
+    A { a: u8 },
+    B(StructStrictOrSomeOtherName),
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(tag = "type")]
+enum OuterStrictOrSomeOtherName {
+    Inner(InnerStrictOrSomeOtherName),
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(strict_or_some_other_name)]
+enum InnerStrictOrSomeOtherName {
+    Struct { f: u8 },
 }
 
 #[test]
@@ -1180,6 +1218,14 @@ fn test_skip_all_deny_unknown() {
 }
 
 #[test]
+fn test_strict_or_some_other_name() {
+    assert_de_tokens_error::<StructStrictOrSomeOtherName>(
+        &[Token::Seq { len: Some(1) }],
+        "invalid type: sequence, expected struct StructStrictOrSomeOtherName",
+    );
+}
+
+#[test]
 fn test_unknown_variant() {
     assert_de_tokens_error::<Enum>(
     &[
@@ -1245,6 +1291,63 @@ fn test_enum_out_of_range() {
     assert_de_tokens_error::<Enum>(
         &[Token::Enum { name: "Enum" }, Token::U32(5), Token::Unit],
         "invalid value: integer `5`, expected variant index 0 <= i < 5",
+    );
+}
+
+#[test]
+fn test_struct_variant_strict_or_some_other_name_flatten() {
+    assert_de_tokens_error::<FlattenStrictStrictOrSomeOtherName>(
+        &[
+            Token::Map { len: None },
+            Token::Str("Map"), // variant
+            Token::Seq { len: Some(3) },
+            Token::U32(0),  // a
+            Token::U32(42), // b
+            Token::U32(69), // c
+            Token::SeqEnd,
+            Token::MapEnd,
+        ],
+        "invalid type: sequence, expected struct variant EnumStrictStrictOrSomeOtherName::Map",
+    );
+}
+
+#[test]
+fn test_struct_variant_strict_or_some_other_name_internally_tagged() {
+    assert_de_tokens_error::<InternallyTaggedStrictOrSomeOtherName>(
+        &[
+            Token::Seq { len: Some(2) },
+            Token::Str("A"),
+            Token::U8(1),
+            Token::SeqEnd,
+        ],
+        "invalid type: sequence, expected struct variant InternallyTaggedStrictOrSomeOtherName::A",
+    );
+    assert_de_tokens_error::<InternallyTaggedStrictOrSomeOtherName>(
+        &[
+            Token::Seq { len: Some(2) },
+            Token::Str("B"),
+            Token::I32(0),
+            Token::I32(42),
+            Token::SeqEnd,
+        ],
+        "invalid type: sequence, expected struct StructStrictOrSomeOtherName",
+    );
+}
+
+#[test]
+fn test_struct_variant_strict_or_some_other_name_enum_in_internally_tagged_enum() {
+    assert_de_tokens_error::<OuterStrictOrSomeOtherName>(
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("type"),
+            Token::Str("Inner"),
+            Token::Str("Struct"),
+            Token::Seq { len: Some(1) },
+            Token::U8(69),
+            Token::SeqEnd,
+            Token::MapEnd,
+        ],
+        "invalid type: sequence, expected struct variant InnerStrictOrSomeOtherName::Struct",
     );
 }
 

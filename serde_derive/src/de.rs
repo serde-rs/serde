@@ -961,10 +961,10 @@ fn deserialize_struct(
     let field_visitor = deserialize_field_identifier(&field_names_idents, cattrs);
 
     // untagged struct variants do not get a visit_seq method. The same applies to
-    // structs that only have a map representation.
+    // structs that only have a map representation or are deserialized strict_or_some_other_name_ly.
     let visit_seq = match form {
         StructForm::Untagged(..) => None,
-        _ if cattrs.has_flatten() => None,
+        _ if cattrs.has_flatten() || cattrs.is_strict_or_some_other_name() => None,
         _ => {
             let mut_seq = if field_names_idents.is_empty() {
                 quote!(_)
@@ -1118,12 +1118,26 @@ fn deserialize_struct_in_place(
 
     let field_visitor = deserialize_field_identifier(&field_names_idents, cattrs);
 
-    let mut_seq = if field_names_idents.is_empty() {
-        quote!(_)
+    let visit_seq_fn = if !cattrs.is_strict_or_some_other_name() {
+        let mut_seq = if field_names_idents.is_empty() {
+            quote!(_)
+        } else {
+            quote!(mut __seq)
+        };
+        let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
+
+        Some(quote!(
+            #[inline]
+            fn visit_seq<__A>(self, #mut_seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
+            where
+                __A: _serde::de::SeqAccess<#delife>,
+            {
+                #visit_seq
+            }
+        ))
     } else {
-        quote!(mut __seq)
+        None
     };
-    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
     let visit_map = Stmts(deserialize_map_in_place(params, fields, cattrs));
     let field_names = field_names_idents
         .iter()
@@ -1150,13 +1164,7 @@ fn deserialize_struct_in_place(
                 _serde::__private::Formatter::write_str(__formatter, #expecting)
             }
 
-            #[inline]
-            fn visit_seq<__A>(self, #mut_seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
-            where
-                __A: _serde::de::SeqAccess<#delife>,
-            {
-                #visit_seq
-            }
+            #visit_seq_fn
 
             #[inline]
             fn visit_map<__A>(self, mut __map: __A) -> _serde::__private::Result<Self::Value, __A::Error>
@@ -2001,6 +2009,7 @@ fn deserialize_generated_identifier(
         None,
         !is_variant && cattrs.has_flatten(),
         None,
+        cattrs.is_strict_or_some_other_name(),
     ));
 
     let lifetime = if !is_variant && cattrs.has_flatten() {
@@ -2155,6 +2164,7 @@ fn deserialize_custom_identifier(
         fallthrough_borrowed,
         false,
         cattrs.expecting(),
+        false,
     ));
 
     quote_block! {
@@ -2188,6 +2198,7 @@ fn deserialize_identifier(
     fallthrough_borrowed: Option<TokenStream>,
     collect_other_fields: bool,
     expecting: Option<&str>,
+    is_strict_or_some_other_name: bool,
 ) -> Fragment {
     let str_mapping = fields.iter().map(|(_, ident, aliases)| {
         // `aliases` also contains a main name
@@ -2255,7 +2266,7 @@ fn deserialize_identifier(
     };
 
     let visit_other = if collect_other_fields {
-        quote! {
+        Some(quote! {
             fn visit_bool<__E>(self, __value: bool) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
@@ -2346,8 +2357,8 @@ fn deserialize_identifier(
             {
                 _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Unit))
             }
-        }
-    } else {
+        })
+    } else if !is_strict_or_some_other_name {
         let u64_mapping = fields.iter().enumerate().map(|(i, (_, ident, _))| {
             let i = i as u64;
             quote!(#i => _serde::__private::Ok(#this_value::#ident))
@@ -2368,7 +2379,7 @@ fn deserialize_identifier(
             &u64_fallthrough_arm_tokens
         };
 
-        quote! {
+        Some(quote! {
             fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
@@ -2378,7 +2389,9 @@ fn deserialize_identifier(
                     _ => #u64_fallthrough_arm,
                 }
             }
-        }
+        })
+    } else {
+        None
     };
 
     let visit_borrowed = if fallthrough_borrowed.is_some() || collect_other_fields {
