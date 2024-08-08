@@ -4,6 +4,7 @@
 
 #![deny(warnings)]
 #![allow(
+    confusable_idents,
     unknown_lints,
     mixed_script_confusables,
     clippy::derive_partial_eq_without_eq,
@@ -19,6 +20,7 @@
     clippy::trivially_copy_pass_by_ref,
     clippy::type_repetition_in_bounds
 )]
+#![deny(clippy::collection_is_never_read)]
 
 use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 use serde::ser::{Serialize, Serializer};
@@ -722,6 +724,19 @@ fn test_gen() {
     pub struct FlattenSkipDeserializing<T> {
         #[serde(flatten, skip_deserializing)]
         flat: T,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(untagged)]
+    pub enum Inner<T> {
+        Builder {
+            s: T,
+            #[serde(flatten)]
+            o: T,
+        },
+        Default {
+            s: T,
+        },
     }
 
     // https://github.com/serde-rs/serde/issues/1804

@@ -2480,7 +2480,10 @@ fn deserialize_map(
         });
 
     // Collect contents for flatten fields into a buffer
-    let let_collect = if cattrs.has_flatten() {
+    let has_flatten = fields
+        .iter()
+        .any(|field| field.attrs.flatten() && !field.attrs.skip_deserializing());
+    let let_collect = if has_flatten {
         Some(quote! {
             let mut __collect = _serde::__private::Vec::<_serde::__private::Option<(
                 _serde::__private::de::Content,
@@ -2532,7 +2535,7 @@ fn deserialize_map(
         });
 
     // Visit ignored values to consume them
-    let ignored_arm = if cattrs.has_flatten() {
+    let ignored_arm = if has_flatten {
         Some(quote! {
             __Field::__other(__name) => {
                 __collect.push(_serde::__private::Some((
@@ -2602,7 +2605,7 @@ fn deserialize_map(
             }
         });
 
-    let collected_deny_unknown_fields = if cattrs.has_flatten() && cattrs.deny_unknown_fields() {
+    let collected_deny_unknown_fields = if has_flatten && cattrs.deny_unknown_fields() {
         Some(quote! {
             if let _serde::__private::Some(_serde::__private::Some((__key, _))) =
                 __collect.into_iter().filter(_serde::__private::Option::is_some).next()
