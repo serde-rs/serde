@@ -1,6 +1,6 @@
 use crate::internals::ast::{Container, Data, Field, Style};
-use crate::internals::attr::{Default, Identifier, TagType};
-use crate::internals::{ungroup, Ctxt, Derive};
+use crate::internals::attr::{Default, Identifier, TagType, VariantName};
+use crate::internals::{symbol, ungroup, Ctxt, Derive};
 use syn::{Member, Type};
 
 // Cross-cutting checks that require looking at more than a single attrs object.
@@ -16,6 +16,7 @@ pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     check_adjacent_tag_conflict(cx, cont);
     check_transparent(cx, cont, derive);
     check_from_and_try_from(cx, cont);
+    check_non_string_renames(cx, cont);
 }
 
 // If some field of a tuple struct is marked #[serde(default)] then all fields
@@ -442,6 +443,68 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
                 );
             }
         },
+    }
+}
+
+/// Externally tagged/untagged enum variants must have string names.
+fn check_non_string_renames(cx: &Ctxt, cont: &mut Container) {
+    let (details, variants) = match &cont.data {
+        Data::Enum(variants) => match cont.attrs.tag() {
+            TagType::Adjacent { .. } | TagType::Internal { .. } => return,
+            TagType::External => ("externally tagged enums", variants),
+            TagType::None => ("untagged enums", variants),
+        },
+        Data::Struct(_, _) => return,
+    };
+
+    for v in variants {
+        let name = v.attrs.name();
+        let ser_name = name.serialize_name();
+        let de_name = name.deserialize_name();
+
+        let attr = v
+            .original
+            .attrs
+            .iter()
+            .filter_map(|attr| {
+                if attr.path() != symbol::SERDE {
+                    None?
+                }
+
+                let meta: syn::Meta = attr.parse_args().ok()?;
+                if meta.path() != symbol::RENAME {
+                    None?
+                }
+
+                Some(meta)
+            })
+            .next();
+
+        match ser_name {
+            VariantName::String(_) => {}
+            _ => cx.error_spanned_by(
+                attr.as_ref().unwrap(),
+                format!("#[serde(rename)] must use a string name in {}", details),
+            ),
+        }
+
+        match de_name {
+            VariantName::String(_) => {}
+            _ => cx.error_spanned_by(
+                attr.as_ref().unwrap(),
+                format!("#[serde(rename)] must use a string name in {}", details),
+            ),
+        }
+
+        for alias in v.attrs.aliases() {
+            match alias {
+                VariantName::String(_) => {}
+                _ => cx.error_spanned_by(
+                    attr.as_ref().unwrap(),
+                    format!("#[serde(rename)] must use a string name in {}", details),
+                ),
+            }
+        }
     }
 }
 
