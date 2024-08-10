@@ -1868,8 +1868,11 @@ fn deserialize_internally_tagged_variant(
     cattrs: &attr::Container,
     deserializer: TokenStream,
 ) -> Fragment {
-    if variant.attrs.deserialize_with().is_some() {
-        return deserialize_untagged_variant(params, variant, cattrs, deserializer);
+    if let Some(path) = variant.attrs.deserialize_with() {
+        let unwrap_fn = unwrap_to_variant_closure(params, variant, false);
+        return quote_block! {
+            _serde::#private::Result::map(#path(#deserializer), #unwrap_fn)
+        };
     }
 
     let variant_ident = &variant.ident;
