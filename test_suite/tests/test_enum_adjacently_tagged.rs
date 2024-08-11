@@ -18,104 +18,149 @@ enum AdjacentlyTagged<T> {
     Struct { f: u8 },
 }
 
-#[test]
-fn unit() {
-    // unit with no content
-    assert_tokens(
-        &AdjacentlyTagged::Unit::<u8>,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 1,
-            },
-            Token::Str("t"),
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Unit",
-            },
-            Token::StructEnd,
-        ],
-    );
+mod unit {
+    use super::*;
 
-    // unit with no content and incorrect hint for number of elements
-    assert_de_tokens(
-        &AdjacentlyTagged::Unit::<u8>,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("t"),
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Unit",
-            },
-            Token::StructEnd,
-        ],
-    );
+    #[test]
+    fn map_str_tag_only() {
+        // Map: tag only
+        assert_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 1,
+                },
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
+                Token::StructEnd,
+            ],
+        );
 
-    // unit with tag first
-    assert_de_tokens(
-        &AdjacentlyTagged::Unit::<u8>,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("t"),
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Unit",
-            },
-            Token::Str("c"),
-            Token::Unit,
-            Token::StructEnd,
-        ],
-    );
+        // Map: tag only and incorrect hint for number of elements
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 2,
+                },
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
+                Token::StructEnd,
+            ],
+        );
+    }
 
-    // unit with content first
-    assert_de_tokens(
-        &AdjacentlyTagged::Unit::<u8>,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("c"),
-            Token::Unit,
-            Token::Str("t"),
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Unit",
-            },
-            Token::StructEnd,
-        ],
-    );
+    #[test]
+    fn map_str_tag_content() {
+        // Map: tag + content
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 2,
+                },
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
+                Token::Str("c"),
+                Token::Unit,
+                Token::StructEnd,
+            ],
+        );
+        // Map: content + tag
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 2,
+                },
+                Token::Str("c"),
+                Token::Unit,
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
+                Token::StructEnd,
+            ],
+        );
 
-    // unit with excess content (f, g, h)
-    assert_de_tokens(
-        &AdjacentlyTagged::Unit::<u8>,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("f"),
-            Token::Unit,
-            Token::Str("t"),
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Unit",
-            },
-            Token::Str("g"),
-            Token::Unit,
-            Token::Str("c"),
-            Token::Unit,
-            Token::Str("h"),
-            Token::Unit,
-            Token::StructEnd,
-        ],
-    );
+        // Map: tag + content + excess fields (f, g, h)
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 2,
+                },
+                Token::Str("f"),
+                Token::Unit,
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
+                Token::Str("g"),
+                Token::Unit,
+                Token::Str("c"),
+                Token::Unit,
+                Token::Str("h"),
+                Token::Unit,
+                Token::StructEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn seq_tag_content() {
+        // Seq: tag and content
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Seq { len: Some(2) },
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
+                Token::Unit,
+                Token::SeqEnd,
+            ],
+        );
+
+        // Seq: tag (as string) and content
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Seq { len: None },
+                Token::Str("Unit"), // tag
+                Token::Unit,        // content
+                Token::SeqEnd,
+            ],
+        );
+
+        // Seq: tag (as borrowed string) and content
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Seq { len: None },
+                Token::BorrowedStr("Unit"), // tag
+                Token::Unit,                // content
+                Token::SeqEnd,
+            ],
+        );
+    }
 }
 
 #[test]
