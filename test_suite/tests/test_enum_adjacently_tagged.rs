@@ -7,9 +7,7 @@
 )]
 
 use serde_derive::{Deserialize, Serialize};
-use serde_test::{
-    assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_tokens, Token,
-};
+use serde_test::{assert_de_tokens, assert_de_tokens_error, assert_tokens, Token};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "t", content = "c")]
@@ -23,7 +21,7 @@ enum AdjacentlyTagged<T> {
 #[test]
 fn unit() {
     // unit with no content
-    assert_ser_tokens(
+    assert_tokens(
         &AdjacentlyTagged::Unit::<u8>,
         &[
             Token::Struct {
@@ -39,7 +37,7 @@ fn unit() {
         ],
     );
 
-    // unit with no content
+    // unit with no content and incorrect hint for number of elements
     assert_de_tokens(
         &AdjacentlyTagged::Unit::<u8>,
         &[
