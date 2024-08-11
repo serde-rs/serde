@@ -59,6 +59,26 @@ mod unit {
     }
 
     #[test]
+    fn map_int_tag_only() {
+        // Map: tag (as number) only
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 1,
+                },
+                Token::U16(0),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
+                Token::StructEnd,
+            ],
+        );
+    }
+
+    #[test]
     fn map_str_tag_content() {
         // Map: tag + content
         assert_de_tokens(
@@ -118,6 +138,47 @@ mod unit {
                 Token::Unit,
                 Token::Str("h"),
                 Token::Unit,
+                Token::StructEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn map_int_tag_content() {
+        // Map: tag (as number) + content (as number)
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 2,
+                },
+                Token::U8(0),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
+                Token::U8(1),
+                Token::Unit,
+                Token::StructEnd,
+            ],
+        );
+
+        // Map: content (as number) + tag (as number)
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 2,
+                },
+                Token::U64(1),
+                Token::Unit,
+                Token::U64(0),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
                 Token::StructEnd,
             ],
         );
