@@ -281,13 +281,9 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
     } else if let attr::Identifier::No = cont.attrs.identifier() {
         match &cont.data {
             Data::Enum(variants) => deserialize_enum(params, variants, &cont.attrs),
-            Data::Struct(Style::Struct, fields) => deserialize_struct(
-                params,
-                fields,
-                &cont.attrs,
-                cont.attrs.has_flatten(),
-                StructForm::Struct,
-            ),
+            Data::Struct(Style::Struct, fields) => {
+                deserialize_struct(params, fields, &cont.attrs, StructForm::Struct)
+            }
             Data::Struct(Style::Tuple, fields) | Data::Struct(Style::Newtype, fields) => {
                 deserialize_tuple(
                     params,
@@ -927,7 +923,6 @@ fn deserialize_struct(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
-    has_flatten: bool,
     form: StructForm,
 ) -> Fragment {
     let this_type = &params.this_type;
@@ -976,6 +971,10 @@ fn deserialize_struct(
             )
         })
         .collect();
+
+    let has_flatten = fields
+        .iter()
+        .any(|field| field.attrs.flatten() && !field.attrs.skip_deserializing());
     let field_visitor = deserialize_field_identifier(&field_names_idents, cattrs, has_flatten);
 
     // untagged struct variants do not get a visit_seq method. The same applies to
@@ -1838,7 +1837,6 @@ fn deserialize_externally_tagged_variant(
             params,
             &variant.fields,
             cattrs,
-            variant.attrs.has_flatten(),
             StructForm::ExternallyTagged(variant_ident),
         ),
     }
@@ -1882,7 +1880,6 @@ fn deserialize_internally_tagged_variant(
             params,
             &variant.fields,
             cattrs,
-            variant.attrs.has_flatten(),
             StructForm::InternallyTagged(variant_ident, deserializer),
         ),
         Style::Tuple => unreachable!("checked in serde_derive_internals"),
@@ -1940,7 +1937,6 @@ fn deserialize_untagged_variant(
             params,
             &variant.fields,
             cattrs,
-            variant.attrs.has_flatten(),
             StructForm::Untagged(variant_ident, deserializer),
         ),
     }

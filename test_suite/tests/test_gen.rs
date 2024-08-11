@@ -548,10 +548,29 @@ fn test_gen() {
     assert::<FlattenWith>();
 
     #[derive(Serialize, Deserialize)]
+    pub struct Flatten<T> {
+        #[serde(flatten)]
+        t: T,
+    }
+
+    #[derive(Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
     pub struct FlattenDenyUnknown<T> {
         #[serde(flatten)]
         t: T,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    pub struct SkipDeserializing<T> {
+        #[serde(skip_deserializing)]
+        flat: T,
+    }
+
+    #[derive(Serialize, Deserialize)]
+    #[serde(deny_unknown_fields)]
+    pub struct SkipDeserializingDenyUnknown<T> {
+        #[serde(skip_deserializing)]
+        flat: T,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -720,14 +739,11 @@ fn test_gen() {
         flat: StdOption<T>,
     }
 
-    #[allow(clippy::collection_is_never_read)] // FIXME
-    const _: () = {
-        #[derive(Serialize, Deserialize)]
-        pub struct FlattenSkipDeserializing<T> {
-            #[serde(flatten, skip_deserializing)]
-            flat: T,
-        }
-    };
+    #[derive(Serialize, Deserialize)]
+    pub struct FlattenSkipDeserializing<T> {
+        #[serde(flatten, skip_deserializing)]
+        flat: T,
+    }
 
     #[derive(Serialize, Deserialize)]
     #[serde(untagged)]
