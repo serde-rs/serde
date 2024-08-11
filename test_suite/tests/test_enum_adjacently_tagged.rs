@@ -217,6 +217,33 @@ fn newtype() {
 }
 
 #[test]
+fn newtype_with_newtype() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct NewtypeStruct(u32);
+
+    assert_de_tokens(
+        &AdjacentlyTagged::Newtype(NewtypeStruct(5)),
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
+            Token::Str("c"),
+            Token::NewtypeStruct {
+                name: "NewtypeStruct",
+            },
+            Token::U32(5),
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Newtype",
+            },
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn tuple() {
     let value = AdjacentlyTagged::Tuple::<u8>(1, 1);
 
@@ -475,33 +502,6 @@ fn partially_untagged() {
     assert_de_tokens(&data, &[Token::U32(42)]);
 
     // TODO test error output
-}
-
-#[test]
-fn newtype_with_newtype() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    struct NewtypeStruct(u32);
-
-    assert_de_tokens(
-        &AdjacentlyTagged::Newtype(NewtypeStruct(5)),
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("c"),
-            Token::NewtypeStruct {
-                name: "NewtypeStruct",
-            },
-            Token::U32(5),
-            Token::Str("t"),
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Newtype",
-            },
-            Token::StructEnd,
-        ],
-    );
 }
 
 #[test]
