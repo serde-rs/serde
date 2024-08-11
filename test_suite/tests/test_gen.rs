@@ -720,11 +720,14 @@ fn test_gen() {
         flat: StdOption<T>,
     }
 
-    #[derive(Serialize, Deserialize)]
-    pub struct FlattenSkipDeserializing<T> {
-        #[serde(flatten, skip_deserializing)]
-        flat: T,
-    }
+    #[allow(clippy::collection_is_never_read)] // FIXME
+    const _: () = {
+        #[derive(Serialize, Deserialize)]
+        pub struct FlattenSkipDeserializing<T> {
+            #[serde(flatten, skip_deserializing)]
+            flat: T,
+        }
+    };
 
     #[derive(Serialize, Deserialize)]
     #[serde(untagged)]
