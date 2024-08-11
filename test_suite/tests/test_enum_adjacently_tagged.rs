@@ -482,17 +482,13 @@ fn newtype_with_newtype() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     struct NewtypeStruct(u32);
 
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(tag = "t", content = "c")]
-    enum E {
-        Newtype(NewtypeStruct),
-        Null,
-    }
-
     assert_de_tokens(
-        &E::Newtype(NewtypeStruct(5)),
+        &AdjacentlyTagged::Newtype(NewtypeStruct(5)),
         &[
-            Token::Struct { name: "E", len: 2 },
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 2,
+            },
             Token::Str("c"),
             Token::NewtypeStruct {
                 name: "NewtypeStruct",
@@ -500,7 +496,7 @@ fn newtype_with_newtype() {
             Token::U32(5),
             Token::Str("t"),
             Token::UnitVariant {
-                name: "E",
+                name: "AdjacentlyTagged",
                 variant: "Newtype",
             },
             Token::StructEnd,
