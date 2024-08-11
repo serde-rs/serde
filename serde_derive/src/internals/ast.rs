@@ -85,7 +85,6 @@ impl<'a> Container<'a> {
                     for field in &mut variant.fields {
                         if field.attrs.flatten() {
                             has_flatten = true;
-                            variant.attrs.mark_has_flatten();
                         }
                         field.attrs.rename_by_rules(
                             variant

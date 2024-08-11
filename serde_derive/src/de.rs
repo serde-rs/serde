@@ -285,13 +285,7 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
                 deserialize_struct(params, fields, &cont.attrs, StructForm::Struct)
             }
             Data::Struct(Style::Tuple, fields) | Data::Struct(Style::Newtype, fields) => {
-                deserialize_tuple(
-                    params,
-                    fields,
-                    &cont.attrs,
-                    cont.attrs.has_flatten(),
-                    TupleForm::Tuple,
-                )
+                deserialize_tuple(params, fields, &cont.attrs, TupleForm::Tuple)
             }
             Data::Struct(Style::Unit, _) => deserialize_unit_struct(params, &cont.attrs),
         }
@@ -465,11 +459,10 @@ fn deserialize_tuple(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
-    has_flatten: bool,
     form: TupleForm,
 ) -> Fragment {
     assert!(
-        !has_flatten,
+        !has_flatten(fields),
         "tuples and tuple variants cannot have flatten fields"
     );
 
@@ -590,7 +583,7 @@ fn deserialize_tuple_in_place(
     cattrs: &attr::Container,
 ) -> Fragment {
     assert!(
-        !cattrs.has_flatten(),
+        !has_flatten(fields),
         "tuples and tuple variants cannot have flatten fields"
     );
 
@@ -972,9 +965,7 @@ fn deserialize_struct(
         })
         .collect();
 
-    let has_flatten = fields
-        .iter()
-        .any(|field| field.attrs.flatten() && !field.attrs.skip_deserializing());
+    let has_flatten = has_flatten(fields);
     let field_visitor = deserialize_field_identifier(&field_names_idents, cattrs, has_flatten);
 
     // untagged struct variants do not get a visit_seq method. The same applies to
@@ -1114,7 +1105,7 @@ fn deserialize_struct_in_place(
 ) -> Option<Fragment> {
     // for now we do not support in_place deserialization for structs that
     // are represented as map.
-    if cattrs.has_flatten() {
+    if has_flatten(fields) {
         return None;
     }
 
@@ -1830,7 +1821,6 @@ fn deserialize_externally_tagged_variant(
             params,
             &variant.fields,
             cattrs,
-            variant.attrs.has_flatten(),
             TupleForm::ExternallyTagged(variant_ident),
         ),
         Style::Struct => deserialize_struct(
@@ -1930,7 +1920,6 @@ fn deserialize_untagged_variant(
             params,
             &variant.fields,
             cattrs,
-            variant.attrs.has_flatten(),
             TupleForm::Untagged(variant_ident, deserializer),
         ),
         Style::Struct => deserialize_struct(
@@ -2703,7 +2692,7 @@ fn deserialize_map_in_place(
     cattrs: &attr::Container,
 ) -> Fragment {
     assert!(
-        !cattrs.has_flatten(),
+        !has_flatten(fields),
         "inplace deserialization of maps does not support flatten fields"
     );
 
@@ -3036,6 +3025,13 @@ fn effective_style(variant: &Variant) -> Style {
         Style::Newtype if variant.fields[0].attrs.skip_deserializing() => Style::Unit,
         other => other,
     }
+}
+
+/// True if there are fields that is not skipped and has a `#[serde(flatten)]` attribute.
+fn has_flatten(fields: &[Field]) -> bool {
+    fields
+        .iter()
+        .any(|field| field.attrs.flatten() && !field.attrs.skip_deserializing())
 }
 
 struct DeImplGenerics<'a>(&'a Parameters);
