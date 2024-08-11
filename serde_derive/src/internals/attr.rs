@@ -216,23 +216,6 @@ pub struct Container {
     type_into: Option<syn::Type>,
     remote: Option<syn::Path>,
     identifier: Identifier,
-    /// True if container is a struct and has a field with `#[serde(flatten)]`,
-    /// or is an enum with a struct variant which has a field with
-    /// `#[serde(flatten)]`.
-    ///
-    /// ```ignore
-    /// struct Container {
-    ///     #[serde(flatten)]
-    ///     some_field: (),
-    /// }
-    /// enum Container {
-    ///     Variant {
-    ///         #[serde(flatten)]
-    ///         some_field: (),
-    ///     },
-    /// }
-    /// ```
-    has_flatten: bool,
     serde_path: Option<syn::Path>,
     is_packed: bool,
     /// Error message generated when type can't be deserialized
@@ -603,7 +586,6 @@ impl Container {
             type_into: type_into.get(),
             remote: remote.get(),
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
-            has_flatten: false,
             serde_path: serde_path.get(),
             is_packed,
             expecting: expecting.get(),
@@ -669,14 +651,6 @@ impl Container {
 
     pub fn identifier(&self) -> Identifier {
         self.identifier
-    }
-
-    pub fn has_flatten(&self) -> bool {
-        self.has_flatten
-    }
-
-    pub fn mark_has_flatten(&mut self) {
-        self.has_flatten = true;
     }
 
     pub fn custom_serde_path(&self) -> Option<&syn::Path> {
