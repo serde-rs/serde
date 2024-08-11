@@ -904,7 +904,9 @@ mod content {
 
     /// Not public API.
     pub struct TagOrContentFieldVisitor {
+        /// Name of the tag field of the adjacently tagged enum
         pub tag: &'static str,
+        /// Name of the content field of the adjacently tagged enum
         pub content: &'static str,
     }
 
@@ -979,7 +981,9 @@ mod content {
 
     /// Not public API.
     pub struct TagContentOtherFieldVisitor {
+        /// Name of the tag field of the adjacently tagged enum
         pub tag: &'static str,
+        /// Name of the content field of the adjacently tagged enum
         pub content: &'static str,
     }
 
