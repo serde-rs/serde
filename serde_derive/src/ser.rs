@@ -289,7 +289,13 @@ fn serialize_tuple_struct(
 }
 
 fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Container) -> Fragment {
-    assert!(fields.len() as u64 <= u64::from(u32::MAX));
+    assert!(
+        fields.len() as u64 <= u64::from(u32::MAX),
+        "too many fields in {}: {}, maximum supported count is {}",
+        cattrs.name().serialize_name(),
+        fields.len(),
+        u32::MAX
+    );
 
     if cattrs.has_flatten() {
         serialize_struct_as_map(params, fields, cattrs)
