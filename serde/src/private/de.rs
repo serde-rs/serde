@@ -1619,9 +1619,7 @@ mod content {
             V: de::Visitor<'de>,
         {
             match self.value {
-                Some(Content::Seq(v)) => {
-                    de::Deserializer::deserialize_any(SeqDeserializer::new(v.into_iter()), visitor)
-                }
+                Some(Content::Seq(v)) => visit_content_seq(v, visitor),
                 Some(other) => Err(de::Error::invalid_type(
                     other.unexpected(),
                     &"tuple variant",
@@ -1642,12 +1640,8 @@ mod content {
             V: de::Visitor<'de>,
         {
             match self.value {
-                Some(Content::Map(v)) => {
-                    de::Deserializer::deserialize_any(MapDeserializer::new(v.into_iter()), visitor)
-                }
-                Some(Content::Seq(v)) => {
-                    de::Deserializer::deserialize_any(SeqDeserializer::new(v.into_iter()), visitor)
-                }
+                Some(Content::Map(v)) => visit_content_map(v, visitor),
+                Some(Content::Seq(v)) => visit_content_seq(v, visitor),
                 Some(other) => Err(de::Error::invalid_type(
                     other.unexpected(),
                     &"struct variant",
