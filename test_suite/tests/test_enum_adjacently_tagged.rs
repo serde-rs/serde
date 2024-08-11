@@ -480,22 +480,22 @@ fn partially_untagged() {
 #[test]
 fn newtype_with_newtype() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    struct GenericNewTypeStruct<T>(T);
+    struct NewtypeStruct(u32);
 
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "t", content = "c")]
     enum E {
-        Newtype(GenericNewTypeStruct<u32>),
+        Newtype(NewtypeStruct),
         Null,
     }
 
     assert_de_tokens(
-        &E::Newtype(GenericNewTypeStruct(5u32)),
+        &E::Newtype(NewtypeStruct(5)),
         &[
             Token::Struct { name: "E", len: 2 },
             Token::Str("c"),
             Token::NewtypeStruct {
-                name: "GenericNewTypeStruct",
+                name: "NewtypeStruct",
             },
             Token::U32(5),
             Token::Str("t"),
