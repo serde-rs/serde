@@ -2380,7 +2380,7 @@ fn test_partially_untagged_enum_desugared() {
     );
 }
 
-/// Regression test for https://github.com/serde-rs/serde/issues/1904
+// Regression test for https://github.com/serde-rs/serde/issues/1904
 #[test]
 fn test_enum_tuple_and_struct_with_flatten() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
