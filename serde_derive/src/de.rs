@@ -1268,7 +1268,7 @@ fn prepare_enum_variant_enum(variants: &[Variant]) -> (TokenStream, Stmts) {
 
     let variant_visitor = Stmts(deserialize_generated_identifier(
         &variant_names_idents,
-        false, // variant identifiers does not depend on the presence of flatten fields
+        false, // variant identifiers do not depend on the presence of flatten fields
         true,
         None,
         fallthrough,
@@ -2708,7 +2708,7 @@ fn deserialize_map_in_place(
 ) -> Fragment {
     assert!(
         !cattrs.has_flatten(),
-        "inplace deserialization of maps doesn't support flatten fields"
+        "inplace deserialization of maps does not support flatten fields"
     );
 
     // Create the field names for the fields.

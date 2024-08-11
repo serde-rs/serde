@@ -1,4 +1,5 @@
 #![allow(dead_code)] // we do not read enum fields
+
 use serde_derive::Deserialize;
 
 #[derive(Deserialize)]

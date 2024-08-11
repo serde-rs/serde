@@ -1,4 +1,5 @@
 #![allow(dead_code)] // we do not read enum fields
+
 use serde_derive::Deserialize;
 
 #[derive(Deserialize)]
@@ -12,5 +13,6 @@ pub enum A {
         e: E,
     },
 }
+
 #[derive(Deserialize)]
 pub struct E {}

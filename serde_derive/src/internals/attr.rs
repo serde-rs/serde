@@ -216,9 +216,9 @@ pub struct Container {
     type_into: Option<syn::Type>,
     remote: Option<syn::Path>,
     identifier: Identifier,
-    /// `true` if container is a `struct` and it has a field with `#[serde(flatten)]`
-    /// attribute or it is an `enum` with a struct variant which has a field with
-    /// `#[serde(flatten)]` attribute. Examples:
+    /// True if container is a struct and has a field with `#[serde(flatten)]`,
+    /// or is an enum with a struct variant which has a field with
+    /// `#[serde(flatten)]`.
     ///
     /// ```ignore
     /// struct Container {
@@ -810,8 +810,8 @@ pub struct Variant {
     rename_all_rules: RenameAllRules,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
-    /// `true` if variant is a struct variant which contains a field with `#[serde(flatten)]`
-    /// attribute. Examples:
+    /// True if variant is a struct variant which contains a field with
+    /// `#[serde(flatten)]`.
     ///
     /// ```ignore
     /// enum Enum {
