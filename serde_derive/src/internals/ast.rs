@@ -65,8 +65,10 @@ impl<'a> Container<'a> {
     ) -> Option<Container<'a>> {
         let mut attrs = attr::Container::from_ast(cx, item);
 
+		let untagged = attrs.tag() == &attr::TagType::None;
+		
         let mut data = match &item.data {
-            syn::Data::Enum(data) => Data::Enum(enum_from_ast(cx, &data.variants, attrs.default())),
+            syn::Data::Enum(data) => Data::Enum(enum_from_ast(cx, &data.variants, attrs.default(), untagged)),
             syn::Data::Struct(data) => {
                 let (style, fields) = struct_from_ast(cx, &data.fields, None, attrs.default());
                 Data::Struct(style, fields)
@@ -141,11 +143,16 @@ fn enum_from_ast<'a>(
     cx: &Ctxt,
     variants: &'a Punctuated<syn::Variant, Token![,]>,
     container_default: &attr::Default,
+    container_is_untagged: bool,
 ) -> Vec<Variant<'a>> {
     let variants: Vec<Variant> = variants
         .iter()
         .map(|variant| {
             let attrs = attr::Variant::from_ast(cx, variant);
+
+			if container_is_untagged && attrs.name().renamed() {
+				cx.error_spanned_by(&variant.ident, "renaming or adding a alias to a variant of an untagged enum does nothing");
+			}
             let (style, fields) =
                 struct_from_ast(cx, &variant.fields, Some(&attrs), container_default);
             Variant {

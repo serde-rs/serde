@@ -177,6 +177,11 @@ impl Name {
     pub fn deserialize_name(&self) -> &str {
         &self.deserialize
     }
+    
+    /// Return whether the container name was changed for serialization or deserialization.
+    pub fn renamed(&self) -> bool {
+		self.serialize_renamed || self.deserialize_renamed || !self.deserialize_aliases.is_empty()
+	}
 
     fn deserialize_aliases(&self) -> &BTreeSet<String> {
         &self.deserialize_aliases
@@ -241,6 +246,7 @@ pub struct Container {
 }
 
 /// Styles of representing an enum.
+#[derive(PartialEq)]
 pub enum TagType {
     /// The default.
     ///
