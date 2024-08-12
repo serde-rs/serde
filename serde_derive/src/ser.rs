@@ -294,7 +294,7 @@ fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Contai
         "too many fields in {}: {}, maximum supported count is {}",
         cattrs.name().serialize_name(),
         fields.len(),
-        u32::MAX
+        u32::MAX,
     );
 
     let has_non_skipped_flatten = fields

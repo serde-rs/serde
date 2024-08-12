@@ -3027,7 +3027,8 @@ fn effective_style(variant: &Variant) -> Style {
     }
 }
 
-/// True if there are fields that is not skipped and has a `#[serde(flatten)]` attribute.
+/// True if there is any field with a `#[serde(flatten)]` attribute, other than
+/// fields which are skipped.
 fn has_flatten(fields: &[Field]) -> bool {
     fields
         .iter()
