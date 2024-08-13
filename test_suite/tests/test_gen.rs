@@ -808,6 +808,41 @@ fn test_gen() {
     #[derive(Deserialize)]
     #[serde(bound(deserialize = "[&'de str; N]: Copy"))]
     pub struct GenericUnitStruct<const N: usize>;
+
+    #[derive(Serialize)]
+    pub struct WithGetter {
+        #[serde(getter = "Self::get")]
+        a: u8,
+        #[serde(getter = "free_function")]
+        b: u8,
+    }
+    impl WithGetter {
+        fn get(&self) -> u8 {
+            self.a
+        }
+    }
+    pub fn free_function(obj: &WithGetter) -> u8 {
+        obj.b
+    }
+    assert_ser::<WithGetter>();
+
+    // We need to constraint generic types with the same bounds as on `generic_free_function`
+    #[derive(Serialize)]
+    pub struct GenericWithGetter<T: Clone> {
+        #[serde(getter = "Self::get")]
+        a: T,
+        #[serde(getter = "generic_free_function")]
+        b: T,
+    }
+    impl<T: Clone> GenericWithGetter<T> {
+        fn get(&self) -> T {
+            self.a.clone()
+        }
+    }
+    pub fn generic_free_function<T: Clone>(obj: &GenericWithGetter<T>) -> T {
+        obj.b.clone()
+    }
+    assert_ser::<GenericWithGetter<u16>>();
 }
 
 //////////////////////////////////////////////////////////////////////////

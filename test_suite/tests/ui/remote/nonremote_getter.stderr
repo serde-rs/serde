@@ -1,8 +1,0 @@
-error: #[serde(getter = "...")] can only be used in structs that have #[serde(remote = "...")]
- --> tests/ui/remote/nonremote_getter.rs:4:1
-  |
-4 | / struct S {
-5 | |     #[serde(getter = "S::get")]
-6 | |     a: u8,
-7 | | }
-  | |_^
