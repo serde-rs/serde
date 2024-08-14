@@ -3,9 +3,9 @@ use serde_derive::{Serialize, Deserialize};
 #[derive(Serialize, Deserialize)]
 #[serde(untagged)]
 enum E {
-	#[serde(alias = "different-name")]
+	#[serde(alias = "foo")]
 	A(u8),
-	#[serde(rename = "different-name")]
+	#[serde(rename = "bar")]
 	B(String),
 }
 fn main() {}

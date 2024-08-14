@@ -325,7 +325,7 @@ impl Container {
         let mut serde_path = Attr::none(cx, CRATE);
         let mut expecting = Attr::none(cx, EXPECTING);
         let mut non_exhaustive = false;
-
+		
         for attr in &item.attrs {
             if attr.path() != SERDE {
                 non_exhaustive |=
@@ -467,7 +467,7 @@ impl Container {
                     // #[serde(untagged)]
                     match item.data {
                         syn::Data::Enum(_) => {
-                            untagged.set_true(&meta.path);
+							untagged.set_true(&meta.path);				
                         }
                         syn::Data::Struct(_) => {
                             let msg = "#[serde(untagged)] can only be used on enums";
@@ -868,7 +868,7 @@ impl Variant {
             if let Err(err) = attr.parse_nested_meta(|meta| {
                 if meta.path == RENAME {
 					if container_is_untagged {
-						cx.error_spanned_by(&attr, "renaming a variant of an untagged enum does nothing");
+						cx.error_spanned_by(&meta.path, "renaming a variant of an untagged enum does nothing");
 					}
                     // #[serde(rename = "foo")]
                     // #[serde(rename(serialize = "foo", deserialize = "bar"))]
@@ -881,7 +881,7 @@ impl Variant {
                 } else if meta.path == ALIAS {
                     // #[serde(alias = "foo")]
 					if container_is_untagged {
-						cx.error_spanned_by(&attr, "adding a alias to a variant of an untagged enum does nothing");
+						cx.error_spanned_by(&meta.path, "adding a alias to a variant of an untagged enum does nothing");
 					}
                     if let Some(s) = get_lit_str(cx, ALIAS, &meta)? {
                         de_aliases.insert(&meta.path, s.value());
