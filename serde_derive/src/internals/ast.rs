@@ -148,11 +148,8 @@ fn enum_from_ast<'a>(
     let variants: Vec<Variant> = variants
         .iter()
         .map(|variant| {
-            let attrs = attr::Variant::from_ast(cx, variant);
+            let attrs = attr::Variant::from_ast(cx, variant, container_is_untagged);
 
-			if container_is_untagged && attrs.name().renamed() {
-				cx.error_spanned_by(&variant.ident, "renaming or adding a alias to a variant of an untagged enum does nothing");
-			}
             let (style, fields) =
                 struct_from_ast(cx, &variant.fields, Some(&attrs), container_default);
             Variant {

@@ -1,0 +1,11 @@
+error: adding a alias to a variant of an untagged enum does nothing
+ --> tests/ui/enum-representation/untagged-and-variant-renamed.rs:6:2
+  |
+6 |     #[serde(alias = "different-name")]
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: renaming a variant of an untagged enum does nothing
+ --> tests/ui/enum-representation/untagged-and-variant-renamed.rs:8:2
+  |
+8 |     #[serde(rename = "different-name")]
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

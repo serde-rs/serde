@@ -178,11 +178,6 @@ impl Name {
         &self.deserialize
     }
     
-    /// Return whether the container name was changed for serialization or deserialization.
-    pub fn renamed(&self) -> bool {
-		self.serialize_renamed || self.deserialize_renamed || !self.deserialize_aliases.is_empty()
-	}
-
     fn deserialize_aliases(&self) -> &BTreeSet<String> {
         &self.deserialize_aliases
     }
@@ -843,7 +838,7 @@ struct BorrowAttribute {
 }
 
 impl Variant {
-    pub fn from_ast(cx: &Ctxt, variant: &syn::Variant) -> Self {
+    pub fn from_ast(cx: &Ctxt, variant: &syn::Variant, container_is_untagged: bool) -> Self {
         let mut ser_name = Attr::none(cx, RENAME);
         let mut de_name = Attr::none(cx, RENAME);
         let mut de_aliases = VecAttr::none(cx, RENAME);
@@ -872,6 +867,9 @@ impl Variant {
 
             if let Err(err) = attr.parse_nested_meta(|meta| {
                 if meta.path == RENAME {
+					if container_is_untagged {
+						cx.error_spanned_by(&attr, "renaming a variant of an untagged enum does nothing");
+					}
                     // #[serde(rename = "foo")]
                     // #[serde(rename(serialize = "foo", deserialize = "bar"))]
                     let (ser, de) = get_multiple_renames(cx, &meta)?;
@@ -882,6 +880,9 @@ impl Variant {
                     }
                 } else if meta.path == ALIAS {
                     // #[serde(alias = "foo")]
+					if container_is_untagged {
+						cx.error_spanned_by(&attr, "adding a alias to a variant of an untagged enum does nothing");
+					}
                     if let Some(s) = get_lit_str(cx, ALIAS, &meta)? {
                         de_aliases.insert(&meta.path, s.value());
                     }
