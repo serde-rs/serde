@@ -2081,7 +2081,10 @@ where
     {
         for entry in self.0 {
             if let Some((key, value)) = flat_map_take_entry(entry, variants) {
-                return visitor.visit_enum(FlatEnumDeserializer::new(key, value));
+                return visitor.visit_enum(FlatEnumDeserializer {
+                    variant: ContentDeserializer::new(key),
+                    value: ContentDeserializer::new(value),
+                });
             }
         }
 
@@ -2294,22 +2297,8 @@ struct FlatEnumDeserializer<'de, E>
 where
     E: Error,
 {
-    variant: Content<'de>,
-    value: Content<'de>,
-    err: PhantomData<E>,
-}
-
-impl<'de, E> FlatEnumDeserializer<'de, E>
-where
-    E: Error,
-{
-    fn new(variant: Content<'de>, value: Content<'de>) -> FlatEnumDeserializer<'de, E> {
-        FlatEnumDeserializer {
-            variant,
-            value,
-            err: PhantomData,
-        }
-    }
+    variant: ContentDeserializer<'de, E>,
+    value: ContentDeserializer<'de, E>,
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
@@ -2324,12 +2313,8 @@ where
     where
         V: DeserializeSeed<'de>,
     {
-        let visitor = FlatVariantDeserializer {
-            value: self.value,
-            err: PhantomData,
-        };
-        seed.deserialize(ContentDeserializer::new(self.variant))
-            .map(|v| (v, visitor))
+        let visitor = FlatVariantDeserializer { de: self.value };
+        seed.deserialize(self.variant).map(|v| (v, visitor))
     }
 }
 
@@ -2338,8 +2323,7 @@ struct FlatVariantDeserializer<'de, E>
 where
     E: Error,
 {
-    value: Content<'de>,
-    err: PhantomData<E>,
+    de: ContentDeserializer<'de, E>,
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
@@ -2350,7 +2334,7 @@ where
     type Error = E;
 
     fn unit_variant(self) -> Result<(), E> {
-        Deserialize::deserialize(ContentDeserializer::new(self.value))
+        Deserialize::deserialize(self.de)
     }
 
     fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value, E>
@@ -2359,7 +2343,7 @@ where
     {
         // Covered by tests/test_annotations
         //      flatten::enum_::externally_tagged::newtype
-        seed.deserialize(ContentDeserializer::new(self.value))
+        seed.deserialize(self.de)
     }
 
     fn tuple_variant<V>(self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
@@ -2368,7 +2352,7 @@ where
     {
         // Covered by tests/test_annotations
         //      flatten::enum_::externally_tagged::tuple
-        ContentDeserializer::new(self.value).deserialize_any(visitor)
+        self.de.deserialize_any(visitor)
     }
 
     fn struct_variant<V>(
@@ -2383,7 +2367,7 @@ where
         //      flatten::enum_::externally_tagged::struct_from_map
         // Seq() covered by tests/test_annotations
         //      flatten::enum_::externally_tagged::struct_from_seq
-        ContentDeserializer::new(self.value).deserialize_any(visitor)
+        self.de.deserialize_any(visitor)
     }
 }
 
