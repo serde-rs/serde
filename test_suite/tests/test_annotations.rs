@@ -1816,6 +1816,32 @@ fn test_flatten_unit() {
 }
 
 #[test]
+fn test_flatten_unit_struct() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Response<T> {
+        #[serde(flatten)]
+        data: T,
+        status: usize,
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Unit;
+
+    assert_tokens(
+        &Response {
+            data: Unit,
+            status: 0,
+        },
+        &[
+            Token::Map { len: None },
+            Token::Str("status"),
+            Token::U64(0),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_flatten_unsupported_type() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     struct Outer {
