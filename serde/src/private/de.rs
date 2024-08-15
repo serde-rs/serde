@@ -2081,7 +2081,7 @@ where
     {
         for entry in self.0 {
             if let Some((key, value)) = flat_map_take_entry(entry, variants) {
-                return visitor.visit_enum(EnumDeserializer::new(key, Some(value)));
+                return visitor.visit_enum(FlatEnumDeserializer::new(key, Some(value)));
             }
         }
 
@@ -2286,6 +2286,128 @@ fn flat_map_take_entry<'de>(
         entry.take()
     } else {
         None
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+struct FlatEnumDeserializer<'de, E>
+where
+    E: Error,
+{
+    variant: Content<'de>,
+    value: Option<Content<'de>>,
+    err: PhantomData<E>,
+}
+
+impl<'de, E> FlatEnumDeserializer<'de, E>
+where
+    E: Error,
+{
+    fn new(variant: Content<'de>, value: Option<Content<'de>>) -> FlatEnumDeserializer<'de, E> {
+        FlatEnumDeserializer {
+            variant,
+            value,
+            err: PhantomData,
+        }
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'de, E> EnumAccess<'de> for FlatEnumDeserializer<'de, E>
+where
+    E: Error,
+{
+    type Error = E;
+    type Variant = FlatVariantDeserializer<'de, Self::Error>;
+
+    fn variant_seed<V>(self, seed: V) -> Result<(V::Value, Self::Variant), E>
+    where
+        V: DeserializeSeed<'de>,
+    {
+        let visitor = FlatVariantDeserializer {
+            value: self.value,
+            err: PhantomData,
+        };
+        seed.deserialize(ContentDeserializer::new(self.variant))
+            .map(|v| (v, visitor))
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+struct FlatVariantDeserializer<'de, E>
+where
+    E: Error,
+{
+    value: Option<Content<'de>>,
+    err: PhantomData<E>,
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'de, E> VariantAccess<'de> for FlatVariantDeserializer<'de, E>
+where
+    E: Error,
+{
+    type Error = E;
+
+    fn unit_variant(self) -> Result<(), E> {
+        // None covered by tests/test_annotations
+        //      flatten::enum_::adjacently_tagged::newtype
+        //      flatten::enum_::adjacently_tagged::struct_
+        match self.value {
+            Some(value) => Deserialize::deserialize(ContentDeserializer::new(value)),
+            None => Ok(()),
+        }
+    }
+
+    fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value, E>
+    where
+        T: DeserializeSeed<'de>,
+    {
+        // Some() covered by tests/test_annotations
+        //      flatten::enum_::externally_tagged::newtype
+        match self.value {
+            Some(value) => seed.deserialize(ContentDeserializer::new(value)),
+            None => Err(Error::invalid_type(
+                Unexpected::UnitVariant,
+                &"newtype variant",
+            )),
+        }
+    }
+
+    fn tuple_variant<V>(self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        // Some(Seq()) covered by tests/test_annotations
+        //      flatten::enum_::externally_tagged::tuple
+        match self.value {
+            Some(content) => ContentDeserializer::new(content).deserialize_any(visitor),
+            None => Err(Error::invalid_type(
+                Unexpected::UnitVariant,
+                &"tuple variant",
+            )),
+        }
+    }
+
+    fn struct_variant<V>(
+        self,
+        _fields: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        // Some(Map()) covered by tests/test_annotations
+        //      flatten::enum_::externally_tagged::struct_from_map
+        // Some(Seq()) covered by tests/test_annotations
+        //      flatten::enum_::externally_tagged::struct_from_seq
+        match self.value {
+            Some(content) => ContentDeserializer::new(content).deserialize_any(visitor),
+            None => Err(Error::invalid_type(
+                Unexpected::UnitVariant,
+                &"struct variant",
+            )),
+        }
     }
 }
 
