@@ -2713,7 +2713,7 @@ where
             if let Some((key, value)) = flat_map_take_entry(entry, variants) {
                 return visitor.visit_enum(FlatEnumDeserializer {
                     variant: ContentDeserializer::new(key),
-                    value: Some(ContentDeserializer::new(value)),
+                    value: ContentDeserializer::new(value),
                 });
             }
         }
@@ -2930,7 +2930,7 @@ where
     E: Error,
 {
     variant: ContentDeserializer<'de, E>,
-    value: Option<ContentDeserializer<'de, E>>,
+    value: ContentDeserializer<'de, E>,
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
@@ -2960,7 +2960,7 @@ struct FlatVariantDeserializer<'de, E>
 where
     E: Error,
 {
-    de: Option<ContentDeserializer<'de, E>>,
+    de: ContentDeserializer<'de, E>,
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
@@ -2971,34 +2971,25 @@ where
     type Error = E;
 
     fn unit_variant(self) -> Result<(), E> {
-        match self.de {
-            Some(de) => Deserialize::deserialize(de),
-            None => Ok(()),
-        }
+        Deserialize::deserialize(self.de)
     }
 
     fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value, E>
     where
         T: DeserializeSeed<'de>,
     {
-        match self.de {
-            // Covered by tests/test_annotations.rs
-            //      flatten::enum_::externally_tagged::newtype
-            Some(de) => seed.deserialize(de),
-            None => seed.deserialize(crate::de::value::UnitDeserializer::new()),
-        }
+        // Covered by tests/test_annotations.rs
+        //      flatten::enum_::externally_tagged::newtype
+        seed.deserialize(self.de)
     }
 
     fn tuple_variant<V>(self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        match self.de {
-            // Covered by tests/test_annotations.rs
-            //      flatten::enum_::externally_tagged::tuple
-            Some(de) => de.deserialize_any(visitor),
-            None => visitor.visit_unit(),
-        }
+        // Covered by tests/test_annotations.rs
+        //      flatten::enum_::externally_tagged::tuple
+        self.de.deserialize_any(visitor)
     }
 
     fn struct_variant<V>(
@@ -3009,14 +3000,11 @@ where
     where
         V: Visitor<'de>,
     {
-        match self.de {
-            // Map() covered by tests/test_annotations.rs
-            //      flatten::enum_::externally_tagged::struct_from_map
-            // Seq() covered by tests/test_annotations.rs
-            //      flatten::enum_::externally_tagged::struct_from_seq
-            Some(de) => de.deserialize_any(visitor),
-            None => visitor.visit_unit(),
-        }
+        // Map() covered by tests/test_annotations.rs
+        //      flatten::enum_::externally_tagged::struct_from_map
+        // Seq() covered by tests/test_annotations.rs
+        //      flatten::enum_::externally_tagged::struct_from_seq
+        self.de.deserialize_any(visitor)
     }
 }
 
