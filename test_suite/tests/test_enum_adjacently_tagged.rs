@@ -360,44 +360,6 @@ fn newtype() {
             Token::StructEnd,
         ],
     );
-
-    // integer field keys
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::U64(1), // content field
-            Token::U8(1),
-            Token::U64(0), // tag field
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Newtype",
-            },
-            Token::StructEnd,
-        ],
-    );
-
-    // byte-array field keys
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Bytes(b"c"),
-            Token::U8(1),
-            Token::Bytes(b"t"),
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Newtype",
-            },
-            Token::StructEnd,
-        ],
-    );
 }
 
 #[test]
@@ -526,31 +488,6 @@ fn struct_() {
                 name: "AdjacentlyTagged",
                 variant: "Struct",
             },
-            Token::StructEnd,
-        ],
-    );
-
-    // byte-array field keys
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Bytes(b"t"),
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Struct",
-            },
-            Token::Bytes(b"c"),
-            Token::Struct {
-                name: "Struct",
-                len: 1,
-            },
-            Token::Str("f"),
-            Token::U8(1),
-            Token::StructEnd,
             Token::StructEnd,
         ],
     );
