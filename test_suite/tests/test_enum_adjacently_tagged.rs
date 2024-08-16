@@ -437,53 +437,79 @@ fn newtype_with_newtype() {
     );
 }
 
-#[test]
-fn tuple() {
-    let value = AdjacentlyTagged::Tuple::<u8>(1, 1);
+mod tuple {
+    use super::*;
 
-    // tuple with tag first
-    assert_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("t"),
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Tuple",
-            },
-            Token::Str("c"),
-            Token::Tuple { len: 2 },
-            Token::U8(1),
-            Token::U8(1),
-            Token::TupleEnd,
-            Token::StructEnd,
-        ],
-    );
+    #[test]
+    fn map() {
+        let value = AdjacentlyTagged::Tuple::<u8>(1, 1);
 
-    // tuple with content first
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("c"),
-            Token::Tuple { len: 2 },
-            Token::U8(1),
-            Token::U8(1),
-            Token::TupleEnd,
-            Token::Str("t"),
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Tuple",
-            },
-            Token::StructEnd,
-        ],
-    );
+        // Map: tag + content
+        assert_tokens(
+            &value,
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 2,
+                },
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Tuple",
+                },
+                Token::Str("c"),
+                Token::Tuple { len: 2 },
+                Token::U8(1),
+                Token::U8(1),
+                Token::TupleEnd,
+                Token::StructEnd,
+            ],
+        );
+
+        // Map: content + tag
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 2,
+                },
+                Token::Str("c"),
+                Token::Tuple { len: 2 },
+                Token::U8(1),
+                Token::U8(1),
+                Token::TupleEnd,
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Tuple",
+                },
+                Token::StructEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn seq() {
+        let value = AdjacentlyTagged::Tuple::<u8>(1, 1);
+
+        // Seq: tag + content
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: Some(2) },
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Tuple",
+                },
+                Token::Tuple { len: 2 },
+                Token::U8(1),
+                Token::U8(1),
+                Token::TupleEnd,
+                Token::SeqEnd,
+            ],
+        );
+    }
 }
 
 #[test]
