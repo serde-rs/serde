@@ -512,59 +512,88 @@ mod tuple {
     }
 }
 
-#[test]
-fn struct_() {
-    let value = AdjacentlyTagged::Struct::<u8> { f: 1 };
+mod struct_ {
+    use super::*;
 
-    // struct with tag first
-    assert_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("t"),
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Struct",
-            },
-            Token::Str("c"),
-            Token::Struct {
-                name: "Struct",
-                len: 1,
-            },
-            Token::Str("f"),
-            Token::U8(1),
-            Token::StructEnd,
-            Token::StructEnd,
-        ],
-    );
+    #[test]
+    fn map() {
+        let value = AdjacentlyTagged::Struct::<u8> { f: 1 };
 
-    // struct with content first
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("c"),
-            Token::Struct {
-                name: "Struct",
-                len: 1,
-            },
-            Token::Str("f"),
-            Token::U8(1),
-            Token::StructEnd,
-            Token::Str("t"),
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Struct",
-            },
-            Token::StructEnd,
-        ],
-    );
+        // Map: tag + content
+        assert_tokens(
+            &value,
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 2,
+                },
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Struct",
+                },
+                Token::Str("c"),
+                Token::Struct {
+                    name: "Struct",
+                    len: 1,
+                },
+                Token::Str("f"),
+                Token::U8(1),
+                Token::StructEnd,
+                Token::StructEnd,
+            ],
+        );
+
+        // Map: content + tag
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 2,
+                },
+                Token::Str("c"),
+                Token::Struct {
+                    name: "Struct",
+                    len: 1,
+                },
+                Token::Str("f"),
+                Token::U8(1),
+                Token::StructEnd,
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Struct",
+                },
+                Token::StructEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn seq() {
+        let value = AdjacentlyTagged::Struct::<u8> { f: 1 };
+
+        // Seq: tag + content
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: Some(2) },
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Struct",
+                },
+                Token::Struct {
+                    name: "Struct",
+                    len: 1,
+                },
+                Token::Str("f"),
+                Token::U8(1),
+                Token::StructEnd,
+                Token::SeqEnd,
+            ],
+        );
+    }
 }
 
 #[test]
