@@ -302,64 +302,112 @@ mod unit {
     }
 }
 
-#[test]
-fn newtype() {
-    let value = AdjacentlyTagged::Newtype::<u8>(1);
+mod newtype {
+    use super::*;
 
-    // newtype with tag first
-    assert_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("t"),
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Newtype",
-            },
-            Token::Str("c"),
-            Token::U8(1),
-            Token::StructEnd,
-        ],
-    );
+    #[test]
+    fn map_tag_content() {
+        let value = AdjacentlyTagged::Newtype::<u8>(1);
 
-    // newtype with content first
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("c"),
-            Token::U8(1),
-            Token::Str("t"),
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Newtype",
-            },
-            Token::StructEnd,
-        ],
-    );
+        // Map: tag + content
+        assert_tokens(
+            &value,
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 2,
+                },
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Newtype",
+                },
+                Token::Str("c"),
+                Token::U8(1),
+                Token::StructEnd,
+            ],
+        );
 
-    // optional newtype with no content field
-    assert_de_tokens(
-        &AdjacentlyTagged::Newtype::<Option<u8>>(None),
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 1,
-            },
-            Token::Str("t"),
-            Token::UnitVariant {
-                name: "AdjacentlyTagged",
-                variant: "Newtype",
-            },
-            Token::StructEnd,
-        ],
-    );
+        // Map: content + tag
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 2,
+                },
+                Token::Str("c"),
+                Token::U8(1),
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Newtype",
+                },
+                Token::StructEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn map_tag_only() {
+        // optional newtype with no content field
+        assert_de_tokens(
+            &AdjacentlyTagged::Newtype::<Option<u8>>(None),
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 1,
+                },
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Newtype",
+                },
+                Token::StructEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn seq() {
+        let value = AdjacentlyTagged::Newtype::<u8>(1);
+
+        // Seq: tag and content
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: Some(2) },
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Newtype",
+                },
+                Token::U8(1),
+                Token::SeqEnd,
+            ],
+        );
+
+        // Seq: tag (as string) and content
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: None },
+                Token::Str("Newtype"), // tag
+                Token::U8(1),          // content
+                Token::SeqEnd,
+            ],
+        );
+
+        // Seq: tag (as borrowed string) and content
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: None },
+                Token::BorrowedStr("Newtype"), // tag
+                Token::U8(1),                  // content
+                Token::SeqEnd,
+            ],
+        );
+    }
 }
 
 #[test]
