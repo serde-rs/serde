@@ -306,6 +306,26 @@ mod newtype {
     use super::*;
 
     #[test]
+    fn map_tag_only() {
+        // optional newtype with no content field
+        assert_de_tokens(
+            &AdjacentlyTagged::Newtype::<Option<u8>>(None),
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 1,
+                },
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Newtype",
+                },
+                Token::StructEnd,
+            ],
+        );
+    }
+
+    #[test]
     fn map_tag_content() {
         let value = AdjacentlyTagged::Newtype::<u8>(1);
 
@@ -338,26 +358,6 @@ mod newtype {
                 },
                 Token::Str("c"),
                 Token::U8(1),
-                Token::Str("t"),
-                Token::UnitVariant {
-                    name: "AdjacentlyTagged",
-                    variant: "Newtype",
-                },
-                Token::StructEnd,
-            ],
-        );
-    }
-
-    #[test]
-    fn map_tag_only() {
-        // optional newtype with no content field
-        assert_de_tokens(
-            &AdjacentlyTagged::Newtype::<Option<u8>>(None),
-            &[
-                Token::Struct {
-                    name: "AdjacentlyTagged",
-                    len: 1,
-                },
                 Token::Str("t"),
                 Token::UnitVariant {
                     name: "AdjacentlyTagged",
