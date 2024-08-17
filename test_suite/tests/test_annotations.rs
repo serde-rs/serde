@@ -3573,4 +3573,81 @@ mod flatten {
             }
         }
     }
+
+    // Reaches crate::private::de::content::ContentDeserializer::deserialize_option
+    mod with_optional_field {
+        use super::*;
+
+        #[derive(Debug, PartialEq, Serialize, Deserialize)]
+        struct Outer {
+            #[serde(flatten)]
+            inner: Inner,
+        }
+
+        #[derive(Debug, PartialEq, Serialize, Deserialize)]
+        struct Inner {
+            optional: Option<u32>,
+        }
+
+        #[test]
+        fn some() {
+            assert_tokens(
+                &Outer {
+                    inner: Inner { optional: Some(42) },
+                },
+                &[
+                    Token::Map { len: None },
+                    Token::Str("optional"),
+                    Token::Some,
+                    Token::U32(42),
+                    Token::MapEnd,
+                ],
+            );
+        }
+
+        #[test]
+        fn some_without_marker() {
+            assert_de_tokens(
+                &Outer {
+                    inner: Inner { optional: Some(42) },
+                },
+                &[
+                    Token::Map { len: None },
+                    Token::Str("optional"),
+                    Token::U32(42),
+                    Token::MapEnd,
+                ],
+            );
+        }
+
+        #[test]
+        fn none() {
+            assert_tokens(
+                &Outer {
+                    inner: Inner { optional: None },
+                },
+                &[
+                    Token::Map { len: None },
+                    Token::Str("optional"),
+                    Token::None,
+                    Token::MapEnd,
+                ],
+            );
+        }
+
+        #[test]
+        fn unit() {
+            assert_de_tokens(
+                &Outer {
+                    inner: Inner { optional: None },
+                },
+                &[
+                    Token::Map { len: None },
+                    Token::Str("optional"),
+                    Token::Unit,
+                    Token::MapEnd,
+                ],
+            );
+        }
+    }
 }
