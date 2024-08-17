@@ -2188,6 +2188,7 @@ mod content {
                 //      test_partially_untagged_enum
                 //      test_partially_untagged_enum_desugared
                 // Covered by tests/test_enum_untagged.rs
+                //      newtype_enum::tuple0
                 //      newtype_enum::tuple2
                 Some(Content::Seq(v)) => {
                     de::Deserializer::deserialize_any(SeqRefDeserializer::new(v), visitor)
@@ -2219,6 +2220,7 @@ mod content {
                 }
                 // Covered by tests/test_enum_untagged.rs
                 //      newtype_enum::struct_from_seq
+                //      newtype_enum::empty_struct_from_seq
                 Some(Content::Seq(v)) => {
                     de::Deserializer::deserialize_any(SeqRefDeserializer::new(v), visitor)
                 }

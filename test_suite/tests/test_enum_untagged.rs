@@ -147,8 +147,10 @@ mod newtype_enum {
     enum Inner {
         Unit,
         Newtype(u8),
+        Tuple0(),
         Tuple2(u8, u8),
         Struct { f: u8 },
+        EmptyStruct {},
     }
 
     // Reaches crate::private::de::content::VariantRefDeserializer::unit_variant
@@ -174,6 +176,22 @@ mod newtype_enum {
                     variant: "Newtype",
                 },
                 Token::U8(1),
+            ],
+        );
+    }
+
+    // Reaches crate::private::de::content::VariantRefDeserializer::tuple_variant
+    #[test]
+    fn tuple0() {
+        assert_tokens(
+            &Outer::Inner(Inner::Tuple0()),
+            &[
+                Token::TupleVariant {
+                    name: "Inner",
+                    variant: "Tuple0",
+                    len: 0,
+                },
+                Token::TupleVariantEnd,
             ],
         );
     }
@@ -228,6 +246,44 @@ mod newtype_enum {
                 // content
                 Token::Seq { len: Some(1) },
                 Token::U8(1),
+                Token::SeqEnd,
+                Token::MapEnd,
+            ],
+        );
+    }
+
+    // Reaches crate::private::de::content::VariantRefDeserializer::struct_variant
+    // Content::Map case
+    // Special case - empty map
+    #[test]
+    fn empty_struct_from_map() {
+        assert_de_tokens(
+            &Outer::Inner(Inner::EmptyStruct {}),
+            &[
+                Token::Map { len: Some(1) },
+                // tag
+                Token::Str("EmptyStruct"),
+                // content
+                Token::Map { len: Some(0) },
+                Token::MapEnd,
+                Token::MapEnd,
+            ],
+        );
+    }
+
+    // Reaches crate::private::de::content::VariantRefDeserializer::struct_variant
+    // Content::Seq case
+    // Special case - empty seq
+    #[test]
+    fn empty_struct_from_seq() {
+        assert_de_tokens(
+            &Outer::Inner(Inner::EmptyStruct {}),
+            &[
+                Token::Map { len: Some(1) },
+                // tag
+                Token::Str("EmptyStruct"),
+                // content
+                Token::Seq { len: Some(0) },
                 Token::SeqEnd,
                 Token::MapEnd,
             ],
