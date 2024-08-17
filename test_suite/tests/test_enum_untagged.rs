@@ -191,6 +191,80 @@ fn newtype_enum() {
     );
 }
 
+// Reaches crate::private::de::content::ContentRefDeserializer::deserialize_option
+mod with_optional_field {
+    use super::*;
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(untagged)]
+    enum Enum {
+        Struct { optional: Option<u32> },
+        Null,
+    }
+
+    #[test]
+    fn some() {
+        assert_tokens(
+            &Enum::Struct { optional: Some(42) },
+            &[
+                Token::Struct {
+                    name: "Enum",
+                    len: 1,
+                },
+                Token::Str("optional"),
+                Token::Some,
+                Token::U32(42),
+                Token::StructEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn some_without_marker() {
+        assert_de_tokens(
+            &Enum::Struct { optional: Some(42) },
+            &[
+                Token::Struct {
+                    name: "Enum",
+                    len: 1,
+                },
+                Token::Str("optional"),
+                Token::U32(42),
+                Token::StructEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn none() {
+        assert_tokens(
+            &Enum::Struct { optional: None },
+            &[
+                Token::Struct {
+                    name: "Enum",
+                    len: 1,
+                },
+                Token::Str("optional"),
+                Token::None,
+                Token::StructEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn unit() {
+        assert_de_tokens(
+            &Enum::Struct { optional: None },
+            &[
+                Token::Map { len: None },
+                Token::Str("optional"),
+                Token::Unit,
+                Token::MapEnd,
+            ],
+        );
+    }
+}
+
 #[test]
 fn string_and_bytes() {
     #[derive(Debug, PartialEq, Deserialize)]

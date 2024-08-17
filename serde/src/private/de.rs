@@ -1898,10 +1898,17 @@ mod content {
         where
             V: Visitor<'de>,
         {
+            // Covered by tests/test_enum_untagged.rs
+            //      with_optional_field::*
             match *self.content {
                 Content::None => visitor.visit_none(),
                 Content::Some(ref v) => visitor.visit_some(ContentRefDeserializer::new(v)),
                 Content::Unit => visitor.visit_unit(),
+                // This case is necessary for formats which does not store marker of optionality of value,
+                // for example, JSON. When `deserialize_any` is requested from such formats, they will
+                // report value without using `Visitor::visit_some`, because they do not known in which
+                // contexts this value will be used.
+                // RON is example of format which preserve markers.
                 _ => visitor.visit_some(self),
             }
         }
