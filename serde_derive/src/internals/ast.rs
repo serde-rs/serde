@@ -65,7 +65,7 @@ impl<'a> Container<'a> {
     ) -> Option<Container<'a>> {
         let mut attrs = attr::Container::from_ast(cx, item);
 
-		let untagged = attrs.tag() == &attr::TagType::None;
+        let untagged = attrs.tag() == &attr::TagType::None;
 		
         let mut data = match &item.data {
             syn::Data::Enum(data) => Data::Enum(enum_from_ast(cx, &data.variants, attrs.default(), untagged)),

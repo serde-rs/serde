@@ -1,11 +1,17 @@
+error: renaming a variant of an untagged enum does nothing
+ --> tests/ui/enum-representation/untagged-and-variant-renamed.rs:4:19
+  |
+4 | #[serde(untagged, rename_all = "lowercase")]
+  |                   ^^^^^^^^^^
+
 error: adding a alias to a variant of an untagged enum does nothing
- --> tests/ui/enum-representation/untagged-and-variant-renamed.rs:6:10
+ --> tests/ui/enum-representation/untagged-and-variant-renamed.rs:6:13
   |
 6 |     #[serde(alias = "foo")]
   |             ^^^^^
 
 error: renaming a variant of an untagged enum does nothing
- --> tests/ui/enum-representation/untagged-and-variant-renamed.rs:8:10
+ --> tests/ui/enum-representation/untagged-and-variant-renamed.rs:8:13
   |
 8 |     #[serde(rename = "bar")]
   |             ^^^^^^
