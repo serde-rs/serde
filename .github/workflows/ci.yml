@@ -84,6 +84,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{matrix.rust}}
+      - run: sed -i '/"test_suite"/d' Cargo.toml
       - run: cd serde && cargo build --features rc
       - run: cd serde && cargo build --no-default-features
       - run: cd serde && cargo build
@@ -95,6 +96,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.56.0
+      - run: sed -i '/"test_suite"/d' Cargo.toml
       - run: cd serde && cargo check --no-default-features
       - run: cd serde && cargo check
       - run: cd serde_derive && cargo check
@@ -106,6 +108,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.36.0
+      - run: sed -i '/"test_suite"/d' Cargo.toml
       - run: cd serde && cargo build --no-default-features --features alloc
 
   minimal:

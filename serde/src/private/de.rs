@@ -2710,6 +2710,17 @@ where
         visitor.visit_unit()
     }
 
+    fn deserialize_unit_struct<V>(
+        self,
+        _name: &'static str,
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_unit()
+    }
+
     fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
@@ -2734,7 +2745,6 @@ where
         deserialize_string()
         deserialize_bytes()
         deserialize_byte_buf()
-        deserialize_unit_struct(&'static str)
         deserialize_seq()
         deserialize_tuple(usize)
         deserialize_tuple_struct(&'static str, usize)

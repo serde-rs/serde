@@ -93,7 +93,7 @@ struct StructSkipDefault {
 
 #[derive(PartialEq, Debug, Deserialize)]
 #[serde(default)]
-struct StructSkipDefaultGeneric<T> {
+pub struct StructSkipDefaultGeneric<T> {
     #[serde(skip_deserializing)]
     t: T,
 }

@@ -162,7 +162,7 @@ fn test_cow() {
 #[test]
 fn test_lifetimes() {
     #[derive(Deserialize)]
-    struct Cows<'a, 'b> {
+    pub struct Cows<'a, 'b> {
         _copied: Cow<'a, str>,
 
         #[serde(borrow)]
@@ -178,7 +178,7 @@ fn test_lifetimes() {
     }
 
     #[derive(Deserialize)]
-    struct Wrap<'a, 'b> {
+    pub struct Wrap<'a, 'b> {
         #[serde(borrow = "'b")]
         _cows: Cows<'a, 'b>,
     }

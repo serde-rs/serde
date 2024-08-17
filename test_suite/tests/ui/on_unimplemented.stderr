@@ -1,0 +1,55 @@
+error[E0277]: the trait bound `MyStruct: Serialize` is not satisfied
+  --> tests/ui/on_unimplemented.rs:21:15
+   |
+21 |     to_string(&MyStruct);
+   |     --------- ^^^^^^^^^ the trait `Serialize` is not implemented for `MyStruct`
+   |     |
+   |     required by a bound introduced by this call
+   |
+   = note: for local types consider adding `#[derive(serde::Serialize)]` to your `MyStruct` type
+   = note: for types from other crates check whether the crate offers a `serde` feature flag
+   = help: the following other types implement trait `Serialize`:
+             &'a T
+             &'a mut T
+             ()
+             (T,)
+             (T0, T1)
+             (T0, T1, T2)
+             (T0, T1, T2, T3)
+             (T0, T1, T2, T3, T4)
+           and $N others
+note: required by a bound in `to_string`
+  --> tests/ui/on_unimplemented.rs:6:8
+   |
+4  | fn to_string<T>(_: &T) -> String
+   |    --------- required by a bound in this function
+5  | where
+6  |     T: Serialize,
+   |        ^^^^^^^^^ required by this bound in `to_string`
+
+error[E0277]: the trait bound `MyStruct: Deserialize<'_>` is not satisfied
+  --> tests/ui/on_unimplemented.rs:22:23
+   |
+22 |     let _: MyStruct = from_str("");
+   |                       ^^^^^^^^^^^^ the trait `Deserialize<'_>` is not implemented for `MyStruct`
+   |
+   = note: for local types consider adding `#[derive(serde::Deserialize)]` to your `MyStruct` type
+   = note: for types from other crates check whether the crate offers a `serde` feature flag
+   = help: the following other types implement trait `Deserialize<'de>`:
+             &'a Path
+             &'a [u8]
+             &'a str
+             ()
+             (T,)
+             (T0, T1)
+             (T0, T1, T2)
+             (T0, T1, T2, T3)
+           and $N others
+note: required by a bound in `from_str`
+  --> tests/ui/on_unimplemented.rs:13:8
+   |
+11 | fn from_str<'de, T>(_: &'de str) -> T
+   |    -------- required by a bound in this function
+12 | where
+13 |     T: Deserialize<'de>,
+   |        ^^^^^^^^^^^^^^^^ required by this bound in `from_str`

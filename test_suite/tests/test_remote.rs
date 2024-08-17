@@ -7,14 +7,17 @@ mod remote {
 
     pub struct PrimitivePriv(u8);
 
+    #[allow(dead_code)]
     pub struct PrimitivePub(pub u8);
 
     pub struct NewtypePriv(Unit);
 
+    #[allow(dead_code)]
     pub struct NewtypePub(pub Unit);
 
     pub struct TuplePriv(u8, Unit);
 
+    #[allow(dead_code)]
     pub struct TuplePub(pub u8, pub Unit);
 
     pub struct StructPriv {
@@ -22,6 +25,7 @@ mod remote {
         b: Unit,
     }
 
+    #[allow(dead_code)]
     pub struct StructPub {
         pub a: u8,
         pub b: Unit,
@@ -86,12 +90,14 @@ mod remote {
         }
     }
 
+    #[allow(dead_code)]
     pub enum EnumGeneric<T> {
         Variant(T),
     }
 }
 
 #[derive(Serialize, Deserialize)]
+#[allow(dead_code)]
 struct Test {
     #[serde(with = "UnitDef")]
     unit: remote::Unit,
@@ -132,6 +138,7 @@ struct Test {
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::Unit")]
+#[allow(dead_code)]
 struct UnitDef;
 
 #[derive(Serialize, Deserialize)]
@@ -140,6 +147,7 @@ struct PrimitivePrivDef(#[serde(getter = "remote::PrimitivePriv::get")] u8);
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::PrimitivePub")]
+#[allow(dead_code)]
 struct PrimitivePubDef(u8);
 
 #[derive(Serialize, Deserialize)]
@@ -148,6 +156,7 @@ struct NewtypePrivDef(#[serde(getter = "remote::NewtypePriv::get", with = "UnitD
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::NewtypePub")]
+#[allow(dead_code)]
 struct NewtypePubDef(#[serde(with = "UnitDef")] remote::Unit);
 
 #[derive(Serialize, Deserialize)]
@@ -159,6 +168,7 @@ struct TuplePrivDef(
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::TuplePub")]
+#[allow(dead_code)]
 struct TuplePubDef(u8, #[serde(with = "UnitDef")] remote::Unit);
 
 #[derive(Serialize, Deserialize)]
@@ -174,6 +184,7 @@ struct StructPrivDef {
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::StructPub")]
+#[allow(dead_code)]
 struct StructPubDef {
     a: u8,
 
@@ -190,17 +201,20 @@ struct StructGenericWithGetterDef<T> {
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::StructGeneric<u8>")]
+#[allow(dead_code)]
 struct StructConcrete {
     value: u8,
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "remote::EnumGeneric<u8>")]
+#[allow(dead_code)]
 enum EnumConcrete {
     Variant(u8),
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 enum ErrorKind {
     NotFound,
     PermissionDenied,
@@ -211,6 +225,7 @@ enum ErrorKind {
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "ErrorKind")]
 #[non_exhaustive]
+#[allow(dead_code)]
 enum ErrorKindDef {
     NotFound,
     PermissionDenied,
