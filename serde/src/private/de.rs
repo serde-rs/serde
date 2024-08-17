@@ -1357,7 +1357,20 @@ mod content {
             V: Visitor<'de>,
         {
             match self.content {
+                // Covered by tests/test_enum_adjacently_tagged.rs
+                //      newtype_with_newtype
                 Content::Newtype(v) => visitor.visit_newtype_struct(ContentDeserializer::new(*v)),
+                // Covered by tests/test_enum_internally_tagged.rs
+                //      newtype_newtype
+                // This case is to support data formats that encode newtype
+                // structs and their underlying data the same, with no
+                // indication whether a newtype wrapper was present. For example
+                // JSON does this, while RON does not. In RON a newtype's name
+                // is included in the serialized representation and it knows to
+                // call `Visitor::visit_newtype_struct` from `deserialize_any`.
+                // JSON's `deserialize_any` never calls `visit_newtype_struct`
+                // but in this code we still must be able to deserialize the
+                // resulting Content into newtypes.
                 _ => visitor.visit_newtype_struct(self),
             }
         }
