@@ -134,8 +134,9 @@ fn newtype_struct() {
     assert_de_tokens(&value, &[Token::U32(5)]);
 }
 
-#[test]
-fn newtype_enum() {
+mod newtype_enum {
+    use super::*;
+
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(untagged)]
     enum Outer {
@@ -146,56 +147,73 @@ fn newtype_enum() {
     enum Inner {
         Unit,
         Newtype(u8),
-        Tuple(u8, u8),
+        Tuple2(u8, u8),
         Struct { f: u8 },
     }
 
-    assert_tokens(
-        &Outer::Inner(Inner::Unit),
-        &[Token::UnitVariant {
-            name: "Inner",
-            variant: "Unit",
-        }],
-    );
-
-    assert_tokens(
-        &Outer::Inner(Inner::Newtype(1)),
-        &[
-            Token::NewtypeVariant {
+    // Reaches crate::private::de::content::VariantRefDeserializer::unit_variant
+    #[test]
+    fn unit() {
+        assert_tokens(
+            &Outer::Inner(Inner::Unit),
+            &[Token::UnitVariant {
                 name: "Inner",
-                variant: "Newtype",
-            },
-            Token::U8(1),
-        ],
-    );
+                variant: "Unit",
+            }],
+        );
+    }
 
-    assert_tokens(
-        &Outer::Inner(Inner::Tuple(1, 1)),
-        &[
-            Token::TupleVariant {
-                name: "Inner",
-                variant: "Tuple",
-                len: 2,
-            },
-            Token::U8(1),
-            Token::U8(1),
-            Token::TupleVariantEnd,
-        ],
-    );
+    // Reaches crate::private::de::content::VariantRefDeserializer::newtype_variant_seed
+    #[test]
+    fn newtype() {
+        assert_tokens(
+            &Outer::Inner(Inner::Newtype(1)),
+            &[
+                Token::NewtypeVariant {
+                    name: "Inner",
+                    variant: "Newtype",
+                },
+                Token::U8(1),
+            ],
+        );
+    }
 
-    assert_tokens(
-        &Outer::Inner(Inner::Struct { f: 1 }),
-        &[
-            Token::StructVariant {
-                name: "Inner",
-                variant: "Struct",
-                len: 1,
-            },
-            Token::Str("f"),
-            Token::U8(1),
-            Token::StructVariantEnd,
-        ],
-    );
+    // Reaches crate::private::de::content::VariantRefDeserializer::tuple_variant
+    #[test]
+    fn tuple2() {
+        assert_tokens(
+            &Outer::Inner(Inner::Tuple2(1, 1)),
+            &[
+                Token::TupleVariant {
+                    name: "Inner",
+                    variant: "Tuple2",
+                    len: 2,
+                },
+                Token::U8(1),
+                Token::U8(1),
+                Token::TupleVariantEnd,
+            ],
+        );
+    }
+
+    // Reaches crate::private::de::content::VariantRefDeserializer::struct_variant
+    // Content::Map case
+    #[test]
+    fn struct_from_map() {
+        assert_tokens(
+            &Outer::Inner(Inner::Struct { f: 1 }),
+            &[
+                Token::StructVariant {
+                    name: "Inner",
+                    variant: "Struct",
+                    len: 1,
+                },
+                Token::Str("f"),
+                Token::U8(1),
+                Token::StructVariantEnd,
+            ],
+        );
+    }
 }
 
 // Reaches crate::private::de::content::ContentRefDeserializer::deserialize_option

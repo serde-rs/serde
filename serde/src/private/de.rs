@@ -2153,6 +2153,10 @@ mod content {
         fn unit_variant(self) -> Result<(), E> {
             match self.value {
                 Some(value) => de::Deserialize::deserialize(ContentRefDeserializer::new(value)),
+                // Covered by tests/test_annotations.rs
+                //      test_partially_untagged_adjacently_tagged_enum
+                // Covered by tests/test_enum_untagged.rs
+                //      newtype_enum::unit
                 None => Ok(()),
             }
         }
@@ -2162,6 +2166,11 @@ mod content {
             T: de::DeserializeSeed<'de>,
         {
             match self.value {
+                // Covered by tests/test_annotations.rs
+                //      test_partially_untagged_enum_desugared
+                //      test_partially_untagged_enum_generic
+                // Covered by tests/test_enum_untagged.rs
+                //      newtype_enum::newtype
                 Some(value) => seed.deserialize(ContentRefDeserializer::new(value)),
                 None => Err(de::Error::invalid_type(
                     de::Unexpected::UnitVariant,
@@ -2175,6 +2184,11 @@ mod content {
             V: de::Visitor<'de>,
         {
             match self.value {
+                // Covered by tests/test_annotations.rs
+                //      test_partially_untagged_enum
+                //      test_partially_untagged_enum_desugared
+                // Covered by tests/test_enum_untagged.rs
+                //      newtype_enum::tuple2
                 Some(Content::Seq(v)) => {
                     de::Deserializer::deserialize_any(SeqRefDeserializer::new(v), visitor)
                 }
@@ -2198,6 +2212,8 @@ mod content {
             V: de::Visitor<'de>,
         {
             match self.value {
+                // Covered by tests/test_enum_untagged.rs
+                //      newtype_enum::struct_from_map
                 Some(Content::Map(v)) => {
                     de::Deserializer::deserialize_any(MapRefDeserializer::new(v), visitor)
                 }
