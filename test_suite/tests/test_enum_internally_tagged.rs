@@ -225,6 +225,8 @@ fn newtype_unit_struct() {
     );
 }
 
+// Reaches crate::private::de::content::ContentDeserializer::deserialize_newtype_struct
+// in _ case
 #[test]
 fn newtype_newtype() {
     assert_tokens(
