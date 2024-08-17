@@ -107,20 +107,20 @@ fn newtype_unit_and_empty_map() {
 #[test]
 fn newtype_struct() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    struct GenericNewTypeStruct<T>(T);
+    struct NewtypeStruct(u32);
 
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(untagged)]
     enum E {
-        Newtype(GenericNewTypeStruct<u32>),
+        Newtype(NewtypeStruct),
         Null,
     }
 
     assert_tokens(
-        &E::Newtype(GenericNewTypeStruct(5u32)),
+        &E::Newtype(NewtypeStruct(5)),
         &[
             Token::NewtypeStruct {
-                name: "GenericNewTypeStruct",
+                name: "NewtypeStruct",
             },
             Token::U32(5),
         ],
