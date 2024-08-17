@@ -2190,9 +2190,7 @@ mod content {
                 // Covered by tests/test_enum_untagged.rs
                 //      newtype_enum::tuple0
                 //      newtype_enum::tuple2
-                Some(Content::Seq(v)) => {
-                    de::Deserializer::deserialize_any(SeqRefDeserializer::new(v), visitor)
-                }
+                Some(Content::Seq(v)) => visit_content_seq_ref(v, visitor),
                 Some(other) => Err(de::Error::invalid_type(
                     other.unexpected(),
                     &"tuple variant",
@@ -2221,9 +2219,7 @@ mod content {
                 // Covered by tests/test_enum_untagged.rs
                 //      newtype_enum::struct_from_seq
                 //      newtype_enum::empty_struct_from_seq
-                Some(Content::Seq(v)) => {
-                    de::Deserializer::deserialize_any(SeqRefDeserializer::new(v), visitor)
-                }
+                Some(Content::Seq(v)) => visit_content_seq_ref(v, visitor),
                 Some(other) => Err(de::Error::invalid_type(
                     other.unexpected(),
                     &"struct variant",
@@ -2233,81 +2229,6 @@ mod content {
                     &"struct variant",
                 )),
             }
-        }
-    }
-
-    struct SeqRefDeserializer<'a, 'de: 'a, E>
-    where
-        E: de::Error,
-    {
-        iter: <&'a [Content<'de>] as IntoIterator>::IntoIter,
-        err: PhantomData<E>,
-    }
-
-    impl<'a, 'de, E> SeqRefDeserializer<'a, 'de, E>
-    where
-        E: de::Error,
-    {
-        fn new(slice: &'a [Content<'de>]) -> Self {
-            SeqRefDeserializer {
-                iter: slice.iter(),
-                err: PhantomData,
-            }
-        }
-    }
-
-    impl<'de, 'a, E> de::Deserializer<'de> for SeqRefDeserializer<'a, 'de, E>
-    where
-        E: de::Error,
-    {
-        type Error = E;
-
-        #[inline]
-        fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: de::Visitor<'de>,
-        {
-            let len = self.iter.len();
-            if len == 0 {
-                visitor.visit_unit()
-            } else {
-                let ret = tri!(visitor.visit_seq(&mut self));
-                let remaining = self.iter.len();
-                if remaining == 0 {
-                    Ok(ret)
-                } else {
-                    Err(de::Error::invalid_length(len, &"fewer elements in array"))
-                }
-            }
-        }
-
-        forward_to_deserialize_any! {
-            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-            bytes byte_buf option unit unit_struct newtype_struct seq tuple
-            tuple_struct map struct enum identifier ignored_any
-        }
-    }
-
-    impl<'de, 'a, E> de::SeqAccess<'de> for SeqRefDeserializer<'a, 'de, E>
-    where
-        E: de::Error,
-    {
-        type Error = E;
-
-        fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
-        where
-            T: de::DeserializeSeed<'de>,
-        {
-            match self.iter.next() {
-                Some(value) => seed
-                    .deserialize(ContentRefDeserializer::new(value))
-                    .map(Some),
-                None => Ok(None),
-            }
-        }
-
-        fn size_hint(&self) -> Option<usize> {
-            size_hint::from_bounds(&self.iter)
         }
     }
 
