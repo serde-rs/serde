@@ -104,6 +104,7 @@ fn newtype_unit_and_empty_map() {
     );
 }
 
+// Reaches crate::private::de::content::ContentRefDeserializer::deserialize_newtype_struct
 #[test]
 fn newtype_struct() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -116,8 +117,11 @@ fn newtype_struct() {
         Null,
     }
 
+    let value = E::Newtype(NewtypeStruct(5));
+
+    // Content::Newtype case
     assert_tokens(
-        &E::Newtype(NewtypeStruct(5)),
+        &value,
         &[
             Token::NewtypeStruct {
                 name: "NewtypeStruct",
@@ -125,6 +129,9 @@ fn newtype_struct() {
             Token::U32(5),
         ],
     );
+
+    // _ case
+    assert_de_tokens(&value, &[Token::U32(5)]);
 }
 
 #[test]
