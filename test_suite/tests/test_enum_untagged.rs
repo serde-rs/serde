@@ -214,6 +214,25 @@ mod newtype_enum {
             ],
         );
     }
+
+    // Reaches crate::private::de::content::VariantRefDeserializer::struct_variant
+    // Content::Seq case
+    #[test]
+    fn struct_from_seq() {
+        assert_de_tokens(
+            &Outer::Inner(Inner::Struct { f: 1 }),
+            &[
+                Token::Map { len: Some(1) },
+                // tag
+                Token::Str("Struct"),
+                // content
+                Token::Seq { len: Some(1) },
+                Token::U8(1),
+                Token::SeqEnd,
+                Token::MapEnd,
+            ],
+        );
+    }
 }
 
 // Reaches crate::private::de::content::ContentRefDeserializer::deserialize_option

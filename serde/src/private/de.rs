@@ -2217,6 +2217,8 @@ mod content {
                 Some(Content::Map(v)) => {
                     de::Deserializer::deserialize_any(MapRefDeserializer::new(v), visitor)
                 }
+                // Covered by tests/test_enum_untagged.rs
+                //      newtype_enum::struct_from_seq
                 Some(Content::Seq(v)) => {
                     de::Deserializer::deserialize_any(SeqRefDeserializer::new(v), visitor)
                 }
