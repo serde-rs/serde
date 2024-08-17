@@ -1373,7 +1373,16 @@ mod content {
             V: Visitor<'de>,
         {
             match self.content {
+                // Covered by tests/test_enum_adjacently_tagged.rs
+                //      newtype_with_newtype
                 Content::Newtype(v) => visitor.visit_newtype_struct(ContentDeserializer::new(*v)),
+                // Covered by tests/test_enum_internally_tagged.rs
+                //      newtype_newtype
+                // This case is necessary for formats which does not store marker of a newtype,
+                // for example, JSON. When `deserialize_any` is requested from such formats, they will
+                // report value without using `Visitor::visit_newtype_struct`, because they do not
+                // known in which contexts this value will be used.
+                // RON is example of format which preserve markers.
                 _ => visitor.visit_newtype_struct(self),
             }
         }
