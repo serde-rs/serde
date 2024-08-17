@@ -2213,9 +2213,7 @@ mod content {
             match self.value {
                 // Covered by tests/test_enum_untagged.rs
                 //      newtype_enum::struct_from_map
-                Some(Content::Map(v)) => {
-                    de::Deserializer::deserialize_any(MapRefDeserializer::new(v), visitor)
-                }
+                Some(Content::Map(v)) => visit_content_map_ref(v, visitor),
                 // Covered by tests/test_enum_untagged.rs
                 //      newtype_enum::struct_from_seq
                 //      newtype_enum::empty_struct_from_seq
@@ -2229,83 +2227,6 @@ mod content {
                     &"struct variant",
                 )),
             }
-        }
-    }
-
-    struct MapRefDeserializer<'a, 'de: 'a, E>
-    where
-        E: de::Error,
-    {
-        iter: <&'a [(Content<'de>, Content<'de>)] as IntoIterator>::IntoIter,
-        value: Option<&'a Content<'de>>,
-        err: PhantomData<E>,
-    }
-
-    impl<'a, 'de, E> MapRefDeserializer<'a, 'de, E>
-    where
-        E: de::Error,
-    {
-        fn new(map: &'a [(Content<'de>, Content<'de>)]) -> Self {
-            MapRefDeserializer {
-                iter: map.iter(),
-                value: None,
-                err: PhantomData,
-            }
-        }
-    }
-
-    impl<'de, 'a, E> de::MapAccess<'de> for MapRefDeserializer<'a, 'de, E>
-    where
-        E: de::Error,
-    {
-        type Error = E;
-
-        fn next_key_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
-        where
-            T: de::DeserializeSeed<'de>,
-        {
-            match self.iter.next() {
-                Some((key, value)) => {
-                    self.value = Some(value);
-                    seed.deserialize(ContentRefDeserializer::new(key)).map(Some)
-                }
-                None => Ok(None),
-            }
-        }
-
-        fn next_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
-        where
-            T: de::DeserializeSeed<'de>,
-        {
-            match self.value.take() {
-                Some(value) => seed.deserialize(ContentRefDeserializer::new(value)),
-                None => Err(de::Error::custom("value is missing")),
-            }
-        }
-
-        fn size_hint(&self) -> Option<usize> {
-            size_hint::from_bounds(&self.iter)
-        }
-    }
-
-    impl<'de, 'a, E> de::Deserializer<'de> for MapRefDeserializer<'a, 'de, E>
-    where
-        E: de::Error,
-    {
-        type Error = E;
-
-        #[inline]
-        fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: de::Visitor<'de>,
-        {
-            visitor.visit_map(self)
-        }
-
-        forward_to_deserialize_any! {
-            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-            bytes byte_buf option unit unit_struct newtype_struct seq tuple
-            tuple_struct map struct enum identifier ignored_any
         }
     }
 
