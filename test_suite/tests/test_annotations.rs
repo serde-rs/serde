@@ -1764,36 +1764,6 @@ fn test_partially_untagged_enum_desugared() {
 }
 
 #[test]
-fn test_partially_untagged_internally_tagged_enum() {
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
-    #[serde(tag = "t")]
-    enum Data {
-        A,
-        B,
-        #[serde(untagged)]
-        Var(u32),
-    }
-
-    let data = Data::A;
-
-    assert_de_tokens(
-        &data,
-        &[
-            Token::Map { len: None },
-            Token::Str("t"),
-            Token::Str("A"),
-            Token::MapEnd,
-        ],
-    );
-
-    let data = Data::Var(42);
-
-    assert_de_tokens(&data, &[Token::U32(42)]);
-
-    // TODO test error output
-}
-
-#[test]
 fn test_transparent_struct() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     #[serde(transparent)]

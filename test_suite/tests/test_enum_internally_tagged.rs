@@ -1067,6 +1067,36 @@ fn wrong_tag() {
 }
 
 #[test]
+fn partially_untagged() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "tag")]
+    enum Data {
+        A,
+        B,
+        #[serde(untagged)]
+        Var(u32),
+    }
+
+    let data = Data::A;
+
+    assert_de_tokens(
+        &data,
+        &[
+            Token::Map { len: None },
+            Token::Str("tag"),
+            Token::Str("A"),
+            Token::MapEnd,
+        ],
+    );
+
+    let data = Data::Var(42);
+
+    assert_de_tokens(&data, &[Token::U32(42)]);
+
+    // TODO test error output
+}
+
+#[test]
 fn untagged_variant() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "tag")]
