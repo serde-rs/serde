@@ -20,7 +20,7 @@ use std::iter::FromIterator;
 struct Unit;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct Newtype(BTreeMap<String, String>);
+struct Newtype<T>(T);
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct Tuple(u8, u8);
@@ -72,7 +72,9 @@ enum InternallyTagged<'a> {
 
     NewtypeUnit(()),
     NewtypeUnitStruct(Unit),
-    NewtypeNewtype(Newtype),
+
+    NewtypeNewtypeU8(Newtype<u8>),
+    NewtypeNewtypeStruct(Newtype<Struct>),
 
     NewtypeTuple((u8, u8)),
     NewtypeTupleStruct(Tuple),
@@ -330,15 +332,24 @@ mod newtype {
         );
     }
 
+    failed!(newtype_u8, NewtypeNewtypeU8(Newtype(42)), "cannot serialize tagged newtype variant InternallyTagged::NewtypeNewtypeU8 containing an integer");
+
     #[test]
-    fn newtype() {
+    fn newtype_struct() {
         assert_tokens(
-            &InternallyTagged::NewtypeNewtype(Newtype(BTreeMap::new())),
+            &InternallyTagged::NewtypeNewtypeStruct(Newtype(Struct { i128_: 4, u128_: 2 })),
             &[
-                Token::Map { len: Some(1) },
+                Token::Struct {
+                    name: "Struct",
+                    len: 3,
+                },
                 Token::Str("tag"),
-                Token::Str("NewtypeNewtype"),
-                Token::MapEnd,
+                Token::Str("NewtypeNewtypeStruct"),
+                Token::Str("i128_"),
+                Token::I128(4),
+                Token::Str("u128_"),
+                Token::U128(2),
+                Token::StructEnd,
             ],
         );
     }
@@ -1228,7 +1239,8 @@ fn wrong_tag() {
         `NewtypeByteBuf`, \
         `NewtypeUnit`, \
         `NewtypeUnitStruct`, \
-        `NewtypeNewtype`, \
+        `NewtypeNewtypeU8`, \
+        `NewtypeNewtypeStruct`, \
         `NewtypeTuple`, \
         `NewtypeTupleStruct`, \
         `NewtypeMap`, \
