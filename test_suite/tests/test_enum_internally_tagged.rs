@@ -110,366 +110,165 @@ fn unit() {
     );
 }
 
-#[test]
-fn newtype_unit() {
-    let value = InternallyTagged::NewtypeUnit(());
-
-    assert_tokens(
-        &value,
-        &[
-            Token::Map { len: Some(1) },
-            Token::Str("tag"),
-            Token::Str("NewtypeUnit"),
-            Token::MapEnd,
-        ],
-    );
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Map { len: Some(1) },
-            Token::BorrowedStr("tag"),
-            Token::BorrowedStr("NewtypeUnit"),
-            Token::MapEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "InternallyTagged",
-                len: 1,
-            },
-            Token::Str("tag"),
-            Token::Str("NewtypeUnit"),
-            Token::StructEnd,
-        ],
-    );
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "InternallyTagged",
-                len: 1,
-            },
-            Token::BorrowedStr("tag"),
-            Token::BorrowedStr("NewtypeUnit"),
-            Token::StructEnd,
-        ],
-    );
-}
-
-#[test]
-fn newtype_unit_struct() {
-    let value = InternallyTagged::NewtypeUnitStruct(Unit);
-
-    assert_tokens(
-        &value,
-        &[
-            Token::Map { len: Some(1) },
-            Token::Str("tag"),
-            Token::Str("NewtypeUnitStruct"),
-            Token::MapEnd,
-        ],
-    );
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Map { len: Some(1) },
-            Token::BorrowedStr("tag"),
-            Token::BorrowedStr("NewtypeUnitStruct"),
-            Token::MapEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "InternallyTagged",
-                len: 1,
-            },
-            Token::Str("tag"),
-            Token::Str("NewtypeUnitStruct"),
-            Token::StructEnd,
-        ],
-    );
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "InternallyTagged",
-                len: 1,
-            },
-            Token::BorrowedStr("tag"),
-            Token::BorrowedStr("NewtypeUnitStruct"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Seq { len: Some(1) },
-            Token::Str("NewtypeUnitStruct"), // tag
-            Token::SeqEnd,
-        ],
-    );
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Seq { len: Some(1) },
-            Token::BorrowedStr("NewtypeUnitStruct"), // tag
-            Token::SeqEnd,
-        ],
-    );
-}
-
-#[test]
-fn newtype_newtype() {
-    assert_tokens(
-        &InternallyTagged::NewtypeNewtype(Newtype(BTreeMap::new())),
-        &[
-            Token::Map { len: Some(1) },
-            Token::Str("tag"),
-            Token::Str("NewtypeNewtype"),
-            Token::MapEnd,
-        ],
-    );
-}
-
-#[test]
-fn newtype_map() {
-    let value = InternallyTagged::NewtypeMap(BTreeMap::new());
-
-    // Special case: empty map
-    assert_tokens(
-        &value,
-        &[
-            Token::Map { len: Some(1) },
-            Token::Str("tag"),
-            Token::Str("NewtypeMap"),
-            Token::MapEnd,
-        ],
-    );
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Map { len: Some(1) },
-            Token::BorrowedStr("tag"),
-            Token::BorrowedStr("NewtypeMap"),
-            Token::MapEnd,
-        ],
-    );
-
-    let value = InternallyTagged::NewtypeMap(BTreeMap::from_iter([(
-        "field".to_string(),
-        "value".to_string(),
-    )]));
-
-    // Special case: tag field ("tag") is the first field
-    assert_tokens(
-        &value,
-        &[
-            Token::Map { len: Some(2) },
-            Token::Str("tag"),
-            Token::Str("NewtypeMap"),
-            Token::Str("field"),
-            Token::Str("value"),
-            Token::MapEnd,
-        ],
-    );
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Map { len: Some(2) },
-            Token::BorrowedStr("tag"),
-            Token::BorrowedStr("NewtypeMap"),
-            Token::BorrowedStr("field"),
-            Token::BorrowedStr("value"),
-            Token::MapEnd,
-        ],
-    );
-
-    // General case: tag field ("tag") is not the first field
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Map { len: Some(2) },
-            Token::Str("field"),
-            Token::Str("value"),
-            Token::Str("tag"),
-            Token::Str("NewtypeMap"),
-            Token::MapEnd,
-        ],
-    );
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Map { len: Some(2) },
-            Token::BorrowedStr("field"),
-            Token::BorrowedStr("value"),
-            Token::BorrowedStr("tag"),
-            Token::BorrowedStr("NewtypeMap"),
-            Token::MapEnd,
-        ],
-    );
-
-    assert_de_tokens_error::<InternallyTagged>(
-        &[
-            Token::Seq { len: Some(2) },
-            Token::Str("NewtypeMap"), // tag
-            Token::Map { len: Some(0) },
-            Token::MapEnd,
-            Token::SeqEnd,
-        ],
-        "invalid type: sequence, expected a map",
-    );
-}
-
-#[test]
-fn newtype_struct() {
-    let value = InternallyTagged::NewtypeStruct(Struct { f: 6 });
-
-    // Special case: tag field ("tag") is the first field
-    assert_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "Struct",
-                len: 2,
-            },
-            Token::Str("tag"),
-            Token::Str("NewtypeStruct"),
-            Token::Str("f"),
-            Token::U8(6),
-            Token::StructEnd,
-        ],
-    );
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "Struct",
-                len: 2,
-            },
-            Token::BorrowedStr("tag"),
-            Token::BorrowedStr("NewtypeStruct"),
-            Token::BorrowedStr("f"),
-            Token::U8(6),
-            Token::StructEnd,
-        ],
-    );
-
-    // General case: tag field ("tag") is not the first field
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "Struct",
-                len: 2,
-            },
-            Token::Str("f"),
-            Token::U8(6),
-            Token::Str("tag"),
-            Token::Str("NewtypeStruct"),
-            Token::StructEnd,
-        ],
-    );
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Struct {
-                name: "Struct",
-                len: 2,
-            },
-            Token::BorrowedStr("f"),
-            Token::U8(6),
-            Token::BorrowedStr("tag"),
-            Token::BorrowedStr("NewtypeStruct"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Seq { len: Some(2) },
-            Token::Str("NewtypeStruct"), // tag
-            Token::U8(6),
-            Token::SeqEnd,
-        ],
-    );
-    assert_de_tokens(
-        &value,
-        &[
-            Token::Seq { len: Some(2) },
-            Token::BorrowedStr("NewtypeStruct"), // tag
-            Token::U8(6),
-            Token::SeqEnd,
-        ],
-    );
-}
-
-mod newtype_enum {
+mod newtype {
     use super::*;
 
     #[test]
     fn unit() {
-        let value = InternallyTagged::NewtypeEnum(Enum::Unit);
+        let value = InternallyTagged::NewtypeUnit(());
 
-        // Special case: tag field ("tag") is the first field
         assert_tokens(
             &value,
             &[
-                Token::Map { len: Some(2) },
+                Token::Map { len: Some(1) },
                 Token::Str("tag"),
-                Token::Str("NewtypeEnum"),
-                Token::Str("Unit"),
-                Token::Unit,
+                Token::Str("NewtypeUnit"),
                 Token::MapEnd,
             ],
         );
         assert_de_tokens(
             &value,
             &[
-                Token::Map { len: Some(2) },
+                Token::Map { len: Some(1) },
                 Token::BorrowedStr("tag"),
-                Token::BorrowedStr("NewtypeEnum"),
-                Token::BorrowedStr("Unit"),
-                Token::Unit,
+                Token::BorrowedStr("NewtypeUnit"),
                 Token::MapEnd,
             ],
         );
 
-        // General case: tag field ("tag") is not the first field
         assert_de_tokens(
             &value,
             &[
-                Token::Map { len: Some(2) },
-                Token::Str("Unit"),
-                Token::Unit,
+                Token::Struct {
+                    name: "InternallyTagged",
+                    len: 1,
+                },
                 Token::Str("tag"),
-                Token::Str("NewtypeEnum"),
+                Token::Str("NewtypeUnit"),
+                Token::StructEnd,
+            ],
+        );
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Struct {
+                    name: "InternallyTagged",
+                    len: 1,
+                },
+                Token::BorrowedStr("tag"),
+                Token::BorrowedStr("NewtypeUnit"),
+                Token::StructEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn unit_struct() {
+        let value = InternallyTagged::NewtypeUnitStruct(Unit);
+
+        assert_tokens(
+            &value,
+            &[
+                Token::Map { len: Some(1) },
+                Token::Str("tag"),
+                Token::Str("NewtypeUnitStruct"),
                 Token::MapEnd,
             ],
         );
         assert_de_tokens(
             &value,
             &[
-                Token::Map { len: Some(2) },
-                Token::BorrowedStr("Unit"),
-                Token::Unit,
+                Token::Map { len: Some(1) },
                 Token::BorrowedStr("tag"),
-                Token::BorrowedStr("NewtypeEnum"),
+                Token::BorrowedStr("NewtypeUnitStruct"),
                 Token::MapEnd,
+            ],
+        );
+
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Struct {
+                    name: "InternallyTagged",
+                    len: 1,
+                },
+                Token::Str("tag"),
+                Token::Str("NewtypeUnitStruct"),
+                Token::StructEnd,
+            ],
+        );
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Struct {
+                    name: "InternallyTagged",
+                    len: 1,
+                },
+                Token::BorrowedStr("tag"),
+                Token::BorrowedStr("NewtypeUnitStruct"),
+                Token::StructEnd,
+            ],
+        );
+
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: Some(1) },
+                Token::Str("NewtypeUnitStruct"), // tag
+                Token::SeqEnd,
+            ],
+        );
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: Some(1) },
+                Token::BorrowedStr("NewtypeUnitStruct"), // tag
+                Token::SeqEnd,
             ],
         );
     }
 
     #[test]
     fn newtype() {
-        let value = InternallyTagged::NewtypeEnum(Enum::Newtype(1));
+        assert_tokens(
+            &InternallyTagged::NewtypeNewtype(Newtype(BTreeMap::new())),
+            &[
+                Token::Map { len: Some(1) },
+                Token::Str("tag"),
+                Token::Str("NewtypeNewtype"),
+                Token::MapEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn map() {
+        let value = InternallyTagged::NewtypeMap(BTreeMap::new());
+
+        // Special case: empty map
+        assert_tokens(
+            &value,
+            &[
+                Token::Map { len: Some(1) },
+                Token::Str("tag"),
+                Token::Str("NewtypeMap"),
+                Token::MapEnd,
+            ],
+        );
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Map { len: Some(1) },
+                Token::BorrowedStr("tag"),
+                Token::BorrowedStr("NewtypeMap"),
+                Token::MapEnd,
+            ],
+        );
+
+        let value = InternallyTagged::NewtypeMap(BTreeMap::from_iter([(
+            "field".to_string(),
+            "value".to_string(),
+        )]));
 
         // Special case: tag field ("tag") is the first field
         assert_tokens(
@@ -477,9 +276,9 @@ mod newtype_enum {
             &[
                 Token::Map { len: Some(2) },
                 Token::Str("tag"),
-                Token::Str("NewtypeEnum"),
-                Token::Str("Newtype"),
-                Token::U8(1),
+                Token::Str("NewtypeMap"),
+                Token::Str("field"),
+                Token::Str("value"),
                 Token::MapEnd,
             ],
         );
@@ -488,9 +287,9 @@ mod newtype_enum {
             &[
                 Token::Map { len: Some(2) },
                 Token::BorrowedStr("tag"),
-                Token::BorrowedStr("NewtypeEnum"),
-                Token::BorrowedStr("Newtype"),
-                Token::U8(1),
+                Token::BorrowedStr("NewtypeMap"),
+                Token::BorrowedStr("field"),
+                Token::BorrowedStr("value"),
                 Token::MapEnd,
             ],
         );
@@ -500,10 +299,10 @@ mod newtype_enum {
             &value,
             &[
                 Token::Map { len: Some(2) },
-                Token::Str("Newtype"),
-                Token::U8(1),
+                Token::Str("field"),
+                Token::Str("value"),
                 Token::Str("tag"),
-                Token::Str("NewtypeEnum"),
+                Token::Str("NewtypeMap"),
                 Token::MapEnd,
             ],
         );
@@ -511,232 +310,437 @@ mod newtype_enum {
             &value,
             &[
                 Token::Map { len: Some(2) },
-                Token::BorrowedStr("Newtype"),
-                Token::U8(1),
+                Token::BorrowedStr("field"),
+                Token::BorrowedStr("value"),
                 Token::BorrowedStr("tag"),
-                Token::BorrowedStr("NewtypeEnum"),
-                Token::MapEnd,
-            ],
-        );
-    }
-
-    #[test]
-    fn tuple() {
-        let value = InternallyTagged::NewtypeEnum(Enum::Tuple(1, 1));
-
-        // Special case: tag field ("tag") is the first field
-        assert_tokens(
-            &value,
-            &[
-                Token::Map { len: Some(2) },
-                Token::Str("tag"),
-                Token::Str("NewtypeEnum"),
-                Token::Str("Tuple"),
-                Token::TupleStruct {
-                    name: "Tuple",
-                    len: 2,
-                },
-                Token::U8(1),
-                Token::U8(1),
-                Token::TupleStructEnd,
-                Token::MapEnd,
-            ],
-        );
-        assert_de_tokens(
-            &value,
-            &[
-                Token::Map { len: Some(2) },
-                Token::BorrowedStr("tag"),
-                Token::BorrowedStr("NewtypeEnum"),
-                Token::BorrowedStr("Tuple"),
-                Token::TupleStruct {
-                    name: "Tuple",
-                    len: 2,
-                },
-                Token::U8(1),
-                Token::U8(1),
-                Token::TupleStructEnd,
+                Token::BorrowedStr("NewtypeMap"),
                 Token::MapEnd,
             ],
         );
 
-        // Special case: tag field ("tag") is not the first field
-        // Reaches crate::private::de::content::VariantDeserializer::tuple_variant
-        // Content::Seq case
-        // via ContentDeserializer::deserialize_enum
-        assert_de_tokens(
-            &value,
+        assert_de_tokens_error::<InternallyTagged>(
             &[
-                Token::Map { len: Some(2) },
-                Token::Str("Tuple"),
-                Token::TupleStruct {
-                    name: "Tuple",
-                    len: 2,
-                },
-                Token::U8(1),
-                Token::U8(1),
-                Token::TupleStructEnd,
-                Token::Str("tag"),
-                Token::Str("NewtypeEnum"),
+                Token::Seq { len: Some(2) },
+                Token::Str("NewtypeMap"), // tag
+                Token::Map { len: Some(0) },
                 Token::MapEnd,
+                Token::SeqEnd,
             ],
-        );
-        assert_de_tokens(
-            &value,
-            &[
-                Token::Map { len: Some(2) },
-                Token::BorrowedStr("Tuple"),
-                Token::TupleStruct {
-                    name: "Tuple",
-                    len: 2,
-                },
-                Token::U8(1),
-                Token::U8(1),
-                Token::TupleStructEnd,
-                Token::BorrowedStr("tag"),
-                Token::BorrowedStr("NewtypeEnum"),
-                Token::MapEnd,
-            ],
+            "invalid type: sequence, expected a map",
         );
     }
 
     #[test]
     fn struct_() {
-        let value = InternallyTagged::NewtypeEnum(Enum::Struct { f: 1 });
+        let value = InternallyTagged::NewtypeStruct(Struct { f: 6 });
 
         // Special case: tag field ("tag") is the first field
         assert_tokens(
             &value,
             &[
-                Token::Map { len: Some(2) },
-                Token::Str("tag"),
-                Token::Str("NewtypeEnum"),
-                Token::Str("Struct"),
                 Token::Struct {
                     name: "Struct",
-                    len: 1,
+                    len: 2,
                 },
+                Token::Str("tag"),
+                Token::Str("NewtypeStruct"),
                 Token::Str("f"),
-                Token::U8(1),
+                Token::U8(6),
                 Token::StructEnd,
-                Token::MapEnd,
             ],
         );
         assert_de_tokens(
             &value,
             &[
-                Token::Map { len: Some(2) },
-                Token::BorrowedStr("tag"),
-                Token::BorrowedStr("NewtypeEnum"),
-                Token::BorrowedStr("Struct"),
                 Token::Struct {
                     name: "Struct",
-                    len: 1,
+                    len: 2,
                 },
+                Token::BorrowedStr("tag"),
+                Token::BorrowedStr("NewtypeStruct"),
                 Token::BorrowedStr("f"),
-                Token::U8(1),
+                Token::U8(6),
                 Token::StructEnd,
-                Token::MapEnd,
             ],
         );
 
         // General case: tag field ("tag") is not the first field
-        // Reaches crate::private::de::content::VariantDeserializer::struct_variant
-        // Content::Map case
-        // via ContentDeserializer::deserialize_enum
         assert_de_tokens(
             &value,
             &[
-                Token::Map { len: Some(2) },
-                Token::Str("Struct"),
                 Token::Struct {
                     name: "Struct",
-                    len: 1,
+                    len: 2,
                 },
                 Token::Str("f"),
-                Token::U8(1),
-                Token::StructEnd,
+                Token::U8(6),
                 Token::Str("tag"),
-                Token::Str("NewtypeEnum"),
-                Token::MapEnd,
+                Token::Str("NewtypeStruct"),
+                Token::StructEnd,
             ],
         );
         assert_de_tokens(
             &value,
             &[
-                Token::Map { len: Some(2) },
-                Token::BorrowedStr("Struct"),
                 Token::Struct {
                     name: "Struct",
-                    len: 1,
+                    len: 2,
                 },
                 Token::BorrowedStr("f"),
-                Token::U8(1),
+                Token::U8(6),
+                Token::BorrowedStr("tag"),
+                Token::BorrowedStr("NewtypeStruct"),
                 Token::StructEnd,
-                Token::BorrowedStr("tag"),
-                Token::BorrowedStr("NewtypeEnum"),
-                Token::MapEnd,
             ],
         );
 
-        // Special case: tag field ("tag") is the first field
         assert_de_tokens(
             &value,
             &[
-                Token::Map { len: Some(2) },
-                Token::Str("tag"),
-                Token::Str("NewtypeEnum"),
-                Token::Str("Struct"),
-                Token::Seq { len: Some(1) },
-                Token::U8(1), // f
+                Token::Seq { len: Some(2) },
+                Token::Str("NewtypeStruct"), // tag
+                Token::U8(6),
                 Token::SeqEnd,
-                Token::MapEnd,
             ],
         );
         assert_de_tokens(
             &value,
             &[
-                Token::Map { len: Some(2) },
-                Token::BorrowedStr("tag"),
-                Token::BorrowedStr("NewtypeEnum"),
-                Token::BorrowedStr("Struct"),
-                Token::Seq { len: Some(1) },
-                Token::U8(1), // f
+                Token::Seq { len: Some(2) },
+                Token::BorrowedStr("NewtypeStruct"), // tag
+                Token::U8(6),
                 Token::SeqEnd,
-                Token::MapEnd,
             ],
         );
+    }
 
-        // General case: tag field ("tag") is not the first field
-        // Reaches crate::private::de::content::VariantDeserializer::struct_variant
-        // Content::Seq case
-        // via ContentDeserializer::deserialize_enum
-        assert_de_tokens(
-            &value,
-            &[
-                Token::Map { len: Some(2) },
-                Token::Str("Struct"),
-                Token::Seq { len: Some(1) },
-                Token::U8(1), // f
-                Token::SeqEnd,
-                Token::Str("tag"),
-                Token::Str("NewtypeEnum"),
-                Token::MapEnd,
-            ],
-        );
-        assert_de_tokens(
-            &value,
-            &[
-                Token::Map { len: Some(2) },
-                Token::BorrowedStr("Struct"),
-                Token::Seq { len: Some(1) },
-                Token::U8(1), // f
-                Token::SeqEnd,
-                Token::BorrowedStr("tag"),
-                Token::BorrowedStr("NewtypeEnum"),
-                Token::MapEnd,
-            ],
-        );
+    mod enum_ {
+        use super::*;
+
+        #[test]
+        fn unit() {
+            let value = InternallyTagged::NewtypeEnum(Enum::Unit);
+
+            // Special case: tag field ("tag") is the first field
+            assert_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::Str("tag"),
+                    Token::Str("NewtypeEnum"),
+                    Token::Str("Unit"),
+                    Token::Unit,
+                    Token::MapEnd,
+                ],
+            );
+            assert_de_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::BorrowedStr("tag"),
+                    Token::BorrowedStr("NewtypeEnum"),
+                    Token::BorrowedStr("Unit"),
+                    Token::Unit,
+                    Token::MapEnd,
+                ],
+            );
+
+            // General case: tag field ("tag") is not the first field
+            assert_de_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::Str("Unit"),
+                    Token::Unit,
+                    Token::Str("tag"),
+                    Token::Str("NewtypeEnum"),
+                    Token::MapEnd,
+                ],
+            );
+            assert_de_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::BorrowedStr("Unit"),
+                    Token::Unit,
+                    Token::BorrowedStr("tag"),
+                    Token::BorrowedStr("NewtypeEnum"),
+                    Token::MapEnd,
+                ],
+            );
+        }
+
+        #[test]
+        fn newtype() {
+            let value = InternallyTagged::NewtypeEnum(Enum::Newtype(1));
+
+            // Special case: tag field ("tag") is the first field
+            assert_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::Str("tag"),
+                    Token::Str("NewtypeEnum"),
+                    Token::Str("Newtype"),
+                    Token::U8(1),
+                    Token::MapEnd,
+                ],
+            );
+            assert_de_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::BorrowedStr("tag"),
+                    Token::BorrowedStr("NewtypeEnum"),
+                    Token::BorrowedStr("Newtype"),
+                    Token::U8(1),
+                    Token::MapEnd,
+                ],
+            );
+
+            // General case: tag field ("tag") is not the first field
+            assert_de_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::Str("Newtype"),
+                    Token::U8(1),
+                    Token::Str("tag"),
+                    Token::Str("NewtypeEnum"),
+                    Token::MapEnd,
+                ],
+            );
+            assert_de_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::BorrowedStr("Newtype"),
+                    Token::U8(1),
+                    Token::BorrowedStr("tag"),
+                    Token::BorrowedStr("NewtypeEnum"),
+                    Token::MapEnd,
+                ],
+            );
+        }
+
+        #[test]
+        fn tuple() {
+            let value = InternallyTagged::NewtypeEnum(Enum::Tuple(1, 1));
+
+            // Special case: tag field ("tag") is the first field
+            assert_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::Str("tag"),
+                    Token::Str("NewtypeEnum"),
+                    Token::Str("Tuple"),
+                    Token::TupleStruct {
+                        name: "Tuple",
+                        len: 2,
+                    },
+                    Token::U8(1),
+                    Token::U8(1),
+                    Token::TupleStructEnd,
+                    Token::MapEnd,
+                ],
+            );
+            assert_de_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::BorrowedStr("tag"),
+                    Token::BorrowedStr("NewtypeEnum"),
+                    Token::BorrowedStr("Tuple"),
+                    Token::TupleStruct {
+                        name: "Tuple",
+                        len: 2,
+                    },
+                    Token::U8(1),
+                    Token::U8(1),
+                    Token::TupleStructEnd,
+                    Token::MapEnd,
+                ],
+            );
+
+            // Special case: tag field ("tag") is not the first field
+            // Reaches crate::private::de::content::VariantDeserializer::tuple_variant
+            // Content::Seq case
+            // via ContentDeserializer::deserialize_enum
+            assert_de_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::Str("Tuple"),
+                    Token::TupleStruct {
+                        name: "Tuple",
+                        len: 2,
+                    },
+                    Token::U8(1),
+                    Token::U8(1),
+                    Token::TupleStructEnd,
+                    Token::Str("tag"),
+                    Token::Str("NewtypeEnum"),
+                    Token::MapEnd,
+                ],
+            );
+            assert_de_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::BorrowedStr("Tuple"),
+                    Token::TupleStruct {
+                        name: "Tuple",
+                        len: 2,
+                    },
+                    Token::U8(1),
+                    Token::U8(1),
+                    Token::TupleStructEnd,
+                    Token::BorrowedStr("tag"),
+                    Token::BorrowedStr("NewtypeEnum"),
+                    Token::MapEnd,
+                ],
+            );
+        }
+
+        #[test]
+        fn struct_() {
+            let value = InternallyTagged::NewtypeEnum(Enum::Struct { f: 1 });
+
+            // Special case: tag field ("tag") is the first field
+            assert_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::Str("tag"),
+                    Token::Str("NewtypeEnum"),
+                    Token::Str("Struct"),
+                    Token::Struct {
+                        name: "Struct",
+                        len: 1,
+                    },
+                    Token::Str("f"),
+                    Token::U8(1),
+                    Token::StructEnd,
+                    Token::MapEnd,
+                ],
+            );
+            assert_de_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::BorrowedStr("tag"),
+                    Token::BorrowedStr("NewtypeEnum"),
+                    Token::BorrowedStr("Struct"),
+                    Token::Struct {
+                        name: "Struct",
+                        len: 1,
+                    },
+                    Token::BorrowedStr("f"),
+                    Token::U8(1),
+                    Token::StructEnd,
+                    Token::MapEnd,
+                ],
+            );
+
+            // General case: tag field ("tag") is not the first field
+            // Reaches crate::private::de::content::VariantDeserializer::struct_variant
+            // Content::Map case
+            // via ContentDeserializer::deserialize_enum
+            assert_de_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::Str("Struct"),
+                    Token::Struct {
+                        name: "Struct",
+                        len: 1,
+                    },
+                    Token::Str("f"),
+                    Token::U8(1),
+                    Token::StructEnd,
+                    Token::Str("tag"),
+                    Token::Str("NewtypeEnum"),
+                    Token::MapEnd,
+                ],
+            );
+            assert_de_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::BorrowedStr("Struct"),
+                    Token::Struct {
+                        name: "Struct",
+                        len: 1,
+                    },
+                    Token::BorrowedStr("f"),
+                    Token::U8(1),
+                    Token::StructEnd,
+                    Token::BorrowedStr("tag"),
+                    Token::BorrowedStr("NewtypeEnum"),
+                    Token::MapEnd,
+                ],
+            );
+
+            // Special case: tag field ("tag") is the first field
+            assert_de_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::Str("tag"),
+                    Token::Str("NewtypeEnum"),
+                    Token::Str("Struct"),
+                    Token::Seq { len: Some(1) },
+                    Token::U8(1), // f
+                    Token::SeqEnd,
+                    Token::MapEnd,
+                ],
+            );
+            assert_de_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::BorrowedStr("tag"),
+                    Token::BorrowedStr("NewtypeEnum"),
+                    Token::BorrowedStr("Struct"),
+                    Token::Seq { len: Some(1) },
+                    Token::U8(1), // f
+                    Token::SeqEnd,
+                    Token::MapEnd,
+                ],
+            );
+
+            // General case: tag field ("tag") is not the first field
+            // Reaches crate::private::de::content::VariantDeserializer::struct_variant
+            // Content::Seq case
+            // via ContentDeserializer::deserialize_enum
+            assert_de_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::Str("Struct"),
+                    Token::Seq { len: Some(1) },
+                    Token::U8(1), // f
+                    Token::SeqEnd,
+                    Token::Str("tag"),
+                    Token::Str("NewtypeEnum"),
+                    Token::MapEnd,
+                ],
+            );
+            assert_de_tokens(
+                &value,
+                &[
+                    Token::Map { len: Some(2) },
+                    Token::BorrowedStr("Struct"),
+                    Token::Seq { len: Some(1) },
+                    Token::U8(1), // f
+                    Token::SeqEnd,
+                    Token::BorrowedStr("tag"),
+                    Token::BorrowedStr("NewtypeEnum"),
+                    Token::MapEnd,
+                ],
+            );
+        }
     }
 }
 
