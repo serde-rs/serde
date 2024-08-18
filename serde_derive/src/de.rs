@@ -1493,7 +1493,17 @@ fn deserialize_adjacently_tagged_enum(
                     quote! {
                         #func(#content).map(#this_value::#variant_ident)
                     }
-                }
+                },
+                Style::Struct if variant.fields.iter().all(|f| !f.attrs.default().is_none()) => quote! {
+                    _serde::de::DeserializeSeed::deserialize(__Seed {
+                        field: __field,
+                        marker: _serde::__private::PhantomData,
+                        lifetime: _serde::__private::PhantomData,
+                    }, _serde::de::value::MapDeserializer::<
+                        std::iter::Empty<((), ())>,
+                        __A::Error
+                    >::new(std::iter::empty()))
+                },
                 _ => {
                     missing_content_fallthrough = quote!(_ => #missing_content);
                     return None;

@@ -976,6 +976,32 @@ fn test_adjacently_tagged_enum() {
 }
 
 #[test]
+fn test_adjacently_tagged_enum_default() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "t", content = "c")]
+    enum AdjacentlyTagged {
+        Struct {
+            #[serde(default)] f: u8,
+            #[serde(default)] z: u8
+        },
+    }
+
+    // struct with content first
+    assert_de_tokens(
+        &AdjacentlyTagged::Struct { f: 0, z: 0 },
+        &[
+            Token::Struct {
+                name: "AdjacentlyTagged",
+                len: 1,
+            },
+            Token::Str("t"),
+            Token::Str("Struct"),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_adjacently_tagged_enum_deny_unknown_fields() {
     #[derive(Debug, PartialEq, Deserialize)]
     #[serde(tag = "t", content = "c", deny_unknown_fields)]
