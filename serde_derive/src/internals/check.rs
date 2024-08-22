@@ -1,5 +1,6 @@
 use crate::internals::ast::{Container, Data, Field, Style};
 use crate::internals::attr::{Default, Identifier, TagType};
+use crate::internals::case::RenameRule;
 use crate::internals::{ungroup, Ctxt, Derive};
 use syn::{Member, Type};
 
@@ -16,6 +17,7 @@ pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     check_adjacent_tag_conflict(cx, cont);
     check_transparent(cx, cont, derive);
     check_from_and_try_from(cx, cont);
+    check_untagged_enum(cx, cont);
 }
 
 // If some field of a tuple struct is marked #[serde(default)] then all fields
@@ -473,5 +475,37 @@ fn check_from_and_try_from(cx: &Ctxt, cont: &mut Container) {
             cont.original,
             "#[serde(from = \"...\")] and #[serde(try_from = \"...\")] conflict with each other",
         );
+    }
+}
+
+fn check_untagged_enum(cx: &Ctxt, cont: &mut Container) {
+    let variants = match &cont.data {
+        Data::Enum(variants) => variants,
+        Data::Struct(_, _) => return,
+    };
+    if cont.attrs.tag() == &TagType::None {
+        let rename_all_rules = &cont.attrs.rename_all_rules();
+        if rename_all_rules.serialize != RenameRule::None || rename_all_rules.deserialize != RenameRule::None {
+            cx.error_spanned_by(
+                cont.original,
+                "#[serde(rename_all = \"...\")] does nothing when used with #[serde(untagged)]",
+            );
+        }
+        
+        for variant in variants {
+            if variant.attrs.aliases().len() > 1 {
+                cx.error_spanned_by(
+                    variant.original,
+                    "#[serde(alias = \"...\")] does nothing when used on a variant of an untagged enum",
+                );
+            }
+            
+            if variant.attrs.name().renamed() {
+                cx.error_spanned_by(
+                    variant.original,
+                    "#[serde(rename = \"...\")] does nothing when used on a variant of an untagged enum",
+                );
+            }
+        }
     }
 }

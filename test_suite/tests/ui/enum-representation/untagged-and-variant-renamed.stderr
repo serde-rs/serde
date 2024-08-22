@@ -1,17 +1,25 @@
-error: renaming a variant of an untagged enum does nothing
- --> tests/ui/enum-representation/untagged-and-variant-renamed.rs:4:19
-  |
-4 | #[serde(untagged, rename_all = "lowercase")]
-  |                   ^^^^^^^^^^
+error: #[serde(rename_all = "...")] does nothing when used with #[serde(untagged)]
+  --> tests/ui/enum-representation/untagged-and-variant-renamed.rs:4:1
+   |
+4  | / #[serde(untagged, rename_all = "lowercase")]
+5  | | enum E {
+6  | |     #[serde(alias = "foo")]
+7  | |     A(u8),
+8  | |     #[serde(rename = "bar")]
+9  | |     B(String),
+10 | | }
+   | |_^
 
-error: adding a alias to a variant of an untagged enum does nothing
- --> tests/ui/enum-representation/untagged-and-variant-renamed.rs:6:13
+error: #[serde(alias = "...")] does nothing when used on a variant of an untagged enum
+ --> tests/ui/enum-representation/untagged-and-variant-renamed.rs:6:5
   |
-6 |     #[serde(alias = "foo")]
-  |             ^^^^^
+6 | /     #[serde(alias = "foo")]
+7 | |     A(u8),
+  | |_________^
 
-error: renaming a variant of an untagged enum does nothing
- --> tests/ui/enum-representation/untagged-and-variant-renamed.rs:8:13
+error: #[serde(rename = "...")] does nothing when used on a variant of an untagged enum
+ --> tests/ui/enum-representation/untagged-and-variant-renamed.rs:8:5
   |
-8 |     #[serde(rename = "bar")]
-  |             ^^^^^^
+8 | /     #[serde(rename = "bar")]
+9 | |     B(String),
+  | |_____________^

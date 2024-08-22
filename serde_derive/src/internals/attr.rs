@@ -181,6 +181,10 @@ impl Name {
     fn deserialize_aliases(&self) -> &BTreeSet<String> {
         &self.deserialize_aliases
     }
+    
+    pub fn renamed(&self) -> bool {
+        self.serialize_renamed || self.deserialize_renamed
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -583,34 +587,14 @@ impl Container {
             }
         }
 
-        let [serialize, deserialize]: [RenameRule; 2];
-        if untagged.get() {
-            if let Some((tokens, rule)) = rename_all_ser_rule.get_with_tokens() {
-                serialize = rule;
-                deserialize = rename_all_de_rule.get().unwrap_or(RenameRule::None);
-                cx.error_spanned_by(&tokens, "renaming a variant of an untagged enum does nothing");
-            } else if let Some((tokens, rule)) = rename_all_de_rule.get_with_tokens() {
-                serialize = rule;
-                deserialize = RenameRule::None;
-                cx.error_spanned_by(&tokens, "renaming a variant of an untagged enum does nothing");
-            } else {
-                serialize = RenameRule::None;
-                deserialize = RenameRule::None;
-            }
-            
-        } else {
-            serialize = rename_all_ser_rule.get().unwrap_or(RenameRule::None);
-            deserialize = rename_all_de_rule.get().unwrap_or(RenameRule::None);
-        }
-		
         Container {
             name: Name::from_attrs(unraw(&item.ident), ser_name, de_name, None),
             transparent: transparent.get(),
             deny_unknown_fields: deny_unknown_fields.get(),
             default: default.get().unwrap_or(Default::None),
             rename_all_rules: RenameAllRules {
-                serialize,
-                deserialize,
+                serialize: rename_all_ser_rule.get().unwrap_or(RenameRule::None),
+                deserialize: rename_all_de_rule.get().unwrap_or(RenameRule::None),
             },
             rename_all_fields_rules: RenameAllRules {
                 serialize: rename_all_fields_ser_rule.get().unwrap_or(RenameRule::None),
@@ -858,7 +842,7 @@ struct BorrowAttribute {
 }
 
 impl Variant {
-    pub fn from_ast(cx: &Ctxt, variant: &syn::Variant, container_is_untagged: bool) -> Self {
+    pub fn from_ast(cx: &Ctxt, variant: &syn::Variant) -> Self {
         let mut ser_name = Attr::none(cx, RENAME);
         let mut de_name = Attr::none(cx, RENAME);
         let mut de_aliases = VecAttr::none(cx, RENAME);
@@ -889,9 +873,6 @@ impl Variant {
                 if meta.path == RENAME {
                     // #[serde(rename = "foo")]
                     // #[serde(rename(serialize = "foo", deserialize = "bar"))]
-                    if container_is_untagged {
-                        cx.error_spanned_by(&meta.path, "renaming a variant of an untagged enum does nothing");
-                    }
                     let (ser, de) = get_multiple_renames(cx, &meta)?;
                     ser_name.set_opt(&meta.path, ser.as_ref().map(syn::LitStr::value));
                     for de_value in de {
@@ -900,9 +881,6 @@ impl Variant {
                     }
                 } else if meta.path == ALIAS {
                     // #[serde(alias = "foo")]
-                    if container_is_untagged {
-                        cx.error_spanned_by(&meta.path, "adding a alias to a variant of an untagged enum does nothing");
-                    }
                     if let Some(s) = get_lit_str(cx, ALIAS, &meta)? {
                         de_aliases.insert(&meta.path, s.value());
                     }
