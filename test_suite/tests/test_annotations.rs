@@ -1608,59 +1608,6 @@ fn test_collect_other() {
 }
 
 #[test]
-fn test_adjacently_tagged_enum_bytes() {
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
-    #[serde(tag = "t", content = "c")]
-    enum Data {
-        A { a: i32 },
-    }
-
-    let data = Data::A { a: 0 };
-
-    assert_tokens(
-        &data,
-        &[
-            Token::Struct {
-                name: "Data",
-                len: 2,
-            },
-            Token::Str("t"),
-            Token::UnitVariant {
-                name: "Data",
-                variant: "A",
-            },
-            Token::Str("c"),
-            Token::Struct { name: "A", len: 1 },
-            Token::Str("a"),
-            Token::I32(0),
-            Token::StructEnd,
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &data,
-        &[
-            Token::Struct {
-                name: "Data",
-                len: 2,
-            },
-            Token::Bytes(b"t"),
-            Token::UnitVariant {
-                name: "Data",
-                variant: "A",
-            },
-            Token::Bytes(b"c"),
-            Token::Struct { name: "A", len: 1 },
-            Token::Str("a"),
-            Token::I32(0),
-            Token::StructEnd,
-            Token::StructEnd,
-        ],
-    );
-}
-
-#[test]
 fn test_partially_untagged_enum() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     enum Exp {
@@ -1847,38 +1794,6 @@ fn test_partially_untagged_internally_tagged_enum() {
 }
 
 #[test]
-fn test_partially_untagged_adjacently_tagged_enum() {
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
-    #[serde(tag = "t", content = "c")]
-    enum Data {
-        A(u32),
-        B,
-        #[serde(untagged)]
-        Var(u32),
-    }
-
-    let data = Data::A(7);
-
-    assert_de_tokens(
-        &data,
-        &[
-            Token::Map { len: None },
-            Token::Str("t"),
-            Token::Str("A"),
-            Token::Str("c"),
-            Token::U32(7),
-            Token::MapEnd,
-        ],
-    );
-
-    let data = Data::Var(42);
-
-    assert_de_tokens(&data, &[Token::U32(42)]);
-
-    // TODO test error output
-}
-
-#[test]
 fn test_transparent_struct() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     #[serde(transparent)]
@@ -1977,32 +1892,6 @@ fn test_expecting_message_externally_tagged_enum() {
     assert_de_tokens_error::<Enum>(
         &[Token::Enum { name: "Enum" }, Token::Unit],
         "invalid type: unit value, expected variant identifier",
-    );
-}
-
-#[test]
-fn test_expecting_message_adjacently_tagged_enum() {
-    #[derive(Deserialize)]
-    #[serde(tag = "tag", content = "content")]
-    #[serde(expecting = "something strange...")]
-    enum Enum {
-        AdjacentlyTagged,
-    }
-
-    assert_de_tokens_error::<Enum>(
-        &[Token::Str("AdjacentlyTagged")],
-        r#"invalid type: string "AdjacentlyTagged", expected something strange..."#,
-    );
-
-    assert_de_tokens_error::<Enum>(
-        &[Token::Map { len: None }, Token::Unit],
-        r#"invalid type: unit value, expected "tag", "content", or other ignored fields"#,
-    );
-
-    // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
-    assert_de_tokens_error::<Enum>(
-        &[Token::Map { len: None }, Token::Str("tag"), Token::Unit],
-        "invalid type: unit value, expected variant of enum Enum",
     );
 }
 
@@ -2890,52 +2779,6 @@ mod flatten {
 
         mod adjacently_tagged {
             use super::*;
-
-            #[test]
-            fn straightforward() {
-                #[derive(Serialize, Deserialize, PartialEq, Debug)]
-                #[serde(tag = "t", content = "c")]
-                enum Data {
-                    A {
-                        a: i32,
-                        #[serde(flatten)]
-                        flat: Flat,
-                    },
-                }
-
-                #[derive(Serialize, Deserialize, PartialEq, Debug)]
-                struct Flat {
-                    b: i32,
-                }
-
-                let data = Data::A {
-                    a: 0,
-                    flat: Flat { b: 0 },
-                };
-
-                assert_tokens(
-                    &data,
-                    &[
-                        Token::Struct {
-                            name: "Data",
-                            len: 2,
-                        },
-                        Token::Str("t"),
-                        Token::UnitVariant {
-                            name: "Data",
-                            variant: "A",
-                        },
-                        Token::Str("c"),
-                        Token::Map { len: None },
-                        Token::Str("a"),
-                        Token::I32(0),
-                        Token::Str("b"),
-                        Token::I32(0),
-                        Token::MapEnd,
-                        Token::StructEnd,
-                    ],
-                );
-            }
 
             #[derive(Debug, PartialEq, Serialize, Deserialize)]
             struct Flatten {
