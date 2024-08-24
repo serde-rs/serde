@@ -208,7 +208,7 @@ mod content {
 
     use crate::lib::*;
 
-    use crate::de::value::{MapDeserializer, SeqDeserializer};
+    use crate::de::value::{ExpectedInSeq, MapDeserializer, SeqDeserializer};
     use crate::de::{
         self, size_hint, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected,
         IgnoredAny, MapAccess, SeqAccess, Unexpected, Visitor,
@@ -2288,11 +2288,18 @@ mod content {
             )
         }
 
-        fn visit_seq<S>(self, _: S) -> Result<(), S::Error>
+        fn visit_seq<S>(self, mut seq: S) -> Result<(), S::Error>
         where
             S: SeqAccess<'de>,
         {
-            Ok(())
+            match seq.next_element() {
+                Ok(Some(IgnoredAny)) => Err(de::Error::invalid_length(
+                    1 + seq.size_hint().unwrap_or(0),
+                    &ExpectedInSeq(0),
+                )),
+                Ok(None) => Ok(()),
+                Err(err) => Err(err),
+            }
         }
 
         fn visit_map<M>(self, mut access: M) -> Result<(), M::Error>

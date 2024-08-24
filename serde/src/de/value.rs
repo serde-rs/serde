@@ -1104,7 +1104,9 @@ where
     }
 }
 
-struct ExpectedInSeq(usize);
+/// Number of elements still expected in a sequence. Does not include already
+/// read elements.
+pub(crate) struct ExpectedInSeq(pub usize);
 
 impl Expected for ExpectedInSeq {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -1580,6 +1582,8 @@ where
     }
 }
 
+/// Number of elements still expected in a map. Does not include already read
+/// elements.
 struct ExpectedInMap(usize);
 
 impl Expected for ExpectedInMap {
