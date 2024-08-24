@@ -1904,12 +1904,13 @@ mod content {
                 Content::None => visitor.visit_none(),
                 Content::Some(ref v) => visitor.visit_some(ContentRefDeserializer::new(v)),
                 Content::Unit => visitor.visit_unit(),
-                // This case is necessary for formats which does not store
-                // marker of optionality of value, for example, JSON. When
-                // `deserialize_any` is requested from such formats, they will
-                // report value without using `Visitor::visit_some`, because
-                // they do not known in which contexts this value will be used.
-                // RON is example of format which preserve markers.
+                // This case is to support data formats which do not encode an
+                // indication whether a value is optional. An example of such a
+                // format is JSON, and a counterexample is RON. When requesting
+                // `deserialize_any` in JSON, the data format never performs
+                // `Visitor::visit_some` but we still must be able to
+                // deserialize the resulting Content into data structures with
+                // optional fields.
                 _ => visitor.visit_some(self),
             }
         }
@@ -1945,12 +1946,15 @@ mod content {
                 Content::Newtype(ref v) => {
                     visitor.visit_newtype_struct(ContentRefDeserializer::new(v))
                 }
-                // This case is necessary for formats which does not store
-                // marker of a newtype, for example, JSON. When
-                // `deserialize_any` is requested from such formats, they will
-                // report value without using `Visitor::visit_newtype_struct`,
-                // because they do not known in which contexts this value will
-                // be used. RON is example of format which preserve markers.
+                // This case is to support data formats that encode newtype
+                // structs and their underlying data the same, with no
+                // indication whether a newtype wrapper was present. For example
+                // JSON does this, while RON does not. In RON a newtype's name
+                // is included in the serialized representation and it knows to
+                // call `Visitor::visit_newtype_struct` from `deserialize_any`.
+                // JSON's `deserialize_any` never calls `visit_newtype_struct`
+                // but in this code we still must be able to deserialize the
+                // resulting Content into newtypes.
                 _ => visitor.visit_newtype_struct(self),
             }
         }
