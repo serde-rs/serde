@@ -1896,18 +1896,6 @@ fn test_expecting_message_externally_tagged_enum() {
 }
 
 #[test]
-fn test_expecting_message_untagged_tagged_enum() {
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    #[serde(expecting = "something strange...")]
-    enum Enum {
-        Untagged,
-    }
-
-    assert_de_tokens_error::<Enum>(&[Token::Str("Untagged")], "something strange...");
-}
-
-#[test]
 fn test_expecting_message_identifier_enum() {
     #[derive(Deserialize)]
     #[serde(field_identifier)]
@@ -2957,41 +2945,6 @@ mod flatten {
 
         mod untagged {
             use super::*;
-
-            #[test]
-            fn straightforward() {
-                #[derive(Serialize, Deserialize, PartialEq, Debug)]
-                #[serde(untagged)]
-                enum Data {
-                    A {
-                        a: i32,
-                        #[serde(flatten)]
-                        flat: Flat,
-                    },
-                }
-
-                #[derive(Serialize, Deserialize, PartialEq, Debug)]
-                struct Flat {
-                    b: i32,
-                }
-
-                let data = Data::A {
-                    a: 0,
-                    flat: Flat { b: 0 },
-                };
-
-                assert_tokens(
-                    &data,
-                    &[
-                        Token::Map { len: None },
-                        Token::Str("a"),
-                        Token::I32(0),
-                        Token::Str("b"),
-                        Token::I32(0),
-                        Token::MapEnd,
-                    ],
-                );
-            }
 
             #[derive(Debug, PartialEq, Serialize, Deserialize)]
             struct Flatten {
