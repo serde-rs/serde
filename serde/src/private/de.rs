@@ -1281,9 +1281,8 @@ mod content {
     where
         E: de::Error,
     {
-        variant: Content<'de>,
-        value: Option<Content<'de>>,
-        err: PhantomData<E>,
+        variant: ContentDeserializer<'de, E>,
+        value: Option<ContentDeserializer<'de, E>>,
     }
 
     impl<'de, E> EnumDeserializer<'de, E>
@@ -1292,9 +1291,8 @@ mod content {
     {
         pub fn new(variant: Content<'de>, value: Option<Content<'de>>) -> EnumDeserializer<'de, E> {
             EnumDeserializer {
-                variant,
-                value,
-                err: PhantomData,
+                variant: ContentDeserializer::new(variant),
+                value: value.map(ContentDeserializer::new),
             }
         }
     }
@@ -1311,10 +1309,9 @@ mod content {
             V: de::DeserializeSeed<'de>,
         {
             let visitor = VariantDeserializer {
-                value: self.value,
-                err: PhantomData,
+                de: self.value,
             };
-            seed.deserialize(ContentDeserializer::new(self.variant))
+            seed.deserialize(self.variant)
                 .map(|v| (v, visitor))
         }
     }
@@ -1323,8 +1320,7 @@ mod content {
     where
         E: de::Error,
     {
-        value: Option<Content<'de>>,
-        err: PhantomData<E>,
+        de: Option<ContentDeserializer<'de, E>>,
     }
 
     impl<'de, E> de::VariantAccess<'de> for VariantDeserializer<'de, E>
@@ -1334,8 +1330,8 @@ mod content {
         type Error = E;
 
         fn unit_variant(self) -> Result<(), E> {
-            match self.value {
-                Some(value) => de::Deserialize::deserialize(ContentDeserializer::new(value)),
+            match self.de {
+                Some(de) => de::Deserialize::deserialize(de),
                 None => Ok(()),
             }
         }
@@ -1344,8 +1340,8 @@ mod content {
         where
             T: de::DeserializeSeed<'de>,
         {
-            match self.value {
-                Some(value) => seed.deserialize(ContentDeserializer::new(value)),
+            match self.de {
+                Some(de) => seed.deserialize(de),
                 None => seed.deserialize(UnitDeserializer::new()),
             }
         }
@@ -1354,8 +1350,8 @@ mod content {
         where
             V: de::Visitor<'de>,
         {
-            match self.value {
-                Some(value) => ContentDeserializer::new(value).deserialize_any(visitor),
+            match self.de {
+                Some(de) => de.deserialize_any(visitor),
                 None => visitor.visit_unit(),
             }
         }
@@ -1368,8 +1364,8 @@ mod content {
         where
             V: de::Visitor<'de>,
         {
-            match self.value {
-                Some(value) => ContentDeserializer::new(value).deserialize_any(visitor),
+            match self.de {
+                Some(de) => de.deserialize_any(visitor),
                 None => visitor.visit_unit(),
             }
         }
@@ -1554,9 +1550,8 @@ mod content {
             };
 
             visitor.visit_enum(EnumRefDeserializer {
-                variant,
-                value,
-                err: PhantomData,
+                variant: ContentRefDeserializer::new(variant),
+                value: value.map(ContentRefDeserializer::new),
             })
         }
 
@@ -1608,9 +1603,8 @@ mod content {
     where
         E: de::Error,
     {
-        variant: &'a Content<'de>,
-        value: Option<&'a Content<'de>>,
-        err: PhantomData<E>,
+        variant: ContentRefDeserializer<'a, 'de, E>,
+        value: Option<ContentRefDeserializer<'a, 'de, E>>,
     }
 
     impl<'de, 'a, E> de::EnumAccess<'de> for EnumRefDeserializer<'a, 'de, E>
@@ -1625,10 +1619,9 @@ mod content {
             V: de::DeserializeSeed<'de>,
         {
             let visitor = VariantRefDeserializer {
-                value: self.value,
-                err: PhantomData,
+                de: self.value,
             };
-            seed.deserialize(ContentRefDeserializer::new(self.variant))
+            seed.deserialize(self.variant)
                 .map(|v| (v, visitor))
         }
     }
@@ -1637,8 +1630,7 @@ mod content {
     where
         E: de::Error,
     {
-        value: Option<&'a Content<'de>>,
-        err: PhantomData<E>,
+        de: Option<ContentRefDeserializer<'a, 'de, E>>,
     }
 
     impl<'de, 'a, E> de::VariantAccess<'de> for VariantRefDeserializer<'a, 'de, E>
@@ -1648,8 +1640,8 @@ mod content {
         type Error = E;
 
         fn unit_variant(self) -> Result<(), E> {
-            match self.value {
-                Some(value) => de::Deserialize::deserialize(ContentRefDeserializer::new(value)),
+            match self.de {
+                Some(de) => de::Deserialize::deserialize(de),
                 // Covered by tests/test_enum_adjacently_tagged.rs
                 //      partially_untagged
                 // Covered by tests/test_enum_untagged.rs
@@ -1662,13 +1654,13 @@ mod content {
         where
             T: de::DeserializeSeed<'de>,
         {
-            match self.value {
+            match self.de {
                 // Covered by tests/test_annotations.rs
                 //      test_partially_untagged_enum_desugared
                 //      test_partially_untagged_enum_generic
                 // Covered by tests/test_enum_untagged.rs
                 //      newtype_enum::newtype
-                Some(value) => seed.deserialize(ContentRefDeserializer::new(value)),
+                Some(de) => seed.deserialize(de),
                 None => seed.deserialize(UnitDeserializer::new()),
             }
         }
@@ -1677,14 +1669,14 @@ mod content {
         where
             V: de::Visitor<'de>,
         {
-            match self.value {
+            match self.de {
                 // Seq() covered by tests/test_annotations.rs
                 //      test_partially_untagged_enum
                 //      test_partially_untagged_enum_desugared
                 // Seq() covered by tests/test_enum_untagged.rs
                 //      newtype_enum::tuple0
                 //      newtype_enum::tuple2
-                Some(value) => ContentRefDeserializer::new(value).deserialize_any(visitor),
+                Some(de) => de.deserialize_any(visitor),
                 None => visitor.visit_unit(),
             }
         }
@@ -1697,13 +1689,13 @@ mod content {
         where
             V: de::Visitor<'de>,
         {
-            match self.value {
+            match self.de {
                 // Map() covered by tests/test_enum_untagged.rs
                 //      newtype_enum::struct_from_map
                 // Seq() covered by tests/test_enum_untagged.rs
                 //      newtype_enum::struct_from_seq
                 //      newtype_enum::empty_struct_from_seq
-                Some(value) => ContentRefDeserializer::new(value).deserialize_any(visitor),
+                Some(de) => de.deserialize_any(visitor),
                 None => visitor.visit_unit(),
             }
         }
