@@ -1658,11 +1658,8 @@ mod content {
         where
             V: de::DeserializeSeed<'de>,
         {
-            let visitor = VariantDeserializer {
-                de: self.value,
-            };
-            seed.deserialize(self.variant)
-                .map(|v| (v, visitor))
+            let visitor = VariantDeserializer { de: self.value };
+            seed.deserialize(self.variant).map(|v| (v, visitor))
         }
     }
 
@@ -2308,11 +2305,8 @@ mod content {
         where
             V: de::DeserializeSeed<'de>,
         {
-            let visitor = VariantRefDeserializer {
-                de: self.value,
-            };
-            seed.deserialize(self.variant)
-                .map(|v| (v, visitor))
+            let visitor = VariantRefDeserializer { de: self.value };
+            seed.deserialize(self.variant).map(|v| (v, visitor))
         }
     }
 
