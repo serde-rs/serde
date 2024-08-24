@@ -1904,10 +1904,11 @@ mod content {
                 Content::None => visitor.visit_none(),
                 Content::Some(ref v) => visitor.visit_some(ContentRefDeserializer::new(v)),
                 Content::Unit => visitor.visit_unit(),
-                // This case is necessary for formats which does not store marker of optionality of value,
-                // for example, JSON. When `deserialize_any` is requested from such formats, they will
-                // report value without using `Visitor::visit_some`, because they do not known in which
-                // contexts this value will be used.
+                // This case is necessary for formats which does not store
+                // marker of optionality of value, for example, JSON. When
+                // `deserialize_any` is requested from such formats, they will
+                // report value without using `Visitor::visit_some`, because
+                // they do not known in which contexts this value will be used.
                 // RON is example of format which preserve markers.
                 _ => visitor.visit_some(self),
             }
@@ -1944,11 +1945,12 @@ mod content {
                 Content::Newtype(ref v) => {
                     visitor.visit_newtype_struct(ContentRefDeserializer::new(v))
                 }
-                // This case is necessary for formats which does not store marker of a newtype,
-                // for example, JSON. When `deserialize_any` is requested from such formats, they will
-                // report value without using `Visitor::visit_newtype_struct`, because they do not
-                // known in which contexts this value will be used.
-                // RON is example of format which preserve markers.
+                // This case is necessary for formats which does not store
+                // marker of a newtype, for example, JSON. When
+                // `deserialize_any` is requested from such formats, they will
+                // report value without using `Visitor::visit_newtype_struct`,
+                // because they do not known in which contexts this value will
+                // be used. RON is example of format which preserve markers.
                 _ => visitor.visit_newtype_struct(self),
             }
         }
