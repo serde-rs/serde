@@ -62,11 +62,6 @@ pub(super) fn deserialize(
             lifetime: _serde::#private::PhantomData<&#delife ()>,
         }
 
-        let (__tag, __content) = _serde::Deserializer::deserialize_any(
-            __deserializer,
-            _serde::#private::de::TaggedContentVisitor::<__Field>::new(#tag, #expecting))?;
-        let __deserializer = _serde::#private::de::ContentDeserializer::<__D::Error>::new(__content);
-
         impl #de_impl_generics _serde::de::DeserializeSeed<#delife> for __Seed #de_ty_generics #where_clause {
             type Value = #this_type #ty_generics;
 
@@ -79,6 +74,12 @@ pub(super) fn deserialize(
                 }
             }
         }
+
+        let (__tag, __content) = _serde::Deserializer::deserialize_any(
+            __deserializer,
+            _serde::#private::de::TaggedContentVisitor::<__Field>::new(#tag, #expecting))?;
+        let __deserializer = _serde::#private::de::ContentDeserializer::<__D::Error>::new(__content);
+
         _serde::de::DeserializeSeed::deserialize(
             __Seed {
                 tag: __tag,
