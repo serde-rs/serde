@@ -1422,11 +1422,6 @@ fn deserialize_internally_tagged_enum(
             lifetime: _serde::__private::PhantomData<&#delife ()>,
         }
 
-        let (__tag, __content) = _serde::Deserializer::deserialize_any(
-            __deserializer,
-            _serde::__private::de::TaggedContentVisitor::<__Field>::new(#tag, #expecting))?;
-        let __deserializer = _serde::__private::de::ContentDeserializer::<__D::Error>::new(__content);
-
         impl #de_impl_generics _serde::de::DeserializeSeed<#delife> for __Seed #de_ty_generics #where_clause {
             type Value = #this_type #ty_generics;
 
@@ -1439,6 +1434,12 @@ fn deserialize_internally_tagged_enum(
                 }
             }
         }
+
+        let (__tag, __content) = _serde::Deserializer::deserialize_any(
+            __deserializer,
+            _serde::__private::de::TaggedContentVisitor::<__Field>::new(#tag, #expecting))?;
+        let __deserializer = _serde::__private::de::ContentDeserializer::<__D::Error>::new(__content);
+
         _serde::de::DeserializeSeed::deserialize(
             __Seed {
                 tag: __tag,
