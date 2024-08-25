@@ -834,9 +834,9 @@ mod content {
     #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, T> Visitor<'de> for TaggedContentVisitor<T>
     where
-        T: Deserialize<'de>,
+        T: Deserialize<'de> + DeserializeSeed<'de>,
     {
-        type Value = (T, Content<'de>);
+        type Value = T::Value;
 
         fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
             fmt.write_str(self.expecting)
@@ -846,21 +846,23 @@ mod content {
         where
             S: SeqAccess<'de>,
         {
-            let tag = match tri!(seq.next_element()) {
+            let tag: T = match tri!(seq.next_element()) {
                 Some(tag) => tag,
                 None => {
                     return Err(de::Error::missing_field(self.tag_name));
                 }
             };
             let rest = de::value::SeqAccessDeserializer::new(seq);
-            Ok((tag, tri!(ContentVisitor::new().deserialize(rest))))
+            let content = tri!(ContentVisitor::new().deserialize(rest));
+
+            tag.deserialize(ContentDeserializer::<S::Error>::new(content))
         }
 
         fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
         where
             M: MapAccess<'de>,
         {
-            let mut tag = None;
+            let mut tag = None::<T>;
             let mut vec = Vec::<(Content, Content)>::with_capacity(size_hint::cautious::<(
                 Content,
                 Content,
@@ -881,7 +883,9 @@ mod content {
             }
             match tag {
                 None => Err(de::Error::missing_field(self.tag_name)),
-                Some(tag) => Ok((tag, Content::Map(vec))),
+                Some(tag) => {
+                    tag.deserialize(ContentDeserializer::<M::Error>::new(Content::Map(vec)))
+                }
             }
         }
     }
