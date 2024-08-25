@@ -860,46 +860,50 @@ mod content {
         where
             M: MapAccess<'de>,
         {
-            let mut tag = None::<T>;
-            let mut vec = Vec::<(Content, Content)>::with_capacity(size_hint::cautious::<(
-                Content,
-                Content,
-            )>(map.size_hint()));
-
             // Read the first field. If it is a tag, immediately deserialize the typed data.
             // Otherwise, we collect everything until we find the tag, and then deserialize
             // using ContentDeserializer.
             match tri!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
                 Some(TagOrContent::Tag) => {
                     let tag: T = tri!(map.next_value());
-                    return tag.deserialize(MapAccessDeserializer::new(map));
+                    tag.deserialize(MapAccessDeserializer::new(map))
                 }
                 Some(TagOrContent::Content(key)) => {
+                    let mut tag = None::<T>;
+                    let mut vec = Vec::<(Content, Content)>::with_capacity(size_hint::cautious::<(
+                        Content,
+                        Content,
+                    )>(
+                        map.size_hint()
+                    ));
+
                     let v = tri!(map.next_value_seed(ContentVisitor::new()));
                     vec.push((key, v));
-                }
-                None => {}
-            }
 
-            while let Some(k) = tri!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
-                match k {
-                    TagOrContent::Tag => {
-                        if tag.is_some() {
-                            return Err(de::Error::duplicate_field(self.tag_name));
+                    while let Some(k) =
+                        tri!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name)))
+                    {
+                        match k {
+                            TagOrContent::Tag => {
+                                if tag.is_some() {
+                                    return Err(de::Error::duplicate_field(self.tag_name));
+                                }
+                                tag = Some(tri!(map.next_value()));
+                            }
+                            TagOrContent::Content(k) => {
+                                let v = tri!(map.next_value_seed(ContentVisitor::new()));
+                                vec.push((k, v));
+                            }
                         }
-                        tag = Some(tri!(map.next_value()));
                     }
-                    TagOrContent::Content(k) => {
-                        let v = tri!(map.next_value_seed(ContentVisitor::new()));
-                        vec.push((k, v));
+                    match tag {
+                        None => Err(de::Error::missing_field(self.tag_name)),
+                        Some(tag) => {
+                            tag.deserialize(ContentDeserializer::<M::Error>::new(Content::Map(vec)))
+                        }
                     }
                 }
-            }
-            match tag {
                 None => Err(de::Error::missing_field(self.tag_name)),
-                Some(tag) => {
-                    tag.deserialize(ContentDeserializer::<M::Error>::new(Content::Map(vec)))
-                }
             }
         }
     }
