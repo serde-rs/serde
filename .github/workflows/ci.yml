@@ -21,6 +21,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
       - run: cd test_suite && cargo test --features unstable
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Cargo.lock
+          path: Cargo.lock
 
   windows:
     name: Test suite (windows)
