@@ -513,9 +513,7 @@ mod content {
     }
 
     /// This is the type of the map keys in an internally tagged enum.
-    ///
-    /// Not public API.
-    pub enum TagOrContent<'de> {
+    enum TagOrContent<'de> {
         Tag,
         Content(Content<'de>),
     }
