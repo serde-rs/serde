@@ -71,7 +71,13 @@ fn complex() {
 
     assert_de_tokens_error::<Untagged>(
         &[Token::Tuple { len: 1 }, Token::U8(1), Token::TupleEnd],
-        "data did not match any variant of untagged enum Untagged",
+        "data did not match any variant of untagged enum `Untagged`
+\t- attempted to deserialize `A` but failed with: invalid type: sequence, expected struct variant Untagged::A
+\t- attempted to deserialize `B` but failed with: invalid type: sequence, expected struct variant Untagged::B
+\t- attempted to deserialize `C` but failed with: invalid type: sequence, expected unit variant Untagged::C
+\t- attempted to deserialize `D` but failed with: invalid type: sequence, expected u8
+\t- attempted to deserialize `E` but failed with: invalid type: sequence, expected a string
+\t- attempted to deserialize `F` but failed with: invalid length 1, expected tuple variant Untagged::F with 2 elements"
     );
 
     assert_de_tokens_error::<Untagged>(
@@ -82,7 +88,13 @@ fn complex() {
             Token::U8(3),
             Token::TupleEnd,
         ],
-        "data did not match any variant of untagged enum Untagged",
+        "data did not match any variant of untagged enum `Untagged`
+\t- attempted to deserialize `A` but failed with: invalid type: sequence, expected struct variant Untagged::A
+\t- attempted to deserialize `B` but failed with: invalid type: sequence, expected struct variant Untagged::B
+\t- attempted to deserialize `C` but failed with: invalid type: sequence, expected unit variant Untagged::C
+\t- attempted to deserialize `D` but failed with: invalid type: sequence, expected u8
+\t- attempted to deserialize `E` but failed with: invalid type: sequence, expected a string
+\t- attempted to deserialize `F` but failed with: invalid length 3, expected 2 elements in sequence"
     );
 }
 
