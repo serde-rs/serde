@@ -310,6 +310,8 @@ mod integer128;
 pub mod de;
 pub mod ser;
 
+mod format;
+
 #[doc(inline)]
 pub use crate::de::{Deserialize, Deserializer};
 #[doc(inline)]

@@ -769,31 +769,6 @@ impl Serialize for SystemTime {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(feature = "std", not(no_core_net)))]
-struct Wrapper<'a> {
-    pub buf: &'a mut [u8],
-    pub offset: usize,
-}
-
-#[cfg(any(feature = "std", not(no_core_net)))]
-impl<'a> fmt::Write for Wrapper<'a> {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        if self.offset > self.buf.len() {
-            return Err(fmt::Error);
-        }
-        let remaining_buf = &mut self.buf[self.offset..];
-        let raw_s = s.as_bytes();
-        let write_num = core::cmp::min(raw_s.len(), remaining_buf.len());
-        remaining_buf[..write_num].copy_from_slice(&raw_s[..write_num]);
-        self.offset += raw_s.len();
-        if write_num < raw_s.len() {
-            Err(fmt::Error)
-        } else {
-            Ok(())
-        }
-    }
-}
-
 /// Serialize a value that implements `Display` as a string, when that string is
 /// statically known to never have more than a constant `MAX_LEN` bytes.
 ///
@@ -802,21 +777,9 @@ impl<'a> fmt::Write for Wrapper<'a> {
 macro_rules! serialize_display_bounded_length {
     ($value:expr, $max:expr, $serializer:expr) => {{
         let mut buffer = [0u8; $max];
-        let written_len = {
-            let mut w = Wrapper {
-                buf: &mut buffer,
-                offset: 0,
-            };
-            write!(&mut w, "{}", $value).unwrap();
-            w.offset
-        };
-        let written = &buffer[..written_len];
-
-        // write! only provides fmt::Formatter to Display implementations, which
-        // has methods write_str and write_char but no method to write arbitrary
-        // bytes. Therefore `written` must be valid UTF-8.
-        let written_str = str::from_utf8(written).expect("must be valid UTF-8");
-        $serializer.serialize_str(written_str)
+        let mut writer = crate::format::Buf::new(&mut buffer);
+        write!(&mut writer, "{}", $value).unwrap();
+        $serializer.serialize_str(writer.as_str())
     }};
 }
 
