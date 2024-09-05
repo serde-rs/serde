@@ -769,20 +769,47 @@ impl Serialize for SystemTime {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#[cfg(any(feature = "std", not(no_core_net)))]
+struct Wrapper<'a> {
+    pub buf: &'a mut [u8],
+    pub offset: usize,
+}
+
+#[cfg(any(feature = "std", not(no_core_net)))]
+impl<'a> fmt::Write for Wrapper<'a> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        if self.offset > self.buf.len() {
+            return Err(fmt::Error);
+        }
+        let remaining_buf = &mut self.buf[self.offset..];
+        let raw_s = s.as_bytes();
+        let write_num = core::cmp::min(raw_s.len(), remaining_buf.len());
+        remaining_buf[..write_num].copy_from_slice(&raw_s[..write_num]);
+        self.offset += raw_s.len();
+        if write_num < raw_s.len() {
+            Err(fmt::Error)
+        } else {
+            Ok(())
+        }
+    }
+}
+
 /// Serialize a value that implements `Display` as a string, when that string is
 /// statically known to never have more than a constant `MAX_LEN` bytes.
 ///
 /// Panics if the `Display` impl tries to write more than `MAX_LEN` bytes.
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", not(no_core_net)))]
 macro_rules! serialize_display_bounded_length {
     ($value:expr, $max:expr, $serializer:expr) => {{
         let mut buffer = [0u8; $max];
-        let remaining_len = {
-            let mut remaining = &mut buffer[..];
-            write!(remaining, "{}", $value).unwrap();
-            remaining.len()
+        let written_len = {
+            let mut w = Wrapper {
+                buf: &mut buffer,
+                offset: 0,
+            };
+            write!(&mut w, "{}", $value).unwrap();
+            w.offset
         };
-        let written_len = buffer.len() - remaining_len;
         let written = &buffer[..written_len];
 
         // write! only provides fmt::Formatter to Display implementations, which
@@ -793,8 +820,8 @@ macro_rules! serialize_display_bounded_length {
     }};
 }
 
-#[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+#[cfg(any(feature = "std", not(no_core_net)))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
 impl Serialize for net::IpAddr {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -818,7 +845,7 @@ impl Serialize for net::IpAddr {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", not(no_core_net)))]
 const DEC_DIGITS_LUT: &[u8] = b"\
       0001020304050607080910111213141516171819\
       2021222324252627282930313233343536373839\
@@ -826,7 +853,7 @@ const DEC_DIGITS_LUT: &[u8] = b"\
       6061626364656667686970717273747576777879\
       8081828384858687888990919293949596979899";
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", not(no_core_net)))]
 #[inline]
 fn format_u8(mut n: u8, out: &mut [u8]) -> usize {
     if n >= 100 {
@@ -847,7 +874,7 @@ fn format_u8(mut n: u8, out: &mut [u8]) -> usize {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", not(no_core_net)))]
 #[test]
 fn test_format_u8() {
     let mut i = 0u8;
@@ -864,8 +891,8 @@ fn test_format_u8() {
     }
 }
 
-#[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+#[cfg(any(feature = "std", not(no_core_net)))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
 impl Serialize for net::Ipv4Addr {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -889,8 +916,8 @@ impl Serialize for net::Ipv4Addr {
     }
 }
 
-#[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+#[cfg(any(feature = "std", not(no_core_net)))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
 impl Serialize for net::Ipv6Addr {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -906,8 +933,8 @@ impl Serialize for net::Ipv6Addr {
     }
 }
 
-#[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+#[cfg(any(feature = "std", not(no_core_net)))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
 impl Serialize for net::SocketAddr {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -931,8 +958,8 @@ impl Serialize for net::SocketAddr {
     }
 }
 
-#[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+#[cfg(any(feature = "std", not(no_core_net)))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
 impl Serialize for net::SocketAddrV4 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -948,8 +975,8 @@ impl Serialize for net::SocketAddrV4 {
     }
 }
 
-#[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+#[cfg(any(feature = "std", not(no_core_net)))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
 impl Serialize for net::SocketAddrV6 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
