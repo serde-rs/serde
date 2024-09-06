@@ -15,6 +15,7 @@ fn main() {
 
     if minor >= 77 {
         println!("cargo:rustc-check-cfg=cfg(no_core_cstr)");
+        println!("cargo:rustc-check-cfg=cfg(no_core_error)");
         println!("cargo:rustc-check-cfg=cfg(no_core_net)");
         println!("cargo:rustc-check-cfg=cfg(no_core_num_saturating)");
         println!("cargo:rustc-check-cfg=cfg(no_core_try_from)");
@@ -97,6 +98,12 @@ fn main() {
     // https://blog.rust-lang.org/2024/05/02/Rust-1.78.0.html#diagnostic-attributes
     if minor < 78 {
         println!("cargo:rustc-cfg=no_diagnostic_namespace");
+    }
+
+    // The Error trait became available in core in 1.81.
+    // https://blog.rust-lang.org/2024/09/05/Rust-1.81.0.html#coreerrorerror
+    if minor < 81 {
+        println!("cargo:rustc-cfg=no_core_error");
     }
 }
 

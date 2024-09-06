@@ -325,7 +325,7 @@ pub mod __private;
 #[path = "de/seed.rs"]
 mod seed;
 
-#[cfg(not(any(feature = "std", feature = "unstable")))]
+#[cfg(all(not(feature = "std"), no_core_error))]
 mod std_error;
 
 // Re-export #[derive(Serialize, Deserialize)].
