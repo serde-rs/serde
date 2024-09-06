@@ -1717,7 +1717,6 @@ macro_rules! deserialize_enum {
 }
 
 #[cfg(any(feature = "std", not(no_core_net)))]
-#[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
 impl<'de> Deserialize<'de> for net::IpAddr {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -1738,13 +1737,11 @@ impl<'de> Deserialize<'de> for net::IpAddr {
 
 parse_ip_impl! {
     #[cfg(any(feature = "std", not(no_core_net)))]
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
     net::Ipv4Addr, "IPv4 address", 4
 }
 
 parse_ip_impl! {
     #[cfg(any(feature = "std", not(no_core_net)))]
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
     net::Ipv6Addr, "IPv6 address", 16
 }
 
@@ -1771,7 +1768,6 @@ macro_rules! parse_socket_impl {
 }
 
 #[cfg(any(feature = "std", not(no_core_net)))]
-#[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
 impl<'de> Deserialize<'de> for net::SocketAddr {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -1792,14 +1788,12 @@ impl<'de> Deserialize<'de> for net::SocketAddr {
 
 parse_socket_impl! {
     #[cfg(any(feature = "std", not(no_core_net)))]
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
     net::SocketAddrV4, "IPv4 socket address",
     |(ip, port)| net::SocketAddrV4::new(ip, port),
 }
 
 parse_socket_impl! {
     #[cfg(any(feature = "std", not(no_core_net)))]
-    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
     net::SocketAddrV6, "IPv6 socket address",
     |(ip, port)| net::SocketAddrV6::new(ip, port, 0, 0),
 }
