@@ -124,10 +124,10 @@ pub(crate) mod size_hint;
 
 pub use self::ignored_any::IgnoredAny;
 
-#[cfg(not(any(feature = "std", feature = "unstable")))]
+#[cfg(all(not(feature = "std"), no_core_error))]
 #[doc(no_inline)]
 pub use crate::std_error::Error as StdError;
-#[cfg(all(feature = "unstable", not(feature = "std")))]
+#[cfg(not(any(feature = "std", no_core_error)))]
 #[doc(no_inline)]
 pub use core::error::Error as StdError;
 #[cfg(feature = "std")]
