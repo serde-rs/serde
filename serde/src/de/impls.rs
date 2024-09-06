@@ -1586,10 +1586,8 @@ map_impl! {
 #[cfg(any(feature = "std", not(no_core_net)))]
 macro_rules! parse_ip_impl {
     (
-        $(#[$attr:meta])*
         $ty:ty, $expecting:expr, $size:tt
     ) => {
-        $(#[$attr])*
         impl<'de> Deserialize<'de> for $ty {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
@@ -1749,11 +1747,9 @@ parse_ip_impl! {
 #[cfg(any(feature = "std", not(no_core_net)))]
 macro_rules! parse_socket_impl {
     (
-        $(#[$attr:meta])*
         $ty:ty, $expecting:tt,
         $new:expr,
     ) => {
-        $(#[$attr])*
         impl<'de> Deserialize<'de> for $ty {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
