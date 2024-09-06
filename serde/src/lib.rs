@@ -238,8 +238,13 @@ mod lib {
     #[cfg(feature = "std")]
     pub use std::ffi::CString;
 
+    #[cfg(all(not(no_core_net), not(feature = "std")))]
+    pub use self::core::net;
     #[cfg(feature = "std")]
-    pub use std::{error, net};
+    pub use std::net;
+
+    #[cfg(feature = "std")]
+    pub use std::error;
 
     #[cfg(feature = "std")]
     pub use std::collections::{HashMap, HashSet};
@@ -304,6 +309,8 @@ mod integer128;
 
 pub mod de;
 pub mod ser;
+
+mod format;
 
 #[doc(inline)]
 pub use crate::de::{Deserialize, Deserializer};

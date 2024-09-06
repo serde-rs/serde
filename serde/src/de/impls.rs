@@ -1604,7 +1604,7 @@ macro_rules! parse_ip_impl {
     };
 }
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", not(no_core_net)))]
 macro_rules! variant_identifier {
     (
         $name_kind:ident ($($variant:ident; $bytes:expr; $index:expr),*)
@@ -1679,7 +1679,7 @@ macro_rules! variant_identifier {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", not(no_core_net)))]
 macro_rules! deserialize_enum {
     (
         $name:ident $name_kind:ident ($($variant:ident; $bytes:expr; $index:expr),*)
@@ -1716,8 +1716,8 @@ macro_rules! deserialize_enum {
     }
 }
 
-#[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+#[cfg(any(feature = "std", not(no_core_net)))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
 impl<'de> Deserialize<'de> for net::IpAddr {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -1737,14 +1737,14 @@ impl<'de> Deserialize<'de> for net::IpAddr {
 }
 
 parse_ip_impl! {
-    #[cfg(feature = "std")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+    #[cfg(any(feature = "std", not(no_core_net)))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
     net::Ipv4Addr, "IPv4 address", 4
 }
 
 parse_ip_impl! {
-    #[cfg(feature = "std")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+    #[cfg(any(feature = "std", not(no_core_net)))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
     net::Ipv6Addr, "IPv6 address", 16
 }
 
@@ -1770,8 +1770,8 @@ macro_rules! parse_socket_impl {
     };
 }
 
-#[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+#[cfg(any(feature = "std", not(no_core_net)))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
 impl<'de> Deserialize<'de> for net::SocketAddr {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -1791,15 +1791,15 @@ impl<'de> Deserialize<'de> for net::SocketAddr {
 }
 
 parse_socket_impl! {
-    #[cfg(feature = "std")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+    #[cfg(any(feature = "std", not(no_core_net)))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
     net::SocketAddrV4, "IPv4 socket address",
     |(ip, port)| net::SocketAddrV4::new(ip, port),
 }
 
 parse_socket_impl! {
-    #[cfg(feature = "std")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+    #[cfg(any(feature = "std", not(no_core_net)))]
+    #[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
     net::SocketAddrV6, "IPv6 socket address",
     |(ip, port)| net::SocketAddrV6::new(ip, port, 0, 0),
 }
@@ -3160,13 +3160,13 @@ atomic_impl! {
     AtomicU64 "64"
 }
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", not(no_core_net)))]
 struct FromStrVisitor<T> {
     expecting: &'static str,
     ty: PhantomData<T>,
 }
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", not(no_core_net)))]
 impl<T> FromStrVisitor<T> {
     fn new(expecting: &'static str) -> Self {
         FromStrVisitor {
@@ -3176,7 +3176,7 @@ impl<T> FromStrVisitor<T> {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "std", not(no_core_net)))]
 impl<'de, T> Visitor<'de> for FromStrVisitor<T>
 where
     T: str::FromStr,

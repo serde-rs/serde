@@ -15,6 +15,7 @@ fn main() {
 
     if minor >= 77 {
         println!("cargo:rustc-check-cfg=cfg(no_core_cstr)");
+        println!("cargo:rustc-check-cfg=cfg(no_core_net)");
         println!("cargo:rustc-check-cfg=cfg(no_core_num_saturating)");
         println!("cargo:rustc-check-cfg=cfg(no_core_try_from)");
         println!("cargo:rustc-check-cfg=cfg(no_diagnostic_namespace)");
@@ -84,6 +85,12 @@ fn main() {
     // https://blog.rust-lang.org/2023/11/16/Rust-1.74.0.html#stabilized-apis
     if minor < 74 {
         println!("cargo:rustc-cfg=no_core_num_saturating");
+    }
+
+    // Support for core::net stabilized in Rust 1.77.
+    // https://blog.rust-lang.org/2024/03/21/Rust-1.77.0.html
+    if minor < 77 {
+        println!("cargo:rustc-cfg=no_core_net");
     }
 
     // Support for the `#[diagnostic]` tool attribute namespace
