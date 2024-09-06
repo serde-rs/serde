@@ -1583,6 +1583,7 @@ map_impl! {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#[cfg(any(feature = "std", not(no_core_net)))]
 macro_rules! parse_ip_impl {
     (
         $(#[$attr:meta])*
@@ -1735,16 +1736,17 @@ impl<'de> Deserialize<'de> for net::IpAddr {
     }
 }
 
+#[cfg(any(feature = "std", not(no_core_net)))]
 parse_ip_impl! {
-    #[cfg(any(feature = "std", not(no_core_net)))]
     net::Ipv4Addr, "IPv4 address", 4
 }
 
+#[cfg(any(feature = "std", not(no_core_net)))]
 parse_ip_impl! {
-    #[cfg(any(feature = "std", not(no_core_net)))]
     net::Ipv6Addr, "IPv6 address", 16
 }
 
+#[cfg(any(feature = "std", not(no_core_net)))]
 macro_rules! parse_socket_impl {
     (
         $(#[$attr:meta])*
@@ -1786,14 +1788,14 @@ impl<'de> Deserialize<'de> for net::SocketAddr {
     }
 }
 
+#[cfg(any(feature = "std", not(no_core_net)))]
 parse_socket_impl! {
-    #[cfg(any(feature = "std", not(no_core_net)))]
     net::SocketAddrV4, "IPv4 socket address",
     |(ip, port)| net::SocketAddrV4::new(ip, port),
 }
 
+#[cfg(any(feature = "std", not(no_core_net)))]
 parse_socket_impl! {
-    #[cfg(any(feature = "std", not(no_core_net)))]
     net::SocketAddrV6, "IPv6 socket address",
     |(ip, port)| net::SocketAddrV6::new(ip, port, 0, 0),
 }
