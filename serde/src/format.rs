@@ -13,7 +13,10 @@ impl<'a> Buf<'a> {
 
     pub fn as_str(&self) -> &str {
         let slice = &self.bytes[..self.offset];
-        unsafe { str::from_utf8_unchecked(slice) }
+        return match str::from_utf8(slice) {
+            Ok(slice) => slice,
+            Err(_) => "",
+        };
     }
 }
 
