@@ -476,14 +476,16 @@ mod content {
         where
             D: Deserializer<'de>,
         {
-            Deserialize::deserialize(deserializer).map(|v| Content::Some(Box::new(v)))
+            let v = tri!(Deserialize::deserialize(deserializer));
+            Ok(Content::Some(Box::new(v)))
         }
 
         fn visit_newtype_struct<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
         where
             D: Deserializer<'de>,
         {
-            Deserialize::deserialize(deserializer).map(|v| Content::Newtype(Box::new(v)))
+            let v = tri!(Deserialize::deserialize(deserializer));
+            Ok(Content::Newtype(Box::new(v)))
         }
 
         fn visit_seq<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
@@ -1113,9 +1115,13 @@ mod content {
         V: Visitor<'de>,
         E: de::Error,
     {
-        let map = content
-            .into_iter()
-            .map(|(k, v)| (ContentDeserializer::new(k), ContentDeserializer::new(v)));
+        fn content_deserializer_pair<'de, E>(
+            (k, v): (Content<'de>, Content<'de>),
+        ) -> (ContentDeserializer<'de, E>, ContentDeserializer<'de, E>) {
+            (ContentDeserializer::new(k), ContentDeserializer::new(v))
+        }
+
+        let map = content.into_iter().map(content_deserializer_pair);
         let mut map_visitor = MapDeserializer::new(map);
         let value = tri!(visitor.visit_map(&mut map_visitor));
         tri!(map_visitor.end());
@@ -1709,12 +1715,19 @@ mod content {
         V: Visitor<'de>,
         E: de::Error,
     {
-        let map = content.iter().map(|(k, v)| {
+        fn content_ref_deserializer_pair<'a, 'de, E>(
+            (k, v): &'a (Content<'de>, Content<'de>),
+        ) -> (
+            ContentRefDeserializer<'a, 'de, E>,
+            ContentRefDeserializer<'a, 'de, E>,
+        ) {
             (
                 ContentRefDeserializer::new(k),
                 ContentRefDeserializer::new(v),
             )
-        });
+        }
+
+        let map = content.iter().map(content_ref_deserializer_pair);
         let mut map_visitor = MapDeserializer::new(map);
         let value = tri!(visitor.visit_map(&mut map_visitor));
         tri!(map_visitor.end());
