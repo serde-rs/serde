@@ -1585,9 +1585,7 @@ map_impl! {
 
 #[cfg(any(feature = "std", not(no_core_net)))]
 macro_rules! parse_ip_impl {
-    (
-        $ty:ty, $expecting:expr, $size:tt
-    ) => {
+    ($ty:ty, $expecting:expr, $size:tt) => {
         impl<'de> Deserialize<'de> for $ty {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
@@ -1735,14 +1733,10 @@ impl<'de> Deserialize<'de> for net::IpAddr {
 }
 
 #[cfg(any(feature = "std", not(no_core_net)))]
-parse_ip_impl! {
-    net::Ipv4Addr, "IPv4 address", 4
-}
+parse_ip_impl!(net::Ipv4Addr, "IPv4 address", 4);
 
 #[cfg(any(feature = "std", not(no_core_net)))]
-parse_ip_impl! {
-    net::Ipv6Addr, "IPv6 address", 16
-}
+parse_ip_impl!(net::Ipv6Addr, "IPv6 address", 16);
 
 #[cfg(any(feature = "std", not(no_core_net)))]
 macro_rules! parse_socket_impl {
