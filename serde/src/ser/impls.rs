@@ -784,7 +784,6 @@ macro_rules! serialize_display_bounded_length {
 }
 
 #[cfg(any(feature = "std", not(no_core_net)))]
-#[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
 impl Serialize for net::IpAddr {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -855,7 +854,6 @@ fn test_format_u8() {
 }
 
 #[cfg(any(feature = "std", not(no_core_net)))]
-#[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
 impl Serialize for net::Ipv4Addr {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -880,7 +878,6 @@ impl Serialize for net::Ipv4Addr {
 }
 
 #[cfg(any(feature = "std", not(no_core_net)))]
-#[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
 impl Serialize for net::Ipv6Addr {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -897,7 +894,6 @@ impl Serialize for net::Ipv6Addr {
 }
 
 #[cfg(any(feature = "std", not(no_core_net)))]
-#[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
 impl Serialize for net::SocketAddr {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -922,7 +918,6 @@ impl Serialize for net::SocketAddr {
 }
 
 #[cfg(any(feature = "std", not(no_core_net)))]
-#[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
 impl Serialize for net::SocketAddrV4 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -939,7 +934,6 @@ impl Serialize for net::SocketAddrV4 {
 }
 
 #[cfg(any(feature = "std", not(no_core_net)))]
-#[cfg_attr(docsrs, doc(cfg(any(feature = "std", not(no_core_net)))))]
 impl Serialize for net::SocketAddrV6 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
