@@ -313,6 +313,17 @@ mod content {
         }
     }
 
+    impl<'a, 'de, E> de::IntoDeserializer<'de, E> for &'a Content<'de>
+    where
+        E: de::Error,
+    {
+        type Deserializer = ContentRefDeserializer<'a, 'de, E>;
+
+        fn into_deserializer(self) -> Self::Deserializer {
+            ContentRefDeserializer::new(self)
+        }
+    }
+
     /// Used to capture data in [`Content`] from other deserializers.
     /// Cannot capture externally tagged enums, `i128` and `u128`.
     struct ContentVisitor<'de> {
@@ -1100,8 +1111,7 @@ mod content {
         V: Visitor<'de>,
         E: de::Error,
     {
-        let seq = content.into_iter().map(ContentDeserializer::new);
-        let mut seq_visitor = SeqDeserializer::new(seq);
+        let mut seq_visitor = SeqDeserializer::new(content.into_iter());
         let value = tri!(visitor.visit_seq(&mut seq_visitor));
         tri!(seq_visitor.end());
         Ok(value)
@@ -1115,14 +1125,7 @@ mod content {
         V: Visitor<'de>,
         E: de::Error,
     {
-        fn content_deserializer_pair<'de, E>(
-            (k, v): (Content<'de>, Content<'de>),
-        ) -> (ContentDeserializer<'de, E>, ContentDeserializer<'de, E>) {
-            (ContentDeserializer::new(k), ContentDeserializer::new(v))
-        }
-
-        let map = content.into_iter().map(content_deserializer_pair);
-        let mut map_visitor = MapDeserializer::new(map);
+        let mut map_visitor = MapDeserializer::new(content.into_iter());
         let value = tri!(visitor.visit_map(&mut map_visitor));
         tri!(map_visitor.end());
         Ok(value)
@@ -1700,8 +1703,7 @@ mod content {
         V: Visitor<'de>,
         E: de::Error,
     {
-        let seq = content.iter().map(ContentRefDeserializer::new);
-        let mut seq_visitor = SeqDeserializer::new(seq);
+        let mut seq_visitor = SeqDeserializer::new(content.iter());
         let value = tri!(visitor.visit_seq(&mut seq_visitor));
         tri!(seq_visitor.end());
         Ok(value)
@@ -1715,16 +1717,10 @@ mod content {
         V: Visitor<'de>,
         E: de::Error,
     {
-        fn content_ref_deserializer_pair<'a, 'de, E>(
+        fn content_ref_deserializer_pair<'a, 'de>(
             (k, v): &'a (Content<'de>, Content<'de>),
-        ) -> (
-            ContentRefDeserializer<'a, 'de, E>,
-            ContentRefDeserializer<'a, 'de, E>,
-        ) {
-            (
-                ContentRefDeserializer::new(k),
-                ContentRefDeserializer::new(v),
-            )
+        ) -> (&'a Content<'de>, &'a Content<'de>) {
+            (k, v)
         }
 
         let map = content.iter().map(content_ref_deserializer_pair);
