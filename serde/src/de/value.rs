@@ -1715,6 +1715,14 @@ mod private {
         }
     }
 
+    impl<'a, A, B> Pair for &'a (A, B) {
+        type First = &'a A;
+        type Second = &'a B;
+        fn split(self) -> (&'a A, &'a B) {
+            (&self.0, &self.1)
+        }
+    }
+
     pub type First<T> = <T as Pair>::First;
     pub type Second<T> = <T as Pair>::Second;
 }

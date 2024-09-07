@@ -1717,14 +1717,7 @@ mod content {
         V: Visitor<'de>,
         E: de::Error,
     {
-        fn content_ref_deserializer_pair<'a, 'de>(
-            (k, v): &'a (Content<'de>, Content<'de>),
-        ) -> (&'a Content<'de>, &'a Content<'de>) {
-            (k, v)
-        }
-
-        let map = content.iter().map(content_ref_deserializer_pair);
-        let mut map_visitor = MapDeserializer::new(map);
+        let mut map_visitor = MapDeserializer::new(content.iter());
         let value = tri!(visitor.visit_map(&mut map_visitor));
         tri!(map_visitor.end());
         Ok(value)
