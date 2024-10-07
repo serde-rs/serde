@@ -27,6 +27,7 @@
     // clippy bug: https://github.com/rust-lang/rust-clippy/issues/6797
     clippy::manual_map,
     clippy::match_like_matches_macro,
+    clippy::needless_lifetimes,
     clippy::needless_pass_by_value,
     clippy::too_many_arguments,
     clippy::trivially_copy_pass_by_ref,

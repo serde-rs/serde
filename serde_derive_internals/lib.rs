@@ -9,6 +9,7 @@
     // clippy bug: https://github.com/rust-lang/rust-clippy/issues/6797
     clippy::manual_map,
     clippy::missing_panics_doc,
+    clippy::needless_lifetimes,
     clippy::redundant_field_names,
     clippy::result_unit_err,
     clippy::should_implement_trait,
