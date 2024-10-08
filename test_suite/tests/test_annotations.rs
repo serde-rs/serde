@@ -2655,9 +2655,44 @@ mod flatten {
 
             #[derive(Debug, PartialEq, Serialize, Deserialize)]
             enum Enum {
+                Unit,
                 Newtype(HashMap<String, String>),
                 Tuple(u32, u32),
                 Struct { index: u32, value: u32 },
+            }
+
+            #[test]
+            fn unit() {
+                let value = Flatten {
+                    data: Enum::Unit,
+                    extra: HashMap::from_iter([("extra_key".into(), "extra value".into())]),
+                };
+                assert_tokens(
+                    &value,
+                    &[
+                        Token::Map { len: None },
+                        // data
+                        Token::Str("Unit"), // variant
+                        Token::Unit,
+                        // extra
+                        Token::Str("extra_key"),
+                        Token::Str("extra value"),
+                        Token::MapEnd,
+                    ],
+                );
+                assert_de_tokens(
+                    &value,
+                    &[
+                        Token::Map { len: None },
+                        // extra
+                        Token::Str("extra_key"),
+                        Token::Str("extra value"),
+                        // data
+                        Token::Str("Unit"), // variant
+                        Token::Unit,
+                        Token::MapEnd,
+                    ],
+                );
             }
 
             #[test]
