@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 use std::ptr;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{parse_quote, Ident, Index, Member};
+use syn::{parse_quote, Ident, Index};
 
 pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<TokenStream> {
     replace_receiver(input);
@@ -504,14 +504,53 @@ fn deserialize_tuple(
     let nfields = fields.len();
 
     let visit_newtype_struct = match form {
-        TupleForm::Tuple if nfields == 1 => {
-            Some(deserialize_newtype_struct(&type_path, params, &fields[0]))
+        TupleForm::Tuple if field_count == 1 => {
+            let visit_newtype_struct = Stmts(read_fields_in_order(
+                &type_path,
+                params,
+                fields,
+                false,
+                cattrs,
+                expecting,
+                |_, _, field, _, _| match field.attrs.deserialize_with() {
+                    None => {
+                        let field_ty = field.ty;
+                        let span = field.original.span();
+                        let func =
+                            quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize);
+                        quote! {
+                            #func(__e)?
+                        }
+                    }
+                    Some(path) => {
+                        quote! {
+                            #path(__e)?
+                        }
+                    }
+                },
+            ));
+
+            Some(quote! {
+                #[inline]
+                fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::__private::Result<Self::Value, __E::Error>
+                where
+                    __E: _serde::Deserializer<#delife>,
+                {
+                    #visit_newtype_struct
+                }
+            })
         }
         _ => None,
     };
 
-    let visit_seq = Stmts(deserialize_seq(
-        &type_path, params, fields, false, cattrs, expecting,
+    let visit_seq = Stmts(read_fields_in_order(
+        &type_path,
+        params,
+        fields,
+        false,
+        cattrs,
+        expecting,
+        read_from_seq_access,
     ));
 
     let visitor_expr = quote! {
@@ -521,7 +560,7 @@ fn deserialize_tuple(
         }
     };
     let dispatch = match form {
-        TupleForm::Tuple if nfields == 1 => {
+        TupleForm::Tuple if field_count != 0 && nfields == 1 => {
             let type_name = cattrs.name().deserialize_name();
             quote! {
                 _serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr)
@@ -602,10 +641,37 @@ fn deserialize_tuple_in_place(
 
     let nfields = fields.len();
 
-    let visit_newtype_struct = if nfields == 1 {
-        // We do not generate deserialize_in_place if every field has a
-        // deserialize_with.
-        assert!(fields[0].attrs.deserialize_with().is_none());
+    let visit_newtype_struct = if field_count == 1 {
+        // We deserialize newtype, so only one field is not skipped
+        let index = fields
+            .iter()
+            .position(|field| !field.attrs.skip_deserializing())
+            .map(Index::from)
+            .unwrap();
+        let mut deserialize = quote! {
+            _serde::Deserialize::deserialize_in_place(__e, &mut self.place.#index)
+        };
+        // Deserialize and write defaults if at least one field is skipped,
+        // otherwise only deserialize
+        if nfields > 1 {
+            let write_defaults = fields.iter().enumerate().filter_map(|(index, field)| {
+                if field.attrs.skip_deserializing() {
+                    let index = Index::from(index);
+                    let default = Expr(expr_is_missing(field, cattrs));
+                    return Some(quote!(self.place.#index = #default;));
+                }
+                None
+            });
+            deserialize = quote! {
+                match #deserialize {
+                    _serde::__private::Ok(_) => {
+                        #(#write_defaults)*
+                        _serde::__private::Ok(())
+                    }
+                    _serde::__private::Err(__err) => _serde::__private::Err(__err),
+                }
+            }
+        }
 
         Some(quote! {
             #[inline]
@@ -613,14 +679,16 @@ fn deserialize_tuple_in_place(
             where
                 __E: _serde::Deserializer<#delife>,
             {
-                _serde::Deserialize::deserialize_in_place(__e, &mut self.place.0)
+                #deserialize
             }
         })
     } else {
         None
     };
 
-    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
+    let visit_seq = Stmts(read_fields_in_order_in_place(
+        params, fields, cattrs, expecting,
+    ));
 
     let visitor_expr = quote! {
         __Visitor {
@@ -630,7 +698,7 @@ fn deserialize_tuple_in_place(
     };
 
     let type_name = cattrs.name().deserialize_name();
-    let dispatch = if nfields == 1 {
+    let dispatch = if field_count != 0 && nfields == 1 {
         quote!(_serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
     } else {
         quote!(_serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #field_count, #visitor_expr))
@@ -675,13 +743,18 @@ fn deserialize_tuple_in_place(
     }
 }
 
-fn deserialize_seq(
+/// Generates code that will read specified `fields` in order, one-by-one,
+/// and then construct a final value from them. All skipped fields will receive
+/// their default values, all other will be read using the code, returned by
+/// the `read_field` function.
+fn read_fields_in_order(
     type_path: &TokenStream,
     params: &Parameters,
     fields: &[Field],
     is_struct: bool,
     cattrs: &attr::Container,
     expecting: &str,
+    read_field: impl Fn(&Parameters, usize, &Field, &attr::Container, &str) -> TokenStream,
 ) -> Fragment {
     let vars = (0..fields.len()).map(field_i as fn(_) -> _);
 
@@ -704,33 +777,11 @@ fn deserialize_seq(
                 let #var = #default;
             }
         } else {
-            let visit = match field.attrs.deserialize_with() {
-                None => {
-                    let field_ty = field.ty;
-                    let span = field.original.span();
-                    let func =
-                        quote_spanned!(span=> _serde::de::SeqAccess::next_element::<#field_ty>);
-                    quote!(#func(&mut __seq)?)
-                }
-                Some(path) => {
-                    let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
-                    quote!({
-                        #wrapper
-                        _serde::__private::Option::map(
-                            _serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)?,
-                            |__wrap| __wrap.value)
-                    })
-                }
-            };
-            let value_if_none = expr_is_missing_seq(None, index_in_seq, field, cattrs, expecting);
-            let assign = quote! {
-                let #var = match #visit {
-                    _serde::__private::Some(__value) => __value,
-                    _serde::__private::None => #value_if_none,
-                };
-            };
+            let read = read_field(params, index_in_seq, field, cattrs, expecting);
             index_in_seq += 1;
-            assign
+            quote! {
+                let #var = #read;
+            }
         }
     });
 
@@ -774,8 +825,46 @@ fn deserialize_seq(
     }
 }
 
+/// Generates code that reads specified field from a `SeqAccess`. The field is located at `index`
+/// position in the list of fields in the serialized form.
+fn read_from_seq_access(
+    params: &Parameters,
+    index: usize,
+    field: &Field,
+    cattrs: &attr::Container,
+    expecting: &str,
+) -> TokenStream {
+    let visit = match field.attrs.deserialize_with() {
+        None => {
+            let field_ty = field.ty;
+            let span = field.original.span();
+            let func = quote_spanned!(span=> _serde::de::SeqAccess::next_element::<#field_ty>);
+            quote!(#func(&mut __seq)?)
+        }
+        Some(path) => {
+            let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
+            quote!({
+                #wrapper
+                _serde::__private::Option::map(
+                    _serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)?,
+                    |__wrap| __wrap.value)
+            })
+        }
+    };
+    let value_if_none = expr_is_missing_seq(None, index, field, cattrs, expecting);
+    quote! {
+        match #visit {
+            _serde::__private::Some(__value) => __value,
+            _serde::__private::None => #value_if_none,
+        }
+    }
+}
+
+/// Generates code that will read specified `fields` in order, one-by-one,
+/// and then construct a final value from them. All skipped fields will receive
+/// their default values, all other will be read from a `SeqAccess`.
 #[cfg(feature = "deserialize_in_place")]
-fn deserialize_seq_in_place(
+fn read_fields_in_order_in_place(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
@@ -853,50 +942,6 @@ fn deserialize_seq_in_place(
         #let_default
         #(#write_values)*
         _serde::__private::Ok(())
-    }
-}
-
-fn deserialize_newtype_struct(
-    type_path: &TokenStream,
-    params: &Parameters,
-    field: &Field,
-) -> TokenStream {
-    let delife = params.borrowed.de_lifetime();
-    let field_ty = field.ty;
-
-    let value = match field.attrs.deserialize_with() {
-        None => {
-            let span = field.original.span();
-            let func = quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize);
-            quote! {
-                #func(__e)?
-            }
-        }
-        Some(path) => {
-            quote! {
-                #path(__e)?
-            }
-        }
-    };
-
-    let mut result = quote!(#type_path(__field0));
-    if params.has_getter {
-        let this_type = &params.this_type;
-        let (_, ty_generics, _) = params.generics.split_for_impl();
-        result = quote! {
-            _serde::__private::Into::<#this_type #ty_generics>::into(#result)
-        };
-    }
-
-    quote! {
-        #[inline]
-        fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::__private::Result<Self::Value, __E::Error>
-        where
-            __E: _serde::Deserializer<#delife>,
-        {
-            let __field0: #field_ty = #value;
-            _serde::__private::Ok(#result)
-        }
     }
 }
 
@@ -980,8 +1025,14 @@ fn deserialize_struct(
                 quote!(mut __seq)
             };
 
-            let visit_seq = Stmts(deserialize_seq(
-                &type_path, params, fields, true, cattrs, expecting,
+            let visit_seq = Stmts(read_fields_in_order(
+                &type_path,
+                params,
+                fields,
+                true,
+                cattrs,
+                expecting,
+                read_from_seq_access,
             ));
 
             Some(quote! {
@@ -1137,7 +1188,9 @@ fn deserialize_struct_in_place(
     } else {
         quote!(mut __seq)
     };
-    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
+    let visit_seq = Stmts(read_fields_in_order_in_place(
+        params, fields, cattrs, expecting,
+    ));
     let visit_map = Stmts(deserialize_map_in_place(params, fields, cattrs));
     let field_names = field_names_idents
         .iter()
@@ -1487,6 +1540,7 @@ fn deserialize_adjacently_tagged_enum(
                 Style::Unit => quote! {
                     _serde::__private::Ok(#this_value::#variant_ident)
                 },
+                // Feature https://github.com/serde-rs/serde/issues/1013
                 Style::Newtype if variant.attrs.deserialize_with().is_none() => {
                     let span = variant.original.span();
                     let func = quote_spanned!(span=> _serde::__private::de::missing_field);
@@ -1778,7 +1832,7 @@ fn deserialize_untagged_enum_after(
         #first_attempt
 
         #(
-            if let _serde::__private::Ok(__ok) = #attempts {
+            if let _serde::__private::Ok::<_, __D::Error>(__ok) = #attempts {
                 return _serde::__private::Ok(__ok);
             }
         )*
@@ -1792,8 +1846,19 @@ fn deserialize_externally_tagged_variant(
     variant: &Variant,
     cattrs: &attr::Container,
 ) -> Fragment {
+    // Feature https://github.com/serde-rs/serde/issues/1013
     if let Some(path) = variant.attrs.deserialize_with() {
-        let (wrapper, wrapper_ty, unwrap_fn) = wrap_deserialize_variant_with(params, variant, path);
+        let field_tys = variant.fields.iter().filter_map(|field| {
+            if field.attrs.skip_deserializing() {
+                None
+            } else {
+                Some(field.ty)
+            }
+        });
+        let (wrapper, wrapper_ty) = wrap_deserialize_with(params, &quote!((#(#field_tys),*)), path);
+
+        let unwrap_fn = unwrap_to_variant_closure(params, variant, cattrs, true);
+
         return quote_block! {
             #wrapper
             _serde::__private::Result::map(
@@ -1840,32 +1905,27 @@ fn deserialize_internally_tagged_variant(
     cattrs: &attr::Container,
     deserializer: TokenStream,
 ) -> Fragment {
+    // Feature https://github.com/serde-rs/serde/issues/1013
     if variant.attrs.deserialize_with().is_some() {
         return deserialize_untagged_variant(params, variant, cattrs, deserializer);
     }
 
     let variant_ident = &variant.ident;
 
-    match effective_style(variant) {
+    match variant.de_style() {
         Style::Unit => {
             let this_value = &params.this_value;
             let type_name = params.type_name();
             let variant_name = variant.ident.to_string();
-            let default = variant.fields.first().map(|field| {
-                let default = Expr(expr_is_missing(field, cattrs));
-                quote!((#default))
-            });
+            let default = construct_default_tuple(variant, cattrs);
             quote_block! {
                 _serde::Deserializer::deserialize_any(#deserializer, _serde::__private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name))?;
                 _serde::__private::Ok(#this_value::#variant_ident #default)
             }
         }
-        Style::Newtype => deserialize_untagged_newtype_variant(
-            variant_ident,
-            params,
-            &variant.fields[0],
-            &deserializer,
-        ),
+        Style::Newtype => {
+            deserialize_untagged_newtype_variant(params, variant, cattrs, deserializer)
+        }
         Style::Struct => deserialize_struct(
             params,
             &variant.fields,
@@ -1882,8 +1942,9 @@ fn deserialize_untagged_variant(
     cattrs: &attr::Container,
     deserializer: TokenStream,
 ) -> Fragment {
+    // Feature https://github.com/serde-rs/serde/issues/1013
     if let Some(path) = variant.attrs.deserialize_with() {
-        let unwrap_fn = unwrap_to_variant_closure(params, variant, false);
+        let unwrap_fn = unwrap_to_variant_closure(params, variant, cattrs, false);
         return quote_block! {
             _serde::__private::Result::map(#path(#deserializer), #unwrap_fn)
         };
@@ -1891,15 +1952,12 @@ fn deserialize_untagged_variant(
 
     let variant_ident = &variant.ident;
 
-    match effective_style(variant) {
+    match variant.de_style() {
         Style::Unit => {
             let this_value = &params.this_value;
             let type_name = params.type_name();
             let variant_name = variant.ident.to_string();
-            let default = variant.fields.first().map(|field| {
-                let default = Expr(expr_is_missing(field, cattrs));
-                quote!((#default))
-            });
+            let default = construct_default_tuple(variant, cattrs);
             quote_expr! {
                 match _serde::Deserializer::deserialize_any(
                     #deserializer,
@@ -1910,12 +1968,9 @@ fn deserialize_untagged_variant(
                 }
             }
         }
-        Style::Newtype => deserialize_untagged_newtype_variant(
-            variant_ident,
-            params,
-            &variant.fields[0],
-            &deserializer,
-        ),
+        Style::Newtype => {
+            deserialize_untagged_newtype_variant(params, variant, cattrs, deserializer)
+        }
         Style::Tuple => deserialize_tuple(
             params,
             &variant.fields,
@@ -1970,26 +2025,52 @@ fn deserialize_externally_tagged_newtype_variant(
 }
 
 fn deserialize_untagged_newtype_variant(
-    variant_ident: &syn::Ident,
     params: &Parameters,
-    field: &Field,
-    deserializer: &TokenStream,
+    variant: &Variant,
+    cattrs: &attr::Container,
+    deserializer: TokenStream,
 ) -> Fragment {
     let this_value = &params.this_value;
-    let field_ty = field.ty;
-    match field.attrs.deserialize_with() {
+    let variant_ident = &variant.ident;
+
+    let fields = variant.fields.iter().enumerate().map(|(i, _)| field_i(i));
+    let define = variant.fields.iter().enumerate().filter_map(|(i, field)| {
+        if field.attrs.skip_deserializing() {
+            let name = field_i(i);
+            let field_ty = field.ty;
+            // This expression always will generate access to default implementation --
+            // see comments on `expr_is_missing`
+            let expr = Expr(expr_is_missing(field, cattrs));
+            return Some(quote!(let #name: #field_ty = #expr;));
+        }
+        None
+    });
+    // We deserialize newtype struct, so only one field is not skipped
+    let (i, field) = variant
+        .fields
+        .iter()
+        .enumerate()
+        .find(|(_, field)| !field.attrs.skip_deserializing())
+        .expect("checked in Variant::de_style()");
+
+    let name = field_i(i);
+    let expr = match field.attrs.deserialize_with() {
         None => {
             let span = field.original.span();
-            let func = quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize);
-            quote_expr! {
-                _serde::__private::Result::map(#func(#deserializer), #this_value::#variant_ident)
-            }
+            quote_spanned!(span=> _serde::Deserialize::deserialize)
         }
-        Some(path) => {
-            quote_block! {
-                let __value: _serde::__private::Result<#field_ty, _> = #path(#deserializer);
-                _serde::__private::Result::map(__value, #this_value::#variant_ident)
+        Some(path) => quote!(#path),
+    };
+
+    quote_expr! {
+        match #expr(#deserializer) {
+            _serde::__private::Ok(#name) => {
+                #(#define)*
+                _serde::__private::Ok(#this_value::#variant_ident(
+                    #(#fields,)*
+                ))
             }
+            _serde::__private::Err(__err) => _serde::__private::Err(__err),
         }
     }
 }
@@ -2891,44 +2972,28 @@ fn wrap_deserialize_field_with(
     wrap_deserialize_with(params, &quote!(#field_ty), deserialize_with)
 }
 
-fn wrap_deserialize_variant_with(
-    params: &Parameters,
-    variant: &Variant,
-    deserialize_with: &syn::ExprPath,
-) -> (TokenStream, TokenStream, TokenStream) {
-    let field_tys = variant.fields.iter().map(|field| field.ty);
-    let (wrapper, wrapper_ty) =
-        wrap_deserialize_with(params, &quote!((#(#field_tys),*)), deserialize_with);
-
-    let unwrap_fn = unwrap_to_variant_closure(params, variant, true);
-
-    (wrapper, wrapper_ty, unwrap_fn)
-}
-
 // Generates closure that converts single input parameter to the final value.
 fn unwrap_to_variant_closure(
     params: &Parameters,
     variant: &Variant,
+    cattrs: &attr::Container,
     with_wrapper: bool,
 ) -> TokenStream {
     let this_value = &params.this_value;
     let variant_ident = &variant.ident;
 
+    let fields = variant
+        .fields
+        .iter()
+        .filter(|field| !field.attrs.skip_deserializing());
     let (arg, wrapper) = if with_wrapper {
         (quote! { __wrap }, quote! { __wrap.value })
     } else {
-        let field_tys = variant.fields.iter().map(|field| field.ty);
+        let field_tys = fields.clone().map(|field| field.ty);
         (quote! { __wrap: (#(#field_tys),*) }, quote! { __wrap })
     };
 
-    let field_access = (0..variant.fields.len()).map(|n| {
-        Member::Unnamed(Index {
-            index: n as u32,
-            span: Span::call_site(),
-        })
-    });
-
-    match variant.style {
+    match variant.de_style() {
         Style::Struct if variant.fields.len() == 1 => {
             let member = &variant.fields[0].member;
             quote! {
@@ -2936,14 +3001,40 @@ fn unwrap_to_variant_closure(
             }
         }
         Style::Struct => {
-            let members = variant.fields.iter().map(|field| &field.member);
+            let mut i = 0;
+            let members = variant.fields.iter().map(|field| {
+                let name = &field.member;
+                let index = Index::from(i);
+                i += 1;
+
+                if field.attrs.skip_deserializing() {
+                    let expr = Expr(expr_is_missing(&field, cattrs));
+                    quote!(#name: #expr)
+                } else {
+                    quote!(#name: #wrapper.#index)
+                }
+            });
             quote! {
-                |#arg| #this_value::#variant_ident { #(#members: #wrapper.#field_access),* }
+                |#arg| #this_value::#variant_ident { #(#members),* }
             }
         }
-        Style::Tuple => quote! {
-            |#arg| #this_value::#variant_ident(#(#wrapper.#field_access),*)
-        },
+        Style::Tuple => {
+            let mut i = 0;
+            let members = variant.fields.iter().map(|field| {
+                let index = Index::from(i);
+                i += 1;
+
+                if field.attrs.skip_deserializing() {
+                    let expr = Expr(expr_is_missing(&field, cattrs));
+                    quote!(#expr)
+                } else {
+                    quote!(#wrapper.#index)
+                }
+            });
+            quote! {
+                |#arg| #this_value::#variant_ident(#(#members),*)
+            }
+        }
         Style::Newtype => quote! {
             |#arg| #this_value::#variant_ident(#wrapper)
         },
@@ -2953,6 +3044,13 @@ fn unwrap_to_variant_closure(
     }
 }
 
+/// The expression, generated by this function, depends on the `__A` type, if field
+/// or a container does not have a `#[serde(default)]` attribute and have a
+/// `#[serde(deserialize_with)]` attribute. In that case type `__A::Error` should be
+/// valid.
+///
+/// If field is skipped, then it automatically gets the `#[serde(default)]` attribute,
+/// so this function can be safely called for skipped fields in any context.
 fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
     match field.attrs.default() {
         attr::Default::Default => {
@@ -3020,10 +3118,24 @@ fn expr_is_missing_seq(
     }
 }
 
-fn effective_style(variant: &Variant) -> Style {
-    match variant.style {
-        Style::Newtype if variant.fields[0].attrs.skip_deserializing() => Style::Unit,
-        other => other,
+/// Constructs a tuple variant with default values of all fields
+fn construct_default_tuple(variant: &Variant, cattrs: &attr::Container) -> Option<TokenStream> {
+    // Tuple variant with some fields, including newtype variant
+    if variant.fields.len() > 0 {
+        // If we have some fields, them all of them are skipped, because this
+        // function is called only when serialized form is Unit
+        let default = variant
+            .fields
+            .iter()
+            .map(|field| Expr(expr_is_missing(field, cattrs)));
+        Some(quote! { (#(#default,)*) })
+    } else
+    // Tuple variant with zero fields
+    if variant.style == Style::Tuple {
+        Some(quote! { () })
+    } else {
+        // Unit variant
+        None
     }
 }
 

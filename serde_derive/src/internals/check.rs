@@ -12,6 +12,7 @@ pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     check_flatten(cx, cont);
     check_identifier(cx, cont);
     check_variant_skip_attrs(cx, cont);
+    check_internal_no_tuples(cx, cont, derive);
     check_internal_tag_field_name_conflict(cx, cont);
     check_adjacent_tag_conflict(cx, cont);
     check_transparent(cx, cont, derive);
@@ -289,6 +290,29 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
                         ),
                     );
                 }
+            }
+        }
+    }
+}
+
+// The tag of an internally-tagged struct variant must not be the same as either
+// one of its fields, as this would result in duplicate keys in the serialized
+// output and/or ambiguity in the to-be-deserialized input.
+fn check_internal_no_tuples(cx: &Ctxt, cont: &Container, derive: Derive) {
+    let variants = match &cont.data {
+        Data::Enum(variants) => variants,
+        Data::Struct(_, _) => return,
+    };
+
+    if let TagType::Internal { .. } = cont.attrs.tag() {
+        for variant in variants {
+            if derive == Derive::Serialize && variant.ser_style() == Style::Tuple
+                || derive == Derive::Deserialize && variant.de_style() == Style::Tuple
+            {
+                cx.error_spanned_by(
+                    variant.original,
+                    "#[serde(tag = \"...\")] cannot be used with tuple variants",
+                );
             }
         }
     }
