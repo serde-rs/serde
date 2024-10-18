@@ -212,7 +212,7 @@ mod content {
     use crate::de::value::{MapDeserializer, SeqDeserializer};
     use crate::de::{
         self, size_hint, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected,
-        IgnoredAny, MapAccess, SeqAccess, Unexpected, Visitor,
+        IgnoredAny, MapAccess, SeqAccess, Unexpected, VariantAccess, Visitor,
     };
 
     /// Used from generated code to buffer the contents of the Deserializer when
@@ -529,12 +529,14 @@ mod content {
         where
             V: EnumAccess<'de>,
         {
-            use crate::de::VariantAccess;
             let (key, data) = tri!(visitor.variant::<String>());
-            Ok(Content::Map(vec![(
-                Content::String(key),
-                tri!(data.newtype_variant::<Self::Value>()),
-            )]))
+            Ok(Content::Map(
+                [(
+                    Content::String(key),
+                    tri!(data.newtype_variant::<Self::Value>()),
+                )]
+                .into(),
+            ))
         }
     }
 
