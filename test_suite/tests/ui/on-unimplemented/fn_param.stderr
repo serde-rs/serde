@@ -1,5 +1,5 @@
 error[E0277]: the trait bound `MyStruct: Serialize` is not satisfied
-  --> tests/ui/on_unimplemented.rs:21:15
+  --> tests/ui/on-unimplemented/fn_param.rs:21:15
    |
 21 |     to_string(&MyStruct);
    |     --------- ^^^^^^^^^ the trait `Serialize` is not implemented for `MyStruct`
@@ -19,7 +19,7 @@ error[E0277]: the trait bound `MyStruct: Serialize` is not satisfied
              (T0, T1, T2, T3, T4)
            and $N others
 note: required by a bound in `to_string`
-  --> tests/ui/on_unimplemented.rs:6:8
+  --> tests/ui/on-unimplemented/fn_param.rs:6:8
    |
 4  | fn to_string<T>(_: &T) -> String
    |    --------- required by a bound in this function
@@ -28,7 +28,7 @@ note: required by a bound in `to_string`
    |        ^^^^^^^^^ required by this bound in `to_string`
 
 error[E0277]: the trait bound `MyStruct: Deserialize<'_>` is not satisfied
-  --> tests/ui/on_unimplemented.rs:22:23
+  --> tests/ui/on-unimplemented/fn_param.rs:22:23
    |
 22 |     let _: MyStruct = from_str("");
    |                       ^^^^^^^^^^^^ the trait `Deserialize<'_>` is not implemented for `MyStruct`
@@ -46,7 +46,7 @@ error[E0277]: the trait bound `MyStruct: Deserialize<'_>` is not satisfied
              (T0, T1, T2, T3)
            and $N others
 note: required by a bound in `from_str`
-  --> tests/ui/on_unimplemented.rs:13:8
+  --> tests/ui/on-unimplemented/fn_param.rs:13:8
    |
 11 | fn from_str<'de, T>(_: &'de str) -> T
    |    -------- required by a bound in this function

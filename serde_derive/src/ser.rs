@@ -311,7 +311,7 @@ fn serialize_struct_tag_field(cattrs: &attr::Container, struct_trait: &StructTra
     match cattrs.tag() {
         attr::TagType::Internal { tag } => {
             let type_name = cattrs.name().serialize_name();
-            let func = struct_trait.serialize_field(Span::call_site());
+            let func = struct_trait.serialize_field(None);
             quote! {
                 #func(&mut __serde_state, #tag, #type_name)?;
             }
@@ -1081,8 +1081,13 @@ fn serialize_tuple_struct_visitor(
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
             }
 
-            let span = field.original.span();
-            let func = tuple_trait.serialize_element(span);
+            let ty = if field.attrs.serialize_with().is_none() {
+                Some(field.ty)
+            } else {
+                None
+            };
+
+            let func = tuple_trait.serialize_element(ty);
             let ser = quote! {
                 #func(&mut __serde_state, #field_expr)?;
             };
@@ -1131,7 +1136,13 @@ fn serialize_struct_visitor(
                     #func(&#field_expr, _serde::__private::ser::FlatMapSerializer(&mut __serde_state))?;
                 }
             } else {
-                let func = struct_trait.serialize_field(span);
+                let ty = if field.attrs.serialize_with().is_none() {
+                    Some(field.ty)
+                } else {
+                    None
+                };
+
+                let func = struct_trait.serialize_field(ty);
                 quote! {
                     #func(&mut __serde_state, #key_expr, #field_expr)?;
                 }
@@ -1300,16 +1311,17 @@ enum StructTrait {
 }
 
 impl StructTrait {
-    fn serialize_field(&self, span: Span) -> TokenStream {
+    fn serialize_field(&self, ty: Option<&syn::Type>) -> TokenStream {
+        let ty = ty.into_iter();
         match *self {
             StructTrait::SerializeMap => {
-                quote_spanned!(span=> _serde::ser::SerializeMap::serialize_entry)
+                quote!(_serde::ser::SerializeMap::serialize_entry #( ::<_, #ty> )* )
             }
             StructTrait::SerializeStruct => {
-                quote_spanned!(span=> _serde::ser::SerializeStruct::serialize_field)
+                quote!(_serde::ser::SerializeStruct::serialize_field #( ::<#ty> )* )
             }
             StructTrait::SerializeStructVariant => {
-                quote_spanned!(span=> _serde::ser::SerializeStructVariant::serialize_field)
+                quote!(_serde::ser::SerializeStructVariant::serialize_field #( ::<#ty> )* )
             }
         }
     }
@@ -1334,16 +1346,17 @@ enum TupleTrait {
 }
 
 impl TupleTrait {
-    fn serialize_element(&self, span: Span) -> TokenStream {
+    fn serialize_element(&self, ty: Option<&syn::Type>) -> TokenStream {
+        let ty = ty.into_iter();
         match *self {
             TupleTrait::SerializeTuple => {
-                quote_spanned!(span=> _serde::ser::SerializeTuple::serialize_element)
+                quote!(_serde::ser::SerializeTuple::serialize_element #( ::<#ty> )*)
             }
             TupleTrait::SerializeTupleStruct => {
-                quote_spanned!(span=> _serde::ser::SerializeTupleStruct::serialize_field)
+                quote!(_serde::ser::SerializeTupleStruct::serialize_field #( ::<#ty> )*)
             }
             TupleTrait::SerializeTupleVariant => {
-                quote_spanned!(span=> _serde::ser::SerializeTupleVariant::serialize_field)
+                quote!(_serde::ser::SerializeTupleVariant::serialize_field #( ::<#ty> )*)
             }
         }
     }
