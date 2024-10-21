@@ -12,4 +12,4 @@ serde = { path = "serde" }
 [workspace.dependencies]
 proc-macro2 = { version = "1.0.74", default-features = false }
 quote = { version = "1.0.35", default-features = false }
-syn = { version = "2.0.46", default-features = false }
+syn = { version = "2.0.81", default-features = false }
