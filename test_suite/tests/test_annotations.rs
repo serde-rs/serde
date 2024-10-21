@@ -1942,6 +1942,204 @@ fn test_expecting_message_identifier_enum() {
     );
 }
 
+#[test]
+fn test_non_string_renames() {
+    #[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
+    #[serde(tag = "op")]
+    enum SpecialEnum {
+        #[serde(rename = -1)]
+        A,
+        #[serde(rename = true)]
+        B,
+    }
+
+    assert_de_tokens(
+        &SpecialEnum::A,
+        &[
+            Token::Map { len: None },
+            Token::Str("op"),
+            Token::I64(-1),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &SpecialEnum::B,
+        &[
+            Token::Map { len: None },
+            Token::Str("op"),
+            Token::Bool(true),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_ser_tokens(
+        &SpecialEnum::A,
+        &[
+            Token::Struct {
+                name: "SpecialEnum",
+                len: 1,
+            },
+            Token::Str("op"),
+            Token::I64(-1),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_ser_tokens(
+        &SpecialEnum::B,
+        &[
+            Token::Struct {
+                name: "SpecialEnum",
+                len: 1,
+            },
+            Token::Str("op"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+
+    #[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
+    #[serde(tag = "op", content = "d")]
+    enum AdjacentEnum {
+        #[serde(rename = -1i64)]
+        A { a: u64 },
+        #[serde(rename = true)]
+        B,
+    }
+
+    assert_de_tokens(
+        &AdjacentEnum::A { a: 1 },
+        &[
+            Token::Map { len: None },
+            Token::Str("op"),
+            Token::I64(-1),
+            Token::Str("d"),
+            Token::Map { len: Some(1) },
+            Token::Str("a"),
+            Token::U64(1),
+            Token::MapEnd,
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &AdjacentEnum::B,
+        &[
+            Token::Map { len: None },
+            Token::Str("op"),
+            Token::Bool(true),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_ser_tokens(
+        &AdjacentEnum::A { a: 1 },
+        &[
+            Token::Struct {
+                name: "AdjacentEnum",
+                len: 2,
+            },
+            Token::Str("op"),
+            Token::I64(-1),
+            Token::Str("d"),
+            Token::Struct {
+                name: "-1i64",
+                len: 1,
+            },
+            Token::Str("a"),
+            Token::U64(1),
+            Token::StructEnd,
+            Token::StructEnd,
+        ],
+    );
+
+    assert_ser_tokens(
+        &AdjacentEnum::B,
+        &[
+            Token::Struct {
+                name: "AdjacentEnum",
+                len: 1,
+            },
+            Token::Str("op"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    )
+}
+
+#[test]
+fn test_non_string_aliases() {
+    #[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
+    #[serde(tag = "op")]
+    enum AliasedEnum {
+        #[serde(rename = 1, alias = 2, alias = "foo")]
+        A,
+        #[serde(rename = 3, alias = "bar", alias = false)]
+        B,
+    }
+
+    assert_de_tokens(
+        &AliasedEnum::A,
+        &[
+            Token::Map { len: None },
+            Token::Str("op"),
+            Token::I64(1),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &AliasedEnum::A,
+        &[
+            Token::Map { len: None },
+            Token::Str("op"),
+            Token::I64(2),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &AliasedEnum::A,
+        &[
+            Token::Map { len: None },
+            Token::Str("op"),
+            Token::Str("foo"),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &AliasedEnum::B,
+        &[
+            Token::Map { len: None },
+            Token::Str("op"),
+            Token::I64(3),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &AliasedEnum::B,
+        &[
+            Token::Map { len: None },
+            Token::Str("op"),
+            Token::Str("bar"),
+            Token::MapEnd,
+        ],
+    );
+
+    assert_de_tokens(
+        &AliasedEnum::B,
+        &[
+            Token::Map { len: None },
+            Token::Str("op"),
+            Token::Bool(false),
+            Token::MapEnd,
+        ],
+    );
+}
+
 mod flatten {
     use super::*;
 

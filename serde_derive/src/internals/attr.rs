@@ -1,6 +1,7 @@
 use crate::internals::symbol::*;
-use crate::internals::{ungroup, Ctxt};
+use crate::internals::{ast, ungroup, Ctxt};
 use proc_macro2::{Spacing, Span, TokenStream, TokenTree};
+use quote::quote;
 use quote::ToTokens;
 use std::borrow::Cow;
 use std::collections::BTreeSet;
@@ -129,25 +130,363 @@ impl<'c, T> VecAttr<'c, T> {
     }
 }
 
-pub struct Name {
-    serialize: String,
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum IntRepr {
+    I8,
+    U8,
+
+    I16,
+    U16,
+
+    I32,
+    U32,
+
+    I64,
+    U64,
+}
+
+impl IntRepr {
+    fn from_integer(i: Integer) -> Option<IntRepr> {
+        if let Some(repr) = i.repr {
+            Some(repr)
+        } else {
+            match i.negative {
+                false if i.magnitude <= u64::from(u8::MAX) => Some(Self::U8),
+                false if i.magnitude <= u64::from(u16::MAX) => Some(Self::U16),
+                false if i.magnitude <= u64::from(u32::MAX) => Some(Self::U32),
+                false if i.magnitude <= u64::from(u64::MAX) => Some(Self::U64),
+
+                true if i.magnitude <= u64::from(u8::MAX) / 2 + 1 => Some(Self::I8),
+                true if i.magnitude <= u64::from(u16::MAX) / 2 + 1 => Some(Self::I16),
+                true if i.magnitude <= u64::from(u32::MAX) / 2 + 1 => Some(Self::I32),
+                true if i.magnitude <= u64::from(u64::MAX) / 2 + 1 => Some(Self::I64),
+
+                _ => None,
+            }
+        }
+    }
+    fn suffix(self) -> &'static str {
+        match self {
+            IntRepr::I8 => "i8",
+            IntRepr::U8 => "u8",
+            IntRepr::I16 => "i16",
+            IntRepr::U16 => "u16",
+            IntRepr::I32 => "i32",
+            IntRepr::U32 => "u32",
+            IntRepr::I64 => "i64",
+            IntRepr::U64 => "u64",
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
+pub struct Integer {
+    pub negative: bool,
+    pub magnitude: u64,
+    pub repr: Option<IntRepr>,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
+pub enum VariantName {
+    String(String),
+    Integer(Integer),
+    Boolean(bool),
+}
+
+impl VariantName {
+    pub fn to_variant_string(&self) -> String {
+        match self {
+            VariantName::String(s) => s.clone(),
+            VariantName::Integer(i) => {
+                let suffix = i.repr.map(|repr| repr.suffix()).unwrap_or("");
+                if i.negative {
+                    format!("-{}{}", i.magnitude, suffix)
+                } else {
+                    format!("{}{}", i.magnitude, suffix)
+                }
+            }
+            VariantName::Boolean(b) => b.to_string(),
+        }
+    }
+    pub fn to_literal(&self, mix: VariantMix) -> TokenStream {
+        match self {
+            VariantName::String(s) => quote!(#s),
+            VariantName::Boolean(b) => quote!(#b),
+            VariantName::Integer(n) => {
+                let repr = match mix {
+                    VariantMix::OnlyIntegers(repr) => repr,
+                    _ => n.repr.unwrap_or(IntRepr::I64),
+                };
+                match repr {
+                    IntRepr::U8 => {
+                        let i = n.magnitude as u8;
+                        quote!(#i)
+                    }
+                    IntRepr::U16 => {
+                        let i = n.magnitude as u16;
+                        quote!(#i)
+                    }
+                    IntRepr::U32 => {
+                        let i = n.magnitude as u32;
+                        quote!(#i)
+                    }
+                    IntRepr::U64 => {
+                        let i = n.magnitude;
+                        quote!(#i)
+                    }
+                    IntRepr::I8 => {
+                        let i = n.magnitude as i8;
+                        if n.negative {
+                            let i = -i;
+                            quote!(#i)
+                        } else {
+                            quote!(#i)
+                        }
+                    }
+                    IntRepr::I16 => {
+                        let i = n.magnitude as i16;
+                        if n.negative {
+                            let i = -i;
+                            quote!(#i)
+                        } else {
+                            quote!(#i)
+                        }
+                    }
+                    IntRepr::I32 => {
+                        let i = n.magnitude as i32;
+                        if n.negative {
+                            let i = -i;
+                            quote!(#i)
+                        } else {
+                            quote!(#i)
+                        }
+                    }
+                    IntRepr::I64 => {
+                        if n.negative {
+                            let i = -((n.magnitude - 1) as i64) - 1;
+                            quote!(#i)
+                        } else {
+                            let i = n.magnitude as i64;
+                            quote!(#i)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// An enum representing the distribution of different variant names
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum VariantMix {
+    OnlyStrings,
+    UnknownIntegers,
+    OnlyIntegers(IntRepr),
+    OnlyBooleans,
+    Any,
+}
+
+impl VariantMix {
+    fn from_single(variant: &VariantName) -> Self {
+        match variant {
+            &VariantName::String(_) => Self::OnlyStrings,
+            &VariantName::Integer(i) => IntRepr::from_integer(i)
+                .map(VariantMix::OnlyIntegers)
+                .unwrap_or(VariantMix::UnknownIntegers),
+            &VariantName::Boolean(_) => Self::OnlyBooleans,
+        }
+    }
+    pub fn from_ser(variants: &[ast::Variant]) -> Self {
+        let mut iter = variants.iter().map(|v| v.attrs.name.serialize_name());
+        match iter.next() {
+            Some(first) => {
+                let mut mix = Self::from_single(first);
+                for rest in iter {
+                    if mix == VariantMix::Any {
+                        return mix;
+                    }
+                    mix = match (Self::from_single(rest), mix) {
+                        (VariantMix::OnlyStrings, VariantMix::OnlyStrings) => {
+                            VariantMix::OnlyStrings
+                        }
+                        (VariantMix::OnlyBooleans, VariantMix::OnlyBooleans) => {
+                            VariantMix::OnlyBooleans
+                        }
+                        (VariantMix::OnlyIntegers(a), VariantMix::OnlyIntegers(b)) if a == b => {
+                            VariantMix::OnlyIntegers(a)
+                        }
+                        (VariantMix::OnlyIntegers(a), VariantMix::UnknownIntegers) => {
+                            VariantMix::OnlyIntegers(a)
+                        }
+                        (VariantMix::UnknownIntegers, VariantMix::OnlyIntegers(b)) => {
+                            VariantMix::OnlyIntegers(b)
+                        }
+                        _ => VariantMix::Any,
+                    };
+                }
+                if mix == VariantMix::UnknownIntegers {
+                    let negative =
+                        variants
+                            .iter()
+                            .map(|v| v.attrs.name.serialize_name())
+                            .any(|v| match v {
+                                VariantName::Integer(i) => i.negative,
+                                _ => false,
+                            });
+                    let max = variants
+                        .iter()
+                        .map(|v| v.attrs.name.serialize_name())
+                        .filter_map(|v| match v {
+                            VariantName::Integer(i) => Some(i.magnitude),
+                            _ => None,
+                        })
+                        .max()
+                        .unwrap();
+                    match IntRepr::from_integer(Integer {
+                        negative,
+                        magnitude: max,
+                        repr: None,
+                    }) {
+                        Some(repr) => VariantMix::OnlyIntegers(repr),
+                        None => VariantMix::UnknownIntegers,
+                    }
+                } else {
+                    mix
+                }
+            }
+
+            // string variants are the base case as they were the original case
+            None => Self::OnlyStrings,
+        }
+    }
+    pub fn from_de(variants: &[ast::Variant]) -> Self {
+        let mut iter = variants.iter().map(|v| v.attrs.name.deserialize_name());
+        match iter.next() {
+            Some(first) => {
+                let mut mix = Self::from_single(first);
+                for rest in iter {
+                    if mix == VariantMix::Any {
+                        return mix;
+                    }
+                    mix = match (Self::from_single(rest), mix) {
+                        (VariantMix::OnlyStrings, VariantMix::OnlyStrings) => {
+                            VariantMix::OnlyStrings
+                        }
+                        (VariantMix::OnlyBooleans, VariantMix::OnlyBooleans) => {
+                            VariantMix::OnlyBooleans
+                        }
+                        (VariantMix::OnlyIntegers(a), VariantMix::OnlyIntegers(b)) if a == b => {
+                            VariantMix::OnlyIntegers(a)
+                        }
+                        (VariantMix::OnlyIntegers(a), VariantMix::UnknownIntegers) => {
+                            VariantMix::OnlyIntegers(a)
+                        }
+                        (VariantMix::UnknownIntegers, VariantMix::OnlyIntegers(b)) => {
+                            VariantMix::OnlyIntegers(b)
+                        }
+                        _ => VariantMix::Any,
+                    };
+                }
+                if mix == VariantMix::UnknownIntegers {
+                    let negative = variants
+                        .iter()
+                        .map(|v| v.attrs.name.deserialize_name())
+                        .any(|v| match v {
+                            VariantName::Integer(i) => i.negative,
+                            _ => false,
+                        });
+                    let max = variants
+                        .iter()
+                        .map(|v| v.attrs.name.deserialize_name())
+                        .filter_map(|v| match v {
+                            VariantName::Integer(i) => Some(i.magnitude),
+                            _ => None,
+                        })
+                        .max()
+                        .unwrap();
+                    match IntRepr::from_integer(Integer {
+                        negative,
+                        magnitude: max,
+                        repr: None,
+                    }) {
+                        Some(repr) => VariantMix::OnlyIntegers(repr),
+                        None => VariantMix::UnknownIntegers,
+                    }
+                } else {
+                    mix
+                }
+            }
+
+            // string variants are the base case as they were the original case
+            None => Self::OnlyStrings,
+        }
+    }
+}
+
+pub trait AsVariant {
+    fn as_string(&self) -> Option<&str>;
+    fn as_int(&self) -> Option<Integer>;
+    fn as_bool(&self) -> Option<bool>;
+}
+
+impl AsVariant for VariantName {
+    fn as_string(&self) -> Option<&str> {
+        match self {
+            VariantName::String(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    fn as_int(&self) -> Option<Integer> {
+        match self {
+            VariantName::Integer(i) => Some(*i),
+            _ => None,
+        }
+    }
+
+    fn as_bool(&self) -> Option<bool> {
+        match self {
+            VariantName::Boolean(b) => Some(*b),
+            _ => None,
+        }
+    }
+}
+
+impl AsVariant for String {
+    fn as_string(&self) -> Option<&str> {
+        Some(self)
+    }
+
+    fn as_int(&self) -> Option<Integer> {
+        None
+    }
+
+    fn as_bool(&self) -> Option<bool> {
+        None
+    }
+}
+
+impl ToTokens for VariantName {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.to_variant_string().to_tokens(tokens)
+    }
+}
+
+pub struct Names<T: Clone + Ord> {
+    serialize: T,
     serialize_renamed: bool,
-    deserialize: String,
+    deserialize: T,
     deserialize_renamed: bool,
-    deserialize_aliases: BTreeSet<String>,
+    deserialize_aliases: BTreeSet<T>,
 }
 
-fn unraw(ident: &Ident) -> String {
-    ident.to_string().trim_start_matches("r#").to_owned()
-}
-
-impl Name {
+impl<T: Clone + Ord> Names<T> {
     fn from_attrs(
-        source_name: String,
-        ser_name: Attr<String>,
-        de_name: Attr<String>,
-        de_aliases: Option<VecAttr<String>>,
-    ) -> Name {
+        source_name: T,
+        ser_name: Attr<T>,
+        de_name: Attr<T>,
+        de_aliases: Option<VecAttr<T>>,
+    ) -> Names<T> {
         let mut alias_set = BTreeSet::new();
         if let Some(de_aliases) = de_aliases {
             for alias_name in de_aliases.get() {
@@ -159,7 +498,7 @@ impl Name {
         let ser_renamed = ser_name.is_some();
         let de_name = de_name.get();
         let de_renamed = de_name.is_some();
-        Name {
+        Names {
             serialize: ser_name.unwrap_or_else(|| source_name.clone()),
             serialize_renamed: ser_renamed,
             deserialize: de_name.unwrap_or(source_name),
@@ -169,18 +508,25 @@ impl Name {
     }
 
     /// Return the container name for the container when serializing.
-    pub fn serialize_name(&self) -> &str {
+    pub fn serialize_name(&self) -> &T {
         &self.serialize
     }
 
     /// Return the container name for the container when deserializing.
-    pub fn deserialize_name(&self) -> &str {
+    pub fn deserialize_name(&self) -> &T {
         &self.deserialize
     }
 
-    fn deserialize_aliases(&self) -> &BTreeSet<String> {
+    fn deserialize_aliases(&self) -> &BTreeSet<T> {
         &self.deserialize_aliases
     }
+}
+
+pub type VariantNames = Names<VariantName>;
+pub type StringNames = Names<String>;
+
+fn unraw(ident: &Ident) -> String {
+    ident.to_string().trim_start_matches("r#").to_owned()
 }
 
 #[derive(Copy, Clone)]
@@ -202,7 +548,7 @@ impl RenameAllRules {
 
 /// Represents struct or enum attribute information.
 pub struct Container {
-    name: Name,
+    name: StringNames,
     transparent: bool,
     deny_unknown_fields: bool,
     default: Default,
@@ -566,7 +912,7 @@ impl Container {
         }
 
         Container {
-            name: Name::from_attrs(unraw(&item.ident), ser_name, de_name, None),
+            name: StringNames::from_attrs(unraw(&item.ident), ser_name, de_name, None),
             transparent: transparent.get(),
             deny_unknown_fields: deny_unknown_fields.get(),
             default: default.get().unwrap_or(Default::None),
@@ -593,7 +939,7 @@ impl Container {
         }
     }
 
-    pub fn name(&self) -> &Name {
+    pub fn name(&self) -> &StringNames {
         &self.name
     }
 
@@ -780,7 +1126,7 @@ fn decide_identifier(
 
 /// Represents variant attribute information
 pub struct Variant {
-    name: Name,
+    name: VariantNames,
     rename_all_rules: RenameAllRules,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
@@ -830,16 +1176,16 @@ impl Variant {
                 if meta.path == RENAME {
                     // #[serde(rename = "foo")]
                     // #[serde(rename(serialize = "foo", deserialize = "bar"))]
-                    let (ser, de) = get_multiple_renames(cx, &meta)?;
-                    ser_name.set_opt(&meta.path, ser.as_ref().map(syn::LitStr::value));
+                    let (ser, de) = get_multiple_variant_renames(cx, &meta)?;
+                    ser_name.set_opt(&meta.path, ser);
                     for de_value in de {
-                        de_name.set_if_none(de_value.value());
-                        de_aliases.insert(&meta.path, de_value.value());
+                        de_name.set_if_none(de_value.clone());
+                        de_aliases.insert(&meta.path, de_value);
                     }
                 } else if meta.path == ALIAS {
                     // #[serde(alias = "foo")]
-                    if let Some(s) = get_lit_str(cx, ALIAS, &meta)? {
-                        de_aliases.insert(&meta.path, s.value());
+                    if let Some(name) = get_variant_name(cx, ALIAS, &meta)? {
+                        de_aliases.insert(&meta.path, name);
                     }
                 } else if meta.path == RENAME_ALL {
                     // #[serde(rename_all = "foo")]
@@ -946,7 +1292,12 @@ impl Variant {
         }
 
         Variant {
-            name: Name::from_attrs(unraw(&variant.ident), ser_name, de_name, Some(de_aliases)),
+            name: VariantNames::from_attrs(
+                VariantName::String(unraw(&variant.ident)),
+                ser_name,
+                de_name,
+                Some(de_aliases),
+            ),
             rename_all_rules: RenameAllRules {
                 serialize: rename_all_ser_rule.get().unwrap_or(RenameRule::None),
                 deserialize: rename_all_de_rule.get().unwrap_or(RenameRule::None),
@@ -963,11 +1314,11 @@ impl Variant {
         }
     }
 
-    pub fn name(&self) -> &Name {
+    pub fn name(&self) -> &VariantNames {
         &self.name
     }
 
-    pub fn aliases(&self) -> &BTreeSet<String> {
+    pub fn aliases(&self) -> &BTreeSet<VariantName> {
         self.name.deserialize_aliases()
     }
 
@@ -1022,7 +1373,7 @@ impl Variant {
 
 /// Represents field attribute information
 pub struct Field {
-    name: Name,
+    name: StringNames,
     skip_serializing: bool,
     skip_deserializing: bool,
     skip_serializing_if: Option<syn::ExprPath>,
@@ -1289,7 +1640,7 @@ impl Field {
         }
 
         Field {
-            name: Name::from_attrs(ident, ser_name, de_name, Some(de_aliases)),
+            name: StringNames::from_attrs(ident, ser_name, de_name, Some(de_aliases)),
             skip_serializing: skip_serializing.get(),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing_if: skip_serializing_if.get(),
@@ -1305,7 +1656,7 @@ impl Field {
         }
     }
 
-    pub fn name(&self) -> &Name {
+    pub fn name(&self) -> &StringNames {
         &self.name
     }
 
@@ -1434,6 +1785,14 @@ fn get_renames(
     Ok((ser.at_most_one(), de.at_most_one()))
 }
 
+fn get_multiple_variant_renames(
+    cx: &Ctxt,
+    meta: &ParseNestedMeta,
+) -> syn::Result<(Option<VariantName>, Vec<VariantName>)> {
+    let (ser, de) = get_ser_and_de(cx, RENAME, meta, get_variant_name2)?;
+    Ok((ser.at_most_one(), de.get()))
+}
+
 fn get_multiple_renames(
     cx: &Ctxt,
     meta: &ParseNestedMeta,
@@ -1458,6 +1817,197 @@ fn get_lit_str(
     get_lit_str2(cx, attr_name, attr_name, meta)
 }
 
+fn try_get_lit_str<'a>(cx: &Ctxt, lit: &'a syn::Expr) -> Result<&'a syn::LitStr, ()> {
+    if let syn::Expr::Lit(syn::ExprLit {
+        lit: syn::Lit::Str(lit),
+        ..
+    }) = lit
+    {
+        let suffix = lit.suffix();
+        if !suffix.is_empty() {
+            cx.error_spanned_by(
+                lit,
+                format!("unexpected suffix `{}` on string literal", suffix),
+            );
+        }
+        Ok(lit)
+    } else {
+        Err(())
+    }
+}
+
+fn try_get_lit_int(lit: &syn::Expr) -> Result<(bool, &syn::LitInt), ()> {
+    if let syn::Expr::Lit(syn::ExprLit {
+        lit: syn::Lit::Int(lit),
+        ..
+    }) = lit
+    {
+        Ok((false, lit))
+    } else if let syn::Expr::Unary(syn::ExprUnary {
+        op: syn::UnOp::Neg(_),
+        expr,
+        ..
+    }) = lit
+    {
+        if let syn::Expr::Lit(syn::ExprLit {
+            lit: syn::Lit::Int(lit),
+            ..
+        }) = &**expr
+        {
+            Ok((true, lit))
+        } else {
+            Err(())
+        }
+    } else {
+        Err(())
+    }
+}
+
+fn try_get_lit_bool(lit: &syn::Expr) -> Result<&syn::LitBool, ()> {
+    if let syn::Expr::Lit(syn::ExprLit {
+        lit: syn::Lit::Bool(lit),
+        ..
+    }) = lit
+    {
+        Ok(lit)
+    } else {
+        Err(())
+    }
+}
+
+fn get_variant_name(
+    cx: &Ctxt,
+    attr_name: Symbol,
+    meta: &ParseNestedMeta,
+) -> syn::Result<Option<VariantName>> {
+    get_variant_name2(cx, attr_name, attr_name, meta)
+}
+
+fn get_variant_name2(
+    cx: &Ctxt,
+    attr_name: Symbol,
+    meta_item_name: Symbol,
+    meta: &ParseNestedMeta,
+) -> syn::Result<Option<VariantName>> {
+    let expr: syn::Expr = meta.value()?.parse()?;
+    let mut value = &expr;
+    while let syn::Expr::Group(e) = value {
+        value = &e.expr;
+    }
+    if let Ok(lit) = try_get_lit_str(cx, value) {
+        Ok(Some(VariantName::String(lit.value())))
+    } else if let Ok((negative, lit)) = try_get_lit_int(value) {
+        let integer = match (negative, lit.suffix()) {
+            (false, "u8") => {
+                let parse = lit.base10_parse();
+                parse.ok().map(|parse: u8| Integer {
+                    negative: false,
+                    magnitude: u64::from(parse),
+                    repr: Some(IntRepr::U8),
+                })
+            }
+            (false, "u16") => {
+                let parse = lit.base10_parse();
+                parse.ok().map(|parse: u16| Integer {
+                    negative: false,
+                    magnitude: u64::from(parse),
+                    repr: Some(IntRepr::U16),
+                })
+            }
+            (false, "u32") => {
+                let parse = lit.base10_parse();
+                parse.ok().map(|parse: u32| Integer {
+                    negative: false,
+                    magnitude: u64::from(parse),
+                    repr: Some(IntRepr::U32),
+                })
+            }
+            (false, "u64") => {
+                let parse = lit.base10_parse();
+                parse.ok().map(|parse: u64| Integer {
+                    negative: false,
+                    magnitude: parse,
+                    repr: Some(IntRepr::U64),
+                })
+            }
+            (_, "i8") => {
+                let parse = lit.base10_parse();
+                parse.ok().map(|parse: i8| Integer {
+                    negative,
+                    magnitude: u64::from(parse as u8),
+                    repr: Some(IntRepr::I8),
+                })
+            }
+            (_, "i16") => {
+                let parse = lit.base10_parse();
+                parse.ok().map(|parse: i16| Integer {
+                    negative,
+                    magnitude: u64::from(parse as u16),
+                    repr: Some(IntRepr::I16),
+                })
+            }
+            (_, "i32") => {
+                let parse = lit.base10_parse();
+                parse.ok().map(|parse: i32| Integer {
+                    negative,
+                    magnitude: u64::from(parse as u32),
+                    repr: Some(IntRepr::I32),
+                })
+            }
+            (_, "i64") => {
+                let parse = lit.base10_parse();
+                parse.ok().map(|parse: i64| Integer {
+                    negative,
+                    magnitude: parse as u64,
+                    repr: Some(IntRepr::I64),
+                })
+            }
+            (_, "") => {
+                let parse = lit.base10_parse();
+                parse.ok().map(|parse: i64| Integer {
+                    negative,
+                    magnitude: parse as u64,
+                    repr: None,
+                })
+            }
+            (true, "u8" | "u16" | "u32" | "u64") => None,
+            (_, suffix) => {
+                cx.error_spanned_by(
+                    lit,
+                    format!(
+                        "serde {} attribute has an integer value of unsupported integer type {}",
+                        attr_name, suffix,
+                    ),
+                );
+                return Ok(None);
+            }
+        };
+        match integer {
+            Some(integer) => Ok(Some(VariantName::Integer(integer))),
+            None => {
+                let suffix = match lit.suffix() {
+                    "" => "i64",
+                    suffix => suffix,
+                };
+                cx.error_spanned_by(
+                    lit,
+                    format!(
+                    "serde {} attribute has an integer value that cannot be represented as type {}",
+                    attr_name,
+                    suffix,
+                ),
+                );
+                Ok(None)
+            }
+        }
+    } else if let Ok(lit) = try_get_lit_bool(value) {
+        Ok(Some(VariantName::Boolean(lit.value())))
+    } else {
+        cx.error_spanned_by(expr, format!("expected serde {} attribute to be a string, integer, or boolean literal: `{} = \"...\"`", attr_name, meta_item_name));
+        Ok(None)
+    }
+}
+
 fn get_lit_str2(
     cx: &Ctxt,
     attr_name: Symbol,
@@ -1469,18 +2019,7 @@ fn get_lit_str2(
     while let syn::Expr::Group(e) = value {
         value = &e.expr;
     }
-    if let syn::Expr::Lit(syn::ExprLit {
-        lit: syn::Lit::Str(lit),
-        ..
-    }) = value
-    {
-        let suffix = lit.suffix();
-        if !suffix.is_empty() {
-            cx.error_spanned_by(
-                lit,
-                format!("unexpected suffix `{}` on string literal", suffix),
-            );
-        }
+    if let Ok(lit) = try_get_lit_str(cx, value) {
         Ok(Some(lit.clone()))
     } else {
         cx.error_spanned_by(

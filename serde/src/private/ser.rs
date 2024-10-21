@@ -19,7 +19,7 @@ pub fn serialize_tagged_newtype<S, T>(
     type_ident: &'static str,
     variant_ident: &'static str,
     tag: &'static str,
-    variant_name: &'static str,
+    variant_name: VariantName,
     value: &T,
 ) -> Result<S::Ok, S::Error>
 where
@@ -39,7 +39,7 @@ struct TaggedSerializer<S> {
     type_ident: &'static str,
     variant_ident: &'static str,
     tag: &'static str,
-    variant_name: &'static str,
+    variant_name: VariantName,
     delegate: S,
 }
 
@@ -179,13 +179,13 @@ where
 
     fn serialize_unit(self) -> Result<Self::Ok, Self::Error> {
         let mut map = tri!(self.delegate.serialize_map(Some(1)));
-        tri!(map.serialize_entry(self.tag, self.variant_name));
+        tri!(map.serialize_entry(self.tag, &self.variant_name));
         map.end()
     }
 
     fn serialize_unit_struct(self, _: &'static str) -> Result<Self::Ok, Self::Error> {
         let mut map = tri!(self.delegate.serialize_map(Some(1)));
-        tri!(map.serialize_entry(self.tag, self.variant_name));
+        tri!(map.serialize_entry(self.tag, &self.variant_name));
         map.end()
     }
 
@@ -196,7 +196,7 @@ where
         inner_variant: &'static str,
     ) -> Result<Self::Ok, Self::Error> {
         let mut map = tri!(self.delegate.serialize_map(Some(2)));
-        tri!(map.serialize_entry(self.tag, self.variant_name));
+        tri!(map.serialize_entry(self.tag, &self.variant_name));
         tri!(map.serialize_entry(inner_variant, &()));
         map.end()
     }
@@ -223,7 +223,7 @@ where
         T: ?Sized + Serialize,
     {
         let mut map = tri!(self.delegate.serialize_map(Some(2)));
-        tri!(map.serialize_entry(self.tag, self.variant_name));
+        tri!(map.serialize_entry(self.tag, &self.variant_name));
         tri!(map.serialize_entry(inner_variant, inner_value));
         map.end()
     }
@@ -266,7 +266,7 @@ where
         len: usize,
     ) -> Result<Self::SerializeTupleVariant, Self::Error> {
         let mut map = tri!(self.delegate.serialize_map(Some(2)));
-        tri!(map.serialize_entry(self.tag, self.variant_name));
+        tri!(map.serialize_entry(self.tag, &self.variant_name));
         tri!(map.serialize_key(inner_variant));
         Ok(SerializeTupleVariantAsMapValue::new(
             map,
@@ -277,7 +277,7 @@ where
 
     fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
         let mut map = tri!(self.delegate.serialize_map(len.map(|len| len + 1)));
-        tri!(map.serialize_entry(self.tag, self.variant_name));
+        tri!(map.serialize_entry(self.tag, &self.variant_name));
         Ok(map)
     }
 
@@ -287,7 +287,7 @@ where
         len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error> {
         let mut state = tri!(self.delegate.serialize_struct(name, len + 1));
-        tri!(state.serialize_field(self.tag, self.variant_name));
+        tri!(state.serialize_field(self.tag, &self.variant_name));
         Ok(state)
     }
 
@@ -313,7 +313,7 @@ where
         len: usize,
     ) -> Result<Self::SerializeStructVariant, Self::Error> {
         let mut map = tri!(self.delegate.serialize_map(Some(2)));
-        tri!(map.serialize_entry(self.tag, self.variant_name));
+        tri!(map.serialize_entry(self.tag, &self.variant_name));
         tri!(map.serialize_key(inner_variant));
         Ok(SerializeStructVariantAsMapValue::new(
             map,
@@ -1328,6 +1328,47 @@ where
             .map
             .serialize_value(&Content::Struct(self.name, self.fields)));
         Ok(())
+    }
+}
+
+pub enum Integer {
+    U8(u8),
+    U16(u16),
+    U32(u32),
+    U64(u64),
+
+    I8(i8),
+    I16(i16),
+    I32(i32),
+    I64(i64),
+}
+
+pub enum VariantName {
+    String(&'static str),
+    Integer(Integer),
+    Boolean(bool),
+}
+
+impl Serialize for VariantName {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            VariantName::String(s) => serializer.serialize_str(s),
+            VariantName::Integer(i) => match *i {
+                Integer::U8(i) => serializer.serialize_u8(i),
+                Integer::U16(i) => serializer.serialize_u16(i),
+                Integer::U32(i) => serializer.serialize_u32(i),
+                Integer::U64(i) => serializer.serialize_u64(i),
+
+                Integer::I8(i) => serializer.serialize_i8(i),
+                Integer::I16(i) => serializer.serialize_i16(i),
+                Integer::I32(i) => serializer.serialize_i32(i),
+                Integer::I64(i) => serializer.serialize_i64(i),
+            },
+            VariantName::Boolean(b) => serializer.serialize_bool(*b),
+        }
     }
 }
 
