@@ -972,13 +972,7 @@ fn deserialize_struct(
         // Skip fields that shouldn't be deserialized or that were flattened,
         // so they don't appear in the storage in their literal form
         .filter(|&(_, field)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
-        .map(|(i, field)| {
-            (
-                field.attrs.name().deserialize_name(),
-                field_i(i),
-                field.attrs.aliases(),
-            )
-        })
+        .map(|(i, field)| (field_i(i), field.attrs.aliases()))
         .collect();
 
     let has_flatten = has_flatten(fields);
@@ -1038,9 +1032,7 @@ fn deserialize_struct(
     let fields_stmt = if has_flatten {
         None
     } else {
-        let field_names = field_names_idents
-            .iter()
-            .flat_map(|&(_, _, aliases)| aliases);
+        let field_names = field_names_idents.iter().flat_map(|&(_, aliases)| aliases);
 
         Some(quote! {
             #[doc(hidden)]
@@ -1137,13 +1129,7 @@ fn deserialize_struct_in_place(
         .iter()
         .enumerate()
         .filter(|&(_, field)| !field.attrs.skip_deserializing())
-        .map(|(i, field)| {
-            (
-                field.attrs.name().deserialize_name(),
-                field_i(i),
-                field.attrs.aliases(),
-            )
-        })
+        .map(|(i, field)| (field_i(i), field.attrs.aliases()))
         .collect();
 
     let field_visitor = deserialize_field_identifier(&field_names_idents, cattrs, false);
@@ -1155,9 +1141,7 @@ fn deserialize_struct_in_place(
     };
     let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
     let visit_map = Stmts(deserialize_map_in_place(params, fields, cattrs));
-    let field_names = field_names_idents
-        .iter()
-        .flat_map(|&(_, _, aliases)| aliases);
+    let field_names = field_names_idents.iter().flat_map(|&(_, aliases)| aliases);
     let type_name = cattrs.name().deserialize_name();
 
     let in_place_impl_generics = de_impl_generics.in_place();
@@ -1248,24 +1232,20 @@ fn prepare_enum_variant_enum(variants: &[Variant]) -> (TokenStream, Stmts) {
 
     let variant_names_idents: Vec<_> = deserialized_variants
         .clone()
-        .map(|(i, variant)| {
-            (
-                variant.attrs.name().deserialize_name(),
-                field_i(i),
-                variant.attrs.aliases(),
-            )
-        })
+        .map(|(i, variant)| (field_i(i), variant.attrs.aliases()))
         .collect();
 
     let fallthrough = deserialized_variants
         .position(|(_, variant)| variant.attrs.other())
         .map(|other_idx| {
-            let ignore_variant = variant_names_idents[other_idx].1.clone();
+            let ignore_variant = variant_names_idents[other_idx].0.clone();
             quote!(_serde::__private::Ok(__Field::#ignore_variant))
         });
 
     let variants_stmt = {
-        let variant_names = variant_names_idents.iter().map(|(name, _, _)| name);
+        let variant_names = variant_names_idents
+            .iter()
+            .flat_map(|&(_, aliases)| aliases);
         quote! {
             #[doc(hidden)]
             const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
@@ -2011,14 +1991,14 @@ fn deserialize_untagged_newtype_variant(
 }
 
 fn deserialize_generated_identifier(
-    fields: &[(&str, Ident, &BTreeSet<String>)],
+    fields: &[(Ident, &BTreeSet<String>)],
     has_flatten: bool,
     is_variant: bool,
     ignore_variant: Option<TokenStream>,
     fallthrough: Option<TokenStream>,
 ) -> Fragment {
     let this_value = quote!(__Field);
-    let field_idents: &Vec<_> = &fields.iter().map(|(_, ident, _)| ident).collect();
+    let field_idents: &Vec<_> = &fields.iter().map(|(ident, _)| ident).collect();
 
     let visitor_impl = Stmts(deserialize_identifier(
         &this_value,
@@ -2068,7 +2048,7 @@ fn deserialize_generated_identifier(
 /// Generates enum and its `Deserialize` implementation that represents each
 /// non-skipped field of the struct
 fn deserialize_field_identifier(
-    fields: &[(&str, Ident, &BTreeSet<String>)],
+    fields: &[(Ident, &BTreeSet<String>)],
     cattrs: &attr::Container,
     has_flatten: bool,
 ) -> Stmts {
@@ -2145,16 +2125,10 @@ fn deserialize_custom_identifier(
 
     let names_idents: Vec<_> = ordinary
         .iter()
-        .map(|variant| {
-            (
-                variant.attrs.name().deserialize_name(),
-                variant.ident.clone(),
-                variant.attrs.aliases(),
-            )
-        })
+        .map(|variant| (variant.ident.clone(), variant.attrs.aliases()))
         .collect();
 
-    let names = names_idents.iter().flat_map(|&(_, _, aliases)| aliases);
+    let names = names_idents.iter().flat_map(|&(_, aliases)| aliases);
 
     let names_const = if fallthrough.is_some() {
         None
@@ -2210,18 +2184,18 @@ fn deserialize_custom_identifier(
 
 fn deserialize_identifier(
     this_value: &TokenStream,
-    fields: &[(&str, Ident, &BTreeSet<String>)],
+    fields: &[(Ident, &BTreeSet<String>)],
     is_variant: bool,
     fallthrough: Option<TokenStream>,
     fallthrough_borrowed: Option<TokenStream>,
     collect_other_fields: bool,
     expecting: Option<&str>,
 ) -> Fragment {
-    let str_mapping = fields.iter().map(|(_, ident, aliases)| {
+    let str_mapping = fields.iter().map(|(ident, aliases)| {
         // `aliases` also contains a main name
         quote!(#(#aliases)|* => _serde::__private::Ok(#this_value::#ident))
     });
-    let bytes_mapping = fields.iter().map(|(_, ident, aliases)| {
+    let bytes_mapping = fields.iter().map(|(ident, aliases)| {
         // `aliases` also contains a main name
         let aliases = aliases
             .iter()
@@ -2376,7 +2350,7 @@ fn deserialize_identifier(
             }
         }
     } else {
-        let u64_mapping = fields.iter().enumerate().map(|(i, (_, ident, _))| {
+        let u64_mapping = fields.iter().enumerate().map(|(i, (ident, _))| {
             let i = i as u64;
             quote!(#i => _serde::__private::Ok(#this_value::#ident))
         });
