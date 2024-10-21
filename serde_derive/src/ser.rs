@@ -1373,8 +1373,8 @@ impl TupleTrait {
 /// Returns the field's type unless `serialize_with` is enabled.
 /// This type hint should be used in a turbofish expression to hint the
 /// compiler where the type of the field comes from. This way an error
-/// that "field's type doesn't implement Serialize" will point to the
-/// type type of the field directly.
+/// that "field's type doesn't implement Serialize" will point to the type
+/// of the field directly.
 fn ser_field_expr_type_hint<'a>(field: &Field<'a>) -> Option<&'a syn::Type> {
     // If `serialize_with` is enabled the type of the serialized field
     // expression will not correlate with the type of the field.
