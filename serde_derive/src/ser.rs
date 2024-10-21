@@ -1123,8 +1123,8 @@ fn serialize_struct_visitor(
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
             }
 
+            let span = field.original.span();
             let ser = if field.attrs.flatten() {
-                let span = field.original.span();
                 let func = quote_spanned!(span=> _serde::Serialize::serialize);
                 quote! {
                     #func(&#field_expr, _serde::__private::ser::FlatMapSerializer(&mut __serde_state))?;
