@@ -1081,13 +1081,7 @@ fn serialize_tuple_struct_visitor(
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
             }
 
-            let ty = if field.attrs.serialize_with().is_none() {
-                Some(field.ty)
-            } else {
-                None
-            };
-
-            let func = tuple_trait.serialize_element(ty);
+            let func = tuple_trait.serialize_element(field);
             let ser = quote! {
                 #func(&mut __serde_state, #field_expr)?;
             };
@@ -1111,6 +1105,7 @@ fn serialize_struct_visitor(
         .filter(|&field| !field.attrs.skip_serializing())
         .map(|field| {
             let member = &field.member;
+            let span = field.original.span();
 
             let mut field_expr = if is_enum {
                 quote!(#member)
@@ -1129,20 +1124,14 @@ fn serialize_struct_visitor(
                 field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
             }
 
-            let span = field.original.span();
             let ser = if field.attrs.flatten() {
                 let func = quote_spanned!(span=> _serde::Serialize::serialize);
                 quote! {
                     #func(&#field_expr, _serde::__private::ser::FlatMapSerializer(&mut __serde_state))?;
                 }
             } else {
-                let ty = if field.attrs.serialize_with().is_none() {
-                    Some(field.ty)
-                } else {
-                    None
-                };
+                let func = struct_trait.serialize_field(Some(field));
 
-                let func = struct_trait.serialize_field(ty);
                 quote! {
                     #func(&mut __serde_state, #key_expr, #field_expr)?;
                 }
@@ -1311,17 +1300,28 @@ enum StructTrait {
 }
 
 impl StructTrait {
-    fn serialize_field(&self, ty: Option<&syn::Type>) -> TokenStream {
-        let ty = ty.into_iter();
+    fn serialize_field(&self, field: Option<&Field>) -> TokenStream {
+        let span = field
+            .map(|field| field.original.span())
+            .unwrap_or_else(Span::call_site);
+
+        let ty = field.and_then(ser_field_expr_type_hint).into_iter();
+
         match *self {
             StructTrait::SerializeMap => {
-                quote!(_serde::ser::SerializeMap::serialize_entry #( ::<_, #ty> )* )
+                quote_spanned! {span=>
+                    _serde::ser::SerializeMap::serialize_entry #( ::<_, #ty> )*
+                }
             }
             StructTrait::SerializeStruct => {
-                quote!(_serde::ser::SerializeStruct::serialize_field #( ::<#ty> )* )
+                quote_spanned! {span=>
+                    _serde::ser::SerializeStruct::serialize_field #( ::<#ty> )*
+                }
             }
             StructTrait::SerializeStructVariant => {
-                quote!(_serde::ser::SerializeStructVariant::serialize_field #( ::<#ty> )* )
+                quote_spanned! {span=>
+                    _serde::ser::SerializeStructVariant::serialize_field #( ::<#ty> )*
+                }
             }
         }
     }
@@ -1346,18 +1346,41 @@ enum TupleTrait {
 }
 
 impl TupleTrait {
-    fn serialize_element(&self, ty: Option<&syn::Type>) -> TokenStream {
-        let ty = ty.into_iter();
+    fn serialize_element(&self, field: &Field) -> TokenStream {
+        let span = field.original.span();
+        let ty = ser_field_expr_type_hint(field).into_iter();
+
         match *self {
             TupleTrait::SerializeTuple => {
-                quote!(_serde::ser::SerializeTuple::serialize_element #( ::<#ty> )*)
+                quote_spanned! {span=>
+                    _serde::ser::SerializeTuple::serialize_element #( ::<#ty> )*
+                }
             }
             TupleTrait::SerializeTupleStruct => {
-                quote!(_serde::ser::SerializeTupleStruct::serialize_field #( ::<#ty> )*)
+                quote_spanned! {span=>
+                    _serde::ser::SerializeTupleStruct::serialize_field #( ::<#ty> )*
+                }
             }
             TupleTrait::SerializeTupleVariant => {
-                quote!(_serde::ser::SerializeTupleVariant::serialize_field #( ::<#ty> )*)
+                quote_spanned! {span=>
+                    _serde::ser::SerializeTupleVariant::serialize_field #( ::<#ty> )*
+                }
             }
         }
     }
+}
+
+/// Returns the field's type unless `serialize_with` is enabled.
+/// This type hint should be used in a turbofish expression to hint the
+/// compiler where the type of the field comes from. This way an error
+/// that "field's type doesn't implement Serialize" will point to the
+/// type type of the field directly.
+fn ser_field_expr_type_hint<'a>(field: &Field<'a>) -> Option<&'a syn::Type> {
+    // If `serialize_with` is enabled the type of the serialized field
+    // expression will not correlate with the type of the field.
+    if field.attrs.serialize_with().is_some() {
+        return None;
+    }
+
+    Some(field.ty)
 }
