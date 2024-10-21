@@ -1105,7 +1105,6 @@ fn serialize_struct_visitor(
         .filter(|&field| !field.attrs.skip_serializing())
         .map(|field| {
             let member = &field.member;
-            let span = field.original.span();
 
             let mut field_expr = if is_enum {
                 quote!(#member)
@@ -1125,6 +1124,7 @@ fn serialize_struct_visitor(
             }
 
             let ser = if field.attrs.flatten() {
+                let span = field.original.span();
                 let func = quote_spanned!(span=> _serde::Serialize::serialize);
                 quote! {
                     #func(&#field_expr, _serde::__private::ser::FlatMapSerializer(&mut __serde_state))?;
