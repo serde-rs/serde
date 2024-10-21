@@ -371,7 +371,11 @@ fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
         } else {
             let value = match field.attrs.default() {
                 attr::Default::Default => quote!(_serde::__private::Default::default()),
-                attr::Default::Path(path) => quote!(#path()),
+                // If #path returns wrong type, error will be reported here (^^^^^).
+                // We attach span of the path to the function so it will be reported
+                // on the #[serde(default = "...")]
+                //                          ^^^^^
+                attr::Default::Path(path) => quote_spanned!(path.span()=> #path()),
                 attr::Default::None => quote!(_serde::__private::PhantomData),
             };
             quote!(#member: #value)
@@ -757,7 +761,11 @@ fn deserialize_seq(
         attr::Default::Default => Some(quote!(
             let __default: Self::Value = _serde::__private::Default::default();
         )),
-        attr::Default::Path(path) => Some(quote!(
+        // If #path returns wrong type, error will be reported here (^^^^^).
+        // We attach span of the path to the function so it will be reported
+        // on the #[serde(default = "...")]
+        //                          ^^^^^
+        attr::Default::Path(path) => Some(quote_spanned!(path.span()=>
             let __default: Self::Value = #path();
         )),
         attr::Default::None => {
@@ -839,7 +847,11 @@ fn deserialize_seq_in_place(
         attr::Default::Default => Some(quote!(
             let __default: #this_type #ty_generics = _serde::__private::Default::default();
         )),
-        attr::Default::Path(path) => Some(quote!(
+        // If #path returns wrong type, error will be reported here (^^^^^).
+        // We attach span of the path to the function so it will be reported
+        // on the #[serde(default = "...")]
+        //                          ^^^^^
+        attr::Default::Path(path) => Some(quote_spanned!(path.span()=>
             let __default: #this_type #ty_generics = #path();
         )),
         attr::Default::None => {
@@ -873,7 +885,11 @@ fn deserialize_newtype_struct(
             }
         }
         Some(path) => {
-            quote! {
+            // If #path returns wrong type, error will be reported here (^^^^^).
+            // We attach span of the path to the function so it will be reported
+            // on the #[serde(with = "...")]
+            //                       ^^^^^
+            quote_spanned! {path.span()=>
                 #path(__e)?
             }
         }
@@ -2647,7 +2663,11 @@ fn deserialize_map(
         attr::Default::Default => Some(quote!(
             let __default: Self::Value = _serde::__private::Default::default();
         )),
-        attr::Default::Path(path) => Some(quote!(
+        // If #path returns wrong type, error will be reported here (^^^^^).
+        // We attach span of the path to the function so it will be reported
+        // on the #[serde(default = "...")]
+        //                          ^^^^^
+        attr::Default::Path(path) => Some(quote_spanned!(path.span()=>
             let __default: Self::Value = #path();
         )),
         attr::Default::None => {
@@ -2817,7 +2837,11 @@ fn deserialize_map_in_place(
         attr::Default::Default => Some(quote!(
             let __default: #this_type #ty_generics = _serde::__private::Default::default();
         )),
-        attr::Default::Path(path) => Some(quote!(
+        // If #path returns wrong type, error will be reported here (^^^^^).
+        // We attach span of the path to the function so it will be reported
+        // on the #[serde(default = "...")]
+        //                          ^^^^^
+        attr::Default::Path(path) => Some(quote_spanned!(path.span()=>
             let __default: #this_type #ty_generics = #path();
         )),
         attr::Default::None => {
@@ -2856,6 +2880,13 @@ fn wrap_deserialize_with(
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
 
+    // If #deserialize_with returns wrong type, error will be reported here (^^^^^).
+    // We attach span of the path to the function so it will be reported
+    // on the #[serde(with = "...")]
+    //                       ^^^^^
+    let value = quote_spanned! {deserialize_with.span()=>
+        #deserialize_with(__deserializer)?
+    };
     let wrapper = quote! {
         #[doc(hidden)]
         struct __DeserializeWith #de_impl_generics #where_clause {
@@ -2870,7 +2901,7 @@ fn wrap_deserialize_with(
                 __D: _serde::Deserializer<#delife>,
             {
                 _serde::__private::Ok(__DeserializeWith {
-                    value: #deserialize_with(__deserializer)?,
+                    value: #value,
                     phantom: _serde::__private::PhantomData,
                     lifetime: _serde::__private::PhantomData,
                 })
@@ -2961,7 +2992,11 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
             return quote_expr!(#func());
         }
         attr::Default::Path(path) => {
-            return quote_expr!(#path());
+            // If #path returns wrong type, error will be reported here (^^^^^).
+            // We attach span of the path to the function so it will be reported
+            // on the #[serde(default = "...")]
+            //                          ^^^^^
+            return Fragment::Expr(quote_spanned!(path.span()=> #path()));
         }
         attr::Default::None => { /* below */ }
     }
@@ -3004,6 +3039,10 @@ fn expr_is_missing_seq(
             return quote_spanned!(span=> #assign_to _serde::__private::Default::default());
         }
         attr::Default::Path(path) => {
+            // If #path returns wrong type, error will be reported here (^^^^^).
+            // We attach span of the path to the function so it will be reported
+            // on the #[serde(default = "...")]
+            //                          ^^^^^
             return quote_spanned!(path.span()=> #assign_to #path());
         }
         attr::Default::None => { /* below */ }

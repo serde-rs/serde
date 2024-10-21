@@ -1220,9 +1220,15 @@ fn wrap_serialize_with(
         })
     });
 
-    quote!({
+    // If #serialize_with returns wrong type, error will be reported on here.
+    // We attach span of the path to this piece so error will be reported
+    // on the #[serde(with = "...")]
+    //                       ^^^^^
+    quote_spanned!(serialize_with.span()=> {
         #[doc(hidden)]
         struct __SerializeWith #wrapper_impl_generics #where_clause {
+            // If #field_tys is empty, `values` does not used
+            #[allow(dead_code)]
             values: (#(&'__a #field_tys, )*),
             phantom: _serde::__private::PhantomData<#this_type #ty_generics>,
         }

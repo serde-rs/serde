@@ -1,0 +1,5 @@
+error: #[serde(default = "...")] can only be used on structs that have fields
+ --> tests/ui/default-attribute/unit_path.rs:4:9
+  |
+4 | #[serde(default = "default_u")]
+  |         ^^^^^^^^^^^^^^^^^^^^^

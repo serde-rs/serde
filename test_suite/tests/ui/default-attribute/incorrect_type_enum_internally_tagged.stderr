@@ -1,0 +1,23 @@
+error[E0308]: `match` arms have incompatible types
+  --> tests/ui/default-attribute/incorrect_type_enum_internally_tagged.rs:11:27
+   |
+4  | #[derive(Deserialize)]
+   |          -----------
+   |          |
+   |          this is found to be of type `u8`
+   |          `match` arms have incompatible types
+...
+11 |         #[serde(default = "main")]
+   |                           ^^^^^^ expected `u8`, found `()`
+
+error[E0308]: `match` arms have incompatible types
+  --> tests/ui/default-attribute/incorrect_type_enum_internally_tagged.rs:14:27
+   |
+4  | #[derive(Deserialize)]
+   |          -----------
+   |          |
+   |          this is found to be of type `i8`
+   |          `match` arms have incompatible types
+...
+14 |         #[serde(default = "main")]
+   |                           ^^^^^^ expected `i8`, found `()`
