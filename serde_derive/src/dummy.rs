@@ -14,7 +14,12 @@ pub fn wrap_in_const(serde_path: Option<&syn::Path>, code: TokenStream) -> Token
 
     quote! {
         #[doc(hidden)]
-        #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+        #[allow(
+            clippy::needless_lifetimes,
+            non_upper_case_globals,
+            unused_attributes,
+            unused_qualifications,
+        )]
         const _: () = {
             #use_serde
             #code
