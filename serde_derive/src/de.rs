@@ -875,13 +875,14 @@ fn deserialize_newtype_struct(
 ) -> TokenStream {
     let delife = params.borrowed.de_lifetime();
     let field_ty = field.ty;
+    let deserializer_var = quote!(__e);
 
     let value = match field.attrs.deserialize_with() {
         None => {
             let span = field.original.span();
             let func = quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize);
             quote! {
-                #func(__e)?
+                #func(#deserializer_var)?
             }
         }
         Some(path) => {
@@ -890,7 +891,7 @@ fn deserialize_newtype_struct(
             // on the #[serde(with = "...")]
             //                       ^^^^^
             quote_spanned! {path.span()=>
-                #path(__e)?
+                #path(#deserializer_var)?
             }
         }
     };
@@ -906,7 +907,7 @@ fn deserialize_newtype_struct(
 
     quote! {
         #[inline]
-        fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::__private::Result<Self::Value, __E::Error>
+        fn visit_newtype_struct<__E>(self, #deserializer_var: __E) -> _serde::__private::Result<Self::Value, __E::Error>
         where
             __E: _serde::Deserializer<#delife>,
         {
