@@ -966,7 +966,7 @@ fn deserialize_struct(
     };
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
-    let field_names_idents: Vec<_> = fields
+    let field_idents_aliases: Vec<_> = fields
         .iter()
         .enumerate()
         // Skip fields that shouldn't be deserialized or that were flattened,
@@ -976,7 +976,7 @@ fn deserialize_struct(
         .collect();
 
     let has_flatten = has_flatten(fields);
-    let field_visitor = deserialize_field_identifier(&field_names_idents, cattrs, has_flatten);
+    let field_visitor = deserialize_field_identifier(&field_idents_aliases, cattrs, has_flatten);
 
     // untagged struct variants do not get a visit_seq method. The same applies to
     // structs that only have a map representation.
@@ -984,7 +984,7 @@ fn deserialize_struct(
         StructForm::Untagged(..) => None,
         _ if has_flatten => None,
         _ => {
-            let mut_seq = if field_names_idents.is_empty() {
+            let mut_seq = if field_idents_aliases.is_empty() {
                 quote!(_)
             } else {
                 quote!(mut __seq)
@@ -1032,7 +1032,9 @@ fn deserialize_struct(
     let fields_stmt = if has_flatten {
         None
     } else {
-        let field_names = field_names_idents.iter().flat_map(|&(_, aliases)| aliases);
+        let field_names = field_idents_aliases
+            .iter()
+            .flat_map(|&(_, aliases)| aliases);
 
         Some(quote! {
             #[doc(hidden)]
@@ -1125,23 +1127,25 @@ fn deserialize_struct_in_place(
     let expecting = format!("struct {}", params.type_name());
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
-    let field_names_idents: Vec<_> = fields
+    let field_idents_aliases: Vec<_> = fields
         .iter()
         .enumerate()
         .filter(|&(_, field)| !field.attrs.skip_deserializing())
         .map(|(i, field)| (field_i(i), field.attrs.aliases()))
         .collect();
 
-    let field_visitor = deserialize_field_identifier(&field_names_idents, cattrs, false);
+    let field_visitor = deserialize_field_identifier(&field_idents_aliases, cattrs, false);
 
-    let mut_seq = if field_names_idents.is_empty() {
+    let mut_seq = if field_idents_aliases.is_empty() {
         quote!(_)
     } else {
         quote!(mut __seq)
     };
     let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
     let visit_map = Stmts(deserialize_map_in_place(params, fields, cattrs));
-    let field_names = field_names_idents.iter().flat_map(|&(_, aliases)| aliases);
+    let field_names = field_idents_aliases
+        .iter()
+        .flat_map(|&(_, aliases)| aliases);
     let type_name = cattrs.name().deserialize_name();
 
     let in_place_impl_generics = de_impl_generics.in_place();
@@ -1991,18 +1995,21 @@ fn deserialize_untagged_newtype_variant(
 }
 
 fn deserialize_generated_identifier(
-    fields: &[(Ident, &BTreeSet<String>)],
+    field_idents_aliases: &[(Ident, &BTreeSet<String>)],
     has_flatten: bool,
     is_variant: bool,
     ignore_variant: Option<TokenStream>,
     fallthrough: Option<TokenStream>,
 ) -> Fragment {
     let this_value = quote!(__Field);
-    let field_idents: &Vec<_> = &fields.iter().map(|(ident, _)| ident).collect();
+    let field_idents: &Vec<_> = &field_idents_aliases
+        .iter()
+        .map(|(ident, _)| ident)
+        .collect();
 
     let visitor_impl = Stmts(deserialize_identifier(
         &this_value,
-        fields,
+        field_idents_aliases,
         is_variant,
         fallthrough,
         None,
@@ -2048,7 +2055,7 @@ fn deserialize_generated_identifier(
 /// Generates enum and its `Deserialize` implementation that represents each
 /// non-skipped field of the struct
 fn deserialize_field_identifier(
-    fields: &[(Ident, &BTreeSet<String>)],
+    field_idents_aliases: &[(Ident, &BTreeSet<String>)],
     cattrs: &attr::Container,
     has_flatten: bool,
 ) -> Stmts {
@@ -2065,7 +2072,7 @@ fn deserialize_field_identifier(
     };
 
     Stmts(deserialize_generated_identifier(
-        fields,
+        field_idents_aliases,
         has_flatten,
         false,
         ignore_variant,
@@ -2184,18 +2191,18 @@ fn deserialize_custom_identifier(
 
 fn deserialize_identifier(
     this_value: &TokenStream,
-    fields: &[(Ident, &BTreeSet<String>)],
+    field_idents_aliases: &[(Ident, &BTreeSet<String>)],
     is_variant: bool,
     fallthrough: Option<TokenStream>,
     fallthrough_borrowed: Option<TokenStream>,
     collect_other_fields: bool,
     expecting: Option<&str>,
 ) -> Fragment {
-    let str_mapping = fields.iter().map(|(ident, aliases)| {
+    let str_mapping = field_idents_aliases.iter().map(|(ident, aliases)| {
         // `aliases` also contains a main name
         quote!(#(#aliases)|* => _serde::__private::Ok(#this_value::#ident))
     });
-    let bytes_mapping = fields.iter().map(|(ident, aliases)| {
+    let bytes_mapping = field_idents_aliases.iter().map(|(ident, aliases)| {
         // `aliases` also contains a main name
         let aliases = aliases
             .iter()
@@ -2350,17 +2357,24 @@ fn deserialize_identifier(
             }
         }
     } else {
-        let u64_mapping = fields.iter().enumerate().map(|(i, (ident, _))| {
-            let i = i as u64;
-            quote!(#i => _serde::__private::Ok(#this_value::#ident))
-        });
+        let u64_mapping = field_idents_aliases
+            .iter()
+            .enumerate()
+            .map(|(i, (ident, _))| {
+                let i = i as u64;
+                quote!(#i => _serde::__private::Ok(#this_value::#ident))
+            });
 
         let u64_fallthrough_arm_tokens;
         let u64_fallthrough_arm = if let Some(fallthrough) = &fallthrough {
             fallthrough
         } else {
             let index_expecting = if is_variant { "variant" } else { "field" };
-            let fallthrough_msg = format!("{} index 0 <= i < {}", index_expecting, fields.len());
+            let fallthrough_msg = format!(
+                "{} index 0 <= i < {}",
+                index_expecting,
+                field_idents_aliases.len(),
+            );
             u64_fallthrough_arm_tokens = quote! {
                 _serde::__private::Err(_serde::de::Error::invalid_value(
                     _serde::de::Unexpected::Unsigned(__value),
