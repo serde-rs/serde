@@ -36,6 +36,7 @@
     clippy::single_match_else,
     clippy::struct_excessive_bools,
     clippy::too_many_lines,
+    clippy::uninlined_format_args,
     clippy::unused_self,
     clippy::wildcard_imports
 )]
