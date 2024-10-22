@@ -19,8 +19,10 @@ note: required by a bound in `w::serialize`
 error[E0061]: this function takes 1 argument but 2 arguments were supplied
   --> tests/ui/with/incorrect_type.rs:15:25
    |
+14 | #[derive(Serialize, Deserialize)]
+   |          --------- unexpected argument #2 of type `__S`
 15 | struct W(#[serde(with = "w")] u8, u8);
-   |                         ^^^ unexpected argument #2 of type `__S`
+   |                         ^^^
    |
 note: function defined here
   --> tests/ui/with/incorrect_type.rs:9:12
@@ -68,8 +70,10 @@ note: required by a bound in `w::serialize`
 error[E0061]: this function takes 1 argument but 2 arguments were supplied
   --> tests/ui/with/incorrect_type.rs:18:35
    |
+17 | #[derive(Serialize, Deserialize)]
+   |          --------- unexpected argument #2 of type `__S`
 18 | struct S(#[serde(serialize_with = "w::serialize")] u8, u8);
-   |                                   ^^^^^^^^^^^^^^ unexpected argument #2 of type `__S`
+   |                                   ^^^^^^^^^^^^^^
    |
 note: function defined here
   --> tests/ui/with/incorrect_type.rs:9:12

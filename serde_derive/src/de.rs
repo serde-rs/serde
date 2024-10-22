@@ -2882,13 +2882,14 @@ fn wrap_deserialize_with(
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
+    let deserializer_var = quote!(__deserializer);
 
     // If #deserialize_with returns wrong type, error will be reported here (^^^^^).
     // We attach span of the path to the function so it will be reported
     // on the #[serde(with = "...")]
     //                       ^^^^^
     let value = quote_spanned! {deserialize_with.span()=>
-        #deserialize_with(__deserializer)?
+        #deserialize_with(#deserializer_var)?
     };
     let wrapper = quote! {
         #[doc(hidden)]
@@ -2899,7 +2900,7 @@ fn wrap_deserialize_with(
         }
 
         impl #de_impl_generics _serde::Deserialize<#delife> for __DeserializeWith #de_ty_generics #where_clause {
-            fn deserialize<__D>(__deserializer: __D) -> _serde::__private::Result<Self, __D::Error>
+            fn deserialize<__D>(#deserializer_var: __D) -> _serde::__private::Result<Self, __D::Error>
             where
                 __D: _serde::Deserializer<#delife>,
             {
