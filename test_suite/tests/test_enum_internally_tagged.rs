@@ -157,6 +157,23 @@ fn newtype_unit() {
             Token::StructEnd,
         ],
     );
+
+    assert_de_tokens(
+        &value,
+        &[
+            Token::Seq { len: Some(1) },
+            Token::Str("NewtypeUnit"), // tag
+            Token::SeqEnd,
+        ],
+    );
+    assert_de_tokens(
+        &value,
+        &[
+            Token::Seq { len: Some(1) },
+            Token::BorrowedStr("NewtypeUnit"), // tag
+            Token::SeqEnd,
+        ],
+    );
 }
 
 #[test]
@@ -225,6 +242,8 @@ fn newtype_unit_struct() {
     );
 }
 
+// Reaches crate::private::de::content::ContentDeserializer::deserialize_newtype_struct
+// in not the Content::Newtype case
 #[test]
 fn newtype_newtype() {
     assert_tokens(
@@ -320,8 +339,9 @@ fn newtype_map() {
             Token::Seq { len: Some(2) },
             Token::Str("NewtypeMap"), // tag
             Token::Map { len: Some(0) },
-            Token::MapEnd,
-            Token::SeqEnd,
+            // Tokens that could follow, but assert_de_tokens_error does not want them
+            // Token::MapEnd,
+            // Token::SeqEnd,
         ],
         "invalid type: sequence, expected a map",
     );
@@ -1062,6 +1082,36 @@ fn wrong_tag() {
         `Struct`, \
         `StructEnum`",
     );
+}
+
+#[test]
+fn partially_untagged() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "tag")]
+    enum Data {
+        A,
+        B,
+        #[serde(untagged)]
+        Var(u32),
+    }
+
+    let data = Data::A;
+
+    assert_de_tokens(
+        &data,
+        &[
+            Token::Map { len: None },
+            Token::Str("tag"),
+            Token::Str("A"),
+            Token::MapEnd,
+        ],
+    );
+
+    let data = Data::Var(42);
+
+    assert_de_tokens(&data, &[Token::U32(42)]);
+
+    // TODO test error output
 }
 
 #[test]

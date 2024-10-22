@@ -1739,6 +1739,17 @@ pub trait SeqAccess<'de> {
     fn size_hint(&self) -> Option<usize> {
         None
     }
+
+    /// Checks if this sequence is empty. If that is unknown, implementation can
+    /// return `false`, but deserialization of internally tagged enums would
+    /// work incorrectly in that case.
+    #[inline]
+    fn is_empty(&mut self) -> bool {
+        match self.size_hint() {
+            Some(0) => true,
+            _ => false,
+        }
+    }
 }
 
 impl<'de, A> SeqAccess<'de> for &mut A
@@ -1766,6 +1777,11 @@ where
     #[inline]
     fn size_hint(&self) -> Option<usize> {
         (**self).size_hint()
+    }
+
+    #[inline]
+    fn is_empty(&mut self) -> bool {
+        (**self).is_empty()
     }
 }
 
@@ -1892,6 +1908,17 @@ pub trait MapAccess<'de> {
     fn size_hint(&self) -> Option<usize> {
         None
     }
+
+    /// Checks if this map is empty. If that is unknown, implementation can
+    /// return `false`, but deserialization of internally tagged enums would
+    /// work incorrectly in that case.
+    #[inline]
+    fn is_empty(&mut self) -> bool {
+        match self.size_hint() {
+            Some(0) => true,
+            _ => false,
+        }
+    }
 }
 
 impl<'de, A> MapAccess<'de> for &mut A
@@ -1957,6 +1984,11 @@ where
     #[inline]
     fn size_hint(&self) -> Option<usize> {
         (**self).size_hint()
+    }
+
+    #[inline]
+    fn is_empty(&mut self) -> bool {
+        (**self).is_empty()
     }
 }
 

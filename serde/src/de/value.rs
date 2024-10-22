@@ -1076,9 +1076,40 @@ where
         visitor.visit_seq(self.seq)
     }
 
+    fn deserialize_unit<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        // Covered by tests/test_enum_internally_tagged.rs/newtype_unit
+        if self.seq.is_empty() {
+            visitor.visit_unit()
+        } else {
+            visitor.visit_seq(self.seq)
+        }
+    }
+
+    fn deserialize_unit_struct<V>(
+        self,
+        _name: &'static str,
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        // Covered by tests/test_enum_internally_tagged.rs/newtype_unit_struct
+        self.deserialize_unit(visitor)
+    }
+
+    fn deserialize_newtype_struct<V>(self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        visitor.visit_newtype_struct(self)
+    }
+
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf option seq tuple
         tuple_struct map struct enum identifier ignored_any
     }
 }
@@ -1253,6 +1284,10 @@ where
     fn size_hint(&self) -> Option<usize> {
         size_hint::from_bounds(&self.iter)
     }
+
+    fn is_empty(&mut self) -> bool {
+        size_hint::is_empty(&self.iter)
+    }
 }
 
 impl<'de, I, E> de::SeqAccess<'de> for MapDeserializer<'de, I, E>
@@ -1280,6 +1315,10 @@ where
 
     fn size_hint(&self) -> Option<usize> {
         size_hint::from_bounds(&self.iter)
+    }
+
+    fn is_empty(&mut self) -> bool {
+        size_hint::is_empty(&self.iter)
     }
 }
 
@@ -1479,6 +1518,30 @@ where
         visitor.visit_map(self.map)
     }
 
+    fn deserialize_unit<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        // For newtype_variant_containing_unit
+        if self.map.is_empty() {
+            visitor.visit_unit()
+        } else {
+            visitor.visit_map(self.map)
+        }
+    }
+
+    fn deserialize_unit_struct<V>(
+        self,
+        _name: &'static str,
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        // For newtype_variant_containing_unit_struct
+        self.deserialize_unit(visitor)
+    }
+
     fn deserialize_enum<V>(
         self,
         _name: &str,
@@ -1491,9 +1554,21 @@ where
         visitor.visit_enum(self)
     }
 
+    fn deserialize_newtype_struct<V>(
+        self,
+        _name: &'static str,
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'de>,
+    {
+        // For test_internally_tagged_enum
+        visitor.visit_newtype_struct(self)
+    }
+
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf option seq tuple
         tuple_struct map struct identifier ignored_any
     }
 }
