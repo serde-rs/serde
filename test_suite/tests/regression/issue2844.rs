@@ -1,3 +1,5 @@
+#![allow(clippy::trivially_copy_pass_by_ref)]
+
 use serde_derive::{Deserialize, Serialize};
 
 macro_rules! declare_in_macro {
