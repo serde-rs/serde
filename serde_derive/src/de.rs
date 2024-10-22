@@ -1225,32 +1225,32 @@ fn deserialize_homogeneous_enum(
 }
 
 fn prepare_enum_variant_enum(variants: &[Variant]) -> (TokenStream, Stmts) {
-    let mut deserialized_variants = variants
+    let deserialized_variants = variants
         .iter()
         .enumerate()
-        .filter(|&(_, variant)| !variant.attrs.skip_deserializing());
-
-    let variant_names_idents: Vec<_> = deserialized_variants
-        .clone()
-        .map(|(i, variant)| (field_i(i), variant.attrs.aliases()))
-        .collect();
+        .filter(|&(_i, variant)| !variant.attrs.skip_deserializing());
 
     let fallthrough = deserialized_variants
-        .position(|(_, variant)| variant.attrs.other())
-        .map(|other_idx| {
-            let ignore_variant = variant_names_idents[other_idx].0.clone();
+        .clone()
+        .find(|(_i, variant)| variant.attrs.other())
+        .map(|(i, _variant)| {
+            let ignore_variant = field_i(i);
             quote!(_serde::__private::Ok(__Field::#ignore_variant))
         });
 
     let variants_stmt = {
-        let variant_names = variant_names_idents
-            .iter()
-            .flat_map(|&(_, aliases)| aliases);
+        let variant_names = deserialized_variants
+            .clone()
+            .flat_map(|(_i, variant)| variant.attrs.aliases());
         quote! {
             #[doc(hidden)]
             const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
         }
     };
+
+    let variant_names_idents: Vec<_> = deserialized_variants
+        .map(|(i, variant)| (field_i(i), variant.attrs.aliases()))
+        .collect();
 
     let variant_visitor = Stmts(deserialize_generated_identifier(
         &variant_names_idents,
