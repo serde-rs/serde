@@ -8,30 +8,30 @@ error[E0308]: mismatched types
   |                   expected due to this
 
 error[E0308]: `match` arms have incompatible types
- --> tests/ui/default-attribute/incorrect_type_tuple.rs:8:23
+ --> tests/ui/default-attribute/incorrect_type_tuple.rs:6:36
   |
 4 | #[derive(Deserialize)]
   |          -----------
   |          |
   |          this is found to be of type `i8`
   |          `match` arms have incompatible types
-...
-8 |     #[serde(default = "main")] i8,
-  |                       ^^^^^^ expected `i8`, found `()`
+5 | #[serde(default = "main")]
+6 | struct Tuple(u8, #[serde(default = "main")] i8);
+  |                                    ^^^^^^ expected `i8`, found `()`
 
 error[E0308]: mismatched types
  --> tests/ui/default-attribute/incorrect_type_tuple.rs:5:19
   |
 5 | #[serde(default = "main")]
   |                   ^^^^^^ expected `Tuple`, found `()`
-6 | struct Tuple(
+6 | struct Tuple(u8, #[serde(default = "main")] i8);
   |        ----- expected due to this
 
 error[E0308]: mismatched types
- --> tests/ui/default-attribute/incorrect_type_tuple.rs:8:23
+ --> tests/ui/default-attribute/incorrect_type_tuple.rs:6:36
   |
 4 | #[derive(Deserialize)]
   |          ----------- expected due to the type of this binding
-...
-8 |     #[serde(default = "main")] i8,
-  |                       ^^^^^^ expected `i8`, found `()`
+5 | #[serde(default = "main")]
+6 | struct Tuple(u8, #[serde(default = "main")] i8);
+  |                                    ^^^^^^ expected `i8`, found `()`

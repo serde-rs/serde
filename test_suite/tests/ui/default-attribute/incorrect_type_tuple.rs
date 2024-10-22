@@ -3,9 +3,6 @@ use serde_derive::Deserialize;
 
 #[derive(Deserialize)]
 #[serde(default = "main")]
-struct Tuple(
-    u8,
-    #[serde(default = "main")] i8,
-);
+struct Tuple(u8, #[serde(default = "main")] i8);
 
 fn main() {}

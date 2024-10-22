@@ -1,17 +1,17 @@
 error[E0308]: `match` arms have incompatible types
-  --> tests/ui/default-attribute/incorrect_type_enum_externally_tagged.rs:10:27
-   |
-4  | #[derive(Deserialize)]
-   |          -----------
-   |          |
-   |          this is found to be of type `i8`
-   |          `match` arms have incompatible types
+ --> tests/ui/default-attribute/incorrect_type_enum_externally_tagged.rs:8:33
+  |
+4 | #[derive(Deserialize)]
+  |          -----------
+  |          |
+  |          this is found to be of type `i8`
+  |          `match` arms have incompatible types
 ...
-10 |         #[serde(default = "main")] i8,
-   |                           ^^^^^^ expected `i8`, found `()`
+8 |     Tuple(u8, #[serde(default = "main")] i8),
+  |                                 ^^^^^^ expected `i8`, found `()`
 
 error[E0308]: `match` arms have incompatible types
-  --> tests/ui/default-attribute/incorrect_type_enum_externally_tagged.rs:13:27
+  --> tests/ui/default-attribute/incorrect_type_enum_externally_tagged.rs:10:27
    |
 4  | #[derive(Deserialize)]
    |          -----------
@@ -19,11 +19,11 @@ error[E0308]: `match` arms have incompatible types
    |          this is found to be of type `u8`
    |          `match` arms have incompatible types
 ...
-13 |         #[serde(default = "main")]
+10 |         #[serde(default = "main")]
    |                           ^^^^^^ expected `u8`, found `()`
 
 error[E0308]: `match` arms have incompatible types
-  --> tests/ui/default-attribute/incorrect_type_enum_externally_tagged.rs:16:27
+  --> tests/ui/default-attribute/incorrect_type_enum_externally_tagged.rs:13:27
    |
 4  | #[derive(Deserialize)]
    |          -----------
@@ -31,5 +31,5 @@ error[E0308]: `match` arms have incompatible types
    |          this is found to be of type `i8`
    |          `match` arms have incompatible types
 ...
-16 |         #[serde(default = "main")]
+13 |         #[serde(default = "main")]
    |                           ^^^^^^ expected `i8`, found `()`

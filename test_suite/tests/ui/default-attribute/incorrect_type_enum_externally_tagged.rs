@@ -5,10 +5,7 @@ use serde_derive::Deserialize;
 enum Enum {
     // Newtype variants does not use the provided path, so it is forbidden here
     // Newtype(#[serde(default = "main")] u8),
-    Tuple(
-        u8,
-        #[serde(default = "main")] i8,
-    ),
+    Tuple(u8, #[serde(default = "main")] i8),
     Struct {
         #[serde(default = "main")]
         f1: u8,
