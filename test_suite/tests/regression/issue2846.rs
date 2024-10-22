@@ -5,7 +5,11 @@ use serde_derive::Deserialize;
 macro_rules! declare_in_macro {
     ($with:literal) => {
         #[derive(Deserialize)]
-        pub struct S(#[serde(with = $with)] i32);
+        pub struct S(
+            #[serde(with = $with)]
+            #[allow(dead_code)]
+            i32,
+        );
     };
 }
 
