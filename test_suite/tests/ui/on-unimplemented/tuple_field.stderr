@@ -1,0 +1,82 @@
+error[E0277]: the trait bound `NoImpls: Serialize` is not satisfied
+ --> tests/ui/on-unimplemented/tuple_field.rs:6:15
+  |
+6 | struct S(u32, NoImpls);
+  |               ^^^^^^^ the trait `Serialize` is not implemented for `NoImpls`
+  |
+  = note: for local types consider adding `#[derive(serde::Serialize)]` to your `NoImpls` type
+  = note: for types from other crates check whether the crate offers a `serde` feature flag
+  = help: the following other types implement trait `Serialize`:
+            &'a T
+            &'a mut T
+            ()
+            (T,)
+            (T0, T1)
+            (T0, T1, T2)
+            (T0, T1, T2, T3)
+            (T0, T1, T2, T3, T4)
+          and $N others
+note: required by a bound in `_::_serde::ser::SerializeTupleStruct::serialize_field`
+ --> $WORKSPACE/serde/src/ser/mod.rs
+  |
+  |     fn serialize_field<T>(&mut self, value: &T) -> Result<(), Self::Error>
+  |        --------------- required by a bound in this associated function
+  |     where
+  |         T: ?Sized + Serialize;
+  |                     ^^^^^^^^^ required by this bound in `SerializeTupleStruct::serialize_field`
+
+error[E0277]: the trait bound `NoImpls: Deserialize<'_>` is not satisfied
+ --> tests/ui/on-unimplemented/tuple_field.rs:6:15
+  |
+6 | struct S(u32, NoImpls);
+  |               ^^^^^^^ the trait `Deserialize<'_>` is not implemented for `NoImpls`
+  |
+  = note: for local types consider adding `#[derive(serde::Deserialize)]` to your `NoImpls` type
+  = note: for types from other crates check whether the crate offers a `serde` feature flag
+  = help: the following other types implement trait `Deserialize<'de>`:
+            &'a Path
+            &'a [u8]
+            &'a str
+            ()
+            (T,)
+            (T0, T1)
+            (T0, T1, T2)
+            (T0, T1, T2, T3)
+          and $N others
+note: required by a bound in `next_element`
+ --> $WORKSPACE/serde/src/de/mod.rs
+  |
+  |     fn next_element<T>(&mut self) -> Result<Option<T>, Self::Error>
+  |        ------------ required by a bound in this associated function
+  |     where
+  |         T: Deserialize<'de>,
+  |            ^^^^^^^^^^^^^^^^ required by this bound in `SeqAccess::next_element`
+
+error[E0277]: the trait bound `NoImpls: Deserialize<'_>` is not satisfied
+ --> tests/ui/on-unimplemented/tuple_field.rs:5:21
+  |
+5 | #[derive(Serialize, Deserialize)]
+  |                     ^^^^^^^^^^^ the trait `Deserialize<'_>` is not implemented for `NoImpls`, which is required by `InPlaceSeed<'_, NoImpls>: DeserializeSeed<'_>`
+  |
+  = note: for local types consider adding `#[derive(serde::Deserialize)]` to your `NoImpls` type
+  = note: for types from other crates check whether the crate offers a `serde` feature flag
+  = help: the following other types implement trait `Deserialize<'de>`:
+            &'a Path
+            &'a [u8]
+            &'a str
+            ()
+            (T,)
+            (T0, T1)
+            (T0, T1, T2)
+            (T0, T1, T2, T3)
+          and $N others
+  = note: required for `InPlaceSeed<'_, NoImpls>` to implement `DeserializeSeed<'_>`
+note: required by a bound in `next_element_seed`
+ --> $WORKSPACE/serde/src/de/mod.rs
+  |
+  |     fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+  |        ----------------- required by a bound in this associated function
+  |     where
+  |         T: DeserializeSeed<'de>;
+  |            ^^^^^^^^^^^^^^^^^^^^ required by this bound in `SeqAccess::next_element_seed`
+  = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)
