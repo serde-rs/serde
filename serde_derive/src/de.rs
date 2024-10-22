@@ -1252,12 +1252,12 @@ fn prepare_enum_variant_enum(variants: &[Variant]) -> (TokenStream, Stmts) {
         }
     };
 
-    let variant_names_idents: Vec<_> = deserialized_variants
+    let variant_idents_aliases: Vec<_> = deserialized_variants
         .map(|(i, variant)| (field_i(i), variant.attrs.aliases()))
         .collect();
 
     let variant_visitor = Stmts(deserialize_generated_identifier(
-        &variant_names_idents,
+        &variant_idents_aliases,
         false, // variant identifiers do not depend on the presence of flatten fields
         true,
         None,
@@ -2130,12 +2130,12 @@ fn deserialize_custom_identifier(
         (variants, None, None)
     };
 
-    let names_idents: Vec<_> = ordinary
+    let idents_aliases: Vec<_> = ordinary
         .iter()
         .map(|variant| (variant.ident.clone(), variant.attrs.aliases()))
         .collect();
 
-    let names = names_idents.iter().flat_map(|&(_, aliases)| aliases);
+    let names = idents_aliases.iter().flat_map(|&(_, aliases)| aliases);
 
     let names_const = if fallthrough.is_some() {
         None
@@ -2158,7 +2158,7 @@ fn deserialize_custom_identifier(
     let delife = params.borrowed.de_lifetime();
     let visitor_impl = Stmts(deserialize_identifier(
         &this_value,
-        &names_idents,
+        &idents_aliases,
         is_variant,
         fallthrough,
         fallthrough_borrowed,
