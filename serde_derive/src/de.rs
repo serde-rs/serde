@@ -966,17 +966,20 @@ fn deserialize_struct(
     };
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
-    let field_idents_aliases: Vec<_> = fields
+    let deserialized_fields: Vec<_> = fields
         .iter()
         .enumerate()
         // Skip fields that shouldn't be deserialized or that were flattened,
         // so they don't appear in the storage in their literal form
         .filter(|&(_, field)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
-        .map(|(i, field)| (field_i(i), field.attrs.aliases()))
+        .map(|(i, field)| FieldWithAliases {
+            ident: field_i(i),
+            aliases: field.attrs.aliases(),
+        })
         .collect();
 
     let has_flatten = has_flatten(fields);
-    let field_visitor = deserialize_field_identifier(&field_idents_aliases, cattrs, has_flatten);
+    let field_visitor = deserialize_field_identifier(&deserialized_fields, cattrs, has_flatten);
 
     // untagged struct variants do not get a visit_seq method. The same applies to
     // structs that only have a map representation.
@@ -984,7 +987,7 @@ fn deserialize_struct(
         StructForm::Untagged(..) => None,
         _ if has_flatten => None,
         _ => {
-            let mut_seq = if field_idents_aliases.is_empty() {
+            let mut_seq = if deserialized_fields.is_empty() {
                 quote!(_)
             } else {
                 quote!(mut __seq)
@@ -1032,9 +1035,7 @@ fn deserialize_struct(
     let fields_stmt = if has_flatten {
         None
     } else {
-        let field_names = field_idents_aliases
-            .iter()
-            .flat_map(|&(_, aliases)| aliases);
+        let field_names = deserialized_fields.iter().flat_map(|field| field.aliases);
 
         Some(quote! {
             #[doc(hidden)]
@@ -1127,25 +1128,26 @@ fn deserialize_struct_in_place(
     let expecting = format!("struct {}", params.type_name());
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
-    let field_idents_aliases: Vec<_> = fields
+    let deserialized_fields: Vec<_> = fields
         .iter()
         .enumerate()
         .filter(|&(_, field)| !field.attrs.skip_deserializing())
-        .map(|(i, field)| (field_i(i), field.attrs.aliases()))
+        .map(|(i, field)| FieldWithAliases {
+            ident: field_i(i),
+            aliases: field.attrs.aliases(),
+        })
         .collect();
 
-    let field_visitor = deserialize_field_identifier(&field_idents_aliases, cattrs, false);
+    let field_visitor = deserialize_field_identifier(&deserialized_fields, cattrs, false);
 
-    let mut_seq = if field_idents_aliases.is_empty() {
+    let mut_seq = if deserialized_fields.is_empty() {
         quote!(_)
     } else {
         quote!(mut __seq)
     };
     let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
     let visit_map = Stmts(deserialize_map_in_place(params, fields, cattrs));
-    let field_names = field_idents_aliases
-        .iter()
-        .flat_map(|&(_, aliases)| aliases);
+    let field_names = deserialized_fields.iter().flat_map(|field| field.aliases);
     let type_name = cattrs.name().deserialize_name();
 
     let in_place_impl_generics = de_impl_generics.in_place();
@@ -1252,12 +1254,15 @@ fn prepare_enum_variant_enum(variants: &[Variant]) -> (TokenStream, Stmts) {
         }
     };
 
-    let variant_idents_aliases: Vec<_> = deserialized_variants
-        .map(|(i, variant)| (field_i(i), variant.attrs.aliases()))
+    let deserialized_variants: Vec<_> = deserialized_variants
+        .map(|(i, variant)| FieldWithAliases {
+            ident: field_i(i),
+            aliases: variant.attrs.aliases(),
+        })
         .collect();
 
     let variant_visitor = Stmts(deserialize_generated_identifier(
-        &variant_idents_aliases,
+        &deserialized_variants,
         false, // variant identifiers do not depend on the presence of flatten fields
         true,
         None,
@@ -1994,22 +1999,27 @@ fn deserialize_untagged_newtype_variant(
     }
 }
 
+struct FieldWithAliases<'a> {
+    ident: Ident,
+    aliases: &'a BTreeSet<String>,
+}
+
 fn deserialize_generated_identifier(
-    field_idents_aliases: &[(Ident, &BTreeSet<String>)],
+    deserialized_fields: &[FieldWithAliases],
     has_flatten: bool,
     is_variant: bool,
     ignore_variant: Option<TokenStream>,
     fallthrough: Option<TokenStream>,
 ) -> Fragment {
     let this_value = quote!(__Field);
-    let field_idents: &Vec<_> = &field_idents_aliases
+    let field_idents: &Vec<_> = &deserialized_fields
         .iter()
-        .map(|(ident, _)| ident)
+        .map(|field| &field.ident)
         .collect();
 
     let visitor_impl = Stmts(deserialize_identifier(
         &this_value,
-        field_idents_aliases,
+        deserialized_fields,
         is_variant,
         fallthrough,
         None,
@@ -2055,7 +2065,7 @@ fn deserialize_generated_identifier(
 /// Generates enum and its `Deserialize` implementation that represents each
 /// non-skipped field of the struct
 fn deserialize_field_identifier(
-    field_idents_aliases: &[(Ident, &BTreeSet<String>)],
+    deserialized_fields: &[FieldWithAliases],
     cattrs: &attr::Container,
     has_flatten: bool,
 ) -> Stmts {
@@ -2072,7 +2082,7 @@ fn deserialize_field_identifier(
     };
 
     Stmts(deserialize_generated_identifier(
-        field_idents_aliases,
+        deserialized_fields,
         has_flatten,
         false,
         ignore_variant,
@@ -2132,10 +2142,13 @@ fn deserialize_custom_identifier(
 
     let idents_aliases: Vec<_> = ordinary
         .iter()
-        .map(|variant| (variant.ident.clone(), variant.attrs.aliases()))
+        .map(|variant| FieldWithAliases {
+            ident: variant.ident.clone(),
+            aliases: variant.attrs.aliases(),
+        })
         .collect();
 
-    let names = idents_aliases.iter().flat_map(|&(_, aliases)| aliases);
+    let names = idents_aliases.iter().flat_map(|variant| variant.aliases);
 
     let names_const = if fallthrough.is_some() {
         None
@@ -2191,20 +2204,24 @@ fn deserialize_custom_identifier(
 
 fn deserialize_identifier(
     this_value: &TokenStream,
-    field_idents_aliases: &[(Ident, &BTreeSet<String>)],
+    deserialized_fields: &[FieldWithAliases],
     is_variant: bool,
     fallthrough: Option<TokenStream>,
     fallthrough_borrowed: Option<TokenStream>,
     collect_other_fields: bool,
     expecting: Option<&str>,
 ) -> Fragment {
-    let str_mapping = field_idents_aliases.iter().map(|(ident, aliases)| {
+    let str_mapping = deserialized_fields.iter().map(|field| {
+        let ident = &field.ident;
+        let aliases = field.aliases;
         // `aliases` also contains a main name
         quote!(#(#aliases)|* => _serde::__private::Ok(#this_value::#ident))
     });
-    let bytes_mapping = field_idents_aliases.iter().map(|(ident, aliases)| {
+    let bytes_mapping = deserialized_fields.iter().map(|field| {
+        let ident = &field.ident;
         // `aliases` also contains a main name
-        let aliases = aliases
+        let aliases = field
+            .aliases
             .iter()
             .map(|alias| Literal::byte_string(alias.as_bytes()));
         quote!(#(#aliases)|* => _serde::__private::Ok(#this_value::#ident))
@@ -2357,13 +2374,11 @@ fn deserialize_identifier(
             }
         }
     } else {
-        let u64_mapping = field_idents_aliases
-            .iter()
-            .enumerate()
-            .map(|(i, (ident, _))| {
-                let i = i as u64;
-                quote!(#i => _serde::__private::Ok(#this_value::#ident))
-            });
+        let u64_mapping = deserialized_fields.iter().enumerate().map(|(i, field)| {
+            let i = i as u64;
+            let ident = &field.ident;
+            quote!(#i => _serde::__private::Ok(#this_value::#ident))
+        });
 
         let u64_fallthrough_arm_tokens;
         let u64_fallthrough_arm = if let Some(fallthrough) = &fallthrough {
@@ -2373,7 +2388,7 @@ fn deserialize_identifier(
             let fallthrough_msg = format!(
                 "{} index 0 <= i < {}",
                 index_expecting,
-                field_idents_aliases.len(),
+                deserialized_fields.len(),
             );
             u64_fallthrough_arm_tokens = quote! {
                 _serde::__private::Err(_serde::de::Error::invalid_value(
