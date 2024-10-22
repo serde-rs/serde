@@ -1224,11 +1224,13 @@ fn wrap_serialize_with(
     // We attach span of the path to this piece so error will be reported
     // on the #[serde(with = "...")]
     //                       ^^^^^
-    quote_spanned!(serialize_with.span()=> {
+    let wrapper_serialize = quote_spanned! {serialize_with.span()=>
+        #serialize_with(#(self.values.#field_access, )* __s)
+    };
+
+    quote!({
         #[doc(hidden)]
         struct __SerializeWith #wrapper_impl_generics #where_clause {
-            // If #field_tys is empty, this field is unused
-            #[allow(dead_code)]
             values: (#(&'__a #field_tys, )*),
             phantom: _serde::__private::PhantomData<#this_type #ty_generics>,
         }
@@ -1238,7 +1240,7 @@ fn wrap_serialize_with(
             where
                 __S: _serde::Serializer,
             {
-                #serialize_with(#(self.values.#field_access, )* __s)
+                #wrapper_serialize
             }
         }
 
