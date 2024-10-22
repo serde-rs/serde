@@ -1227,7 +1227,7 @@ fn wrap_serialize_with(
     quote_spanned!(serialize_with.span()=> {
         #[doc(hidden)]
         struct __SerializeWith #wrapper_impl_generics #where_clause {
-            // If #field_tys is empty, `values` does not used
+            // If #field_tys is empty, this field is unused
             #[allow(dead_code)]
             values: (#(&'__a #field_tys, )*),
             phantom: _serde::__private::PhantomData<#this_type #ty_generics>,

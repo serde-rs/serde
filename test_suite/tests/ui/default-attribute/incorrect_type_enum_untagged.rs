@@ -1,10 +1,11 @@
-//! Ensures that error message points to the path in attribute
+// Tests that type error points to the path in attribute
+
 use serde_derive::Deserialize;
 
 #[derive(Deserialize)]
 #[serde(untagged)]
 enum Enum {
-    // Newtype variants does not use the provided path, so it is forbidden here
+    // Newtype variants do not use the provided path, so it is forbidden here
     // Newtype(#[serde(default = "main")] u8),
     Tuple(u8, #[serde(default = "main")] i8),
     Struct {

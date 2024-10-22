@@ -1,4 +1,5 @@
-//! Ensures that error message points to the path in attribute
+// Tests that type error points to the path in attribute
+
 use serde_derive::Deserialize;
 
 #[derive(Deserialize)]
