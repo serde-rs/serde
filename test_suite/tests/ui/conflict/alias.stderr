@@ -1,0 +1,35 @@
+error: alias `b` conflicts with deserialization name of other field
+ --> tests/ui/conflict/alias.rs:5:5
+  |
+5 | /     /// Expected error on "alias b", because this is a name of other field
+6 | |     /// Error on "alias a" is not expected because this is a name of this field
+7 | |     /// Error on "alias c" is not expected because field `c` is skipped
+8 | |     #[serde(alias = "a", alias = "b", alias = "c")]
+9 | |     a: (),
+  | |_________^
+
+error: alias `c` already used by field a
+  --> tests/ui/conflict/alias.rs:11:5
+   |
+11 | /     /// Expected error on "alias c", because it is already used as alias of `a`
+12 | |     #[serde(alias = "c")]
+13 | |     b: (),
+   | |_________^
+
+error: alias `c` conflicts with deserialization name of other field
+  --> tests/ui/conflict/alias.rs:21:5
+   |
+21 | /     /// Expected error on "alias c", because this is a name of other field after
+22 | |     /// applying rename rules
+23 | |     #[serde(alias = "b", alias = "c")]
+24 | |     a: (),
+   | |_________^
+
+error: alias `B` conflicts with deserialization name of other field
+  --> tests/ui/conflict/alias.rs:33:5
+   |
+33 | /     /// Expected error on "alias B", because this is a name of field after
+34 | |     /// applying rename rules
+35 | |     #[serde(alias = "B", alias = "c")]
+36 | |     a: (),
+   | |_________^
