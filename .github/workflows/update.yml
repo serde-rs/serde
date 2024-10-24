@@ -10,6 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Sync fork
-        uses: tgymnich/fork-sync@v2
+        uses: tgymnich/fork-sync@24694a38cabd64d73af8bb26981754121a9c4ba6
         with:
           owner: serde-rs
