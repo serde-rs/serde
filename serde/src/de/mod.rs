@@ -296,7 +296,7 @@ macro_rules! declare_error_trait {
             /// Raised when trying to serialize or deserialize type that not supported.
             #[cold]
             fn unsupported(ty: &'static str) -> Self {
-                Error::custom(format_args!("{ty} is not supported"))
+                Error::custom(format_args!("{} is not supported", ty))
             }
         }
     }
