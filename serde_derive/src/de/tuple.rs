@@ -61,25 +61,18 @@ pub(super) fn deserialize(
         TupleForm::Tuple if nfields == 1 => {
             let field = &fields[0];
             let field_ty = field.ty;
-            let deserializer_var = quote!(__e);
 
-            let value = match field.attrs.deserialize_with() {
+            let deserialize = match field.attrs.deserialize_with() {
                 None => {
                     let span = field.original.span();
-                    let func =
-                        quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize);
-                    quote! {
-                        #func(#deserializer_var)?
-                    }
+                    quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize)
                 }
                 Some(path) => {
                     // If #path returns wrong type, error will be reported here (^^^^^).
                     // We attach span of the path to the function so it will be reported
                     // on the #[serde(with = "...")]
                     //                       ^^^^^
-                    quote_spanned! {path.span()=>
-                        #path(#deserializer_var)?
-                    }
+                    quote_spanned!(path.span()=> #path)
                 }
             };
 
@@ -94,11 +87,11 @@ pub(super) fn deserialize(
 
             Some(quote! {
                 #[inline]
-                fn visit_newtype_struct<__E>(self, #deserializer_var: __E) -> _serde::#private::Result<Self::Value, __E::Error>
+                fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::#private::Result<Self::Value, __E::Error>
                 where
                     __E: _serde::Deserializer<#delife>,
                 {
-                    let __field0: #field_ty = #value;
+                    let __field0: #field_ty = #deserialize(__e)?;
                     _serde::#private::Ok(#result)
                 }
             })
