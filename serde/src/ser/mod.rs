@@ -179,7 +179,7 @@ macro_rules! declare_error_trait {
             where
                 T: Display;
 
-            /// Raised when trying to serialize or deserialize type that not supported.
+            /// Raised when trying to serialize type that not supported.
             fn unsupported(ty: &'static str) -> Self {
                 Self::custom(format_args!("{} is not supported", ty))
             }

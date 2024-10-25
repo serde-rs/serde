@@ -293,7 +293,7 @@ macro_rules! declare_error_trait {
                 Error::custom(format_args!("duplicate field `{}`", field))
             }
 
-            /// Raised when trying to serialize or deserialize type that not supported.
+            /// Raised when trying to deserialize type that not supported.
             #[cold]
             fn unsupported(ty: &'static str) -> Self {
                 Error::custom(format_args!("{} is not supported", ty))
