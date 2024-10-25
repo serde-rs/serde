@@ -292,6 +292,12 @@ macro_rules! declare_error_trait {
             fn duplicate_field(field: &'static str) -> Self {
                 Error::custom(format_args!("duplicate field `{}`", field))
             }
+
+            /// Raised when trying to serialize or deserialize type that not supported.
+            #[cold]
+            fn unsupported(ty: &'static str) -> Self {
+                Error::custom(format_args!("{ty} is not supported"))
+            }
         }
     }
 }
@@ -927,32 +933,56 @@ pub trait Deserializer<'de>: Sized {
     /// many others.
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("any"))
+    }
 
     /// Hint that the `Deserialize` type is expecting a `bool` value.
     fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("bool"))
+    }
 
     /// Hint that the `Deserialize` type is expecting an `i8` value.
     fn deserialize_i8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("i8"))
+    }
 
     /// Hint that the `Deserialize` type is expecting an `i16` value.
     fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("i16"))
+    }
 
     /// Hint that the `Deserialize` type is expecting an `i32` value.
     fn deserialize_i32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("i32"))
+    }
 
     /// Hint that the `Deserialize` type is expecting an `i64` value.
     fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("i64"))
+    }
 
     /// Hint that the `Deserialize` type is expecting an `i128` value.
     ///
@@ -962,28 +992,44 @@ pub trait Deserializer<'de>: Sized {
         V: Visitor<'de>,
     {
         let _ = visitor;
-        Err(Error::custom("i128 is not supported"))
+        Err(Error::unsupported("i128"))
     }
 
     /// Hint that the `Deserialize` type is expecting a `u8` value.
     fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("u8"))
+    }
 
     /// Hint that the `Deserialize` type is expecting a `u16` value.
     fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("u16"))
+    }
 
     /// Hint that the `Deserialize` type is expecting a `u32` value.
     fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("u32"))
+    }
 
     /// Hint that the `Deserialize` type is expecting a `u64` value.
     fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("u64"))
+    }
 
     /// Hint that the `Deserialize` type is expecting an `u128` value.
     ///
@@ -993,23 +1039,35 @@ pub trait Deserializer<'de>: Sized {
         V: Visitor<'de>,
     {
         let _ = visitor;
-        Err(Error::custom("u128 is not supported"))
+        Err(Error::unsupported("u128"))
     }
 
     /// Hint that the `Deserialize` type is expecting a `f32` value.
     fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("f32"))
+    }
 
     /// Hint that the `Deserialize` type is expecting a `f64` value.
     fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("f64"))
+    }
 
     /// Hint that the `Deserialize` type is expecting a `char` value.
     fn deserialize_char<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("char"))
+    }
 
     /// Hint that the `Deserialize` type is expecting a string value and does
     /// not benefit from taking ownership of buffered data owned by the
@@ -1020,7 +1078,10 @@ pub trait Deserializer<'de>: Sized {
     /// instead.
     fn deserialize_str<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        self.deserialize_string(visitor)
+    }
 
     /// Hint that the `Deserialize` type is expecting a string value and would
     /// benefit from taking ownership of buffered data owned by the
@@ -1031,7 +1092,11 @@ pub trait Deserializer<'de>: Sized {
     /// instead.
     fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("string"))
+    }
 
     /// Hint that the `Deserialize` type is expecting a byte array and does not
     /// benefit from taking ownership of buffered data owned by the
@@ -1042,7 +1107,11 @@ pub trait Deserializer<'de>: Sized {
     /// instead.
     fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("bytes slice"))
+    }
 
     /// Hint that the `Deserialize` type is expecting a byte array and would
     /// benefit from taking ownership of buffered data owned by the
@@ -1053,7 +1122,11 @@ pub trait Deserializer<'de>: Sized {
     /// instead.
     fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        self.deserialize_bytes(visitor)
+    }
 
     /// Hint that the `Deserialize` type is expecting an optional value.
     ///
@@ -1062,12 +1135,20 @@ pub trait Deserializer<'de>: Sized {
     /// `Some(value)`.
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("optional value"))
+    }
 
     /// Hint that the `Deserialize` type is expecting a unit value.
     fn deserialize_unit<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("unit value"))
+    }
 
     /// Hint that the `Deserialize` type is expecting a unit struct with a
     /// particular name.
@@ -1077,7 +1158,11 @@ pub trait Deserializer<'de>: Sized {
         visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = (name, visitor);
+        Err(Error::unsupported("unit struct"))
+    }
 
     /// Hint that the `Deserialize` type is expecting a newtype struct with a
     /// particular name.
@@ -1087,18 +1172,30 @@ pub trait Deserializer<'de>: Sized {
         visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = (name, visitor);
+        Err(Error::unsupported("newtype struct"))
+    }
 
     /// Hint that the `Deserialize` type is expecting a sequence of values.
     fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("sequence"))
+    }
 
     /// Hint that the `Deserialize` type is expecting a sequence of values and
     /// knows how many values there are without looking at the serialized data.
     fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = (len, visitor);
+        Err(Error::unsupported("tuple"))
+    }
 
     /// Hint that the `Deserialize` type is expecting a tuple struct with a
     /// particular name and number of fields.
@@ -1109,12 +1206,20 @@ pub trait Deserializer<'de>: Sized {
         visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = (name, len, visitor);
+        Err(Error::unsupported("tuple struct"))
+    }
 
     /// Hint that the `Deserialize` type is expecting a map of key-value pairs.
     fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("map"))
+    }
 
     /// Hint that the `Deserialize` type is expecting a struct with a particular
     /// name and fields.
@@ -1125,7 +1230,11 @@ pub trait Deserializer<'de>: Sized {
         visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = (name, fields, visitor);
+        Err(Error::unsupported("struct"))
+    }
 
     /// Hint that the `Deserialize` type is expecting an enum value with a
     /// particular name and possible variants.
@@ -1136,13 +1245,21 @@ pub trait Deserializer<'de>: Sized {
         visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = (name, variants, visitor);
+        Err(Error::unsupported("enum"))
+    }
 
     /// Hint that the `Deserialize` type is expecting the name of a struct
     /// field or the discriminant of an enum variant.
     fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("identifier hint"))
+    }
 
     /// Hint that the `Deserialize` type needs to deserialize a value whose type
     /// doesn't matter because it is ignored.
@@ -1150,7 +1267,11 @@ pub trait Deserializer<'de>: Sized {
     /// Deserializers for non-self-describing formats may not support this mode.
     fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
-        V: Visitor<'de>;
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::unsupported("ignored any"))
+    }
 
     /// Determine whether `Deserialize` implementations should expect to
     /// deserialize their human-readable form.

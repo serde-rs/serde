@@ -178,6 +178,11 @@ macro_rules! declare_error_trait {
             fn custom<T>(msg: T) -> Self
             where
                 T: Display;
+
+            /// Raised when trying to serialize or deserialize type that not supported.
+            fn unsupported(ty: &'static str) -> Self {
+                Self::custom(format_args!("{ty} is not supported"))
+            }
         }
     }
 }
@@ -409,7 +414,10 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_bool(self, v: bool) -> Result<Self::Ok, Self::Error>;
+    fn serialize_bool(self, v: bool) -> Result<Self::Ok, Self::Error> {
+        let _ = v;
+        Err(Error::unsupported("bool"))
+    }
 
     /// Serialize an `i8` value.
     ///
@@ -431,7 +439,10 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_i8(self, v: i8) -> Result<Self::Ok, Self::Error>;
+    fn serialize_i8(self, v: i8) -> Result<Self::Ok, Self::Error> {
+        let _ = v;
+        Err(Error::unsupported("i8"))
+    }
 
     /// Serialize an `i16` value.
     ///
@@ -453,7 +464,10 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_i16(self, v: i16) -> Result<Self::Ok, Self::Error>;
+    fn serialize_i16(self, v: i16) -> Result<Self::Ok, Self::Error> {
+        let _ = v;
+        Err(Error::unsupported("i16"))
+    }
 
     /// Serialize an `i32` value.
     ///
@@ -475,7 +489,10 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_i32(self, v: i32) -> Result<Self::Ok, Self::Error>;
+    fn serialize_i32(self, v: i32) -> Result<Self::Ok, Self::Error> {
+        let _ = v;
+        Err(Error::unsupported("i32"))
+    }
 
     /// Serialize an `i64` value.
     ///
@@ -493,7 +510,10 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_i64(self, v: i64) -> Result<Self::Ok, Self::Error>;
+    fn serialize_i64(self, v: i64) -> Result<Self::Ok, Self::Error> {
+        let _ = v;
+        Err(Error::unsupported("i64"))
+    }
 
     /// Serialize an `i128` value.
     ///
@@ -515,7 +535,7 @@ pub trait Serializer: Sized {
     /// The default behavior unconditionally returns an error.
     fn serialize_i128(self, v: i128) -> Result<Self::Ok, Self::Error> {
         let _ = v;
-        Err(Error::custom("i128 is not supported"))
+        Err(Error::unsupported("i128"))
     }
 
     /// Serialize a `u8` value.
@@ -538,7 +558,10 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_u8(self, v: u8) -> Result<Self::Ok, Self::Error>;
+    fn serialize_u8(self, v: u8) -> Result<Self::Ok, Self::Error> {
+        let _ = v;
+        Err(Error::unsupported("u8"))
+    }
 
     /// Serialize a `u16` value.
     ///
@@ -560,7 +583,10 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_u16(self, v: u16) -> Result<Self::Ok, Self::Error>;
+    fn serialize_u16(self, v: u16) -> Result<Self::Ok, Self::Error> {
+        let _ = v;
+        Err(Error::unsupported("u16"))
+    }
 
     /// Serialize a `u32` value.
     ///
@@ -582,7 +608,10 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_u32(self, v: u32) -> Result<Self::Ok, Self::Error>;
+    fn serialize_u32(self, v: u32) -> Result<Self::Ok, Self::Error> {
+        let _ = v;
+        Err(Error::unsupported("u32"))
+    }
 
     /// Serialize a `u64` value.
     ///
@@ -600,7 +629,10 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_u64(self, v: u64) -> Result<Self::Ok, Self::Error>;
+    fn serialize_u64(self, v: u64) -> Result<Self::Ok, Self::Error> {
+        let _ = v;
+        Err(Error::unsupported("u64"))
+    }
 
     /// Serialize a `u128` value.
     ///
@@ -622,7 +654,7 @@ pub trait Serializer: Sized {
     /// The default behavior unconditionally returns an error.
     fn serialize_u128(self, v: u128) -> Result<Self::Ok, Self::Error> {
         let _ = v;
-        Err(Error::custom("u128 is not supported"))
+        Err(Error::unsupported("u128"))
     }
 
     /// Serialize an `f32` value.
@@ -645,7 +677,10 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_f32(self, v: f32) -> Result<Self::Ok, Self::Error>;
+    fn serialize_f32(self, v: f32) -> Result<Self::Ok, Self::Error> {
+        let _ = v;
+        Err(Error::unsupported("f32"))
+    }
 
     /// Serialize an `f64` value.
     ///
@@ -663,7 +698,10 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_f64(self, v: f64) -> Result<Self::Ok, Self::Error>;
+    fn serialize_f64(self, v: f64) -> Result<Self::Ok, Self::Error> {
+        let _ = v;
+        Err(Error::unsupported("f64"))
+    }
 
     /// Serialize a character.
     ///
@@ -684,7 +722,10 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_char(self, v: char) -> Result<Self::Ok, Self::Error>;
+    fn serialize_char(self, v: char) -> Result<Self::Ok, Self::Error> {
+        let _ = v;
+        Err(Error::unsupported("char"))
+    }
 
     /// Serialize a `&str`.
     ///
@@ -702,7 +743,10 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_str(self, v: &str) -> Result<Self::Ok, Self::Error>;
+    fn serialize_str(self, v: &str) -> Result<Self::Ok, Self::Error> {
+        let _ = v;
+        Err(Error::unsupported("str"))
+    }
 
     /// Serialize a chunk of raw byte data.
     ///
@@ -737,7 +781,10 @@ pub trait Serializer: Sized {
     /// #     }
     /// # }
     /// ```
-    fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok, Self::Error>;
+    fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok, Self::Error> {
+        let _ = v;
+        Err(Error::unsupported("bytes slice"))
+    }
 
     /// Serialize a [`None`] value.
     ///
@@ -770,7 +817,9 @@ pub trait Serializer: Sized {
     /// ```
     ///
     /// [`None`]: https://doc.rust-lang.org/std/option/enum.Option.html#variant.None
-    fn serialize_none(self) -> Result<Self::Ok, Self::Error>;
+    fn serialize_none(self) -> Result<Self::Ok, Self::Error> {
+        Err(Error::unsupported("none value"))
+    }
 
     /// Serialize a [`Some(T)`] value.
     ///
@@ -805,7 +854,11 @@ pub trait Serializer: Sized {
     /// [`Some(T)`]: https://doc.rust-lang.org/std/option/enum.Option.html#variant.Some
     fn serialize_some<T>(self, value: &T) -> Result<Self::Ok, Self::Error>
     where
-        T: ?Sized + Serialize;
+        T: ?Sized + Serialize,
+    {
+        let _ = value;
+        Err(Error::unsupported("Some(T) value"))
+    }
 
     /// Serialize a `()` value.
     ///
@@ -823,7 +876,9 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_unit(self) -> Result<Self::Ok, Self::Error>;
+    fn serialize_unit(self) -> Result<Self::Ok, Self::Error> {
+        Err(Error::unsupported("unit value"))
+    }
 
     /// Serialize a unit struct like `struct Unit` or `PhantomData<T>`.
     ///
@@ -843,7 +898,10 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_unit_struct(self, name: &'static str) -> Result<Self::Ok, Self::Error>;
+    fn serialize_unit_struct(self, name: &'static str) -> Result<Self::Ok, Self::Error> {
+        let _ = name;
+        Err(Error::unsupported("unit struct"))
+    }
 
     /// Serialize a unit variant like `E::A` in `enum E { A, B }`.
     ///
@@ -876,7 +934,10 @@ pub trait Serializer: Sized {
         name: &'static str,
         variant_index: u32,
         variant: &'static str,
-    ) -> Result<Self::Ok, Self::Error>;
+    ) -> Result<Self::Ok, Self::Error> {
+        let _ = (name, variant_index, variant);
+        Err(Error::unsupported("unit variant"))
+    }
 
     /// Serialize a newtype struct like `struct Millimeters(u8)`.
     ///
@@ -904,7 +965,11 @@ pub trait Serializer: Sized {
         value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
-        T: ?Sized + Serialize;
+        T: ?Sized + Serialize,
+    {
+        let _ = (name, value);
+        Err(Error::unsupported("newtype struct"))
+    }
 
     /// Serialize a newtype variant like `E::N` in `enum E { N(u8) }`.
     ///
@@ -940,7 +1005,11 @@ pub trait Serializer: Sized {
         value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
-        T: ?Sized + Serialize;
+        T: ?Sized + Serialize,
+    {
+        let _ = (name, variant_index, variant, value);
+        Err(Error::unsupported("newtype variant"))
+    }
 
     /// Begin to serialize a variably sized sequence. This call must be
     /// followed by zero or more calls to `serialize_element`, then a call to
@@ -988,7 +1057,10 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error>;
+    fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
+        let _ = len;
+        Err(Error::unsupported("sequence"))
+    }
 
     /// Begin to serialize a statically sized sequence whose length will be
     /// known at deserialization time without looking at the serialized data.
@@ -1044,7 +1116,10 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple, Self::Error>;
+    fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple, Self::Error> {
+        let _ = len;
+        Err(Error::unsupported("tuple value"))
+    }
 
     /// Begin to serialize a tuple struct like `struct Rgb(u8, u8, u8)`. This
     /// call must be followed by zero or more calls to `serialize_field`, then a
@@ -1075,7 +1150,10 @@ pub trait Serializer: Sized {
         self,
         name: &'static str,
         len: usize,
-    ) -> Result<Self::SerializeTupleStruct, Self::Error>;
+    ) -> Result<Self::SerializeTupleStruct, Self::Error> {
+        let _ = (name, len);
+        Err(Error::unsupported("tuple struct"))
+    }
 
     /// Begin to serialize a tuple variant like `E::T` in `enum E { T(u8, u8)
     /// }`. This call must be followed by zero or more calls to
@@ -1122,7 +1200,10 @@ pub trait Serializer: Sized {
         variant_index: u32,
         variant: &'static str,
         len: usize,
-    ) -> Result<Self::SerializeTupleVariant, Self::Error>;
+    ) -> Result<Self::SerializeTupleVariant, Self::Error> {
+        let _ = (name, variant_index, variant, len);
+        Err(Error::unsupported("tuple variant"))
+    }
 
     /// Begin to serialize a map. This call must be followed by zero or more
     /// calls to `serialize_key` and `serialize_value`, then a call to `end`.
@@ -1170,7 +1251,10 @@ pub trait Serializer: Sized {
     ///     }
     /// }
     /// ```
-    fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Self::Error>;
+    fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
+        let _ = len;
+        Err(Error::unsupported("map"))
+    }
 
     /// Begin to serialize a struct like `struct Rgb { r: u8, g: u8, b: u8 }`.
     /// This call must be followed by zero or more calls to `serialize_field`,
@@ -1206,7 +1290,10 @@ pub trait Serializer: Sized {
         self,
         name: &'static str,
         len: usize,
-    ) -> Result<Self::SerializeStruct, Self::Error>;
+    ) -> Result<Self::SerializeStruct, Self::Error> {
+        let _ = (name, len);
+        Err(Error::unsupported("struct"))
+    }
 
     /// Begin to serialize a struct variant like `E::S` in `enum E { S { r: u8,
     /// g: u8, b: u8 } }`. This call must be followed by zero or more calls to
@@ -1252,7 +1339,10 @@ pub trait Serializer: Sized {
         variant_index: u32,
         variant: &'static str,
         len: usize,
-    ) -> Result<Self::SerializeStructVariant, Self::Error>;
+    ) -> Result<Self::SerializeStructVariant, Self::Error> {
+        let _ = (name, variant_index, variant, len);
+        Err(Error::unsupported("struct variant"))
+    }
 
     /// Collect an iterator as a sequence.
     ///
