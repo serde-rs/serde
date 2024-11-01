@@ -483,7 +483,7 @@ fn check_from_and_try_from(cx: &Ctxt, cont: &mut Container) {
 fn check_name_conflicts(cx: &Ctxt, cont: &Container, derive: Derive) {
     if let Derive::Deserialize = derive {
         match &cont.data {
-            Data::Enum(variants) => check_variant_name_conflicts(cx, &variants),
+            Data::Enum(variants) => check_variant_name_conflicts(cx, variants),
             Data::Struct(Style::Struct, fields) => check_field_name_conflicts(cx, fields),
             _ => {}
         }
