@@ -130,7 +130,7 @@ impl<'c, T> VecAttr<'c, T> {
     }
 }
 
-pub struct Name {
+pub struct MultiName {
     serialize: String,
     serialize_renamed: bool,
     deserialize: String,
@@ -142,13 +142,13 @@ fn unraw(ident: &Ident) -> String {
     ident.to_string().trim_start_matches("r#").to_owned()
 }
 
-impl Name {
+impl MultiName {
     fn from_attrs(
         source_name: String,
         ser_name: Attr<String>,
         de_name: Attr<String>,
         de_aliases: Option<VecAttr<String>>,
-    ) -> Name {
+    ) -> Self {
         let mut alias_set = BTreeSet::new();
         if let Some(de_aliases) = de_aliases {
             for alias_name in de_aliases.get() {
@@ -160,7 +160,7 @@ impl Name {
         let ser_renamed = ser_name.is_some();
         let de_name = de_name.get();
         let de_renamed = de_name.is_some();
-        Name {
+        MultiName {
             serialize: ser_name.unwrap_or_else(|| source_name.clone()),
             serialize_renamed: ser_renamed,
             deserialize: de_name.unwrap_or(source_name),
@@ -203,7 +203,7 @@ impl RenameAllRules {
 
 /// Represents struct or enum attribute information.
 pub struct Container {
-    name: Name,
+    name: MultiName,
     transparent: bool,
     deny_unknown_fields: bool,
     default: Default,
@@ -567,7 +567,7 @@ impl Container {
         }
 
         Container {
-            name: Name::from_attrs(unraw(&item.ident), ser_name, de_name, None),
+            name: MultiName::from_attrs(unraw(&item.ident), ser_name, de_name, None),
             transparent: transparent.get(),
             deny_unknown_fields: deny_unknown_fields.get(),
             default: default.get().unwrap_or(Default::None),
@@ -594,7 +594,7 @@ impl Container {
         }
     }
 
-    pub fn name(&self) -> &Name {
+    pub fn name(&self) -> &MultiName {
         &self.name
     }
 
@@ -781,7 +781,7 @@ fn decide_identifier(
 
 /// Represents variant attribute information
 pub struct Variant {
-    name: Name,
+    name: MultiName,
     rename_all_rules: RenameAllRules,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
@@ -947,7 +947,7 @@ impl Variant {
         }
 
         Variant {
-            name: Name::from_attrs(unraw(&variant.ident), ser_name, de_name, Some(de_aliases)),
+            name: MultiName::from_attrs(unraw(&variant.ident), ser_name, de_name, Some(de_aliases)),
             rename_all_rules: RenameAllRules {
                 serialize: rename_all_ser_rule.get().unwrap_or(RenameRule::None),
                 deserialize: rename_all_de_rule.get().unwrap_or(RenameRule::None),
@@ -964,7 +964,7 @@ impl Variant {
         }
     }
 
-    pub fn name(&self) -> &Name {
+    pub fn name(&self) -> &MultiName {
         &self.name
     }
 
@@ -1023,7 +1023,7 @@ impl Variant {
 
 /// Represents field attribute information
 pub struct Field {
-    name: Name,
+    name: MultiName,
     skip_serializing: bool,
     skip_deserializing: bool,
     skip_serializing_if: Option<syn::ExprPath>,
@@ -1290,7 +1290,7 @@ impl Field {
         }
 
         Field {
-            name: Name::from_attrs(ident, ser_name, de_name, Some(de_aliases)),
+            name: MultiName::from_attrs(ident, ser_name, de_name, Some(de_aliases)),
             skip_serializing: skip_serializing.get(),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing_if: skip_serializing_if.get(),
@@ -1306,7 +1306,7 @@ impl Field {
         }
     }
 
-    pub fn name(&self) -> &Name {
+    pub fn name(&self) -> &MultiName {
         &self.name
     }
 
