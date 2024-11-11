@@ -1,8 +1,8 @@
-error: expected expression, found `@`
+error[E0425]: cannot find value `__FAIL__` in this scope
   --> tests/ui/conflict/alias.rs:38:5
    |
-38 |     @//fail
-   |     ^ expected expression
+38 |     __FAIL__;
+   |     ^^^^^^^^ not found in this scope
 
 warning: unreachable pattern
   --> tests/ui/conflict/alias.rs:10:5

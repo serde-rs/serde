@@ -35,5 +35,5 @@ struct S3 {
 }
 
 fn main() {
-    @//fail
+    __FAIL__;
 }
