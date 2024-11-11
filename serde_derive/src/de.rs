@@ -1,5 +1,6 @@
 use crate::fragment::{Expr, Fragment, Match, Stmts};
 use crate::internals::ast::{Container, Data, Field, Style, Variant};
+use crate::internals::name::Name;
 use crate::internals::{attr, replace_receiver, ungroup, Ctxt, Derive};
 use crate::{bound, dummy, pretend, this};
 use proc_macro2::{Literal, Span, TokenStream};
@@ -2002,7 +2003,7 @@ fn deserialize_untagged_newtype_variant(
 
 struct FieldWithAliases<'a> {
     ident: Ident,
-    aliases: &'a BTreeSet<String>,
+    aliases: &'a BTreeSet<Name>,
 }
 
 fn deserialize_generated_identifier(
@@ -2224,7 +2225,7 @@ fn deserialize_identifier(
         let aliases = field
             .aliases
             .iter()
-            .map(|alias| Literal::byte_string(alias.as_bytes()));
+            .map(|alias| Literal::byte_string(alias.value.as_bytes()));
         quote!(#(#aliases)|* => _serde::__private::Ok(#this_value::#ident))
     });
 
