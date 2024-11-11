@@ -1,43 +1,43 @@
 error: expected expression, found `@`
-  --> tests/ui/conflict/alias.rs:41:5
+  --> tests/ui/conflict/alias.rs:38:5
    |
-41 |     @//fail
+38 |     @//fail
    |     ^ expected expression
 
 warning: unreachable pattern
-  --> tests/ui/conflict/alias.rs:13:5
+  --> tests/ui/conflict/alias.rs:10:5
    |
-8  |     #[serde(alias = "a", alias = "b", alias = "c")]
+5  |     #[serde(alias = "a", alias = "b", alias = "c")]
    |                                  --- matches all the relevant values
 ...
-13 |     b: (),
+10 |     b: (),
    |     ^ no value can reach this
    |
    = note: `#[warn(unreachable_patterns)]` on by default
 
 warning: unreachable pattern
-  --> tests/ui/conflict/alias.rs:12:21
-   |
-8  |     #[serde(alias = "a", alias = "b", alias = "c")]
-   |                                               --- matches all the relevant values
+ --> tests/ui/conflict/alias.rs:9:21
+  |
+5 |     #[serde(alias = "a", alias = "b", alias = "c")]
+  |                                               --- matches all the relevant values
 ...
-12 |     #[serde(alias = "c")]
-   |                     ^^^ no value can reach this
+9 |     #[serde(alias = "c")]
+  |                     ^^^ no value can reach this
 
 warning: unreachable pattern
-  --> tests/ui/conflict/alias.rs:26:22
+  --> tests/ui/conflict/alias.rs:22:22
    |
-23 |     #[serde(alias = "b", alias = "c")]
+18 |     #[serde(alias = "b", alias = "c")]
    |                                  --- matches all the relevant values
 ...
-26 |     #[serde(rename = "c")]
+22 |     #[serde(rename = "c")]
    |                      ^^^ no value can reach this
 
 warning: unreachable pattern
-  --> tests/ui/conflict/alias.rs:37:5
+  --> tests/ui/conflict/alias.rs:34:5
    |
-35 |     #[serde(alias = "B", alias = "c")]
+29 |     #[serde(alias = "B", alias = "c")]
    |                     --- matches all the relevant values
-36 |     a: (),
-37 |     b: (),
+...
+34 |     b: (),
    |     ^ no value can reach this

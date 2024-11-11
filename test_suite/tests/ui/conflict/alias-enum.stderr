@@ -1,79 +1,79 @@
 error: expected expression, found `@`
-  --> tests/ui/conflict/alias-enum.rs:80:5
+  --> tests/ui/conflict/alias-enum.rs:74:5
    |
-80 |     @//fail
+74 |     @//fail
    |     ^ expected expression
 
 warning: unreachable pattern
-  --> tests/ui/conflict/alias-enum.rs:16:9
+  --> tests/ui/conflict/alias-enum.rs:13:9
    |
-11 |         #[serde(alias = "a", alias = "b", alias = "c")]
+8  |         #[serde(alias = "a", alias = "b", alias = "c")]
    |                                      --- matches all the relevant values
 ...
-16 |         b: (),
+13 |         b: (),
    |         ^ no value can reach this
    |
    = note: `#[warn(unreachable_patterns)]` on by default
 
 warning: unreachable pattern
-  --> tests/ui/conflict/alias-enum.rs:15:25
+  --> tests/ui/conflict/alias-enum.rs:12:25
    |
-11 |         #[serde(alias = "a", alias = "b", alias = "c")]
+8  |         #[serde(alias = "a", alias = "b", alias = "c")]
    |                                                   --- matches all the relevant values
 ...
-15 |         #[serde(alias = "c")]
+12 |         #[serde(alias = "c")]
    |                         ^^^ no value can reach this
 
 warning: unreachable pattern
-  --> tests/ui/conflict/alias-enum.rs:28:26
+  --> tests/ui/conflict/alias-enum.rs:24:26
    |
-25 |         #[serde(alias = "b", alias = "c")]
+20 |         #[serde(alias = "b", alias = "c")]
    |                                      --- matches all the relevant values
 ...
-28 |         #[serde(rename = "c")]
+24 |         #[serde(rename = "c")]
    |                          ^^^ no value can reach this
 
 warning: unreachable pattern
-  --> tests/ui/conflict/alias-enum.rs:38:9
+  --> tests/ui/conflict/alias-enum.rs:35:9
    |
-36 |         #[serde(alias = "B", alias = "c")]
+30 |         #[serde(alias = "B", alias = "c")]
    |                         --- matches all the relevant values
-37 |         a: (),
-38 |         b: (),
+...
+35 |         b: (),
    |         ^ no value can reach this
 
 warning: unreachable pattern
-  --> tests/ui/conflict/alias-enum.rs:52:5
+  --> tests/ui/conflict/alias-enum.rs:46:5
    |
-47 |     #[serde(alias = "a", alias = "b", alias = "c")]
+41 |     #[serde(alias = "a", alias = "b", alias = "c")]
    |                                  --- matches all the relevant values
 ...
-52 |     b,
+46 |     b,
    |     ^ no value can reach this
 
 warning: unreachable pattern
-  --> tests/ui/conflict/alias-enum.rs:51:21
+  --> tests/ui/conflict/alias-enum.rs:45:21
    |
-47 |     #[serde(alias = "a", alias = "b", alias = "c")]
+41 |     #[serde(alias = "a", alias = "b", alias = "c")]
    |                                               --- matches all the relevant values
 ...
-51 |     #[serde(alias = "c")]
+45 |     #[serde(alias = "c")]
    |                     ^^^ no value can reach this
 
 warning: unreachable pattern
-  --> tests/ui/conflict/alias-enum.rs:65:22
+  --> tests/ui/conflict/alias-enum.rs:58:22
    |
-62 |     #[serde(alias = "b", alias = "c")]
+54 |     #[serde(alias = "b", alias = "c")]
    |                                  --- matches all the relevant values
 ...
-65 |     #[serde(rename = "c")]
+58 |     #[serde(rename = "c")]
    |                      ^^^ no value can reach this
 
 warning: unreachable pattern
-  --> tests/ui/conflict/alias-enum.rs:76:5
+  --> tests/ui/conflict/alias-enum.rs:70:5
    |
-74 |     #[serde(alias = "B", alias = "c")]
+65 |     #[serde(alias = "B", alias = "c")]
    |                     --- matches all the relevant values
-75 |     a,
-76 |     b,
+...
+70 |     b,
    |     ^ no value can reach this
