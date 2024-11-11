@@ -37,4 +37,6 @@ struct S3 {
     b: (),
 }
 
-fn main() {}
+fn main() {
+    @//fail
+}

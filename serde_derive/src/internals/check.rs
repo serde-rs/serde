@@ -1,8 +1,6 @@
-use crate::internals::ast::{Container, Data, Field, Style, Variant};
+use crate::internals::ast::{Container, Data, Field, Style};
 use crate::internals::attr::{Default, Identifier, TagType};
 use crate::internals::{ungroup, Ctxt, Derive};
-use std::collections::btree_map::Entry;
-use std::collections::{BTreeMap, BTreeSet};
 use syn::{Member, Type};
 
 // Cross-cutting checks that require looking at more than a single attrs object.
@@ -18,7 +16,6 @@ pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     check_adjacent_tag_conflict(cx, cont);
     check_transparent(cx, cont, derive);
     check_from_and_try_from(cx, cont);
-    check_name_conflicts(cx, cont, derive);
 }
 
 // If some field of a tuple struct is marked #[serde(default)] then all fields
@@ -476,136 +473,5 @@ fn check_from_and_try_from(cx: &Ctxt, cont: &mut Container) {
             cont.original,
             "#[serde(from = \"...\")] and #[serde(try_from = \"...\")] conflict with each other",
         );
-    }
-}
-
-// Checks that aliases does not repeated
-fn check_name_conflicts(cx: &Ctxt, cont: &Container, derive: Derive) {
-    if let Derive::Deserialize = derive {
-        match &cont.data {
-            Data::Enum(variants) => check_variant_name_conflicts(cx, variants),
-            Data::Struct(Style::Struct, fields) => check_field_name_conflicts(cx, fields),
-            _ => {}
-        }
-    }
-}
-
-// All renames already applied
-fn check_variant_name_conflicts(cx: &Ctxt, variants: &[Variant]) {
-    let names: BTreeSet<_> = variants
-        .iter()
-        .filter_map(|variant| {
-            if variant.attrs.skip_deserializing() {
-                None
-            } else {
-                Some(variant.attrs.name().deserialize_name().to_owned())
-            }
-        })
-        .collect();
-    let mut alias_owners = BTreeMap::new();
-
-    for variant in variants {
-        let name = variant.attrs.name().deserialize_name();
-
-        for alias in variant.attrs.aliases().intersection(&names) {
-            // Aliases contains variant names, so filter them out
-            if alias == name {
-                continue;
-            }
-
-            // TODO: report other variant location when this become possible
-            cx.error_spanned_by(
-                variant.original,
-                format!(
-                    "alias `{}` conflicts with deserialization name of other variant",
-                    alias
-                ),
-            );
-        }
-
-        for alias in variant.attrs.aliases() {
-            // Aliases contains variant names, so filter them out
-            if alias == name {
-                continue;
-            }
-
-            match alias_owners.entry(alias) {
-                Entry::Vacant(e) => {
-                    e.insert(variant);
-                }
-                Entry::Occupied(e) => {
-                    // TODO: report other variant location when this become possible
-                    cx.error_spanned_by(
-                        variant.original,
-                        format!(
-                            "alias `{}` already used by variant {}",
-                            alias,
-                            e.get().original.ident
-                        ),
-                    );
-                }
-            }
-        }
-
-        check_field_name_conflicts(cx, &variant.fields);
-    }
-}
-
-// All renames already applied
-fn check_field_name_conflicts(cx: &Ctxt, fields: &[Field]) {
-    let names: BTreeSet<_> = fields
-        .iter()
-        .filter_map(|field| {
-            if field.attrs.skip_deserializing() {
-                None
-            } else {
-                Some(field.attrs.name().deserialize_name().to_owned())
-            }
-        })
-        .collect();
-    let mut alias_owners = BTreeMap::new();
-
-    for field in fields {
-        let name = field.attrs.name().deserialize_name();
-
-        for alias in field.attrs.aliases().intersection(&names) {
-            // Aliases contains field names, so filter them out
-            if alias == name {
-                continue;
-            }
-
-            // TODO: report other field location when this become possible
-            cx.error_spanned_by(
-                field.original,
-                format!(
-                    "alias `{}` conflicts with deserialization name of other field",
-                    alias
-                ),
-            );
-        }
-
-        for alias in field.attrs.aliases() {
-            // Aliases contains field names, so filter them out
-            if alias == name {
-                continue;
-            }
-
-            match alias_owners.entry(alias) {
-                Entry::Vacant(e) => {
-                    e.insert(field);
-                }
-                Entry::Occupied(e) => {
-                    // TODO: report other field location when this become possible
-                    cx.error_spanned_by(
-                        field.original,
-                        format!(
-                            "alias `{}` already used by field {}",
-                            alias,
-                            e.get().original.ident.as_ref().unwrap()
-                        ),
-                    );
-                }
-            }
-        }
     }
 }
