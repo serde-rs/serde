@@ -76,4 +76,6 @@ enum E3 {
     b,
 }
 
-fn main() {}
+fn main() {
+    @//fail
+}
