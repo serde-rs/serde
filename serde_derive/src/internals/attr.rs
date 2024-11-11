@@ -1,4 +1,4 @@
-use crate::internals::name::MultiName;
+use crate::internals::name::{MultiName, Name};
 use crate::internals::symbol::*;
 use crate::internals::{ungroup, Ctxt};
 use proc_macro2::{Spacing, Span, TokenStream, TokenTree};
@@ -131,8 +131,8 @@ impl<'c, T> VecAttr<'c, T> {
     }
 }
 
-fn unraw(ident: &Ident) -> String {
-    ident.to_string().trim_start_matches("r#").to_owned()
+fn unraw(ident: &Ident) -> Ident {
+    Ident::new(ident.to_string().trim_start_matches("r#"), ident.span())
 }
 
 #[derive(Copy, Clone)]
@@ -278,8 +278,8 @@ impl Container {
                     // #[serde(rename = "foo")]
                     // #[serde(rename(serialize = "foo", deserialize = "bar"))]
                     let (ser, de) = get_renames(cx, RENAME, &meta)?;
-                    ser_name.set_opt(&meta.path, ser.as_ref().map(syn::LitStr::value));
-                    de_name.set_opt(&meta.path, de.as_ref().map(syn::LitStr::value));
+                    ser_name.set_opt(&meta.path, ser.as_ref().map(Name::from));
+                    de_name.set_opt(&meta.path, de.as_ref().map(Name::from));
                 } else if meta.path == RENAME_ALL {
                     // #[serde(rename_all = "foo")]
                     // #[serde(rename_all(serialize = "foo", deserialize = "bar"))]
@@ -518,7 +518,7 @@ impl Container {
         }
 
         Container {
-            name: MultiName::from_attrs(unraw(&item.ident), ser_name, de_name, None),
+            name: MultiName::from_attrs(Name::from(&unraw(&item.ident)), ser_name, de_name, None),
             transparent: transparent.get(),
             deny_unknown_fields: deny_unknown_fields.get(),
             default: default.get().unwrap_or(Default::None),
@@ -783,15 +783,15 @@ impl Variant {
                     // #[serde(rename = "foo")]
                     // #[serde(rename(serialize = "foo", deserialize = "bar"))]
                     let (ser, de) = get_multiple_renames(cx, &meta)?;
-                    ser_name.set_opt(&meta.path, ser.as_ref().map(syn::LitStr::value));
+                    ser_name.set_opt(&meta.path, ser.as_ref().map(Name::from));
                     for de_value in de {
-                        de_name.set_if_none(de_value.value());
-                        de_aliases.insert(&meta.path, de_value.value());
+                        de_name.set_if_none(Name::from(&de_value));
+                        de_aliases.insert(&meta.path, Name::from(&de_value));
                     }
                 } else if meta.path == ALIAS {
                     // #[serde(alias = "foo")]
                     if let Some(s) = get_lit_str(cx, ALIAS, &meta)? {
-                        de_aliases.insert(&meta.path, s.value());
+                        de_aliases.insert(&meta.path, Name::from(&s));
                     }
                 } else if meta.path == RENAME_ALL {
                     // #[serde(rename_all = "foo")]
@@ -898,7 +898,12 @@ impl Variant {
         }
 
         Variant {
-            name: MultiName::from_attrs(unraw(&variant.ident), ser_name, de_name, Some(de_aliases)),
+            name: MultiName::from_attrs(
+                Name::from(&unraw(&variant.ident)),
+                ser_name,
+                de_name,
+                Some(de_aliases),
+            ),
             rename_all_rules: RenameAllRules {
                 serialize: rename_all_ser_rule.get().unwrap_or(RenameRule::None),
                 deserialize: rename_all_de_rule.get().unwrap_or(RenameRule::None),
@@ -919,16 +924,19 @@ impl Variant {
         &self.name
     }
 
-    pub fn aliases(&self) -> &BTreeSet<String> {
+    pub fn aliases(&self) -> &BTreeSet<Name> {
         self.name.deserialize_aliases()
     }
 
     pub fn rename_by_rules(&mut self, rules: RenameAllRules) {
         if !self.name.serialize_renamed {
-            self.name.serialize = rules.serialize.apply_to_variant(&self.name.serialize);
+            self.name.serialize.value =
+                rules.serialize.apply_to_variant(&self.name.serialize.value);
         }
         if !self.name.deserialize_renamed {
-            self.name.deserialize = rules.deserialize.apply_to_variant(&self.name.deserialize);
+            self.name.deserialize.value = rules
+                .deserialize
+                .apply_to_variant(&self.name.deserialize.value);
         }
         self.name
             .deserialize_aliases
@@ -1033,8 +1041,11 @@ impl Field {
         let mut flatten = BoolAttr::none(cx, FLATTEN);
 
         let ident = match &field.ident {
-            Some(ident) => unraw(ident),
-            None => index.to_string(),
+            Some(ident) => Name::from(&unraw(ident)),
+            None => Name {
+                value: index.to_string(),
+                span: Span::call_site(),
+            },
         };
 
         if let Some(borrow_attribute) = attrs.and_then(|variant| variant.borrow.as_ref()) {
@@ -1070,15 +1081,15 @@ impl Field {
                     // #[serde(rename = "foo")]
                     // #[serde(rename(serialize = "foo", deserialize = "bar"))]
                     let (ser, de) = get_multiple_renames(cx, &meta)?;
-                    ser_name.set_opt(&meta.path, ser.as_ref().map(syn::LitStr::value));
+                    ser_name.set_opt(&meta.path, ser.as_ref().map(Name::from));
                     for de_value in de {
-                        de_name.set_if_none(de_value.value());
-                        de_aliases.insert(&meta.path, de_value.value());
+                        de_name.set_if_none(Name::from(&de_value));
+                        de_aliases.insert(&meta.path, Name::from(&de_value));
                     }
                 } else if meta.path == ALIAS {
                     // #[serde(alias = "foo")]
                     if let Some(s) = get_lit_str(cx, ALIAS, &meta)? {
-                        de_aliases.insert(&meta.path, s.value());
+                        de_aliases.insert(&meta.path, Name::from(&s));
                     }
                 } else if meta.path == DEFAULT {
                     if meta.input.peek(Token![=]) {
@@ -1261,16 +1272,18 @@ impl Field {
         &self.name
     }
 
-    pub fn aliases(&self) -> &BTreeSet<String> {
+    pub fn aliases(&self) -> &BTreeSet<Name> {
         self.name.deserialize_aliases()
     }
 
     pub fn rename_by_rules(&mut self, rules: RenameAllRules) {
         if !self.name.serialize_renamed {
-            self.name.serialize = rules.serialize.apply_to_field(&self.name.serialize);
+            self.name.serialize.value = rules.serialize.apply_to_field(&self.name.serialize.value);
         }
         if !self.name.deserialize_renamed {
-            self.name.deserialize = rules.deserialize.apply_to_field(&self.name.deserialize);
+            self.name.deserialize.value = rules
+                .deserialize
+                .apply_to_field(&self.name.deserialize.value);
         }
         self.name
             .deserialize_aliases
@@ -1720,7 +1733,7 @@ fn is_primitive_path(path: &syn::Path, primitive: &str) -> bool {
 // attribute on the field so there must be at least one borrowable lifetime.
 fn borrowable_lifetimes(
     cx: &Ctxt,
-    name: &str,
+    name: &Name,
     field: &syn::Field,
 ) -> Result<BTreeSet<syn::Lifetime>, ()> {
     let mut lifetimes = BTreeSet::new();

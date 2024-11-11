@@ -1,20 +1,25 @@
 use crate::internals::attr::{Attr, VecAttr};
+use proc_macro2::{Ident, Span, TokenStream};
+use quote::ToTokens;
+use std::cmp::Ordering;
 use std::collections::BTreeSet;
+use std::fmt::{self, Display};
+use syn::LitStr;
 
 pub struct MultiName {
-    pub(crate) serialize: String,
+    pub(crate) serialize: Name,
     pub(crate) serialize_renamed: bool,
-    pub(crate) deserialize: String,
+    pub(crate) deserialize: Name,
     pub(crate) deserialize_renamed: bool,
-    pub(crate) deserialize_aliases: BTreeSet<String>,
+    pub(crate) deserialize_aliases: BTreeSet<Name>,
 }
 
 impl MultiName {
     pub(crate) fn from_attrs(
-        source_name: String,
-        ser_name: Attr<String>,
-        de_name: Attr<String>,
-        de_aliases: Option<VecAttr<String>>,
+        source_name: Name,
+        ser_name: Attr<Name>,
+        de_name: Attr<Name>,
+        de_aliases: Option<VecAttr<Name>>,
     ) -> Self {
         let mut alias_set = BTreeSet::new();
         if let Some(de_aliases) = de_aliases {
@@ -37,16 +42,72 @@ impl MultiName {
     }
 
     /// Return the container name for the container when serializing.
-    pub fn serialize_name(&self) -> &str {
+    pub fn serialize_name(&self) -> &Name {
         &self.serialize
     }
 
     /// Return the container name for the container when deserializing.
-    pub fn deserialize_name(&self) -> &str {
+    pub fn deserialize_name(&self) -> &Name {
         &self.deserialize
     }
 
-    pub(crate) fn deserialize_aliases(&self) -> &BTreeSet<String> {
+    pub(crate) fn deserialize_aliases(&self) -> &BTreeSet<Name> {
         &self.deserialize_aliases
+    }
+}
+
+#[derive(Clone)]
+pub struct Name {
+    pub value: String,
+    pub span: Span,
+}
+
+impl ToTokens for Name {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        LitStr::new(&self.value, self.span).to_tokens(tokens);
+    }
+}
+
+impl Ord for Name {
+    fn cmp(&self, other: &Self) -> Ordering {
+        Ord::cmp(&self.value, &other.value)
+    }
+}
+
+impl PartialOrd for Name {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(Ord::cmp(self, other))
+    }
+}
+
+impl Eq for Name {}
+
+impl PartialEq for Name {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value
+    }
+}
+
+impl From<&Ident> for Name {
+    fn from(ident: &Ident) -> Self {
+        Name {
+            value: ident.to_string(),
+            span: ident.span(),
+        }
+    }
+}
+
+impl From<&LitStr> for Name {
+    fn from(lit: &LitStr) -> Self {
+        Name {
+            value: lit.value(),
+            span: lit.span(),
+        }
+    }
+}
+
+impl Display for Name {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        Display::fmt(&self.value, formatter)
     }
 }

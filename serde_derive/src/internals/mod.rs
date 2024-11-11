@@ -1,10 +1,10 @@
 pub mod ast;
 pub mod attr;
+pub mod name;
 
 mod case;
 mod check;
 mod ctxt;
-mod name;
 mod receiver;
 mod respan;
 mod symbol;
