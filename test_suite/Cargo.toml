@@ -13,7 +13,7 @@ serde = { path = "../serde" }
 
 [dev-dependencies]
 automod = "1.0.1"
-fnv = "1.0"
+foldhash = "0.1"
 rustversion = "1.0"
 serde = { path = "../serde", features = ["rc"] }
 serde_derive = { path = "../serde_derive", features = ["deserialize_in_place"] }

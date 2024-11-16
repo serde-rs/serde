@@ -1,7 +1,6 @@
 #![allow(clippy::derive_partial_eq_without_eq, clippy::unreadable_literal)]
 #![cfg_attr(feature = "unstable", feature(never_type))]
 
-use fnv::FnvBuildHasher;
 use serde_derive::Serialize;
 use serde_test::{assert_ser_tokens, assert_ser_tokens_error, Configure, Token};
 use std::cell::RefCell;
@@ -220,7 +219,7 @@ fn test_hashset() {
         &[Token::Seq { len: Some(1) }, Token::I32(1), Token::SeqEnd],
     );
     assert_ser_tokens(
-        &hashset![FnvBuildHasher; 1],
+        &hashset![foldhash::fast::FixedState; 1],
         &[Token::Seq { len: Some(1) }, Token::I32(1), Token::SeqEnd],
     );
 }
@@ -300,7 +299,7 @@ fn test_hashmap() {
         ],
     );
     assert_ser_tokens(
-        &hashmap![FnvBuildHasher; 1 => 2],
+        &hashmap![foldhash::fast::FixedState; 1 => 2],
         &[
             Token::Map { len: Some(1) },
             Token::I32(1),

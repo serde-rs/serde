@@ -10,7 +10,6 @@
 )]
 #![cfg_attr(feature = "unstable", feature(never_type))]
 
-use fnv::FnvBuildHasher;
 use serde::de::value::{F32Deserializer, F64Deserializer};
 use serde::de::{Deserialize, DeserializeOwned, Deserializer, IntoDeserializer};
 use serde_derive::Deserialize;
@@ -1040,7 +1039,7 @@ fn test_hashset() {
         ],
     );
     test(
-        hashset![FnvBuildHasher; 1, 2, 3],
+        hashset![foldhash::fast::FixedState; 1, 2, 3],
         &[
             Token::Seq { len: Some(3) },
             Token::I32(1),
@@ -1275,7 +1274,7 @@ fn test_hashmap() {
         ],
     );
     test(
-        hashmap![FnvBuildHasher; 1 => 2, 3 => 4],
+        hashmap![foldhash::fast::FixedState; 1 => 2, 3 => 4],
         &[
             Token::Map { len: Some(2) },
             Token::I32(1),
