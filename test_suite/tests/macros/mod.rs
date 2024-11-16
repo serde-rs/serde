@@ -34,9 +34,8 @@ macro_rules! hashset {
         $(set.insert($value);)+
         set
     }};
-    ($hasher:ident @ $($value:expr),+) => {{
-        use std::hash::BuildHasherDefault;
-        let mut set = HashSet::with_hasher(BuildHasherDefault::<$hasher>::default());
+    ($hasher:ty; $($value:expr),+) => {{
+        let mut set = HashSet::<_, $hasher>::default();
         $(set.insert($value);)+
         set
     }};
@@ -51,9 +50,8 @@ macro_rules! hashmap {
         $(map.insert($key, $value);)+
         map
     }};
-    ($hasher:ident @ $($key:expr => $value:expr),+) => {{
-        use std::hash::BuildHasherDefault;
-        let mut map = HashMap::with_hasher(BuildHasherDefault::<$hasher>::default());
+    ($hasher:ty; $($key:expr => $value:expr),+) => {{
+        let mut map = HashMap::<_, _, $hasher>::default();
         $(map.insert($key, $value);)+
         map
     }};
