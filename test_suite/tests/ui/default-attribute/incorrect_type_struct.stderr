@@ -1,0 +1,58 @@
+error[E0308]: mismatched types
+ --> tests/ui/default-attribute/incorrect_type_struct.rs:6:19
+  |
+6 | #[serde(default = "main")]
+  |                   ^^^^^^
+  |                   |
+  |                   expected `Struct`, found `()`
+  |                   expected due to this
+
+error[E0308]: `match` arms have incompatible types
+ --> tests/ui/default-attribute/incorrect_type_struct.rs:8:23
+  |
+5 | #[derive(Deserialize)]
+  |          -----------
+  |          |
+  |          this is found to be of type `u8`
+  |          `match` arms have incompatible types
+...
+8 |     #[serde(default = "main")]
+  |                       ^^^^^^ expected `u8`, found `()`
+
+error[E0308]: `match` arms have incompatible types
+  --> tests/ui/default-attribute/incorrect_type_struct.rs:11:23
+   |
+5  | #[derive(Deserialize)]
+   |          -----------
+   |          |
+   |          this is found to be of type `i8`
+   |          `match` arms have incompatible types
+...
+11 |     #[serde(default = "main")]
+   |                       ^^^^^^ expected `i8`, found `()`
+
+error[E0308]: mismatched types
+ --> tests/ui/default-attribute/incorrect_type_struct.rs:6:19
+  |
+6 | #[serde(default = "main")]
+  |                   ^^^^^^ expected `Struct`, found `()`
+7 | struct Struct {
+  |        ------ expected due to this
+
+error[E0308]: mismatched types
+ --> tests/ui/default-attribute/incorrect_type_struct.rs:8:23
+  |
+5 | #[derive(Deserialize)]
+  |          ----------- expected due to the type of this binding
+...
+8 |     #[serde(default = "main")]
+  |                       ^^^^^^ expected `u8`, found `()`
+
+error[E0308]: mismatched types
+  --> tests/ui/default-attribute/incorrect_type_struct.rs:11:23
+   |
+5  | #[derive(Deserialize)]
+   |          ----------- expected due to the type of this binding
+...
+11 |     #[serde(default = "main")]
+   |                       ^^^^^^ expected `i8`, found `()`

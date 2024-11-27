@@ -1,6 +1,6 @@
 use std::env;
 use std::process::Command;
-use std::str::{self, FromStr};
+use std::str;
 
 // The rustc-cfg strings below are *not* public API. Please let us know by
 // opening a GitHub issue if your build environment requires some way to enable
@@ -50,11 +50,6 @@ fn main() {
         println!("cargo:rustc-cfg=no_float_copysign");
     }
 
-    // Current minimum supported version of serde_derive crate is Rust 1.56.
-    if minor < 56 {
-        println!("cargo:rustc-cfg=no_serde_derive");
-    }
-
     // Support for #[cfg(target_has_atomic = "...")] stabilized in Rust 1.60.
     if minor < 60 {
         println!("cargo:rustc-cfg=no_target_has_atomic");
@@ -74,6 +69,11 @@ fn main() {
         if minor < 34 || !has_atomic32 {
             println!("cargo:rustc-cfg=no_std_atomic");
         }
+    }
+
+    // Current minimum supported version of serde_derive crate is Rust 1.61.
+    if minor < 61 {
+        println!("cargo:rustc-cfg=no_serde_derive");
     }
 
     // Support for core::ffi::CStr and alloc::ffi::CString stabilized in Rust 1.64.
@@ -108,30 +108,12 @@ fn main() {
 }
 
 fn rustc_minor_version() -> Option<u32> {
-    let rustc = match env::var_os("RUSTC") {
-        Some(rustc) => rustc,
-        None => return None,
-    };
-
-    let output = match Command::new(rustc).arg("--version").output() {
-        Ok(output) => output,
-        Err(_) => return None,
-    };
-
-    let version = match str::from_utf8(&output.stdout) {
-        Ok(version) => version,
-        Err(_) => return None,
-    };
-
+    let rustc = env::var_os("RUSTC")?;
+    let output = Command::new(rustc).arg("--version").output().ok()?;
+    let version = str::from_utf8(&output.stdout).ok()?;
     let mut pieces = version.split('.');
     if pieces.next() != Some("rustc 1") {
         return None;
     }
-
-    let next = match pieces.next() {
-        Some(next) => next,
-        None => return None,
-    };
-
-    u32::from_str(next).ok()
+    pieces.next()?.parse().ok()
 }

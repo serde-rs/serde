@@ -1,0 +1,43 @@
+error[E0425]: cannot find value `__FAIL__` in this scope
+  --> tests/ui/conflict/alias.rs:38:5
+   |
+38 |     __FAIL__;
+   |     ^^^^^^^^ not found in this scope
+
+warning: unreachable pattern
+  --> tests/ui/conflict/alias.rs:10:5
+   |
+5  |     #[serde(alias = "a", alias = "b", alias = "c")]
+   |                                  --- matches all the relevant values
+...
+10 |     b: (),
+   |     ^ no value can reach this
+   |
+   = note: `#[warn(unreachable_patterns)]` on by default
+
+warning: unreachable pattern
+ --> tests/ui/conflict/alias.rs:9:21
+  |
+5 |     #[serde(alias = "a", alias = "b", alias = "c")]
+  |                                               --- matches all the relevant values
+...
+9 |     #[serde(alias = "c")]
+  |                     ^^^ no value can reach this
+
+warning: unreachable pattern
+  --> tests/ui/conflict/alias.rs:22:22
+   |
+18 |     #[serde(alias = "b", alias = "c")]
+   |                                  --- matches all the relevant values
+...
+22 |     #[serde(rename = "c")]
+   |                      ^^^ no value can reach this
+
+warning: unreachable pattern
+  --> tests/ui/conflict/alias.rs:34:5
+   |
+29 |     #[serde(alias = "B", alias = "c")]
+   |                     --- matches all the relevant values
+...
+34 |     b: (),
+   |     ^ no value can reach this

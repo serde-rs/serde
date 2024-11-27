@@ -13,7 +13,7 @@
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
-#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.210")]
+#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.215")]
 #![cfg_attr(not(check_cfg), allow(unexpected_cfgs))]
 // Ignored clippy lints
 #![allow(
@@ -56,6 +56,7 @@
     clippy::single_match_else,
     clippy::struct_excessive_bools,
     clippy::too_many_lines,
+    clippy::uninlined_format_args,
     clippy::unseparated_literal_suffix,
     clippy::unused_self,
     clippy::use_self,

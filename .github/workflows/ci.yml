@@ -26,6 +26,7 @@ jobs:
         with:
           name: Cargo.lock
           path: Cargo.lock
+        continue-on-error: true
 
   windows:
     name: Test suite (windows)
@@ -95,13 +96,16 @@ jobs:
       - run: cd serde && cargo build
 
   derive:
-    name: Rust 1.56.0
+    name: Rust 1.61.0
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.56.0
-      - run: sed -i '/"test_suite"/d' Cargo.toml
+      - uses: dtolnay/rust-toolchain@1.61.0
+      - run: |
+          sed -i 's/proc-macro2 = { workspace = true/proc-macro2 = { version = "1"/' serde_derive*/Cargo.toml
+          sed -i 's/quote = { workspace = true/quote = { version = "1"/' serde_derive*/Cargo.toml
+          sed -i 's/syn = { workspace = true/syn = { version = "2"/' serde_derive*/Cargo.toml
       - run: cd serde && cargo check --no-default-features
       - run: cd serde && cargo check
       - run: cd serde_derive && cargo check
