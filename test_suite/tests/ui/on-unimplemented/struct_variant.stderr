@@ -1,0 +1,108 @@
+error[E0277]: the trait bound `NoImpls: Serialize` is not satisfied
+ --> tests/ui/on-unimplemented/struct_variant.rs:7:22
+  |
+7 |     S { x1: u32, x2: NoImpls },
+  |                      ^^^^^^^ the trait `Serialize` is not implemented for `NoImpls`
+  |
+  = note: for local types consider adding `#[derive(serde::Serialize)]` to your `NoImpls` type
+  = note: for types from other crates check whether the crate offers a `serde` feature flag
+  = help: the following other types implement trait `Serialize`:
+            &'a T
+            &'a mut T
+            ()
+            (T,)
+            (T0, T1)
+            (T0, T1, T2)
+            (T0, T1, T2, T3)
+            (T0, T1, T2, T3, T4)
+          and $N others
+note: required by a bound in `_::_serde::ser::SerializeStructVariant::serialize_field`
+ --> $WORKSPACE/serde/src/ser/mod.rs
+  |
+  |     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
+  |        --------------- required by a bound in this associated function
+  |     where
+  |         T: ?Sized + Serialize;
+  |                     ^^^^^^^^^ required by this bound in `SerializeStructVariant::serialize_field`
+
+error[E0277]: the trait bound `NoImpls: Deserialize<'_>` is not satisfied
+ --> tests/ui/on-unimplemented/struct_variant.rs:7:22
+  |
+7 |     S { x1: u32, x2: NoImpls },
+  |                      ^^^^^^^ the trait `Deserialize<'_>` is not implemented for `NoImpls`
+  |
+  = note: for local types consider adding `#[derive(serde::Deserialize)]` to your `NoImpls` type
+  = note: for types from other crates check whether the crate offers a `serde` feature flag
+  = help: the following other types implement trait `Deserialize<'de>`:
+            &'a Path
+            &'a [u8]
+            &'a str
+            ()
+            (T,)
+            (T0, T1)
+            (T0, T1, T2)
+            (T0, T1, T2, T3)
+          and $N others
+note: required by a bound in `next_element`
+ --> $WORKSPACE/serde/src/de/mod.rs
+  |
+  |     fn next_element<T>(&mut self) -> Result<Option<T>, Self::Error>
+  |        ------------ required by a bound in this associated function
+  |     where
+  |         T: Deserialize<'de>,
+  |            ^^^^^^^^^^^^^^^^ required by this bound in `SeqAccess::next_element`
+
+error[E0277]: the trait bound `NoImpls: Deserialize<'_>` is not satisfied
+ --> tests/ui/on-unimplemented/struct_variant.rs:7:22
+  |
+7 |     S { x1: u32, x2: NoImpls },
+  |                      ^^^^^^^ the trait `Deserialize<'_>` is not implemented for `NoImpls`
+  |
+  = note: for local types consider adding `#[derive(serde::Deserialize)]` to your `NoImpls` type
+  = note: for types from other crates check whether the crate offers a `serde` feature flag
+  = help: the following other types implement trait `Deserialize<'de>`:
+            &'a Path
+            &'a [u8]
+            &'a str
+            ()
+            (T,)
+            (T0, T1)
+            (T0, T1, T2)
+            (T0, T1, T2, T3)
+          and $N others
+note: required by a bound in `next_value`
+ --> $WORKSPACE/serde/src/de/mod.rs
+  |
+  |     fn next_value<V>(&mut self) -> Result<V, Self::Error>
+  |        ---------- required by a bound in this associated function
+  |     where
+  |         V: Deserialize<'de>,
+  |            ^^^^^^^^^^^^^^^^ required by this bound in `MapAccess::next_value`
+
+error[E0277]: the trait bound `NoImpls: Deserialize<'_>` is not satisfied
+ --> tests/ui/on-unimplemented/struct_variant.rs:5:21
+  |
+5 | #[derive(Serialize, Deserialize)]
+  |                     ^^^^^^^^^^^ the trait `Deserialize<'_>` is not implemented for `NoImpls`
+  |
+  = note: for local types consider adding `#[derive(serde::Deserialize)]` to your `NoImpls` type
+  = note: for types from other crates check whether the crate offers a `serde` feature flag
+  = help: the following other types implement trait `Deserialize<'de>`:
+            &'a Path
+            &'a [u8]
+            &'a str
+            ()
+            (T,)
+            (T0, T1)
+            (T0, T1, T2)
+            (T0, T1, T2, T3)
+          and $N others
+note: required by a bound in `_::_serde::__private::de::missing_field`
+ --> $WORKSPACE/serde/src/private/de.rs
+  |
+  | pub fn missing_field<'de, V, E>(field: &'static str) -> Result<V, E>
+  |        ------------- required by a bound in this function
+  | where
+  |     V: Deserialize<'de>,
+  |        ^^^^^^^^^^^^^^^^ required by this bound in `missing_field`
+  = note: this error originates in the derive macro `Deserialize` (in Nightly builds, run with -Z macro-backtrace for more info)
