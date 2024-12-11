@@ -33,6 +33,7 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
         let vis = &input.vis;
         let used = pretend::pretend_used(&cont, params.is_packed);
         quote! {
+            #[automatically_derived]
             impl #de_impl_generics #ident #ty_generics #where_clause {
                 #vis fn deserialize<__D>(__deserializer: __D) -> #serde::__private::Result<#remote #ty_generics, __D::Error>
                 where
@@ -1606,6 +1607,7 @@ fn deserialize_adjacently_tagged_enum(
             lifetime: _serde::__private::PhantomData<&#delife ()>,
         }
 
+        #[automatically_derived]
         impl #de_impl_generics _serde::de::DeserializeSeed<#delife> for __Seed #de_ty_generics #where_clause {
             type Value = #this_type #ty_generics;
 
@@ -2920,6 +2922,7 @@ fn wrap_deserialize_with(
             lifetime: _serde::__private::PhantomData<&#delife ()>,
         }
 
+        #[automatically_derived]
         impl #de_impl_generics _serde::Deserialize<#delife> for __DeserializeWith #de_ty_generics #where_clause {
             fn deserialize<__D>(#deserializer_var: __D) -> _serde::__private::Result<Self, __D::Error>
             where
