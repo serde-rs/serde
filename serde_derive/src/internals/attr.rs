@@ -347,24 +347,21 @@ impl Container {
                     deny_unknown_fields.set_true(meta.path);
                 } else if meta.path == DEFAULT {
                     if meta.input.peek(Token![=]) {
-                        // #[serde(default = "...")]
-                        if let Some(path) = parse_lit_into_expr_path(cx, DEFAULT, &meta)? {
+                        // #[serde(default = ...)]
+                        if let Some(dflt) = parse_default(cx, &meta)? {
                             match &item.data {
                                 syn::Data::Struct(syn::DataStruct { fields, .. }) => match fields {
                                     syn::Fields::Named(_) | syn::Fields::Unnamed(_) => {
-                                        default.set(&meta.path, Default::Path(path));
+                                        default.set(&meta.path, dflt);
                                     }
                                     syn::Fields::Unit => {
-                                        let msg = "#[serde(default = \"...\")] can only be used on structs that have fields";
+                                        let msg = "#[serde(default = ...)] can only be used on structs that have fields";
                                         cx.syn_error(meta.error(msg));
                                     }
                                 },
-                                syn::Data::Enum(_) => {
-                                    let msg = "#[serde(default = \"...\")] can only be used on structs";
-                                    cx.syn_error(meta.error(msg));
-                                }
+                                syn::Data::Enum(_) |
                                 syn::Data::Union(_) => {
-                                    let msg = "#[serde(default = \"...\")] can only be used on structs";
+                                    let msg = "#[serde(default = ...)] can only be used on structs";
                                     cx.syn_error(meta.error(msg));
                                 }
                             }
@@ -1005,13 +1002,17 @@ pub enum Default {
     Default,
     /// The default is given by this function.
     Path(syn::ExprPath),
+    /// The default is a literal value
+    Expr(Box<syn::Expr>),
 }
 
 impl Default {
     pub fn is_none(&self) -> bool {
         match self {
             Default::None => true,
-            Default::Default | Default::Path(_) => false,
+            Default::Default |
+            Default::Path(_) |
+            Default::Expr(_) => false,
         }
     }
 }
@@ -1093,9 +1094,9 @@ impl Field {
                     }
                 } else if meta.path == DEFAULT {
                     if meta.input.peek(Token![=]) {
-                        // #[serde(default = "...")]
-                        if let Some(path) = parse_lit_into_expr_path(cx, DEFAULT, &meta)? {
-                            default.set(&meta.path, Default::Path(path));
+                        // #[serde(default = ...)]
+                        if let Some(default_value) = parse_default(cx, &meta)? {
+                            default.set(&meta.path, default_value)
                         }
                     } else {
                         // #[serde(default)]
@@ -1501,6 +1502,54 @@ fn parse_lit_into_expr_path(
             None
         }
     })
+}
+
+/// Parses either an [`ExprPath`](syn::ExprPath) to a `fn` which will return the 
+/// default value for a field, or an [`Expr`](syn::ExprParen) wrapped in parenthesies
+/// which is a valid value for a field. 
+/// 
+/// ```no_run
+/// use serde::{Serialize, Deserialize};
+/// 
+/// #[derive(Clone, Default, Serialize, Deserialize)]
+/// pub struct DemoStruct {
+///     #[serde(default = "my_fn")]
+///     a: i32,
+///     #[serde(default = (12))]
+///     b: i32,
+/// }
+/// 
+/// fn my_fn() -> i32 { 16 }
+/// ```
+fn parse_default(
+    cx: &Ctxt,
+    meta: &ParseNestedMeta,
+) -> syn::Result<Option<Default>> {
+
+    let expr: syn::Expr = meta.value()?.parse()?;
+    match expr {
+        // #[serde(default = "...")]
+        syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(lit_str), .. }) => {
+            match lit_str.parse::<syn::ExprPath>() {
+                Ok(path) => Ok(Some(Default::Path(path))),
+                _ => {
+                    let msg = format!("failed to parse path: {:?}", lit_str.value());
+                    cx.error_spanned_by(&lit_str, msg);
+                    Ok(None)
+                }
+            }
+        },
+
+        // #[serde(default = (...))]
+        syn::Expr::Paren(paren) => {
+            Ok(Some(Default::Expr(paren.expr)))
+        },
+        _ => {
+            let msg = format!("failed to parse literal or fn path: {:?}", expr.to_token_stream());
+            cx.error_spanned_by(&expr, msg);
+            Ok(None)
+        }
+    }
 }
 
 fn parse_lit_into_where(
