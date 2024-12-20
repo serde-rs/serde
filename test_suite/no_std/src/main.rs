@@ -1,5 +1,3 @@
-#![allow(internal_features)]
-#![feature(lang_items)]
 #![no_std]
 #![no_main]
 
@@ -9,10 +7,6 @@ use core::ffi::c_int;
 extern "C" fn main(_argc: c_int, _argv: *const *const u8) -> c_int {
     0
 }
-
-#[lang = "eh_personality"]
-#[no_mangle]
-pub extern "C" fn rust_eh_personality() {}
 
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {

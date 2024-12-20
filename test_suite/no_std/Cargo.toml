@@ -10,4 +10,10 @@ libc = { version = "0.2", default-features = false }
 serde = { path = "../../serde", default-features = false }
 serde_derive = { path = "../../serde_derive" }
 
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+
 [workspace]
