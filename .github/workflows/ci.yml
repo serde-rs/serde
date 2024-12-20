@@ -52,6 +52,7 @@ jobs:
           toolchain: ${{matrix.rust}}
       - run: cd serde && cargo build --features rc
       - run: cd serde && cargo build --no-default-features
+      - run: cd test_suite/no_std && cargo build
 
   nightly:
     name: Rust nightly ${{matrix.os == 'windows' && '(windows)' || ''}}
