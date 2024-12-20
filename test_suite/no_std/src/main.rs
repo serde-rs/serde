@@ -1,9 +1,12 @@
 #![allow(internal_features)]
-#![feature(lang_items, start)]
+#![feature(lang_items)]
 #![no_std]
+#![no_main]
 
-#[start]
-fn start(_argc: isize, _argv: *const *const u8) -> isize {
+use core::ffi::c_int;
+
+#[no_mangle]
+extern "C" fn main(_argc: c_int, _argv: *const *const u8) -> c_int {
     0
 }
 
