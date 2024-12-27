@@ -769,7 +769,7 @@ fn test_gen() {
     }
 
     #[derive(Serialize)]
-    #[repr(packed)]
+    #[repr(C, packed)]
     #[allow(dead_code)]
     struct Packed {
         x: u8,
@@ -915,14 +915,14 @@ where
 
 //////////////////////////////////////////////////////////////////////////
 
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct RemotePacked {
     pub a: u16,
     pub b: u32,
 }
 
 #[derive(Serialize)]
-#[repr(packed)]
+#[repr(C, packed)]
 #[serde(remote = "RemotePacked")]
 pub struct RemotePackedDef {
     a: u16,
@@ -933,14 +933,14 @@ impl Drop for RemotePackedDef {
     fn drop(&mut self) {}
 }
 
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct RemotePackedNonCopy {
     pub a: u16,
     pub b: String,
 }
 
 #[derive(Deserialize)]
-#[repr(packed)]
+#[repr(C, packed)]
 #[serde(remote = "RemotePackedNonCopy")]
 pub struct RemotePackedNonCopyDef {
     a: u16,
