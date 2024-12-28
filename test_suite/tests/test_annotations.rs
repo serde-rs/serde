@@ -95,6 +95,8 @@ where
     a4: D,
     #[serde(skip_deserializing, default = "MyDefault::my_default")]
     a5: E,
+    #[serde(skip_deserializing, default = (12.3))]
+    a6: f32
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -123,6 +125,7 @@ fn test_default_struct() {
             a3: 3,
             a4: 0,
             a5: 123,
+            a6: 12.3,
         },
         &[
             Token::Struct {
@@ -139,6 +142,8 @@ fn test_default_struct() {
             Token::I32(4),
             Token::Str("a5"),
             Token::I32(5),
+            Token::Str("a6"),
+            Token::F32(12.3),
             Token::StructEnd,
         ],
     );
@@ -150,14 +155,17 @@ fn test_default_struct() {
             a3: 123,
             a4: 0,
             a5: 123,
+            a6: 12.3
         },
         &[
             Token::Struct {
                 name: "DefaultStruct",
-                len: 3,
+                len: 6,
             },
             Token::Str("a1"),
             Token::I32(1),
+            Token::Str("a6"),
+            Token::F32(12.3),
             Token::StructEnd,
         ],
     );
@@ -436,6 +444,7 @@ fn test_ignore_unknown() {
             a3: 3,
             a4: 0,
             a5: 123,
+            a6: 12.3
         },
         &[
             Token::Struct {

@@ -1,4 +1,4 @@
-error: #[serde(default = "...")] can only be used on structs
+error: #[serde(default = ...)] can only be used on structs
  --> tests/ui/default-attribute/enum_path.rs:4:9
   |
 4 | #[serde(default = "default_e")]
