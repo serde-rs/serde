@@ -1,5 +1,6 @@
 use crate::fragment::{Expr, Fragment, Match, Stmts};
 use crate::internals::ast::{Container, Data, Field, Style, Variant};
+use crate::internals::deprecated::allow_deprecated;
 use crate::internals::name::Name;
 use crate::internals::{attr, replace_receiver, ungroup, Ctxt, Derive};
 use crate::{bound, dummy, pretend, this};
@@ -22,6 +23,8 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
     precondition(&ctxt, &cont);
     ctxt.check()?;
 
+    let allow_deprecated = allow_deprecated(input)?;
+
     let ident = &cont.ident;
     let params = Parameters::new(&cont);
     let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
@@ -34,6 +37,7 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
         let used = pretend::pretend_used(&cont, params.is_packed);
         quote! {
             #[automatically_derived]
+            #allow_deprecated
             impl #de_impl_generics #ident #ty_generics #where_clause {
                 #vis fn deserialize<__D>(__deserializer: __D) -> #serde::__private::Result<#remote #ty_generics, __D::Error>
                 where
@@ -49,6 +53,7 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
 
         quote! {
             #[automatically_derived]
+            #allow_deprecated
             impl #de_impl_generics #serde::Deserialize<#delife> for #ident #ty_generics #where_clause {
                 fn deserialize<__D>(__deserializer: __D) -> #serde::__private::Result<Self, __D::Error>
                 where
