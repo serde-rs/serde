@@ -1,3 +1,2 @@
 target/
-*.sw[po]
 Cargo.lock
