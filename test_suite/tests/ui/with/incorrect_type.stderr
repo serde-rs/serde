@@ -28,7 +28,7 @@ note: function defined here
   --> tests/ui/with/incorrect_type.rs:9:12
    |
 9  |     pub fn serialize<T, S: Serializer>(_: S) -> Result<S::Ok, S::Error> {
-   |            ^^^^^^^^^                   ----
+   |            ^^^^^^^^^
 
 error[E0277]: the trait bound `&u8: Serializer` is not satisfied
   --> tests/ui/with/incorrect_type.rs:15:25
@@ -79,7 +79,7 @@ note: function defined here
   --> tests/ui/with/incorrect_type.rs:9:12
    |
 9  |     pub fn serialize<T, S: Serializer>(_: S) -> Result<S::Ok, S::Error> {
-   |            ^^^^^^^^^                   ----
+   |            ^^^^^^^^^
 
 error[E0277]: the trait bound `&u8: Serializer` is not satisfied
   --> tests/ui/with/incorrect_type.rs:18:35
