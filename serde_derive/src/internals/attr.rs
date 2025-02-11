@@ -169,6 +169,7 @@ pub struct Container {
     remote: Option<syn::Path>,
     identifier: Identifier,
     serde_path: Option<syn::Path>,
+    vaildate: Option<syn::ExprPath>,
     is_packed: bool,
     /// Error message generated when type can't be deserialized
     expecting: Option<String>,
@@ -256,6 +257,7 @@ impl Container {
         let mut remote = Attr::none(cx, REMOTE);
         let mut field_identifier = BoolAttr::none(cx, FIELD_IDENTIFIER);
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
+        let mut vaildate = Attr::none(cx, VALIDATE);
         let mut serde_path = Attr::none(cx, CRATE);
         let mut expecting = Attr::none(cx, EXPECTING);
         let mut non_exhaustive = false;
@@ -486,6 +488,11 @@ impl Container {
                     if let Some(path) = parse_lit_into_path(cx, CRATE, &meta)? {
                         serde_path.set(&meta.path, path);
                     }
+                } else if meta.path == VALIDATE {
+                    // #[serde(validate = "...")]
+                    if let Some(path) = parse_lit_into_expr_path(cx, VALIDATE, &meta)? {
+                        vaildate.set(&meta.path, path);
+                    }
                 } else if meta.path == EXPECTING {
                     // #[serde(expecting = "a message")]
                     if let Some(s) = get_lit_str(cx, EXPECTING, &meta)? {
@@ -539,6 +546,7 @@ impl Container {
             remote: remote.get(),
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
             serde_path: serde_path.get(),
+            vaildate: vaildate.get(),
             is_packed,
             expecting: expecting.get(),
             non_exhaustive,
@@ -595,6 +603,10 @@ impl Container {
 
     pub fn remote(&self) -> Option<&syn::Path> {
         self.remote.as_ref()
+    }
+
+    pub fn vaildate(&self) -> Option<&syn::ExprPath> {
+        self.vaildate.as_ref()
     }
 
     pub fn is_packed(&self) -> bool {
