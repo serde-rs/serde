@@ -277,9 +277,9 @@ fn borrowed_lifetimes(cont: &Container) -> BorrowedLifetimes {
 fn validate_body(cont: &Container, body: Stmts) -> TokenStream {
     if let Some(vaildate) = cont.attrs.vaildate() {
         quote! {
-            let __body = { #body }?;
-            #vaildate(&__body).map_err(_serde::de::Error::custom)?;
-            Ok(__body)
+            let body = { #body }?;
+            #vaildate(&body).map_err(_serde::de::Error::custom)?;
+            Ok(body)
         }
     } else {
         quote! { #body }
