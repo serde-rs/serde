@@ -275,10 +275,11 @@ fn borrowed_lifetimes(cont: &Container) -> BorrowedLifetimes {
 }
 
 fn validate_body(cont: &Container, body: Stmts) -> TokenStream {
+    let serde = cont.attrs.serde_path();
     if let Some(validate) = cont.attrs.validate() {
         quote! {
             let body = { #body }?;
-            #validate(&body).map_err(_serde::de::Error::custom)?;
+            #validate(&body).map_err(#serde::de::Error::custom)?;
             Ok(body)
         }
     } else {
