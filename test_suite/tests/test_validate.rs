@@ -3,14 +3,22 @@ use serde_test::{assert_de_tokens, assert_de_tokens_error, Token};
 use std::fmt::Display;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(validate = "validate_struct")]
+#[serde(validate = "validate_struct1")]
+#[serde(validate = "validate_struct2")]
 struct Struct {
     a: u16,
 }
 
-fn validate_struct(deserialized: &Struct) -> Result<(), impl Display> {
+fn validate_struct1(deserialized: &Struct) -> Result<(), impl Display> {
     if deserialized.a == 0 {
         return Err("field `a` can not be zero");
+    }
+    Ok(())
+}
+
+fn validate_struct2(deserialized: &Struct) -> Result<(), impl Display> {
+    if deserialized.a == 2 {
+        return Err("field `a` can not be two");
     }
     Ok(())
 }
@@ -52,6 +60,19 @@ fn test_struct() {
             Token::StructEnd,
         ],
         "field `a` can not be zero",
+    );
+
+    assert_de_tokens_error::<Struct>(
+        &[
+            Token::Struct {
+                name: "Struct",
+                len: 1,
+            },
+            Token::Str("a"),
+            Token::U16(2),
+            Token::StructEnd,
+        ],
+        "field `a` can not be two",
     );
 }
 
@@ -179,9 +200,17 @@ struct ValidateStruct {
 
 #[derive(Debug, PartialEq, validator::Validate, Deserialize)]
 #[serde(validator)]
+#[serde(validate = "validator_struct_name")]
 struct ValidatorStruct {
     #[validate(email)]
     mail: String,
+}
+
+fn validator_struct_name(deserialized: &ValidatorStruct) -> Result<(), impl Display> {
+    if deserialized.mail.starts_with("foo@") {
+        return Err("name can not be 'foo'");
+    }
+    Ok(())
 }
 
 #[test]
@@ -243,5 +272,18 @@ fn test_validator_struct() {
             Token::StructEnd,
         ],
         "mail: Validation error: email [{\"value\": String(\"email.example.com\")}]",
+    );
+
+    assert_de_tokens_error::<ValidatorStruct>(
+        &[
+            Token::Struct {
+                name: "ValidatorStruct",
+                len: 1,
+            },
+            Token::Str("mail"),
+            Token::Str("foo@example.com"),
+            Token::StructEnd,
+        ],
+        "name can not be 'foo'",
     );
 }

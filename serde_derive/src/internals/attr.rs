@@ -169,7 +169,7 @@ pub struct Container {
     remote: Option<syn::Path>,
     identifier: Identifier,
     serde_path: Option<syn::Path>,
-    validate: Option<syn::ExprPath>,
+    validate: Vec<syn::ExprPath>,
     validator: bool,
     is_packed: bool,
     /// Error message generated when type can't be deserialized
@@ -258,7 +258,7 @@ impl Container {
         let mut remote = Attr::none(cx, REMOTE);
         let mut field_identifier = BoolAttr::none(cx, FIELD_IDENTIFIER);
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
-        let mut validate = Attr::none(cx, VALIDATE);
+        let mut validate = VecAttr::none(cx, VALIDATE);
         let mut validator = BoolAttr::none(cx, VALIDATOR);
         let mut serde_path = Attr::none(cx, CRATE);
         let mut expecting = Attr::none(cx, EXPECTING);
@@ -493,7 +493,7 @@ impl Container {
                 } else if meta.path == VALIDATE {
                     // #[serde(validate = "...")]
                     if let Some(path) = parse_lit_into_expr_path(cx, VALIDATE, &meta)? {
-                        validate.set(&meta.path, path);
+                        validate.insert(&meta.path, path);
                     }
                 } else if meta.path == VALIDATOR {
                     // #[serde(validator)]
@@ -611,7 +611,7 @@ impl Container {
         self.remote.as_ref()
     }
 
-    pub fn validate(&self) -> Option<&syn::ExprPath> {
+    pub fn validate(&self) -> &[syn::ExprPath] {
         self.validate.as_ref()
     }
 

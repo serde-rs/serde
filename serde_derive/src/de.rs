@@ -26,7 +26,7 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
     let params = Parameters::new(&cont);
     let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
     let body = Stmts(deserialize_body(&cont, &params));
-    let vaildated_body = validate_body(&cont, body)?;
+    let vaildated_body = validate_body(&cont, body);
     let delife = params.borrowed.de_lifetime();
     let serde = cont.attrs.serde_path();
 
@@ -274,27 +274,31 @@ fn borrowed_lifetimes(cont: &Container) -> BorrowedLifetimes {
     }
 }
 
-fn validate_body(cont: &Container, body: Stmts) -> syn::Result<TokenStream> {
+fn validate_body(cont: &Container, body: Stmts) -> TokenStream {
     let serde = cont.attrs.serde_path();
-    match (cont.attrs.validate(), cont.attrs.validator()) {
-        (None, false) => Ok(quote! { #body }),
-        (Some(validate), false) => Ok(quote! {
+    let mut validations: Vec<TokenStream> = cont
+        .attrs
+        .validate()
+        .iter()
+        .map(|validate| {
+            quote! {
+                #validate(&body).map_err(#serde::de::Error::custom)?;
+            }
+        })
+        .collect();
+    if cont.attrs.validator() {
+        validations.push(
+            quote! {validator::Validate::validate(&body).map_err(#serde::de::Error::custom)?;},
+        );
+    }
+    if validations.is_empty() {
+        quote! { #body }
+    } else {
+        quote! {
             let body = { #body }?;
-            #validate(&body).map_err(#serde::de::Error::custom)?;
+            #(#validations)*
             Ok(body)
-        }),
-        (None, true) => Ok(quote! {
-            let body = { #body }?;
-            validator::Validate::validate(&body).map_err(#serde::de::Error::custom)?;
-            Ok(body)
-        }),
-        // If both `validator` and `validate` are defined, error will be reported
-        // on the #[serde(validate = "...")]
-        //                           ^^^^^
-        (Some(validate), true) => Err(syn::Error::new(
-            validate.span(),
-            "can not define both `validator` and `validate`",
-        )),
+        }
     }
 }
 
