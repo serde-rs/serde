@@ -1,0 +1,5 @@
+error: can not define both `validator` and `validate`
+ --> tests/ui/validate/both_validator_and_validate.rs:4:20
+  |
+4 | #[serde(validate = "validator::Validate::validate")]
+  |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
