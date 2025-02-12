@@ -212,7 +212,7 @@ mod content {
     use crate::de::value::{MapDeserializer, SeqDeserializer};
     use crate::de::{
         self, size_hint, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected,
-        IgnoredAny, MapAccess, SeqAccess, Unexpected, Visitor,
+        IgnoredAny, MapAccess, SeqAccess, Unexpected, VariantAccess, Visitor,
     };
 
     /// Used from generated code to buffer the contents of the Deserializer when
@@ -525,12 +525,17 @@ mod content {
             Ok(Content::Map(vec))
         }
 
-        fn visit_enum<V>(self, _visitor: V) -> Result<Self::Value, V::Error>
+        fn visit_enum<V>(self, visitor: V) -> Result<Self::Value, V::Error>
         where
             V: EnumAccess<'de>,
         {
-            Err(de::Error::custom(
-                "untagged and internally tagged enums do not support enum input",
+            let (key, data) = tri!(visitor.variant::<String>());
+            Ok(Content::Map(
+                [(
+                    Content::String(key),
+                    tri!(data.newtype_variant::<Self::Value>()),
+                )]
+                .into(),
             ))
         }
     }
