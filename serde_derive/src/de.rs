@@ -26,7 +26,7 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
     let params = Parameters::new(&cont);
     let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
     let body = Stmts(deserialize_body(&cont, &params));
-    let vaildated_body = validate_body(&cont, body);
+    let vaildated_body = validate_body(&cont, body)?;
     let delife = params.borrowed.de_lifetime();
     let serde = cont.attrs.serde_path();
 
@@ -274,16 +274,27 @@ fn borrowed_lifetimes(cont: &Container) -> BorrowedLifetimes {
     }
 }
 
-fn validate_body(cont: &Container, body: Stmts) -> TokenStream {
+fn validate_body(cont: &Container, body: Stmts) -> syn::Result<TokenStream> {
     let serde = cont.attrs.serde_path();
-    if let Some(validate) = cont.attrs.validate() {
-        quote! {
+    match (cont.attrs.validate(), cont.attrs.validator()) {
+        (None, false) => Ok(quote! { #body }),
+        (Some(validate), false) => Ok(quote! {
             let body = { #body }?;
             #validate(&body).map_err(#serde::de::Error::custom)?;
             Ok(body)
-        }
-    } else {
-        quote! { #body }
+        }),
+        (None, true) => Ok(quote! {
+            let body = { #body }?;
+            validator::Validate::validate(&body).map_err(#serde::de::Error::custom)?;
+            Ok(body)
+        }),
+        // If both `validator` and `validate` are defined, error will be reported
+        // on the #[serde(validate = "...")]
+        //                           ^^^^^
+        (Some(validate), true) => Err(syn::Error::new(
+            validate.span(),
+            "can not define both `validator` and `validate`",
+        )),
     }
 }
 

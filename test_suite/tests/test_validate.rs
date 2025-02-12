@@ -172,20 +172,27 @@ fn test_tuple_variant() {
 
 #[derive(Debug, PartialEq, validator::Validate, Deserialize)]
 #[serde(validate = "validator::Validate::validate")]
-struct ValidatorDemo {
+struct ValidateStruct {
+    #[validate(email)]
+    mail: String,
+}
+
+#[derive(Debug, PartialEq, validator::Validate, Deserialize)]
+#[serde(validator)]
+struct ValidatorStruct {
     #[validate(email)]
     mail: String,
 }
 
 #[test]
-fn test_validator_demo() {
+fn test_validate_struct() {
     assert_de_tokens(
-        &ValidatorDemo {
+        &ValidateStruct {
             mail: "email@example.com".into(),
         },
         &[
             Token::Struct {
-                name: "ValidatorDemo",
+                name: "ValidateStruct",
                 len: 1,
             },
             Token::Str("mail"),
@@ -194,10 +201,41 @@ fn test_validator_demo() {
         ],
     );
 
-    assert_de_tokens_error::<ValidatorDemo>(
+    assert_de_tokens_error::<ValidateStruct>(
         &[
             Token::Struct {
-                name: "ValidatorDemo",
+                name: "ValidateStruct",
+                len: 1,
+            },
+            Token::Str("mail"),
+            Token::Str("email.example.com"),
+            Token::StructEnd,
+        ],
+        "mail: Validation error: email [{\"value\": String(\"email.example.com\")}]",
+    );
+}
+
+#[test]
+fn test_validator_struct() {
+    assert_de_tokens(
+        &ValidatorStruct {
+            mail: "email@example.com".into(),
+        },
+        &[
+            Token::Struct {
+                name: "ValidatorStruct",
+                len: 1,
+            },
+            Token::Str("mail"),
+            Token::Str("email@example.com"),
+            Token::StructEnd,
+        ],
+    );
+
+    assert_de_tokens_error::<ValidatorStruct>(
+        &[
+            Token::Struct {
+                name: "ValidatorStruct",
                 len: 1,
             },
             Token::Str("mail"),
