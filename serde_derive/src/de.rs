@@ -26,7 +26,7 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
     let params = Parameters::new(&cont);
     let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
     let body = Stmts(deserialize_body(&cont, &params));
-    let vaildated_body = validate_body(&cont, body);
+    let validated_body = validate_body(&cont, body);
     let delife = params.borrowed.de_lifetime();
     let serde = cont.attrs.serde_path();
 
@@ -41,7 +41,7 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
                     __D: #serde::Deserializer<#delife>,
                 {
                     #used
-                    #vaildated_body
+                    #validated_body
                 }
             }
         }
@@ -55,7 +55,7 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
                 where
                     __D: #serde::Deserializer<#delife>,
                 {
-                    #vaildated_body
+                    #validated_body
                 }
 
                 #fn_deserialize_in_place
