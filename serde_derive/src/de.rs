@@ -288,7 +288,9 @@ fn validate_body(cont: &Container, body: Stmts) -> TokenStream {
         .collect();
     if cont.attrs.validator() {
         validations.push(
-            quote! {validator::Validate::validate(&body).map_err(#serde::de::Error::custom)?;},
+            quote! {
+                validator::Validate::validate(&body).map_err(#serde::de::Error::custom)?;
+            },
         );
     }
     if validations.is_empty() {
