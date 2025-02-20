@@ -118,6 +118,8 @@ use crate::lib::*;
 
 pub mod value;
 
+#[cfg(not(no_serde_derive))]
+pub(crate) mod identifier;
 mod ignored_any;
 mod impls;
 pub(crate) mod size_hint;
