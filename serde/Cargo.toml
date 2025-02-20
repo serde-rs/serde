@@ -26,7 +26,12 @@ features = ["derive", "rc"]
 [package.metadata.docs.rs]
 features = ["derive", "rc", "unstable"]
 targets = ["x86_64-unknown-linux-gnu"]
-rustdoc-args = ["--generate-link-to-definition"]
+rustdoc-args = [
+    "--generate-link-to-definition",
+    "--extern-html-root-url=core=https://doc.rust-lang.org",
+    "--extern-html-root-url=alloc=https://doc.rust-lang.org",
+    "--extern-html-root-url=std=https://doc.rust-lang.org",
+]
 
 # This cfg cannot be enabled, but it still forces Cargo to keep serde_derive's
 # version in lockstep with serde's, even if someone depends on the two crates
