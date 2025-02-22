@@ -6,8 +6,9 @@ error[E0609]: no field `b` on type `&remote::S`
    |
 help: a field with a similar name exists
    |
-12 |     a: u8,
-   |     ~
+12 -     b: u8,
+12 +     a: u8,
+   |
 
 error[E0560]: struct `remote::S` has no field named `b`
   --> tests/ui/remote/unknown_field.rs:12:5
