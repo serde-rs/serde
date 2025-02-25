@@ -46,6 +46,13 @@ struct StructSkipAllDenyUnknown {
 struct NotDeserializable;
 
 #[derive(PartialEq, Debug, Deserialize)]
+#[serde(rename = "NewName")]
+struct Renamed {
+    a: i32,
+    b: i32,
+}
+
+#[derive(PartialEq, Debug, Deserialize)]
 enum Enum {
     #[allow(dead_code)]
     #[serde(skip_deserializing)]
@@ -1176,6 +1183,14 @@ fn test_skip_all_deny_unknown() {
             Token::Str("a"),
         ],
         "unknown field `a`, there are no fields",
+    );
+}
+
+#[test]
+fn test_rename_struct() {
+    assert_de_tokens_error::<Renamed>(
+        &[Token::Str("a")],
+        "invalid type: string \"a\", expected struct NewName",
     );
 }
 
