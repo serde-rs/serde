@@ -2010,6 +2010,14 @@ pub trait EnumAccess<'de>: Sized {
     }
 }
 
+///  VariantHint for VariantAccess
+pub enum VariantHint {
+    Unit,
+    Newtype,
+    Tuple(usize),
+    Struct(&'static [&'static str]),
+}
+
 /// `VariantAccess` is a visitor that is created by the `Deserializer` and
 /// passed to the `Deserialize` to deserialize the content of a particular enum
 /// variant.
@@ -2125,6 +2133,11 @@ pub trait VariantAccess<'de>: Sized {
         T: Deserialize<'de>,
     {
         self.newtype_variant_seed(PhantomData)
+    }
+
+    /// Variant type hint
+    fn hint(&self) -> Option<VariantHint> {
+        None
     }
 
     /// Called when deserializing a tuple-like variant.

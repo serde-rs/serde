@@ -529,14 +529,17 @@ mod content {
         where
             V: EnumAccess<'de>,
         {
-            let (key, data) = tri!(visitor.variant::<String>());
-            Ok(Content::Map(
-                [(
-                    Content::String(key),
-                    tri!(data.newtype_variant::<Self::Value>()),
-                )]
-                .into(),
-            ))
+            let (key, data) = tri!(visitor.variant::<Content>());
+            let variant_hint = tri!(data.hint().ok_or(de::Error::custom(
+                "untagged and internally tagged enums do not support enum input",
+            )));
+            let data = match variant_hint {
+                de::VariantHint::Unit => Content::Unit,
+                de::VariantHint::Newtype => tri!(data.newtype_variant::<Self::Value>()),
+                de::VariantHint::Tuple(len) => tri!(data.tuple_variant(len, self)),
+                de::VariantHint::Struct(fields) => tri!(data.struct_variant(fields, self)),
+            };
+            Ok(Content::Map([(key, data)].into()))
         }
     }
 
@@ -2066,7 +2069,6 @@ mod content {
                     ));
                 }
             };
-
             visitor.visit_enum(EnumRefDeserializer {
                 variant,
                 value,
