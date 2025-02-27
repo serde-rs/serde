@@ -2051,7 +2051,7 @@ pub trait VariantAccess<'de>: Sized {
     /// `invalid_type` error should be constructed:
     ///
     /// ```edition2021
-    /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, Unexpected};
+    /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, VariantHint, Unexpected};
     /// #
     /// # struct X;
     /// #
