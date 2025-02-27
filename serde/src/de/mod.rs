@@ -2051,7 +2051,7 @@ pub trait VariantAccess<'de>: Sized {
     /// `invalid_type` error should be constructed:
     ///
     /// ```edition2021
-    /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, VariantHint, Unexpected};
+    /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, Unexpected};
     /// #
     /// # struct X;
     /// #
@@ -2141,7 +2141,7 @@ pub trait VariantAccess<'de>: Sized {
 
     /// Variant type hint
     /// ```edition2021
-    /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, Unexpected};
+    /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, VariantHint, Unexpected};
     /// #
     /// # enum X {
     /// #     Unit,
@@ -2155,7 +2155,7 @@ pub trait VariantAccess<'de>: Sized {
     /// #         unimplemented!()
     /// #     }
     /// #
-    /// fn hint(&self) -> Option<de::VariantHint> {
+    /// fn hint(&self) -> Option<VariantHint> {
     ///     Some(match self {
     ///         Self::Unit => VariantHint::Unit,
     ///         Self::Newtype => VariantHint::Newtype,
