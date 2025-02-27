@@ -2011,14 +2011,6 @@ pub trait EnumAccess<'de>: Sized {
 }
 
 /// Variant Hint for VariantAccess
-/// ```edition2021
-/// let (key, data) = tri!(visitor.variant());
-/// let variant_hint = data.hint().unwrap()
-/// let data = match variant_hint {
-///     de::VariantHint::Unit => Content::Unit,
-///     de::VariantHint::Newtype => tri!(data.newtype_variant()),
-///     _ => unreachable!(),
-/// };
 pub enum VariantHint {
     /// variant with no values
     Unit,
@@ -2148,6 +2140,44 @@ pub trait VariantAccess<'de>: Sized {
     }
 
     /// Variant type hint
+    /// ```edition2021
+    /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, Unexpected};
+    /// #
+    /// # enum X {
+    /// #     Unit,
+    /// #     Newtype,
+    /// # }
+    /// #
+    /// # impl<'de> VariantAccess<'de> for X {
+    /// #     type Error = value::Error;
+    /// #
+    /// #     fn unit_variant(self) -> Result<(), Self::Error> {
+    /// #         unimplemented!()
+    /// #     }
+    /// #
+    /// fn hint(&self) -> Option<de::VariantHint> {
+    ///     Some(match self {
+    ///         Self::Unit => VariantHint::Unit,
+    ///         Self::Newtype => VariantHint::Newtype,
+    ///     })
+    /// }
+    /// #
+    /// #     fn newtype_variant_seed<T>(self, _seed: T) -> Result<T::Value, Self::Error>
+    /// #     where
+    /// #     T: DeserializeSeed<'de>,
+    /// #     { unimplemented!() }
+    /// #
+    /// #     fn tuple_variant<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
+    /// #     where
+    /// #         V: Visitor<'de>,
+    /// #     { unimplemented!() }
+    /// #
+    /// #     fn struct_variant<V>(self, _: &[&str], _: V) -> Result<V::Value, Self::Error>
+    /// #     where
+    /// #         V: Visitor<'de>,
+    /// #     { unimplemented!() }
+    /// # }
+    /// ```
     fn hint(&self) -> Option<VariantHint> {
         None
     }
