@@ -535,7 +535,7 @@ mod content {
             )));
             let data = match variant_hint {
                 de::VariantHint::Unit => Content::Unit,
-                de::VariantHint::Newtype => tri!(data.newtype_variant::<Self::Value>()),
+                de::VariantHint::Newtype => tri!(data.newtype_variant()),
                 de::VariantHint::Tuple(len) => tri!(data.tuple_variant(len, self)),
                 de::VariantHint::Struct(fields) => tri!(data.struct_variant(fields, self)),
             };
@@ -2069,6 +2069,7 @@ mod content {
                     ));
                 }
             };
+
             visitor.visit_enum(EnumRefDeserializer {
                 variant,
                 value,

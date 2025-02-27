@@ -2011,6 +2011,14 @@ pub trait EnumAccess<'de>: Sized {
 }
 
 /// Variant Hint for VariantAccess
+/// ```edition2021
+/// let (key, data) = tri!(visitor.variant());
+/// let variant_hint = data.hint().unwrap()
+/// let data = match variant_hint {
+///     de::VariantHint::Unit => Content::Unit,
+///     de::VariantHint::Newtype => tri!(data.newtype_variant()),
+///     _ => unreachable!(),
+/// };
 pub enum VariantHint {
     /// variant with no values
     Unit,
