@@ -49,7 +49,7 @@ impl ReplaceReceiver<'_> {
 
         path.leading_colon = Some(**path.segments.pairs().next().unwrap().punct().unwrap());
 
-        let segments = mem::replace(&mut path.segments, Punctuated::new());
+        let segments = mem::take(&mut path.segments);
         path.segments = segments.into_pairs().skip(1).collect();
     }
 
