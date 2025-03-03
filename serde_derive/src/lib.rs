@@ -41,6 +41,7 @@
     clippy::cast_possible_truncation,
     clippy::checked_conversions,
     clippy::doc_markdown,
+    clippy::elidable_lifetime_names,
     clippy::enum_glob_use,
     clippy::indexing_slicing,
     clippy::items_after_statements,

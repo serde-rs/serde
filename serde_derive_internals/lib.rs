@@ -21,6 +21,7 @@
 // Ignored clippy_pedantic lints
 #![allow(
     clippy::doc_markdown,
+    clippy::elidable_lifetime_names,
     clippy::enum_glob_use,
     clippy::items_after_statements,
     clippy::let_underscore_untyped,

@@ -144,6 +144,7 @@
     clippy::too_many_lines,
     // preference
     clippy::doc_markdown,
+    clippy::elidable_lifetime_names,
     clippy::needless_lifetimes,
     clippy::unseparated_literal_suffix,
     // false positive
