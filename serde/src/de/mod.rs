@@ -206,7 +206,7 @@ macro_rules! declare_error_trait {
             /// containing an integer, the unexpected type is the integer and the
             /// expected type is the string.
             #[cold]
-            fn invalid_type(unexp: Unexpected, exp: &Expected) -> Self {
+            fn invalid_type(unexp: Unexpected, exp: &dyn Expected) -> Self {
                 Error::custom(format_args!("invalid type: {}, expected {}", unexp, exp))
             }
 
@@ -224,7 +224,7 @@ macro_rules! declare_error_trait {
             /// that is not valid UTF-8, the unexpected value is the bytes and the
             /// expected value is a string.
             #[cold]
-            fn invalid_value(unexp: Unexpected, exp: &Expected) -> Self {
+            fn invalid_value(unexp: Unexpected, exp: &dyn Expected) -> Self {
                 Error::custom(format_args!("invalid value: {}, expected {}", unexp, exp))
             }
 
@@ -238,7 +238,7 @@ macro_rules! declare_error_trait {
             /// expected. For example `exp` might say that a tuple of size 6 was
             /// expected.
             #[cold]
-            fn invalid_length(len: usize, exp: &Expected) -> Self {
+            fn invalid_length(len: usize, exp: &dyn Expected) -> Self {
                 Error::custom(format_args!("invalid length {}, expected {}", len, exp))
             }
 
@@ -492,7 +492,7 @@ impl Expected for &str {
     }
 }
 
-impl Display for Expected + '_ {
+impl Display for dyn Expected + '_ {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         Expected::fmt(self, formatter)
     }
