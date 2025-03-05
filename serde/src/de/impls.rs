@@ -249,11 +249,8 @@ macro_rules! int_to_int {
         where
             E: Error,
         {
-            if Self::Value::MIN as i64 <= v as i64 && v as i64 <= Self::Value::MAX as i64 {
-                Ok(v as Self::Value)
-            } else {
-                Err(Error::invalid_value(Unexpected::Signed(v as i64), &self))
-            }
+            Self::Value::try_from(v as i64)
+                .map_err(|_| Error::invalid_value(Unexpected::Signed(v as i64), &self))
         }
     };
 
@@ -262,8 +259,8 @@ macro_rules! int_to_int {
         where
             E: Error,
         {
-            if $primitive::MIN as i64 <= v as i64 && v as i64 <= $primitive::MAX as i64 {
-                if let Some(nonzero) = Self::Value::new(v as $primitive) {
+            if let Ok(v) = $primitive::try_from(v as i64) {
+                if let Some(nonzero) = Self::Value::new(v) {
                     return Ok(nonzero);
                 }
             }
@@ -294,11 +291,13 @@ macro_rules! int_to_uint {
         where
             E: Error,
         {
-            if 0 <= v && v as u64 <= Self::Value::MAX as u64 {
-                Ok(v as Self::Value)
-            } else {
-                Err(Error::invalid_value(Unexpected::Signed(v as i64), &self))
+            if 0 <= v {
+                #[allow(irrefutable_let_patterns)]
+                if let Ok(v) = Self::Value::try_from(v as u64) {
+                    return Ok(v as Self::Value);
+                }
             }
+            Err(Error::invalid_value(Unexpected::Signed(v as i64), &self))
         }
     };
 
@@ -307,9 +306,12 @@ macro_rules! int_to_uint {
         where
             E: Error,
         {
-            if 0 < v && v as u64 <= $primitive::MAX as u64 {
-                if let Some(nonzero) = Self::Value::new(v as $primitive) {
-                    return Ok(nonzero);
+            if 0 < v {
+                #[allow(irrefutable_let_patterns)]
+                if let Ok(v) = $primitive::try_from(v as u64) {
+                    if let Some(nonzero) = Self::Value::new(v) {
+                        return Ok(nonzero);
+                    }
                 }
             }
             Err(Error::invalid_value(Unexpected::Signed(v as i64), &self))
@@ -339,11 +341,8 @@ macro_rules! uint_to_self {
         where
             E: Error,
         {
-            if v as u64 <= Self::Value::MAX as u64 {
-                Ok(v as Self::Value)
-            } else {
-                Err(Error::invalid_value(Unexpected::Unsigned(v as u64), &self))
-            }
+            Self::Value::try_from(v as u64)
+                .map_err(|_| Error::invalid_value(Unexpected::Unsigned(v as u64), &self))
         }
     };
 
@@ -352,8 +351,8 @@ macro_rules! uint_to_self {
         where
             E: Error,
         {
-            if v as u64 <= $primitive::MAX as u64 {
-                if let Some(nonzero) = Self::Value::new(v as $primitive) {
+            if let Ok(v) = $primitive::try_from(v as u64) {
+                if let Some(nonzero) = Self::Value::new(v) {
                     return Ok(nonzero);
                 }
             }
@@ -366,7 +365,7 @@ macro_rules! uint_to_self {
         where
             E: Error,
         {
-            if v as u64 <= $primitive::MAX as u64 {
+            if let Ok(v) = $primitive::try_from(v as u64) {
                 Ok(Saturating(v as $primitive))
             } else {
                 Ok(Saturating($primitive::MAX))
