@@ -80,10 +80,9 @@ impl<'de> Deserialize<'de> for bool {
 ////////////////////////////////////////////////////////////////////////////////
 
 macro_rules! impl_deserialize_num {
-    ($primitive:ident, $nonzero:ident $(cfg($($cfg:tt)*))*, $deserialize:ident $($method:ident!($($val:ident : $visit:ident)*);)*) => {
+    ($primitive:ident, $nonzero:ident, $deserialize:ident $($method:ident!($($val:ident : $visit:ident)*);)*) => {
         impl_deserialize_num!($primitive, $deserialize $($method!($($val : $visit)*);)*);
 
-        $(#[cfg($($cfg)*)])*
         impl<'de> Deserialize<'de> for num::$nonzero {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
@@ -228,12 +227,12 @@ macro_rules! num_as_copysign_self {
         where
             E: Error,
         {
-            #[cfg(any(no_float_copysign, not(feature = "std")))]
+            #[cfg(not(feature = "std"))]
             {
                 Ok(v as Self::Value)
             }
 
-            #[cfg(all(not(no_float_copysign), feature = "std"))]
+            #[cfg(feature = "std")]
             {
                 // Preserve sign of NaN. The `as` produces a nondeterministic sign.
                 let sign = if v.is_sign_positive() { 1.0 } else { -1.0 };
@@ -381,14 +380,14 @@ macro_rules! uint_to_self {
 }
 
 impl_deserialize_num! {
-    i8, NonZeroI8 cfg(not(no_num_nonzero_signed)), deserialize_i8
+    i8, NonZeroI8, deserialize_i8
     num_self!(i8:visit_i8);
     int_to_int!(i16:visit_i16 i32:visit_i32 i64:visit_i64);
     uint_to_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32 u64:visit_u64);
 }
 
 impl_deserialize_num! {
-    i16, NonZeroI16 cfg(not(no_num_nonzero_signed)), deserialize_i16
+    i16, NonZeroI16, deserialize_i16
     num_self!(i16:visit_i16);
     num_as_self!(i8:visit_i8);
     int_to_int!(i32:visit_i32 i64:visit_i64);
@@ -396,7 +395,7 @@ impl_deserialize_num! {
 }
 
 impl_deserialize_num! {
-    i32, NonZeroI32 cfg(not(no_num_nonzero_signed)), deserialize_i32
+    i32, NonZeroI32, deserialize_i32
     num_self!(i32:visit_i32);
     num_as_self!(i8:visit_i8 i16:visit_i16);
     int_to_int!(i64:visit_i64);
@@ -404,14 +403,14 @@ impl_deserialize_num! {
 }
 
 impl_deserialize_num! {
-    i64, NonZeroI64 cfg(not(no_num_nonzero_signed)), deserialize_i64
+    i64, NonZeroI64, deserialize_i64
     num_self!(i64:visit_i64);
     num_as_self!(i8:visit_i8 i16:visit_i16 i32:visit_i32);
     uint_to_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32 u64:visit_u64);
 }
 
 impl_deserialize_num! {
-    isize, NonZeroIsize cfg(not(no_num_nonzero_signed)), deserialize_i64
+    isize, NonZeroIsize, deserialize_i64
     num_as_self!(i8:visit_i8 i16:visit_i16);
     int_to_int!(i32:visit_i32 i64:visit_i64);
     uint_to_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32 u64:visit_u64);
@@ -528,7 +527,7 @@ macro_rules! num_128 {
 }
 
 impl_deserialize_num! {
-    i128, NonZeroI128 cfg(not(no_num_nonzero_signed)), deserialize_i128
+    i128, NonZeroI128, deserialize_i128
     num_self!(i128:visit_i128);
     num_as_self!(i8:visit_i8 i16:visit_i16 i32:visit_i32 i64:visit_i64);
     num_as_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32 u64:visit_u64);
@@ -2415,13 +2414,9 @@ impl<'de> Deserialize<'de> for SystemTime {
 
         const FIELDS: &[&str] = &["secs_since_epoch", "nanos_since_epoch"];
         let duration = tri!(deserializer.deserialize_struct("SystemTime", FIELDS, DurationVisitor));
-        #[cfg(not(no_systemtime_checked_add))]
-        let ret = UNIX_EPOCH
+        UNIX_EPOCH
             .checked_add(duration)
-            .ok_or_else(|| D::Error::custom("overflow deserializing SystemTime"));
-        #[cfg(no_systemtime_checked_add)]
-        let ret = Ok(UNIX_EPOCH + duration);
-        ret
+            .ok_or_else(|| D::Error::custom("overflow deserializing SystemTime"))
     }
 }
 
