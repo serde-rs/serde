@@ -249,9 +249,7 @@ macro_rules! int_to_int {
         where
             E: Error,
         {
-            if Self::Value::min_value() as i64 <= v as i64
-                && v as i64 <= Self::Value::max_value() as i64
-            {
+            if Self::Value::MIN as i64 <= v as i64 && v as i64 <= Self::Value::MAX as i64 {
                 Ok(v as Self::Value)
             } else {
                 Err(Error::invalid_value(Unexpected::Signed(v as i64), &self))
@@ -264,9 +262,7 @@ macro_rules! int_to_int {
         where
             E: Error,
         {
-            if $primitive::min_value() as i64 <= v as i64
-                && v as i64 <= $primitive::max_value() as i64
-            {
+            if $primitive::MIN as i64 <= v as i64 && v as i64 <= $primitive::MAX as i64 {
                 if let Some(nonzero) = Self::Value::new(v as $primitive) {
                     return Ok(nonzero);
                 }
@@ -298,7 +294,7 @@ macro_rules! int_to_uint {
         where
             E: Error,
         {
-            if 0 <= v && v as u64 <= Self::Value::max_value() as u64 {
+            if 0 <= v && v as u64 <= Self::Value::MAX as u64 {
                 Ok(v as Self::Value)
             } else {
                 Err(Error::invalid_value(Unexpected::Signed(v as i64), &self))
@@ -311,7 +307,7 @@ macro_rules! int_to_uint {
         where
             E: Error,
         {
-            if 0 < v && v as u64 <= $primitive::max_value() as u64 {
+            if 0 < v && v as u64 <= $primitive::MAX as u64 {
                 if let Some(nonzero) = Self::Value::new(v as $primitive) {
                     return Ok(nonzero);
                 }
@@ -343,7 +339,7 @@ macro_rules! uint_to_self {
         where
             E: Error,
         {
-            if v as u64 <= Self::Value::max_value() as u64 {
+            if v as u64 <= Self::Value::MAX as u64 {
                 Ok(v as Self::Value)
             } else {
                 Err(Error::invalid_value(Unexpected::Unsigned(v as u64), &self))
@@ -356,7 +352,7 @@ macro_rules! uint_to_self {
         where
             E: Error,
         {
-            if v as u64 <= $primitive::max_value() as u64 {
+            if v as u64 <= $primitive::MAX as u64 {
                 if let Some(nonzero) = Self::Value::new(v as $primitive) {
                     return Ok(nonzero);
                 }
@@ -475,9 +471,7 @@ macro_rules! num_128 {
         where
             E: Error,
         {
-            if v as i128 >= Self::Value::min_value() as i128
-                && v as u128 <= Self::Value::max_value() as u128
-            {
+            if v as i128 >= Self::Value::MIN as i128 && v as u128 <= Self::Value::MAX as u128 {
                 Ok(v as Self::Value)
             } else {
                 Err(Error::invalid_value(
@@ -493,9 +487,7 @@ macro_rules! num_128 {
         where
             E: Error,
         {
-            if v as i128 >= $primitive::min_value() as i128
-                && v as u128 <= $primitive::max_value() as u128
-            {
+            if v as i128 >= $primitive::MIN as i128 && v as u128 <= $primitive::MAX as u128 {
                 if let Some(nonzero) = Self::Value::new(v as $primitive) {
                     Ok(nonzero)
                 } else {
