@@ -5,6 +5,7 @@ members = [
     "serde_derive_internals",
     "test_suite",
 ]
+resolver = "2"
 
 [patch.crates-io]
 serde = { path = "serde" }

@@ -84,7 +84,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [1.31.0, 1.34.0]
+        rust: [1.56.0, 1.60.0]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -94,6 +94,7 @@ jobs:
       - run: sed -i '/"test_suite"/d' Cargo.toml
       - run: cd serde && cargo build --features rc
       - run: cd serde && cargo build --no-default-features
+      - run: cd serde && cargo build --no-default-features --features alloc
       - run: cd serde && cargo build
 
   derive:
@@ -110,16 +111,6 @@ jobs:
       - run: cd serde && cargo check --no-default-features
       - run: cd serde && cargo check
       - run: cd serde_derive && cargo check
-
-  alloc:
-    name: Rust 1.36.0
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.36.0
-      - run: sed -i '/"test_suite"/d' Cargo.toml
-      - run: cd serde && cargo build --no-default-features --features alloc
 
   minimal:
     name: Minimal versions

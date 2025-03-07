@@ -1065,7 +1065,7 @@ mod content {
         E: de::Error,
     {
         #[cold]
-        fn invalid_type(self, exp: &Expected) -> E {
+        fn invalid_type(self, exp: &dyn Expected) -> E {
             de::Error::invalid_type(self.content.unexpected(), exp)
         }
 
@@ -1654,7 +1654,7 @@ mod content {
         E: de::Error,
     {
         #[cold]
-        fn invalid_type(self, exp: &Expected) -> E {
+        fn invalid_type(self, exp: &dyn Expected) -> E {
             de::Error::invalid_type(self.content.unexpected(), exp)
         }
 
