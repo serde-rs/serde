@@ -18,37 +18,16 @@ fn main() {
         println!("cargo:rustc-check-cfg=cfg(no_core_error)");
         println!("cargo:rustc-check-cfg=cfg(no_core_net)");
         println!("cargo:rustc-check-cfg=cfg(no_core_num_saturating)");
-        println!("cargo:rustc-check-cfg=cfg(no_core_try_from)");
         println!("cargo:rustc-check-cfg=cfg(no_diagnostic_namespace)");
         println!("cargo:rustc-check-cfg=cfg(no_float_copysign)");
-        println!("cargo:rustc-check-cfg=cfg(no_num_nonzero_signed)");
-        println!("cargo:rustc-check-cfg=cfg(no_relaxed_trait_bounds)");
         println!("cargo:rustc-check-cfg=cfg(no_serde_derive)");
         println!("cargo:rustc-check-cfg=cfg(no_std_atomic)");
         println!("cargo:rustc-check-cfg=cfg(no_std_atomic64)");
-        println!("cargo:rustc-check-cfg=cfg(no_systemtime_checked_add)");
         println!("cargo:rustc-check-cfg=cfg(no_target_has_atomic)");
     }
 
     let target = env::var("TARGET").unwrap();
     let emscripten = target == "asmjs-unknown-emscripten" || target == "wasm32-unknown-emscripten";
-
-    // TryFrom, Atomic types, non-zero signed integers, and SystemTime::checked_add
-    // stabilized in Rust 1.34:
-    // https://blog.rust-lang.org/2019/04/11/Rust-1.34.0.html#tryfrom-and-tryinto
-    // https://blog.rust-lang.org/2019/04/11/Rust-1.34.0.html#library-stabilizations
-    if minor < 34 {
-        println!("cargo:rustc-cfg=no_core_try_from");
-        println!("cargo:rustc-cfg=no_num_nonzero_signed");
-        println!("cargo:rustc-cfg=no_systemtime_checked_add");
-        println!("cargo:rustc-cfg=no_relaxed_trait_bounds");
-    }
-
-    // f32::copysign and f64::copysign stabilized in Rust 1.35.
-    // https://blog.rust-lang.org/2019/05/23/Rust-1.35.0.html#copy-the-sign-of-a-floating-point-number-onto-another
-    if minor < 35 {
-        println!("cargo:rustc-cfg=no_float_copysign");
-    }
 
     // Support for #[cfg(target_has_atomic = "...")] stabilized in Rust 1.60.
     if minor < 60 {

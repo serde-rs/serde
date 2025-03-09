@@ -20,7 +20,6 @@ pub use self::string::from_utf8_lossy;
 #[cfg(any(feature = "alloc", feature = "std"))]
 pub use crate::lib::{ToString, Vec};
 
-#[cfg(not(no_core_try_from))]
 pub use crate::lib::convert::TryFrom;
 
 mod string {
