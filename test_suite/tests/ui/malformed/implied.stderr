@@ -1,0 +1,5 @@
+error: malformed implied attribute, expected `implied(key = ..., value = ...)`
+ --> tests/ui/malformed/implied.rs:4:17
+  |
+4 | #[serde(implied(unknown))]
+  |                 ^^^^^^^
