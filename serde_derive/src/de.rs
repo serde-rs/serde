@@ -1042,7 +1042,11 @@ fn deserialize_struct(
     let fields_stmt = if has_flatten {
         None
     } else {
-        let field_names = deserialized_fields.iter().flat_map(|field| field.aliases);
+        let implied_fields = cattrs.implied().iter().map(|(key, _)| key);
+        let field_names = deserialized_fields
+            .iter()
+            .flat_map(|field| field.aliases)
+            .chain(implied_fields);
 
         Some(quote! {
             #[doc(hidden)]
@@ -1155,7 +1159,11 @@ fn deserialize_struct_in_place(
     };
     let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
     let visit_map = Stmts(deserialize_map_in_place(params, fields, cattrs));
-    let field_names = deserialized_fields.iter().flat_map(|field| field.aliases);
+    let implied_fields = cattrs.implied().iter().map(|(key, _)| key);
+    let field_names = deserialized_fields
+        .iter()
+        .flat_map(|field| field.aliases)
+        .chain(implied_fields);
     let type_name = cattrs.name().deserialize_name();
 
     let in_place_impl_generics = de_impl_generics.in_place();
@@ -1276,6 +1284,7 @@ fn prepare_enum_variant_enum(variants: &[Variant]) -> (TokenStream, Stmts) {
         true,
         None,
         fallthrough,
+        None,
     ));
 
     (variants_stmt, variant_visitor)
@@ -2022,8 +2031,29 @@ fn deserialize_generated_identifier(
     is_variant: bool,
     ignore_variant: Option<TokenStream>,
     fallthrough: Option<TokenStream>,
+    implied_fields: Option<&[(Name, Name)]>,
 ) -> Fragment {
     let this_value = quote!(__Field);
+
+    let implied_fields: Vec<_> = implied_fields
+        .unwrap_or_default()
+        .iter()
+        .map(|(key, value)| {
+            let ident = Ident::new(&format!("__field_{}", key.value), key.span);
+            (key, value, ident)
+        })
+        .collect();
+
+    let implied_idents: Vec<_> = implied_fields.iter().map(|(_, _, ident)| ident).collect();
+    let implied_field_mapping: Vec<_> = implied_fields
+        .iter()
+        .map(|(key, _, ident)| {
+            quote! {
+                #key => _serde::__private::Ok(#this_value::#ident),
+            }
+        })
+        .collect();
+
     let field_idents: &Vec<_> = &deserialized_fields
         .iter()
         .map(|field| &field.ident)
@@ -2037,6 +2067,7 @@ fn deserialize_generated_identifier(
         None,
         !is_variant && has_flatten,
         None,
+        &implied_field_mapping,
     ));
 
     let lifetime = if !is_variant && has_flatten {
@@ -2049,6 +2080,7 @@ fn deserialize_generated_identifier(
         #[allow(non_camel_case_types)]
         #[doc(hidden)]
         enum __Field #lifetime {
+            #(#implied_idents,)*
             #(#field_idents,)*
             #ignore_variant
         }
@@ -2101,6 +2133,7 @@ fn deserialize_field_identifier(
         false,
         ignore_variant,
         fallthrough,
+        Some(cattrs.implied()),
     ))
 }
 
@@ -2162,7 +2195,11 @@ fn deserialize_custom_identifier(
         })
         .collect();
 
-    let names = idents_aliases.iter().flat_map(|variant| variant.aliases);
+    let implied_fields = cattrs.implied().iter().map(|(key, _)| key);
+    let names = idents_aliases
+        .iter()
+        .flat_map(|variant| variant.aliases)
+        .chain(implied_fields);
 
     let names_const = if fallthrough.is_some() {
         None
@@ -2191,6 +2228,7 @@ fn deserialize_custom_identifier(
         fallthrough_borrowed,
         false,
         cattrs.expecting(),
+        &[],
     ));
 
     quote_block! {
@@ -2225,6 +2263,7 @@ fn deserialize_identifier(
     fallthrough_borrowed: Option<TokenStream>,
     collect_other_fields: bool,
     expecting: Option<&str>,
+    additional_mapping: &[TokenStream],
 ) -> Fragment {
     let str_mapping = deserialized_fields.iter().map(|field| {
         let ident = &field.ident;
@@ -2484,6 +2523,7 @@ fn deserialize_identifier(
         {
             match __value {
                 #(#str_mapping)*
+                #(#additional_mapping)*
                 _ => {
                     #value_as_str_content
                     #fallthrough_arm
@@ -2523,6 +2563,21 @@ fn deserialize_map(
         .map(|(i, field)| (field, field_i(i)))
         .collect();
 
+    let implied_fields: Vec<_> = cattrs
+        .implied()
+        .iter()
+        .map(|(key, value)| {
+            let ident = Ident::new(&format!("__field_{}", key.value), key.span);
+            (key, value, ident)
+        })
+        .collect();
+
+    let implied_let_values = implied_fields.iter().map(|(_, _, ident)| {
+        quote! {
+            let mut #ident: _serde::__private::Option<::std::string::String> = _serde::__private::None;
+        }
+    });
+
     // Declare each field that will be deserialized.
     let let_values = fields_names
         .iter()
@@ -2532,7 +2587,8 @@ fn deserialize_map(
             quote! {
                 let mut #name: _serde::__private::Option<#field_ty> = _serde::__private::None;
             }
-        });
+        })
+        .chain(implied_let_values);
 
     // Collect contents for flatten fields into a buffer
     let let_collect = if has_flatten {
@@ -2545,6 +2601,31 @@ fn deserialize_map(
     } else {
         None
     };
+
+    let implied_values_arm = implied_fields.iter().map(|(key, value, ident)| {
+        let visit = {
+            let span = key.span();
+            let func =
+                quote_spanned!(span=> _serde::de::MapAccess::next_value::<::std::string::String>);
+
+            quote! {
+                if _serde::__private::Option::is_some(&#ident) {
+                    return _serde::__private::Err(<__A::Error as _serde::de::Error>::duplicate_field(#key));
+                }
+                let inner = #func(&mut __map)?;
+                if inner != #value {
+                    return _serde::__private::Err(_serde::de::Error::invalid_value(_serde::de::Unexpected::Str(&inner), &#value));
+                }
+                #ident = _serde::__private::Some(inner);
+            }
+        };
+
+        quote! {
+            __Field::#ident => {
+                #visit
+            }
+        }
+    });
 
     // Match arms to extract a value for a field.
     let value_arms = fields_names
@@ -2584,7 +2665,7 @@ fn deserialize_map(
                     #name = _serde::__private::Some(#visit);
                 }
             }
-        });
+        }).chain(implied_values_arm);
 
     // Visit ignored values to consume them
     let ignored_arm = if has_flatten {
@@ -2623,6 +2704,21 @@ fn deserialize_map(
         }
     };
 
+    let implied_extract_values = implied_fields.iter().map(|(key, _, ident)| {
+        let span = key.span();
+        let func = quote_spanned!(span=> _serde::__private::de::missing_field);
+        let missing_expr = quote! {
+            #func(#key)?
+        };
+
+        quote! {
+            match #ident.take() {
+                _serde::__private::Some(_) => {},
+                _serde::__private::None => #missing_expr
+            };
+        }
+    });
+
     let extract_values = fields_names
         .iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
@@ -2635,7 +2731,8 @@ fn deserialize_map(
                     _serde::__private::None => #missing_expr
                 };
             }
-        });
+        })
+        .chain(implied_extract_values);
 
     let extract_collected = fields_names
         .iter()
@@ -2749,6 +2846,21 @@ fn deserialize_map_in_place(
         .map(|(i, field)| (field, field_i(i)))
         .collect();
 
+    let implied_fields: Vec<_> = cattrs
+        .implied()
+        .iter()
+        .map(|(key, value)| {
+            let ident = Ident::new(&format!("__field_{}", key.value), key.span);
+            (key, value, ident)
+        })
+        .collect();
+
+    let implied_let_flags = implied_fields.iter().map(|(_, _, name)| {
+        quote! {
+            let mut #name: bool = false;
+        }
+    });
+
     // For deserialize_in_place, declare booleans for each field that will be
     // deserialized.
     let let_flags = fields_names
@@ -2758,7 +2870,32 @@ fn deserialize_map_in_place(
             quote! {
                 let mut #name: bool = false;
             }
-        });
+        })
+        .chain(implied_let_flags);
+
+    let implied_values_arm = implied_fields.iter().map(|(key, value, ident)| {
+        let visit = {
+            let span = key.span();
+            let func =
+                quote_spanned!(span=> _serde::de::MapAccess::next_value::<::std::string::String>);
+            quote! {
+                let inner = #func(&mut __map)?;
+                if inner != #value {
+                    return Err(de::Error::custom("Invalid method value"));
+                }
+            }
+        };
+
+        quote! {
+            __Field::#ident => {
+                if #ident {
+                    return _serde::__private::Err(<__A::Error as _serde::de::Error>::duplicate_field(#key));
+                }
+                #visit
+                #ident = true;
+            }
+        }
+    });
 
     // Match arms to extract a value for a field.
     let value_arms_from = fields_names
@@ -2796,7 +2933,7 @@ fn deserialize_map_in_place(
                     #name = true;
                 }
             }
-        });
+        }).chain(implied_values_arm);
 
     // Visit ignored values to consume them
     let ignored_arm = if cattrs.deny_unknown_fields() {

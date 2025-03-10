@@ -18,7 +18,9 @@ pub const FIELD_IDENTIFIER: Symbol = Symbol("field_identifier");
 pub const FLATTEN: Symbol = Symbol("flatten");
 pub const FROM: Symbol = Symbol("from");
 pub const GETTER: Symbol = Symbol("getter");
+pub const KEY: Symbol = Symbol("key");
 pub const INTO: Symbol = Symbol("into");
+pub const IMPLIED: Symbol = Symbol("implied");
 pub const NON_EXHAUSTIVE: Symbol = Symbol("non_exhaustive");
 pub const OTHER: Symbol = Symbol("other");
 pub const REMOTE: Symbol = Symbol("remote");
@@ -37,6 +39,7 @@ pub const TAG: Symbol = Symbol("tag");
 pub const TRANSPARENT: Symbol = Symbol("transparent");
 pub const TRY_FROM: Symbol = Symbol("try_from");
 pub const UNTAGGED: Symbol = Symbol("untagged");
+pub const VALUE: Symbol = Symbol("value");
 pub const VARIANT_IDENTIFIER: Symbol = Symbol("variant_identifier");
 pub const WITH: Symbol = Symbol("with");
 

@@ -170,6 +170,7 @@ pub struct Container {
     identifier: Identifier,
     serde_path: Option<syn::Path>,
     is_packed: bool,
+    implied: Vec<(Name, Name)>,
     /// Error message generated when type can't be deserialized
     expecting: Option<String>,
     non_exhaustive: bool,
@@ -259,6 +260,7 @@ impl Container {
         let mut serde_path = Attr::none(cx, CRATE);
         let mut expecting = Attr::none(cx, EXPECTING);
         let mut non_exhaustive = false;
+        let mut implied = VecAttr::none(cx, IMPLIED);
 
         for attr in &item.attrs {
             if attr.path() != SERDE {
@@ -491,6 +493,11 @@ impl Container {
                     if let Some(s) = get_lit_str(cx, EXPECTING, &meta)? {
                         expecting.set(&meta.path, s.value());
                     }
+                } else if meta.path == IMPLIED {
+                    // #[serde(implied(key = "key", value = "value")]
+                    if let Some((key, value)) = parse_key_value_names(cx,IMPLIED,&meta)? {
+                        implied.insert(&meta.path, (key, value));
+                    }
                 } else {
                     let path = meta.path.to_token_stream().to_string().replace(' ', "");
                     return Err(
@@ -540,6 +547,7 @@ impl Container {
             identifier: decide_identifier(cx, item, field_identifier, variant_identifier),
             serde_path: serde_path.get(),
             is_packed,
+            implied: implied.get(),
             expecting: expecting.get(),
             non_exhaustive,
         }
@@ -599,6 +607,10 @@ impl Container {
 
     pub fn is_packed(&self) -> bool {
         self.is_packed
+    }
+
+    pub fn implied(&self) -> &[(Name, Name)] {
+        &self.implied
     }
 
     pub fn identifier(&self) -> Identifier {
@@ -1545,6 +1557,40 @@ fn parse_lit_into_ty(
             None
         }
     })
+}
+
+fn parse_key_value_names(
+    cx: &Ctxt,
+    attr_name: Symbol,
+    meta: &ParseNestedMeta,
+) -> syn::Result<Option<(Name, Name)>> {
+    let mut key = None;
+    let mut value = None;
+
+    meta.parse_nested_meta(|meta| {
+        if meta.path == KEY {
+            if let Some(v) = get_lit_str2(cx, attr_name, KEY, &meta)? {
+                key = Some(v)
+            }
+        } else if meta.path == VALUE {
+            if let Some(v) = get_lit_str2(cx, attr_name, VALUE, &meta)? {
+                value = Some(v);
+            }
+        } else {
+            return Err(meta.error(format_args!(
+                "malformed {0} attribute, expected `{0}(key = ..., value = ...)`",
+                attr_name,
+            )));
+        }
+        Ok(())
+    })?;
+
+    Ok(
+        match (key.as_ref().map(Name::from), value.as_ref().map(Name::from)) {
+            (Some(key), Some(value)) => Some((key, value)),
+            _ => None,
+        },
+    )
 }
 
 // Parses a string literal like "'a + 'b + 'c" containing a nonempty list of
