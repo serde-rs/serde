@@ -150,7 +150,7 @@ fn build_generics(cont: &Container) -> syn::Generics {
 }
 
 // Fields with a `skip_serializing` or `serialize_with` attribute, or which
-// belong to a variant with a 'skip_serializing` or `serialize_with` attribute,
+// belong to a variant with a `skip_serializing` or `serialize_with` attribute,
 // are not serialized by us so we do not generate a bound. Fields with a `bound`
 // attribute specify their own bound so we do not generate one. All other fields
 // may need a `T: Serialize` bound where T is the type of the field.
