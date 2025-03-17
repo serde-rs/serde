@@ -2340,6 +2340,13 @@ fn deserialize_identifier(
                 _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I64(__value)))
             }
 
+            fn visit_i128<__E>(self, __value: i128) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::I128(__value)))
+            }
+
             fn visit_u8<__E>(self, __value: u8) -> _serde::__private::Result<Self::Value, __E>
             where
                 __E: _serde::de::Error,
@@ -2366,6 +2373,13 @@ fn deserialize_identifier(
                 __E: _serde::de::Error,
             {
                 _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U64(__value)))
+            }
+
+            fn visit_u128<__E>(self, __value: u128) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::U128(__value)))
             }
 
             fn visit_f32<__E>(self, __value: f32) -> _serde::__private::Result<Self::Value, __E>
@@ -2397,6 +2411,7 @@ fn deserialize_identifier(
             }
         }
     } else {
+        let index_expecting = if is_variant { "variant" } else { "field" };
         let u64_mapping = deserialized_fields.iter().enumerate().map(|(i, field)| {
             let i = i as u64;
             let ident = &field.ident;
@@ -2407,7 +2422,6 @@ fn deserialize_identifier(
         let u64_fallthrough_arm = if let Some(fallthrough) = &fallthrough {
             fallthrough
         } else {
-            let index_expecting = if is_variant { "variant" } else { "field" };
             let fallthrough_msg = format!(
                 "{} index 0 <= i < {}",
                 index_expecting,
@@ -2422,6 +2436,27 @@ fn deserialize_identifier(
             &u64_fallthrough_arm_tokens
         };
 
+        let u128_mapping = deserialized_fields.iter().enumerate().map(|(i, field)| {
+            let i = i as u128;
+            let ident = &field.ident;
+            quote!(#i => _serde::__private::Ok(#this_value::#ident))
+        });
+
+        let u128_fallthrough_arm_tokens;
+        let u128_fallthrough_arm = if let Some(fallthrough) = &fallthrough {
+            fallthrough
+        } else {
+            let fallthrough_msg = format!(
+                "{} index 0 <= i < {}",
+                index_expecting,
+                deserialized_fields.len()
+            );
+            u128_fallthrough_arm_tokens = quote! {
+                _serde::__private::Err(_serde::de::Unexpected::invalid_u128(__value, &#fallthrough_msg))
+            };
+            &u128_fallthrough_arm_tokens
+        };
+
         quote! {
             fn visit_u64<__E>(self, __value: u64) -> _serde::__private::Result<Self::Value, __E>
             where
@@ -2430,6 +2465,16 @@ fn deserialize_identifier(
                 match __value {
                     #(#u64_mapping,)*
                     _ => #u64_fallthrough_arm,
+                }
+            }
+
+            fn visit_u128<__E>(self, __value: u128) -> _serde::__private::Result<Self::Value, __E>
+            where
+                __E: _serde::de::Error,
+            {
+                match __value {
+                    #(#u128_mapping,)*
+                    _ => #u128_fallthrough_arm,
                 }
             }
         }
