@@ -7,7 +7,7 @@ pub mod ser;
 pub mod doc;
 
 pub use crate::lib::clone::Clone;
-pub use crate::lib::convert::{From, Into};
+pub use crate::lib::convert::{From, Into, TryFrom};
 pub use crate::lib::default::Default;
 pub use crate::lib::fmt::{self, Formatter};
 pub use crate::lib::marker::PhantomData;
@@ -19,9 +19,6 @@ pub use self::string::from_utf8_lossy;
 
 #[cfg(any(feature = "alloc", feature = "std"))]
 pub use crate::lib::{ToString, Vec};
-
-#[cfg(not(no_core_try_from))]
-pub use crate::lib::convert::TryFrom;
 
 mod string {
     use crate::lib::*;
