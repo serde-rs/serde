@@ -1,5 +1,17 @@
 error: #[serde(default = "...")] can only be used on structs
- --> tests/ui/default-attribute/enum_path.rs:4:9
+ --> tests/ui/default-attribute/enum_path.rs:8:9
   |
-4 | #[serde(default = "default_e")]
+8 | #[serde(default = "default_e")]
   |         ^^^^^^^^^^^^^^^^^^^^^
+
+error: field must have #[serde(default)] because previous field 0 has #[serde(default)]
+  --> tests/ui/default-attribute/enum_path.rs:20:36
+   |
+20 |     T2(#[serde(default = "d")] u8, u8, u8),
+   |                                    ^^
+
+error: field must have #[serde(default)] because previous field 0 has #[serde(default)]
+  --> tests/ui/default-attribute/enum_path.rs:20:40
+   |
+20 |     T2(#[serde(default = "d")] u8, u8, u8),
+   |                                        ^^
