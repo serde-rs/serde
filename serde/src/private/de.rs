@@ -211,7 +211,7 @@ mod content {
     use crate::actually_private;
     use crate::de::value::{MapDeserializer, SeqDeserializer};
     use crate::de::{
-        self, size_hint, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected,
+        self, size_hint, Buffer, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected,
         IgnoredAny, MapAccess, SeqAccess, Unexpected, Visitor,
     };
 
@@ -321,6 +321,32 @@ mod content {
 
         fn into_deserializer(self) -> Self::Deserializer {
             ContentRefDeserializer::new(self)
+        }
+    }
+
+    impl<'de, E> Buffer<'de> for ContentDeserializer<'de, E>
+    where
+        E: de::Error,
+    {
+        type Error = E;
+
+        type OwnedDeserializer = Self;
+
+        type RefDeserializer<'a>
+            = ContentRefDeserializer<'a, 'de, E>
+        where
+            'de: 'a,
+            E: 'a;
+
+        fn owned_deserializer(self) -> Self::OwnedDeserializer {
+            self
+        }
+
+        fn ref_deserializer<'a>(&'a self) -> Self::RefDeserializer<'a>
+        where
+            'de: 'a,
+        {
+            ContentRefDeserializer::new(&self.content)
         }
     }
 
