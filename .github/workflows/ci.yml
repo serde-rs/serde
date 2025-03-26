@@ -55,7 +55,7 @@ jobs:
       - run: cd test_suite/no_std && cargo build
 
   nightly:
-    name: Rust nightly ${{matrix.os == 'windows' && '(windows)' || ''}}
+    name: Rust nightly${{matrix.os == 'windows' && ' (windows)' || ''}}
     runs-on: ${{matrix.os}}-latest
     strategy:
       fail-fast: false
