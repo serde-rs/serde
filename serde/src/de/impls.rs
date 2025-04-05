@@ -906,11 +906,12 @@ where
         T::deserialize(deserializer).map(Some)
     }
 
-    fn __private_visit_untagged_option<D>(self, deserializer: D) -> Result<Self::Value, ()>
+    #[doc(hidden)]
+    fn __private_make_none<E>() -> Result<Self::Value, E>
     where
-        D: Deserializer<'de>,
+        E: Error,
     {
-        Ok(T::deserialize(deserializer).ok())
+        Ok(None)
     }
 }
 
