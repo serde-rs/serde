@@ -7,8 +7,11 @@
     dead_code,
 )]
 
-use serde::de::value::{BorrowedStrDeserializer, MapDeserializer};
-use serde::de::{Deserialize, Deserializer, IntoDeserializer};
+use serde::de::value::{
+    BorrowedBytesDeserializer, BorrowedStrDeserializer, CowBytesVisitor, CowStrVisitor, Error,
+    MapDeserializer,
+};
+use serde::de::{Deserialize, DeserializeSeed, Deserializer, IntoDeserializer};
 use serde_derive::Deserialize;
 use serde_test::{assert_de_tokens, assert_de_tokens_error, Token};
 use std::borrow::Cow;
@@ -137,7 +140,7 @@ fn test_cow() {
     struct BorrowedStr(&'static str);
 
     impl<'de> IntoDeserializer<'de> for BorrowedStr {
-        type Deserializer = BorrowedStrDeserializer<'de, serde::de::value::Error>;
+        type Deserializer = BorrowedStrDeserializer<'de, Error>;
 
         fn into_deserializer(self) -> Self::Deserializer {
             BorrowedStrDeserializer::new(self.0)
@@ -159,6 +162,47 @@ fn test_cow() {
     match cows.borrowed {
         Cow::Borrowed("borrowed") => {}
         _ => panic!("expected a borrowed string"),
+    }
+}
+
+#[test]
+fn test_cow_str_visitor() {
+    let de_str = BorrowedStrDeserializer::<Error>::new("borrowed");
+    let de_bytes = BorrowedBytesDeserializer::<Error>::new(b"borrowed");
+
+    // This example shows, that without CowStrVisitor the result is different
+    match Cow::<str>::deserialize(de_str) {
+        Ok(Cow::Owned(_)) => {}
+        x => panic!("expected an owned string, got {:?}", x),
+    }
+
+    match CowStrVisitor.deserialize(de_str) {
+        Ok(Cow::Borrowed("borrowed")) => {}
+        x => panic!("expected a borrowed string, got {:?}", x),
+    }
+    match CowStrVisitor.deserialize(de_bytes) {
+        Ok(Cow::Borrowed("borrowed")) => {}
+        x => panic!("expected a borrowed string, got {:?}", x),
+    }
+}
+
+#[test]
+fn test_cow_bytes_visitor() {
+    let de_str = BorrowedStrDeserializer::<Error>::new("borrowed");
+    let de_bytes = BorrowedBytesDeserializer::<Error>::new(b"borrowed");
+
+    // Because [u8] is a generic [T] where T = u8, Cow will expect a sequence,
+    // but the deserializer supply only borrowed bytes.
+    // This example shows, that without CowBytesVisitor the result is different
+    Cow::<[u8]>::deserialize(de_str).unwrap_err();
+
+    match CowBytesVisitor.deserialize(de_str) {
+        Ok(Cow::Borrowed(b"borrowed")) => {}
+        x => panic!("expected a borrowed bytes, got {:?}", x),
+    }
+    match CowBytesVisitor.deserialize(de_bytes).unwrap() {
+        Cow::Borrowed(b"borrowed") => {}
+        x => panic!("expected a borrowed bytes, got {:?}", x),
     }
 }
 
