@@ -218,7 +218,7 @@ mod lib {
     #[cfg(all(feature = "rc", feature = "std"))]
     pub use std::rc::{Rc, Weak as RcWeak};
 
-    #[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
+    #[cfg(all(feature = "rc", all(feature = "alloc", target_has_atomic = "ptr"), not(feature = "std")))]
     pub use alloc::sync::{Arc, Weak as ArcWeak};
     #[cfg(all(feature = "rc", feature = "std"))]
     pub use std::sync::{Arc, Weak as ArcWeak};
