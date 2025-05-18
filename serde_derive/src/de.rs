@@ -1669,12 +1669,12 @@ fn deserialize_adjacently_tagged_enum(
                     // First key is the content.
                     _serde::__private::Some(_serde::__private::de::TagOrContentField::Content) => {
                         // Buffer up the content.
-                        let __content = _serde::de::MapAccess::next_value::<_serde::__private::de::Content>(&mut __map)?;
+                        let __content = _serde::de::MapAccess::next_value_buffer(&mut __map)?;
                         // Visit the second key.
                         match #next_relevant_key {
                             // Second key is the tag.
                             _serde::__private::Some(_serde::__private::de::TagOrContentField::Tag) => {
-                                let __deserializer = _serde::__private::de::ContentDeserializer::<__A::Error>::new(__content);
+                                let __deserializer = _serde::de::Buffer::owned_deserializer(__content);
                                 #finish_content_then_tag
                             }
                             // Second key is a duplicate of the content.
@@ -1789,8 +1789,8 @@ fn deserialize_untagged_enum_after(
     });
 
     quote_block! {
-        let __content = <_serde::__private::de::Content as _serde::Deserialize>::deserialize(__deserializer)?;
-        let __deserializer = _serde::__private::de::ContentRefDeserializer::<__D::Error>::new(&__content);
+        let __content = _serde::Deserializer::deserialize_buffer(__deserializer)?;
+        let __deserializer = _serde::de::Buffer::ref_deserializer(&__content);
 
         #first_attempt
 
