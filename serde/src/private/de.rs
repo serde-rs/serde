@@ -263,7 +263,7 @@ mod content {
         }
 
         #[cold]
-        fn unexpected(&self) -> Unexpected {
+        pub fn unexpected(&self) -> Unexpected {
             match *self {
                 Content::Bool(b) => Unexpected::Bool(b),
                 Content::U8(n) => Unexpected::Unsigned(n as u64),
