@@ -1215,10 +1215,10 @@ fn deserialize_enum(
     match variants.iter().position(|var| var.attrs.untagged()) {
         Some(variant_idx) => {
             let (tagged, untagged) = variants.split_at(variant_idx);
-            let tagged_frag = Expr(deserialize_homogeneous_enum(params, tagged, cattrs));
+            let tagged_frag = Expr(deserialize_homogeneous_enum(params, tagged, cattrs, true));
             deserialize_untagged_enum_after(params, untagged, cattrs, Some(tagged_frag))
         }
-        None => deserialize_homogeneous_enum(params, variants, cattrs),
+        None => deserialize_homogeneous_enum(params, variants, cattrs, false),
     }
 }
 
@@ -1226,20 +1226,28 @@ fn deserialize_homogeneous_enum(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
+    found_untagged: bool, // tell if we found even one untagged variant
 ) -> Fragment {
     match cattrs.tag() {
-        attr::TagType::External => deserialize_externally_tagged_enum(params, variants, cattrs),
+        attr::TagType::External => {
+            deserialize_externally_tagged_enum(params, variants, cattrs, found_untagged)
+        }
         attr::TagType::Internal { tag } => {
-            deserialize_internally_tagged_enum(params, variants, cattrs, tag)
+            deserialize_internally_tagged_enum(params, variants, cattrs, tag, found_untagged)
         }
-        attr::TagType::Adjacent { tag, content } => {
-            deserialize_adjacently_tagged_enum(params, variants, cattrs, tag, content)
-        }
+        attr::TagType::Adjacent { tag, content } => deserialize_adjacently_tagged_enum(
+            params,
+            variants,
+            cattrs,
+            tag,
+            content,
+            found_untagged,
+        ),
         attr::TagType::None => deserialize_untagged_enum(params, variants, cattrs),
     }
 }
 
-fn prepare_enum_variant_enum(variants: &[Variant]) -> (TokenStream, Stmts) {
+fn prepare_enum_variant_enum(variants: &[Variant], found_untagged: bool) -> (TokenStream, Stmts) {
     let deserialized_variants = variants
         .iter()
         .enumerate()
@@ -1276,6 +1284,7 @@ fn prepare_enum_variant_enum(variants: &[Variant]) -> (TokenStream, Stmts) {
         true,
         None,
         fallthrough,
+        found_untagged,
     ));
 
     (variants_stmt, variant_visitor)
@@ -1285,6 +1294,7 @@ fn deserialize_externally_tagged_enum(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
+    found_untagged: bool,
 ) -> Fragment {
     let this_type = &params.this_type;
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
@@ -1295,7 +1305,7 @@ fn deserialize_externally_tagged_enum(
     let expecting = format!("enum {}", params.type_name());
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
-    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants);
+    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants, found_untagged);
 
     // Match arms to extract a variant from a string
     let variant_arms = variants
@@ -1380,8 +1390,9 @@ fn deserialize_internally_tagged_enum(
     variants: &[Variant],
     cattrs: &attr::Container,
     tag: &str,
+    found_untagged: bool,
 ) -> Fragment {
-    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants);
+    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants, found_untagged);
 
     // Match arms to extract a variant from a string
     let variant_arms = variants
@@ -1428,6 +1439,7 @@ fn deserialize_adjacently_tagged_enum(
     cattrs: &attr::Container,
     tag: &str,
     content: &str,
+    found_untagged: bool,
 ) -> Fragment {
     let this_type = &params.this_type;
     let this_value = &params.this_value;
@@ -1435,8 +1447,7 @@ fn deserialize_adjacently_tagged_enum(
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
 
-    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants);
-
+    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants, found_untagged);
     let variant_arms: &Vec<_> = &variants
         .iter()
         .enumerate()
@@ -2022,6 +2033,7 @@ fn deserialize_generated_identifier(
     is_variant: bool,
     ignore_variant: Option<TokenStream>,
     fallthrough: Option<TokenStream>,
+    found_untagged: bool,
 ) -> Fragment {
     let this_value = quote!(__Field);
     let field_idents: &Vec<_> = &deserialized_fields
@@ -2037,6 +2049,7 @@ fn deserialize_generated_identifier(
         None,
         !is_variant && has_flatten,
         None,
+        found_untagged,
     ));
 
     let lifetime = if !is_variant && has_flatten {
@@ -2101,6 +2114,7 @@ fn deserialize_field_identifier(
         false,
         ignore_variant,
         fallthrough,
+        false, // we don't need it there
     ))
 }
 
@@ -2191,6 +2205,7 @@ fn deserialize_custom_identifier(
         fallthrough_borrowed,
         false,
         cattrs.expecting(),
+        false, // we need that one only for internally(?) tagged variants
     ));
 
     quote_block! {
@@ -2225,6 +2240,7 @@ fn deserialize_identifier(
     fallthrough_borrowed: Option<TokenStream>,
     collect_other_fields: bool,
     expecting: Option<&str>,
+    found_untagged: bool,
 ) -> Fragment {
     let str_mapping = deserialized_fields.iter().map(|field| {
         let ident = &field.ident;
@@ -2396,6 +2412,8 @@ fn deserialize_identifier(
                 _serde::__private::Ok(__Field::__other(_serde::__private::de::Content::Unit))
             }
         }
+    } else if found_untagged {
+        quote! {}
     } else {
         let u64_mapping = deserialized_fields.iter().enumerate().map(|(i, field)| {
             let i = i as u64;
