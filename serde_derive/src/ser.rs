@@ -23,7 +23,6 @@ pub fn expand_derive_serialize(input: &mut syn::DeriveInput) -> syn::Result<Toke
     let params = Parameters::new(&cont);
     let (impl_generics, ty_generics, where_clause) = params.generics.split_for_impl();
     let body = Stmts(serialize_body(&cont, &params));
-    let serde = cont.attrs.serde_path();
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
         let vis = &input.vis;
@@ -31,9 +30,9 @@ pub fn expand_derive_serialize(input: &mut syn::DeriveInput) -> syn::Result<Toke
         quote! {
             #[automatically_derived]
             impl #impl_generics #ident #ty_generics #where_clause {
-                #vis fn serialize<__S>(__self: &#remote #ty_generics, __serializer: __S) -> #serde::__private::Result<__S::Ok, __S::Error>
+                #vis fn serialize<__S>(__self: &#remote #ty_generics, __serializer: __S) -> _serde::__private::Result<__S::Ok, __S::Error>
                 where
-                    __S: #serde::Serializer,
+                    __S: _serde::Serializer,
                 {
                     #used
                     #body
@@ -43,10 +42,10 @@ pub fn expand_derive_serialize(input: &mut syn::DeriveInput) -> syn::Result<Toke
     } else {
         quote! {
             #[automatically_derived]
-            impl #impl_generics #serde::Serialize for #ident #ty_generics #where_clause {
-                fn serialize<__S>(&self, __serializer: __S) -> #serde::__private::Result<__S::Ok, __S::Error>
+            impl #impl_generics _serde::Serialize for #ident #ty_generics #where_clause {
+                fn serialize<__S>(&self, __serializer: __S) -> _serde::__private::Result<__S::Ok, __S::Error>
                 where
-                    __S: #serde::Serializer,
+                    __S: _serde::Serializer,
                 {
                     #body
                 }
