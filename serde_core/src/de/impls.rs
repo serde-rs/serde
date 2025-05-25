@@ -2174,7 +2174,7 @@ impl<'de> Deserialize<'de> for Duration {
                             b"secs" => Ok(Field::Secs),
                             b"nanos" => Ok(Field::Nanos),
                             _ => {
-                                let value = crate::__private::from_utf8_lossy(value);
+                                let value = crate::lib::from_utf8_lossy(value);
                                 Err(Error::unknown_field(&*value, FIELDS))
                             }
                         }
@@ -2510,7 +2510,7 @@ mod range {
                         b"start" => Ok(Field::Start),
                         b"end" => Ok(Field::End),
                         _ => {
-                            let value = crate::__private::from_utf8_lossy(value);
+                            let value = crate::lib::from_utf8_lossy(value);
                             Err(Error::unknown_field(&*value, FIELDS))
                         }
                     }
@@ -2665,7 +2665,7 @@ mod range_from {
                     match value {
                         b"start" => Ok(Field::Start),
                         _ => {
-                            let value = crate::__private::from_utf8_lossy(value);
+                            let value = crate::lib::from_utf8_lossy(value);
                             Err(Error::unknown_field(&*value, FIELDS))
                         }
                     }
@@ -2803,7 +2803,7 @@ mod range_to {
                     match value {
                         b"end" => Ok(Field::End),
                         _ => {
-                            let value = crate::__private::from_utf8_lossy(value);
+                            let value = crate::lib::from_utf8_lossy(value);
                             Err(Error::unknown_field(&*value, FIELDS))
                         }
                     }
