@@ -1,4 +1,4 @@
-#![allow(clippy::trivially_copy_pass_by_ref)]
+#![allow(dead_code)]
 
 use serde_derive::Deserialize;
 
@@ -29,5 +29,3 @@ enum ChildNoSeq {
 enum Child {
     Topic, Sidebar
 }
-
-
