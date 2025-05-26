@@ -206,6 +206,7 @@ mod content {
     // This issue is tracking making some of this stuff public:
     // https://github.com/serde-rs/serde/issues/741
 
+    use crate::de::Error;
     use crate::lib::*;
 
     use crate::actually_private;
@@ -839,16 +840,18 @@ mod content {
         tag_name: &'static str,
         expecting: &'static str,
         value: PhantomData<T>,
+        use_seq: bool,
     }
 
     impl<T> TaggedContentVisitor<T> {
         /// Visitor for the content of an internally tagged enum with the given
         /// tag name.
-        pub fn new(name: &'static str, expecting: &'static str) -> Self {
+        pub fn new(name: &'static str, expecting: &'static str, use_seq: bool) -> Self {
             TaggedContentVisitor {
                 tag_name: name,
                 expecting,
                 value: PhantomData,
+                use_seq,
             }
         }
     }
@@ -867,14 +870,18 @@ mod content {
         where
             S: SeqAccess<'de>,
         {
-            let tag = match tri!(seq.next_element()) {
-                Some(tag) => tag,
-                None => {
-                    return Err(de::Error::missing_field(self.tag_name));
-                }
-            };
-            let rest = de::value::SeqAccessDeserializer::new(seq);
-            Ok((tag, tri!(Content::deserialize(rest))))
+            if self.use_seq {
+                let tag = match tri!(seq.next_element()) {
+                    Some(tag) => tag,
+                    None => {
+                        return Err(de::Error::missing_field(self.tag_name));
+                    }
+                };
+                let rest = de::value::SeqAccessDeserializer::new(seq);
+                Ok((tag, tri!(Content::deserialize(rest))))
+            } else {
+                Err(Error::invalid_type(Unexpected::Seq, &self))
+            }
         }
 
         fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>

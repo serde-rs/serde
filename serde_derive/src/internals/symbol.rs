@@ -37,6 +37,7 @@ pub const TAG: Symbol = Symbol("tag");
 pub const TRANSPARENT: Symbol = Symbol("transparent");
 pub const TRY_FROM: Symbol = Symbol("try_from");
 pub const UNTAGGED: Symbol = Symbol("untagged");
+pub const USE_SEQ: Symbol = Symbol("seq");
 pub const VARIANT_IDENTIFIER: Symbol = Symbol("variant_identifier");
 pub const WITH: Symbol = Symbol("with");
 

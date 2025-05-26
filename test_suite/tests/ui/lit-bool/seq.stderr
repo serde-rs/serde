@@ -1,0 +1,11 @@
+error: expected serde content attribute to be a bool: `content = false/true`
+  --> tests/ui/lit-bool/seq.rs:10:27
+   |
+10 | #[serde(tag = "type", seq="xx")]
+   |                           ^^^^
+
+error: expected serde content attribute to be a bool: `content = false/true`
+  --> tests/ui/lit-bool/seq.rs:18:27
+   |
+18 | #[serde(tag = "type", seq="true")]
+   |                           ^^^^^^
