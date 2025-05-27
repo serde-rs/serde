@@ -189,14 +189,18 @@ pub enum TagType {
     /// ```json
     /// {"type": "variant1", "key1": "value1", "key2": "value2"}
     /// ```
-    Internal { tag: String },
+    Internal { tag: String, use_seq: bool },
 
     /// `#[serde(tag = "t", content = "c")]`
     ///
     /// ```json
     /// {"t": "variant1", "c": {"key1": "value1", "key2": "value2"}}
     /// ```
-    Adjacent { tag: String, content: String },
+    Adjacent {
+        tag: String,
+        content: String,
+        use_seq: bool,
+    },
 
     /// `#[serde(untagged)]`
     ///
@@ -248,6 +252,7 @@ impl Container {
         let mut ser_bound = Attr::none(cx, BOUND);
         let mut de_bound = Attr::none(cx, BOUND);
         let mut untagged = BoolAttr::none(cx, UNTAGGED);
+        let mut use_seq = Attr::none(cx, USE_SEQ);
         let mut internal_tag = Attr::none(cx, TAG);
         let mut content = Attr::none(cx, CONTENT);
         let mut type_from = Attr::none(cx, FROM);
@@ -434,6 +439,12 @@ impl Container {
                             }
                         }
                     }
+                } else if meta.path == USE_SEQ {
+                    // #[serde(seq = false)]
+                    if let Some(s) = get_lit_bool(cx, CONTENT, &meta)? {
+                        // Should we introduce there a compile time checks? If so, which ones?
+                        use_seq.set(&meta.path, s.value());
+                    }
                 } else if meta.path == CONTENT {
                     // #[serde(content = "c")]
                     if let Some(s) = get_lit_str(cx, CONTENT, &meta)? {
@@ -532,7 +543,7 @@ impl Container {
             },
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
-            tag: decide_tag(cx, item, untagged, internal_tag, content),
+            tag: decide_tag(cx, item, untagged, internal_tag, content, use_seq),
             type_from: type_from.get(),
             type_try_from: type_try_from.get(),
             type_into: type_into.get(),
@@ -631,15 +642,17 @@ fn decide_tag(
     untagged: BoolAttr,
     internal_tag: Attr<String>,
     content: Attr<String>,
+    use_seq: Attr<bool>,
 ) -> TagType {
     match (
         untagged.0.get_with_tokens(),
         internal_tag.get_with_tokens(),
         content.get_with_tokens(),
+        use_seq.get(),
     ) {
-        (None, None, None) => TagType::External,
-        (Some(_), None, None) => TagType::None,
-        (None, Some((_, tag)), None) => {
+        (None, None, None, _) => TagType::External,
+        (Some(_), None, None, _) => TagType::None,
+        (None, Some((_, tag)), None, use_seq) => {
             // Check that there are no tuple variants.
             if let syn::Data::Enum(data) = &item.data {
                 for variant in &data.variants {
@@ -656,27 +669,34 @@ fn decide_tag(
                     }
                 }
             }
-            TagType::Internal { tag }
+            TagType::Internal {
+                tag,
+                use_seq: use_seq.unwrap_or(true),
+            }
         }
-        (Some((untagged_tokens, ())), Some((tag_tokens, _)), None) => {
+        (Some((untagged_tokens, ())), Some((tag_tokens, _)), None, _) => {
             let msg = "enum cannot be both untagged and internally tagged";
             cx.error_spanned_by(untagged_tokens, msg);
             cx.error_spanned_by(tag_tokens, msg);
             TagType::External // doesn't matter, will error
         }
-        (None, None, Some((content_tokens, _))) => {
+        (None, None, Some((content_tokens, _)), _) => {
             let msg = "#[serde(tag = \"...\", content = \"...\")] must be used together";
             cx.error_spanned_by(content_tokens, msg);
             TagType::External
         }
-        (Some((untagged_tokens, ())), None, Some((content_tokens, _))) => {
+        (Some((untagged_tokens, ())), None, Some((content_tokens, _)), _) => {
             let msg = "untagged enum cannot have #[serde(content = \"...\")]";
             cx.error_spanned_by(untagged_tokens, msg);
             cx.error_spanned_by(content_tokens, msg);
             TagType::External
         }
-        (None, Some((_, tag)), Some((_, content))) => TagType::Adjacent { tag, content },
-        (Some((untagged_tokens, ())), Some((tag_tokens, _)), Some((content_tokens, _))) => {
+        (None, Some((_, tag)), Some((_, content)), use_seq) => TagType::Adjacent {
+            tag,
+            content,
+            use_seq: use_seq.unwrap_or(true),
+        },
+        (Some((untagged_tokens, ())), Some((tag_tokens, _)), Some((content_tokens, _)), _) => {
             let msg = "untagged enum cannot have #[serde(tag = \"...\", content = \"...\")]";
             cx.error_spanned_by(untagged_tokens, msg);
             cx.error_spanned_by(tag_tokens, msg);
@@ -1413,6 +1433,34 @@ fn get_where_predicates(
 ) -> syn::Result<SerAndDe<Vec<syn::WherePredicate>>> {
     let (ser, de) = get_ser_and_de(cx, BOUND, meta, parse_lit_into_where)?;
     Ok((ser.at_most_one(), de.at_most_one()))
+}
+
+fn get_lit_bool(
+    cx: &Ctxt,
+    attr_name: Symbol,
+    meta: &ParseNestedMeta,
+) -> syn::Result<Option<syn::LitBool>> {
+    let expr: syn::Expr = meta.value()?.parse()?;
+    let mut value = &expr;
+    while let syn::Expr::Group(e) = value {
+        value = &e.expr;
+    }
+    if let syn::Expr::Lit(syn::ExprLit {
+        lit: syn::Lit::Bool(lit),
+        ..
+    }) = value
+    {
+        Ok(Some(lit.clone()))
+    } else {
+        cx.error_spanned_by(
+            expr,
+            format!(
+                "expected serde {} attribute to be a bool: `{} = false/true`",
+                attr_name, attr_name
+            ),
+        );
+        Ok(None)
+    }
 }
 
 fn get_lit_str(
