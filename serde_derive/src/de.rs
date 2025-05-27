@@ -1409,6 +1409,12 @@ fn deserialize_internally_tagged_enum(
     let expecting = format!("internally tagged enum {}", params.type_name());
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
+    let tagged_content_visitor = if use_seq {
+        quote!(_serde::__private::de::TaggedContentVisitor)
+    } else {
+        quote!(_serde::__private::de::NoSeqTaggedContentVisitor)
+    };
+
     quote_block! {
         #variant_visitor
 
@@ -1416,7 +1422,7 @@ fn deserialize_internally_tagged_enum(
 
         let (__tag, __content) = _serde::Deserializer::deserialize_any(
             __deserializer,
-            _serde::__private::de::TaggedContentVisitor::<__Field>::new(#tag, #expecting, #use_seq))?;
+            #tagged_content_visitor::<__Field>::new(#tag, #expecting))?;
         let __deserializer = _serde::__private::de::ContentDeserializer::<__D::Error>::new(__content);
 
         match __tag {

@@ -7,7 +7,7 @@ enum Child {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "type", seq="xx")]
+#[serde(tag = "type", seq_form="xx")]
 enum ParentNoSeq {
     Title,
     #[serde(untagged)]
@@ -15,7 +15,7 @@ enum ParentNoSeq {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "type", seq="true")]
+#[serde(tag = "type", seq_form="true")]
 enum E2 {
     Title,
     #[serde(untagged)]
@@ -23,7 +23,7 @@ enum E2 {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "type", seq=true)]
+#[serde(tag = "type", seq_form=true)]
 enum Ok1 {
     Title,
     #[serde(untagged)]
@@ -31,7 +31,7 @@ enum Ok1 {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "type", seq=false)]
+#[serde(tag = "type", seq_form=false)]
 enum Ok2 {
     Title,
     #[serde(untagged)]

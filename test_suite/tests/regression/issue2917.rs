@@ -3,7 +3,7 @@
 use serde_derive::Deserialize;
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "type", seq=false)]
+#[serde(tag = "type", seq_form=false)]
 enum ParentNoSeq {
     Title,
     #[serde(untagged)]
@@ -11,7 +11,7 @@ enum ParentNoSeq {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "type", seq=false)]
+#[serde(tag = "type", seq_form=false)]
 enum ParentChildNoSeq {
     Title,
     #[serde(untagged)]
@@ -19,7 +19,7 @@ enum ParentChildNoSeq {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "subtype", seq=false)]
+#[serde(tag = "subtype", seq_form=false)]
 enum ChildNoSeq {
     Topic, Sidebar
 }
