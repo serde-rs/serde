@@ -1486,21 +1486,6 @@ fn deserialize_adjacently_tagged_enum(
         quote! { _serde::#private::de::TagContentOtherFieldVisitor }
     };
 
-    let tag_or_content = quote! {
-        #field_visitor_ty {
-            tag: #tag,
-            content: #content,
-        }
-    };
-
-    let variant_seed = quote! {
-        _serde::#private::de::AdjacentlyTaggedEnumVariantSeed::<__Field> {
-            enum_name: #rust_name,
-            variants: VARIANTS,
-            fields_enum: _serde::#private::PhantomData
-        }
-    };
-
     let mut missing_content = quote! {
         _serde::#private::Err(<__A::Error as _serde::de::Error>::missing_field(#content))
     };
@@ -1545,11 +1530,18 @@ fn deserialize_adjacently_tagged_enum(
 
     // Advance the map by one key, returning early in case of error.
     let next_key = quote! {
-        _serde::de::MapAccess::next_key_seed(&mut __map, #tag_or_content)?
+        _serde::de::MapAccess::next_key_seed(&mut __map, #field_visitor_ty {
+            tag: #tag,
+            content: #content,
+        })?
     };
 
     let variant_from_map = quote! {
-        _serde::de::MapAccess::next_value_seed(&mut __map, #variant_seed)?
+        _serde::de::MapAccess::next_value_seed(&mut __map, _serde::#private::de::AdjacentlyTaggedEnumVariantSeed::<__Field> {
+            enum_name: #rust_name,
+            variants: VARIANTS,
+            fields_enum: _serde::#private::PhantomData
+        })?
     };
 
     // When allowing unknown fields, we want to transparently step through keys
