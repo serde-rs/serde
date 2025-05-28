@@ -352,6 +352,7 @@ fn deserialize_in_place_body(_cont: &Container, _params: &Parameters) -> Option<
     None
 }
 
+/// Generates `Deserialize::deserialize` body for a type with `#[serde(transparent)]` attribute
 fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
     let fields = match &cont.data {
         Data::Struct(_, fields) => fields,
@@ -394,6 +395,7 @@ fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
     }
 }
 
+/// Generates `Deserialize::deserialize` body for a type with `#[serde(from)]` attribute
 fn deserialize_from(type_from: &syn::Type) -> Fragment {
     quote_block! {
         _serde::#private::Result::map(
@@ -402,6 +404,7 @@ fn deserialize_from(type_from: &syn::Type) -> Fragment {
     }
 }
 
+/// Generates `Deserialize::deserialize` body for a type with `#[serde(try_from)]` attribute
 fn deserialize_try_from(type_try_from: &syn::Type) -> Fragment {
     quote_block! {
         _serde::#private::Result::and_then(
@@ -410,6 +413,7 @@ fn deserialize_try_from(type_try_from: &syn::Type) -> Fragment {
     }
 }
 
+/// Generates `Deserialize::deserialize` body for a `struct Unit;`
 fn deserialize_unit_struct(params: &Parameters, cattrs: &attr::Container) -> Fragment {
     let this_type = &params.this_type;
     let this_value = &params.this_value;
@@ -465,6 +469,7 @@ enum TupleForm<'a> {
     Untagged(&'a syn::Ident, TokenStream),
 }
 
+/// Generates `Deserialize::deserialize` body for a `struct Tuple(...);` including `struct Newtype(T);`
 fn deserialize_tuple(
     params: &Parameters,
     fields: &[Field],
@@ -587,6 +592,7 @@ fn deserialize_tuple(
     }
 }
 
+/// Generates `Deserialize::deserialize_in_place` body for a `struct Tuple(...);` including `struct Newtype(T);`
 #[cfg(feature = "deserialize_in_place")]
 fn deserialize_tuple_in_place(
     params: &Parameters,
@@ -937,6 +943,7 @@ enum StructForm<'a> {
     Untagged(&'a syn::Ident, TokenStream),
 }
 
+/// Generates `Deserialize::deserialize` body for a `struct Struct {...}`
 fn deserialize_struct(
     params: &Parameters,
     fields: &[Field],
@@ -1119,6 +1126,7 @@ fn deserialize_struct(
     }
 }
 
+/// Generates `Deserialize::deserialize_in_place` body for a `struct Struct {...}`
 #[cfg(feature = "deserialize_in_place")]
 fn deserialize_struct_in_place(
     params: &Parameters,
@@ -1209,6 +1217,7 @@ fn deserialize_struct_in_place(
     })
 }
 
+/// Generates `Deserialize::deserialize` body for an `enum Enum {...}`
 fn deserialize_enum(
     params: &Parameters,
     variants: &[Variant],
@@ -1284,6 +1293,7 @@ fn prepare_enum_variant_enum(variants: &[Variant]) -> (TokenStream, Stmts) {
     (variants_stmt, variant_visitor)
 }
 
+/// Generates `Deserialize::deserialize` body for an `enum Enum {...}` without additional attributes
 fn deserialize_externally_tagged_enum(
     params: &Parameters,
     variants: &[Variant],
@@ -1378,6 +1388,7 @@ fn deserialize_externally_tagged_enum(
     }
 }
 
+/// Generates `Deserialize::deserialize` body for an `enum Enum {...}` with `#[serde(tag)]` attribute
 fn deserialize_internally_tagged_enum(
     params: &Parameters,
     variants: &[Variant],
@@ -1425,6 +1436,7 @@ fn deserialize_internally_tagged_enum(
     }
 }
 
+/// Generates `Deserialize::deserialize` body for an `enum Enum {...}` with `#[serde(tag, content)]` attributes
 fn deserialize_adjacently_tagged_enum(
     params: &Parameters,
     variants: &[Variant],
@@ -1742,6 +1754,7 @@ fn deserialize_adjacently_tagged_enum(
     }
 }
 
+/// Generates `Deserialize::deserialize` body for an `enum Enum {...}` with `#[serde(untagged)]` attribute
 fn deserialize_untagged_enum(
     params: &Parameters,
     variants: &[Variant],
