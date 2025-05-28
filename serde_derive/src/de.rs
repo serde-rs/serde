@@ -1601,10 +1601,12 @@ fn deserialize_adjacently_tagged_enum(
         }
     } else {
         quote! {
-            let __ret = match #variant_from_map {
-                // Deserialize the buffered content now that we know the variant.
-                #(#variant_arms)*
-            }?;
+            let __seed = __Seed {
+                field: #variant_from_map,
+                marker: _serde::#private::PhantomData,
+                lifetime: _serde::#private::PhantomData,
+            };
+            let __ret = _serde::de::DeserializeSeed::deserialize(__seed, __deserializer)?;
             // Visit remaining keys, looking for duplicates.
             #visit_remaining_keys
         }
