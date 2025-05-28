@@ -1606,6 +1606,7 @@ fn deserialize_adjacently_tagged_enum(
                 marker: _serde::#private::PhantomData,
                 lifetime: _serde::#private::PhantomData,
             };
+            let __deserializer = _serde::#private::de::ContentDeserializer::<__A::Error>::new(__content);
             let __ret = _serde::de::DeserializeSeed::deserialize(__seed, __deserializer)?;
             // Visit remaining keys, looking for duplicates.
             #visit_remaining_keys
@@ -1691,7 +1692,6 @@ fn deserialize_adjacently_tagged_enum(
                         match #next_relevant_key {
                             // Second key is the tag.
                             _serde::#private::Some(_serde::#private::de::TagOrContentField::Tag) => {
-                                let __deserializer = _serde::#private::de::ContentDeserializer::<__A::Error>::new(__content);
                                 #finish_content_then_tag
                             }
                             // Second key is a duplicate of the content.
