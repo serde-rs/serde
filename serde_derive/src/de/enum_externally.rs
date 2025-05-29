@@ -49,7 +49,7 @@ pub(super) fn deserialize(
             ));
 
             quote! {
-                (__Field::#variant_name, __variant) => #block
+                _serde::#private::Ok((__Field::#variant_name, __variant)) => #block
             }
         });
 
@@ -69,8 +69,9 @@ pub(super) fn deserialize(
         }
     } else {
         quote! {
-            match _serde::de::EnumAccess::variant(__data)? {
+            match _serde::de::EnumAccess::variant(__data) {
                 #(#variant_arms)*
+                _serde::#private::Err(__err) => _serde::#private::Err(__err),
             }
         }
     };

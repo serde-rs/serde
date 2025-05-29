@@ -282,8 +282,8 @@ pub(super) fn deserialize(
                 __A: _serde::de::SeqAccess<#delife>,
             {
                 // Visit the first element - the tag.
-                match _serde::de::SeqAccess::next_element(&mut __seq)? {
-                    _serde::#private::Some(__variant) => {
+                match _serde::de::SeqAccess::next_element(&mut __seq) {
+                    _serde::#private::Ok(_serde::#private::Some(__variant)) => {
                         // Visit the second element - the content.
                         match _serde::de::SeqAccess::next_element_seed(
                             &mut __seq,
@@ -292,18 +292,20 @@ pub(super) fn deserialize(
                                 marker: _serde::#private::PhantomData,
                                 lifetime: _serde::#private::PhantomData,
                             },
-                        )? {
-                            _serde::#private::Some(__ret) => _serde::#private::Ok(__ret),
+                        ) {
+                            _serde::#private::Ok(_serde::#private::Some(__ret)) => _serde::#private::Ok(__ret),
                             // There is no second element.
-                            _serde::#private::None => {
+                            _serde::#private::Ok(_serde::#private::None) => {
                                 _serde::#private::Err(_serde::de::Error::invalid_length(1, &self))
                             }
+                            _serde::#private::Err(__err) => _serde::#private::Err(__err),
                         }
                     }
                     // There is no first element.
-                    _serde::#private::None => {
+                    _serde::#private::Ok(_serde::#private::None) => {
                         _serde::#private::Err(_serde::de::Error::invalid_length(0, &self))
                     }
+                    _serde::#private::Err(__err) => _serde::#private::Err(__err),
                 }
             }
         }
