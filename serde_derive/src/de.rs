@@ -1594,7 +1594,7 @@ fn deserialize_adjacently_tagged_enum(
     } else {
         quote! {
             let __seed = __Seed {
-                field: #variant_from_map,
+                variant: #variant_from_map,
                 marker: _serde::#private::PhantomData,
                 lifetime: _serde::#private::PhantomData,
             };
@@ -1612,7 +1612,7 @@ fn deserialize_adjacently_tagged_enum(
 
         #[doc(hidden)]
         struct __Seed #de_impl_generics #where_clause {
-            field: __Field,
+            variant: __Field,
             marker: _serde::#private::PhantomData<#this_type #ty_generics>,
             lifetime: _serde::#private::PhantomData<&#delife ()>,
         }
@@ -1625,7 +1625,7 @@ fn deserialize_adjacently_tagged_enum(
             where
                 __D: _serde::Deserializer<#delife>,
             {
-                match self.field {
+                match self.variant {
                     #(#variant_arms)*
                 }
             }
@@ -1665,7 +1665,7 @@ fn deserialize_adjacently_tagged_enum(
                             _serde::#private::Some(_serde::#private::de::TagOrContentField::Content) => {
                                 let __ret = _serde::de::MapAccess::next_value_seed(&mut __map,
                                     __Seed {
-                                        field: __field,
+                                        variant: __field,
                                         marker: _serde::#private::PhantomData,
                                         lifetime: _serde::#private::PhantomData,
                                     })?;
@@ -1709,12 +1709,12 @@ fn deserialize_adjacently_tagged_enum(
             {
                 // Visit the first element - the tag.
                 match _serde::de::SeqAccess::next_element(&mut __seq)? {
-                    _serde::#private::Some(__field) => {
+                    _serde::#private::Some(__variant) => {
                         // Visit the second element - the content.
                         match _serde::de::SeqAccess::next_element_seed(
                             &mut __seq,
                             __Seed {
-                                field: __field,
+                                variant: __variant,
                                 marker: _serde::#private::PhantomData,
                                 lifetime: _serde::#private::PhantomData,
                             },
