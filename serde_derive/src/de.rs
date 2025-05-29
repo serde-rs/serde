@@ -830,12 +830,15 @@ fn deserialize_seq_in_place(
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
                     quote!({
                         #wrapper
-                        match _serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)? {
-                            _serde::__private::Some(__wrap) => {
+                        match _serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq) {
+                            _serde::__private::Ok(_serde::__private::Some(__wrap)) => {
                                 self.place.#member = __wrap.value;
                             }
-                            _serde::__private::None => {
+                            _serde::__private::Ok(_serde::__private::None) => {
                                 #value_if_none;
+                            }
+                            _serde::__private::Err(__err) => {
+                                return _serde::__private::Err(__err);
                             }
                         }
                     })
@@ -1310,31 +1313,9 @@ fn deserialize_externally_tagged_enum(
             ));
 
             quote! {
-                (__Field::#variant_name, __variant) => #block
+                _serde::__private::Ok((__Field::#variant_name, __variant)) => #block
             }
         });
-
-    let all_skipped = variants
-        .iter()
-        .all(|variant| variant.attrs.skip_deserializing());
-    let match_variant = if all_skipped {
-        // This is an empty enum like `enum Impossible {}` or an enum in which
-        // all variants have `#[serde(skip_deserializing)]`.
-        quote! {
-            // FIXME: Once feature(exhaustive_patterns) is stable:
-            // let _serde::__private::Err(__err) = _serde::de::EnumAccess::variant::<__Field>(__data);
-            // _serde::__private::Err(__err)
-            _serde::__private::Result::map(
-                _serde::de::EnumAccess::variant::<__Field>(__data),
-                |(__impossible, _)| match __impossible {})
-        }
-    } else {
-        quote! {
-            match _serde::de::EnumAccess::variant(__data)? {
-                #(#variant_arms)*
-            }
-        }
-    };
 
     quote_block! {
         #variant_visitor
@@ -1357,7 +1338,10 @@ fn deserialize_externally_tagged_enum(
             where
                 __A: _serde::de::EnumAccess<#delife>,
             {
-                #match_variant
+                match _serde::de::EnumAccess::variant::<__Field>(__data) {
+                    #(#variant_arms)*
+                    _serde::__private::Err(__err) => _serde::__private::Err(__err),
+                }
             }
         }
 
@@ -1699,8 +1683,8 @@ fn deserialize_adjacently_tagged_enum(
                 __A: _serde::de::SeqAccess<#delife>,
             {
                 // Visit the first element - the tag.
-                match _serde::de::SeqAccess::next_element(&mut __seq)? {
-                    _serde::__private::Some(__field) => {
+                match _serde::de::SeqAccess::next_element(&mut __seq) {
+                    _serde::__private::Ok(_serde::__private::Some(__field)) => {
                         // Visit the second element - the content.
                         match _serde::de::SeqAccess::next_element_seed(
                             &mut __seq,
@@ -1709,18 +1693,20 @@ fn deserialize_adjacently_tagged_enum(
                                 marker: _serde::__private::PhantomData,
                                 lifetime: _serde::__private::PhantomData,
                             },
-                        )? {
-                            _serde::__private::Some(__ret) => _serde::__private::Ok(__ret),
+                        ) {
+                            _serde::__private::Ok(_serde::__private::Some(__ret)) => _serde::__private::Ok(__ret),
                             // There is no second element.
-                            _serde::__private::None => {
+                            _serde::__private::Ok(_serde::__private::None) => {
                                 _serde::__private::Err(_serde::de::Error::invalid_length(1, &self))
                             }
+                            _serde::__private::Err(__err) => _serde::__private::Err(__err),
                         }
                     }
                     // There is no first element.
-                    _serde::__private::None => {
+                    _serde::__private::Ok(_serde::__private::None) => {
                         _serde::__private::Err(_serde::de::Error::invalid_length(0, &self))
                     }
+                    _serde::__private::Err(__err) => _serde::__private::Err(__err),
                 }
             }
         }
