@@ -1317,29 +1317,6 @@ fn deserialize_externally_tagged_enum(
             }
         });
 
-    let all_skipped = variants
-        .iter()
-        .all(|variant| variant.attrs.skip_deserializing());
-    let match_variant = if all_skipped {
-        // This is an empty enum like `enum Impossible {}` or an enum in which
-        // all variants have `#[serde(skip_deserializing)]`.
-        quote! {
-            // FIXME: Once feature(exhaustive_patterns) is stable:
-            // let _serde::__private::Err(__err) = _serde::de::EnumAccess::variant::<__Field>(__data);
-            // _serde::__private::Err(__err)
-            _serde::__private::Result::map(
-                _serde::de::EnumAccess::variant::<__Field>(__data),
-                |(__impossible, _)| match __impossible {})
-        }
-    } else {
-        quote! {
-            match _serde::de::EnumAccess::variant(__data) {
-                #(#variant_arms)*
-                _serde::__private::Err(__err) => _serde::__private::Err(__err),
-            }
-        }
-    };
-
     quote_block! {
         #variant_visitor
 
@@ -1361,7 +1338,10 @@ fn deserialize_externally_tagged_enum(
             where
                 __A: _serde::de::EnumAccess<#delife>,
             {
-                #match_variant
+                match _serde::de::EnumAccess::variant::<__Field>(__data) {
+                    #(#variant_arms)*
+                    _serde::__private::Err(__err) => _serde::__private::Err(__err),
+                }
             }
         }
 
