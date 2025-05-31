@@ -1,0 +1,11 @@
+error: use of deprecated function `deprecated_with`
+ --> tests/ui/deprecated/deprecated_ser_with.rs:8:30
+  |
+8 |     #[serde(serialize_with = "deprecated_with")]
+  |                              ^^^^^^^^^^^^^^^^^
+  |
+note: the lint level is defined here
+ --> tests/ui/deprecated/deprecated_ser_with.rs:1:9
+  |
+1 | #![deny(deprecated)]
+  |         ^^^^^^^^^^
