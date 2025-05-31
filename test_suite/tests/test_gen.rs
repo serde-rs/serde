@@ -805,6 +805,8 @@ fn test_gen() {
         pub vec: Vec<Self>,
     }
 
+    assert_ser::<Struct>();
+
     #[derive(Deserialize)]
     #[serde(bound(deserialize = "[&'de str; N]: Copy"))]
     pub struct GenericUnitStruct<const N: usize>;
