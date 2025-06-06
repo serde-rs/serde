@@ -208,7 +208,6 @@ mod content {
 
     use crate::lib::*;
 
-    use crate::actually_private;
     use crate::de::value::{MapDeserializer, SeqDeserializer};
     use crate::de::{
         self, size_hint, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected,
@@ -298,7 +297,7 @@ mod content {
             // Untagged and internally tagged enums are only supported in
             // self-describing formats.
             let visitor = ContentVisitor { value: PhantomData };
-            deserializer.__deserialize_content(actually_private::T, visitor)
+            deserializer.__deserialize_content(visitor)
         }
     }
 
@@ -1498,11 +1497,7 @@ mod content {
             visitor.visit_unit()
         }
 
-        fn __deserialize_content<V>(
-            self,
-            _: actually_private::T,
-            visitor: V,
-        ) -> Result<Content<'de>, Self::Error>
+        fn __deserialize_content<V>(self, visitor: V) -> Result<Content<'de>, Self::Error>
         where
             V: Visitor<'de, Value = Content<'de>>,
         {
@@ -2091,11 +2086,7 @@ mod content {
             visitor.visit_unit()
         }
 
-        fn __deserialize_content<V>(
-            self,
-            _: actually_private::T,
-            visitor: V,
-        ) -> Result<Content<'de>, Self::Error>
+        fn __deserialize_content<V>(self, visitor: V) -> Result<Content<'de>, Self::Error>
         where
             V: Visitor<'de, Value = Content<'de>>,
         {

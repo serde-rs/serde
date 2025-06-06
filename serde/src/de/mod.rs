@@ -1228,7 +1228,6 @@ pub trait Deserializer<'de>: Sized {
     #[doc(hidden)]
     fn __deserialize_content<V>(
         self,
-        _: crate::actually_private::T,
         visitor: V,
     ) -> Result<crate::__private::de::Content<'de>, Self::Error>
     where
