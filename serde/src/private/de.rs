@@ -16,7 +16,7 @@ pub use self::content::{
     TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
 };
 
-pub use crate::seed::InPlaceSeed;
+pub use serde_core::de::InPlaceSeed;
 
 /// If the missing field is of type `Option<T>` then treat is as `None`,
 /// otherwise it is an error.
@@ -47,7 +47,7 @@ where
             visitor.visit_none()
         }
 
-        forward_to_deserialize_any! {
+        serde_core::forward_to_deserialize_any! {
             bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
             bytes byte_buf unit unit_struct newtype_struct seq tuple
             tuple_struct map struct enum identifier ignored_any
@@ -297,7 +297,7 @@ mod content {
             // Untagged and internally tagged enums are only supported in
             // self-describing formats.
             let visitor = ContentVisitor { value: PhantomData };
-            deserializer.__deserialize_content(visitor)
+            deserializer.deserialize_any(visitor)
         }
     }
 
@@ -1496,14 +1496,6 @@ mod content {
             drop(self);
             visitor.visit_unit()
         }
-
-        fn __deserialize_content<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de, Value = Content<'de>>,
-        {
-            let _ = visitor;
-            Ok(self.content)
-        }
     }
 
     impl<'de, E> ContentDeserializer<'de, E> {
@@ -2085,14 +2077,6 @@ mod content {
         {
             visitor.visit_unit()
         }
-
-        fn __deserialize_content<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de, Value = Content<'de>>,
-        {
-            let _ = visitor;
-            Ok(self.content.clone())
-        }
     }
 
     impl<'a, 'de, E> ContentRefDeserializer<'a, 'de, E> {
@@ -2397,7 +2381,7 @@ where
         visitor.visit_str(self.value)
     }
 
-    forward_to_deserialize_any! {
+    serde_core::forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
         bytes byte_buf option unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any
@@ -2422,7 +2406,7 @@ where
         visitor.visit_borrowed_str(self.value)
     }
 
-    forward_to_deserialize_any! {
+    serde_core::forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
         bytes byte_buf option unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any

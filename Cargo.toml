@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "serde",
+    "serde_core",
     "serde_derive",
     "serde_derive_internals",
     "test_suite",
