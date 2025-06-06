@@ -660,6 +660,8 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#[cfg(feature = "result")]
+#[cfg_attr(docsrs, doc(cfg(feature = "result")))]
 impl<T, E> Serialize for Result<T, E>
 where
     T: Serialize,

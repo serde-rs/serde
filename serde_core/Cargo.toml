@@ -18,10 +18,10 @@ rust-version = "1.56"
 serde = { version = "1", path = "../serde" }
 
 [package.metadata.playground]
-features = ["rc"]
+features = ["rc", "result"]
 
 [package.metadata.docs.rs]
-features = ["rc", "unstable"]
+features = ["rc", "result", "unstable"]
 targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = [
     "--generate-link-to-definition",
@@ -34,7 +34,7 @@ rustdoc-args = [
 ### FEATURES #################################################################
 
 [features]
-default = ["std"]
+default = ["std", "result"]
 
 # Provide impls for common standard library types like Vec<T> and HashMap<K, V>.
 # Requires a dependency on the Rust standard library.
@@ -55,3 +55,8 @@ alloc = []
 # does not preserve identity and may result in multiple copies of the same data.
 # Be sure that this is what you want before enabling this feature.
 rc = []
+
+# Provide impls for Result<T, E>. Enabling these impls allows for serialization
+# and deserialization of Result types, which may be useful in certain contexts
+# but could lead to confusion if ? or unwrap are overused.
+result = []
