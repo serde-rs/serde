@@ -64,6 +64,7 @@
     clippy::wildcard_imports
 )]
 #![cfg_attr(all(test, exhaustive), feature(non_exhaustive_omitted_patterns_lint))]
+#![allow(unknown_lints, mismatched_lifetime_syntaxes)]
 
 extern crate proc_macro2;
 extern crate quote;
