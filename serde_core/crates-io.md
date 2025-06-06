@@ -1,45 +1,22 @@
 <!-- Serde readme rendered on crates.io -->
 
-**Serde is a framework for *ser*ializing and *de*serializing Rust data structures efficiently and generically.**
+**Serde Core is a collection of core functionalities and abstractions for Serde, a framework for *ser*ializing and *de*serializing Rust data structures efficiently and generically.**
 
 ---
 
+Serde Core exposes core traits and utilities for interacting with Serde's data model.
+It is intended to be consumed by Serde's data formats and other crates that implement the Serde traits by hand.
+
+If you are looking to use Serde in your library/application to simply serialize and deserialize data, you most likely want to use [Serde](https://crates.io/crates/serde) directly.
+Serde Core does _not_ offer any convenience functions for automatically implementing `Serialize` or `Deserialize` via a `#[derive]` macro.
+
 You may be looking for:
 
+- [API documentation](https://docs.rs/serde_core)
 - [An overview of Serde](https://serde.rs/)
 - [Data formats supported by Serde](https://serde.rs/#data-formats)
-- [Setting up `#[derive(Serialize, Deserialize)]`](https://serde.rs/derive.html)
 - [Examples](https://serde.rs/examples.html)
-- [API documentation](https://docs.rs/serde)
-- [Release notes](https://github.com/serde-rs/serde/releases)
-
-## Serde in action
-
-```rust
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Point {
-    x: i32,
-    y: i32,
-}
-
-fn main() {
-    let point = Point { x: 1, y: 2 };
-
-    // Convert the Point to a JSON string.
-    let serialized = serde_json::to_string(&point).unwrap();
-
-    // Prints serialized = {"x":1,"y":2}
-    println!("serialized = {}", serialized);
-
-    // Convert the JSON string back to a Point.
-    let deserialized: Point = serde_json::from_str(&serialized).unwrap();
-
-    // Prints deserialized = Point { x: 1, y: 2 }
-    println!("deserialized = {:?}", deserialized);
-}
-```
+- [Release notes](https://github.com/serde-rs/serde_core/releases)
 
 ## Getting help
 
