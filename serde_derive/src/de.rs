@@ -1229,12 +1229,14 @@ fn deserialize_homogeneous_enum(
 ) -> Fragment {
     match cattrs.tag() {
         attr::TagType::External => deserialize_externally_tagged_enum(params, variants, cattrs),
-        attr::TagType::Internal { tag } => {
-            deserialize_internally_tagged_enum(params, variants, cattrs, tag)
+        attr::TagType::Internal { tag, use_seq } => {
+            deserialize_internally_tagged_enum(params, variants, cattrs, tag, *use_seq)
         }
-        attr::TagType::Adjacent { tag, content } => {
-            deserialize_adjacently_tagged_enum(params, variants, cattrs, tag, content)
-        }
+        attr::TagType::Adjacent {
+            tag,
+            content,
+            use_seq,
+        } => deserialize_adjacently_tagged_enum(params, variants, cattrs, tag, content, *use_seq),
         attr::TagType::None => deserialize_untagged_enum(params, variants, cattrs),
     }
 }
@@ -1380,6 +1382,7 @@ fn deserialize_internally_tagged_enum(
     variants: &[Variant],
     cattrs: &attr::Container,
     tag: &str,
+    use_seq: bool,
 ) -> Fragment {
     let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants);
 
@@ -1406,6 +1409,12 @@ fn deserialize_internally_tagged_enum(
     let expecting = format!("internally tagged enum {}", params.type_name());
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
+    let tagged_content_visitor = if use_seq {
+        quote!(_serde::__private::de::TaggedContentVisitor)
+    } else {
+        quote!(_serde::__private::de::NoSeqTaggedContentVisitor)
+    };
+
     quote_block! {
         #variant_visitor
 
@@ -1413,7 +1422,7 @@ fn deserialize_internally_tagged_enum(
 
         let (__tag, __content) = _serde::Deserializer::deserialize_any(
             __deserializer,
-            _serde::__private::de::TaggedContentVisitor::<__Field>::new(#tag, #expecting))?;
+            #tagged_content_visitor::<__Field>::new(#tag, #expecting))?;
         let __deserializer = _serde::__private::de::ContentDeserializer::<__D::Error>::new(__content);
 
         match __tag {
@@ -1428,6 +1437,7 @@ fn deserialize_adjacently_tagged_enum(
     cattrs: &attr::Container,
     tag: &str,
     content: &str,
+    use_seq: bool,
 ) -> Fragment {
     let this_type = &params.this_type;
     let this_value = &params.this_value;
@@ -1595,6 +1605,42 @@ fn deserialize_adjacently_tagged_enum(
         }
     };
 
+    let visit_seq = if use_seq {
+        quote! {
+            fn visit_seq<__A>(self, mut __seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
+            where
+                __A: _serde::de::SeqAccess<#delife>,
+            {
+                // Visit the first element - the tag.
+                match _serde::de::SeqAccess::next_element(&mut __seq)? {
+                    _serde::__private::Some(__field) => {
+                        // Visit the second element - the content.
+                        match _serde::de::SeqAccess::next_element_seed(
+                            &mut __seq,
+                            __Seed {
+                                field: __field,
+                                marker: _serde::__private::PhantomData,
+                                lifetime: _serde::__private::PhantomData,
+                            },
+                        )? {
+                            _serde::__private::Some(__ret) => _serde::__private::Ok(__ret),
+                            // There is no second element.
+                            _serde::__private::None => {
+                                _serde::__private::Err(_serde::de::Error::invalid_length(1, &self))
+                            }
+                        }
+                    }
+                    // There is no first element.
+                    _serde::__private::None => {
+                        _serde::__private::Err(_serde::de::Error::invalid_length(0, &self))
+                    }
+                }
+            }
+        }
+    } else {
+        quote! {}
+    };
+
     quote_block! {
         #variant_visitor
 
@@ -1694,35 +1740,7 @@ fn deserialize_adjacently_tagged_enum(
                 }
             }
 
-            fn visit_seq<__A>(self, mut __seq: __A) -> _serde::__private::Result<Self::Value, __A::Error>
-            where
-                __A: _serde::de::SeqAccess<#delife>,
-            {
-                // Visit the first element - the tag.
-                match _serde::de::SeqAccess::next_element(&mut __seq)? {
-                    _serde::__private::Some(__field) => {
-                        // Visit the second element - the content.
-                        match _serde::de::SeqAccess::next_element_seed(
-                            &mut __seq,
-                            __Seed {
-                                field: __field,
-                                marker: _serde::__private::PhantomData,
-                                lifetime: _serde::__private::PhantomData,
-                            },
-                        )? {
-                            _serde::__private::Some(__ret) => _serde::__private::Ok(__ret),
-                            // There is no second element.
-                            _serde::__private::None => {
-                                _serde::__private::Err(_serde::de::Error::invalid_length(1, &self))
-                            }
-                        }
-                    }
-                    // There is no first element.
-                    _serde::__private::None => {
-                        _serde::__private::Err(_serde::de::Error::invalid_length(0, &self))
-                    }
-                }
-            }
+            #visit_seq
         }
 
         #[doc(hidden)]
