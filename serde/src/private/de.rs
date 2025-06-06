@@ -1497,7 +1497,7 @@ mod content {
             visitor.visit_unit()
         }
 
-        fn __deserialize_content<V>(self, visitor: V) -> Result<Content<'de>, Self::Error>
+        fn __deserialize_content<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de, Value = Content<'de>>,
         {
@@ -2086,7 +2086,7 @@ mod content {
             visitor.visit_unit()
         }
 
-        fn __deserialize_content<V>(self, visitor: V) -> Result<Content<'de>, Self::Error>
+        fn __deserialize_content<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de, Value = Content<'de>>,
         {
