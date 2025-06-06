@@ -1226,11 +1226,7 @@ pub trait Deserializer<'de>: Sized {
     // Not public API.
     #[cfg(all(not(no_serde_derive), any(feature = "std", feature = "alloc")))]
     #[doc(hidden)]
-    fn __deserialize_content<V>(
-        self,
-        _: crate::actually_private::T,
-        visitor: V,
-    ) -> Result<crate::__private::de::Content<'de>, Self::Error>
+    fn __deserialize_content<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de, Value = crate::__private::de::Content<'de>>,
     {
