@@ -1674,11 +1674,11 @@ pub trait Visitor<'de>: Sized {
 
     // Used when deserializing a flattened Option field. Not public API.
     #[doc(hidden)]
-    fn __private_visit_untagged_option<D>(self, _: D) -> Result<Self::Value, ()>
+    fn __private_make_none<E>() -> Result<Self::Value, E>
     where
-        D: Deserializer<'de>,
+        E: Error,
     {
-        Err(())
+        Err(Error::custom(""))
     }
 }
 

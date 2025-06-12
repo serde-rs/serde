@@ -2583,9 +2583,10 @@ where
     where
         V: Visitor<'de>,
     {
-        match visitor.__private_visit_untagged_option(self) {
+        match visitor.visit_some(OptionFlatMapDeserializer(self)) {
             Ok(value) => Ok(value),
-            Err(()) => Self::deserialize_other(),
+            Err(FlatStructError::NotPresent) => V::__private_make_none(),
+            Err(FlatStructError::Inner(e)) => Err(e),
         }
     }
 
@@ -2739,6 +2740,183 @@ fn flat_map_take_entry<'de>(
         entry.take()
     } else {
         None
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+#[derive(Debug)]
+enum FlatStructError<E> {
+    NotPresent,
+    Inner(E),
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<E> Error for FlatStructError<E>
+where
+    E: Error,
+{
+    fn custom<T>(_msg: T) -> Self
+    where
+        T: Display,
+    {
+        unreachable!()
+    }
+
+    fn missing_field(_field: &'static str) -> Self {
+        Self::NotPresent
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<E> Display for FlatStructError<E> {
+    fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        unreachable!()
+    }
+}
+
+#[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+impl<E> error::Error for FlatStructError<E> where E: Error {}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+struct OptionFlatMapDeserializer<'a, 'de: 'a, E>(FlatMapDeserializer<'a, 'de, E>);
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+macro_rules! forward_to_deserialize_inner {
+    ($($func:ident ($($argn:ident: $argt:ty),*))*) => {
+        $(
+            fn $func<V>(self, $($argn: $argt,)* visitor: V) -> Result<V::Value, Self::Error>
+            where
+                V: Visitor<'de>,
+            {
+                self.0.$func($($argn,)* visitor).map_err(FlatStructError::Inner)
+            }
+        )*
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, 'de, E> Deserializer<'de> for OptionFlatMapDeserializer<'a, 'de, E>
+where
+    E: Error,
+{
+    type Error = FlatStructError<E>;
+
+    fn deserialize_enum<V>(
+        self,
+        _name: &'static str,
+        variants: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        for entry in self.0 .0 {
+            if let Some((key, value)) = flat_map_take_entry(entry, variants) {
+                return visitor
+                    .visit_enum(EnumDeserializer::new(key, Some(value)))
+                    .map_err(FlatStructError::Inner);
+            }
+        }
+
+        Err(FlatStructError::NotPresent)
+    }
+
+    fn deserialize_struct<V>(
+        self,
+        _: &'static str,
+        fields: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_map(OptionFlatStructAccess {
+            iter: self.0 .0.iter_mut(),
+            pending_content: None,
+            fields,
+            _marker: PhantomData,
+        })
+    }
+
+    fn deserialize_newtype_struct<V>(self, _name: &str, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_newtype_struct(self)
+    }
+
+    forward_to_deserialize_inner! {
+        deserialize_any()
+        deserialize_map()
+        deserialize_option()
+        deserialize_ignored_any()
+        deserialize_unit()
+        deserialize_bool()
+        deserialize_i8()
+        deserialize_i16()
+        deserialize_i32()
+        deserialize_i64()
+        deserialize_u8()
+        deserialize_u16()
+        deserialize_u32()
+        deserialize_u64()
+        deserialize_f32()
+        deserialize_f64()
+        deserialize_char()
+        deserialize_str()
+        deserialize_string()
+        deserialize_bytes()
+        deserialize_byte_buf()
+        deserialize_unit_struct(name: &'static str)
+        deserialize_seq()
+        deserialize_tuple(len: usize)
+        deserialize_tuple_struct(name: &'static str, len: usize)
+        deserialize_identifier()
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+struct OptionFlatStructAccess<'a, 'de: 'a, E> {
+    iter: slice::IterMut<'a, Option<(Content<'de>, Content<'de>)>>,
+    pending_content: Option<Content<'de>>,
+    fields: &'static [&'static str],
+    _marker: PhantomData<E>,
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'a, 'de, E> MapAccess<'de> for OptionFlatStructAccess<'a, 'de, E>
+where
+    E: Error,
+{
+    type Error = FlatStructError<E>;
+
+    fn next_key_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+    where
+        T: DeserializeSeed<'de>,
+    {
+        for entry in self.iter.by_ref() {
+            if let Some((key, content)) = flat_map_take_entry(entry, self.fields) {
+                self.pending_content = Some(content);
+                return seed
+                    .deserialize(ContentDeserializer::new(key))
+                    .map(Some)
+                    .map_err(FlatStructError::Inner);
+            }
+        }
+        Ok(None)
+    }
+
+    fn next_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
+    where
+        T: DeserializeSeed<'de>,
+    {
+        match self.pending_content.take() {
+            Some(value) => seed
+                .deserialize(ContentDeserializer::new(value))
+                .map_err(FlatStructError::Inner),
+            None => Err(FlatStructError::Inner(Error::custom("value is missing"))),
+        }
     }
 }
 
