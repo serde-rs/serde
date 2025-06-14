@@ -5,8 +5,9 @@
 //! enum Enum {}
 //! ```
 
+use crate::de::struct_;
 use crate::de::{
-    deserialize_struct, deserialize_tuple, effective_style, expr_is_missing,
+    deserialize_tuple, effective_style, expr_is_missing,
     unwrap_to_variant_closure, Parameters, StructForm, TupleForm,
 };
 use crate::fragment::{Expr, Fragment};
@@ -99,7 +100,7 @@ pub fn deserialize_untagged_variant(
             cattrs,
             TupleForm::Untagged(variant_ident),
         ),
-        Style::Struct => deserialize_struct(
+        Style::Struct => struct_::deserialize_struct(
             params,
             &variant.fields,
             cattrs,

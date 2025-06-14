@@ -7,8 +7,9 @@
 
 use crate::de::enum_;
 use crate::de::enum_untagged;
+use crate::de::struct_;
 use crate::de::{
-    deserialize_struct, effective_style, expr_is_missing, field_i,
+    effective_style, expr_is_missing, field_i,
     unwrap_to_variant_closure, Parameters, StructForm,
 };
 use crate::fragment::{Expr, Fragment, Match};
@@ -95,7 +96,7 @@ fn deserialize_internally_tagged_variant(
         Style::Newtype => {
             enum_untagged::deserialize_untagged_newtype_variant(variant_ident, params, &variant.fields[0])
         }
-        Style::Struct => deserialize_struct(
+        Style::Struct => struct_::deserialize_struct(
             params,
             &variant.fields,
             cattrs,
