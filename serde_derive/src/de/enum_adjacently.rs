@@ -5,7 +5,8 @@
 //! enum Enum {}
 //! ```
 
-use crate::de::{deserialize_untagged_variant, field_i, prepare_enum_variant_enum, Parameters};
+use crate::de::enum_untagged;
+use crate::de::{field_i, prepare_enum_variant_enum, Parameters};
 use crate::fragment::{Fragment, Match};
 use crate::internals::ast::{Style, Variant};
 use crate::internals::attr;
@@ -35,7 +36,7 @@ pub fn deserialize_adjacently_tagged_enum(
         .map(|(i, variant)| {
             let variant_index = field_i(i);
 
-            let block = Match(deserialize_untagged_variant(params, variant, cattrs));
+            let block = Match(enum_untagged::deserialize_untagged_variant(params, variant, cattrs));
 
             quote! {
                 __Field::#variant_index => #block

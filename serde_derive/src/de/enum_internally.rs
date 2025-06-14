@@ -5,9 +5,10 @@
 //! enum Enum {}
 //! ```
 
+use crate::de::enum_untagged;
 use crate::de::{
-    deserialize_struct, deserialize_untagged_newtype_variant, effective_style, expr_is_missing,
-    field_i, prepare_enum_variant_enum, unwrap_to_variant_closure, Parameters, StructForm,
+    deserialize_struct, effective_style, expr_is_missing, field_i, prepare_enum_variant_enum,
+    unwrap_to_variant_closure, Parameters, StructForm,
 };
 use crate::fragment::{Expr, Fragment, Match};
 use crate::internals::ast::{Style, Variant};
@@ -91,7 +92,7 @@ fn deserialize_internally_tagged_variant(
             }
         }
         Style::Newtype => {
-            deserialize_untagged_newtype_variant(variant_ident, params, &variant.fields[0])
+            enum_untagged::deserialize_untagged_newtype_variant(variant_ident, params, &variant.fields[0])
         }
         Style::Struct => deserialize_struct(
             params,

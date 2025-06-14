@@ -15,6 +15,7 @@ use syn::{parse_quote, Ident, Index, Member};
 mod enum_adjacently;
 mod enum_externally;
 mod enum_internally;
+mod enum_untagged;
 
 pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<TokenStream> {
     replace_receiver(input);
@@ -1249,7 +1250,7 @@ fn deserialize_enum(
                     return _serde::#private::Ok(__ok);
                 }
             };
-            deserialize_untagged_enum(params, untagged, cattrs, Some(tagged_frag))
+            enum_untagged::deserialize_untagged_enum(params, untagged, cattrs, Some(tagged_frag))
         }
         None => deserialize_homogeneous_enum(params, variants, cattrs),
     }
@@ -1268,7 +1269,7 @@ fn deserialize_homogeneous_enum(
         attr::TagType::Adjacent { tag, content } => {
             enum_adjacently::deserialize_adjacently_tagged_enum(params, variants, cattrs, tag, content)
         }
-        attr::TagType::None => deserialize_untagged_enum(params, variants, cattrs, None),
+        attr::TagType::None => enum_untagged::deserialize_untagged_enum(params, variants, cattrs, None),
     }
 }
 
@@ -1312,121 +1313,6 @@ fn prepare_enum_variant_enum(variants: &[Variant]) -> (TokenStream, Stmts) {
     ));
 
     (variants_stmt, variant_visitor)
-}
-
-/// Generates `Deserialize::deserialize` body for an `enum Enum {...}` with `#[serde(untagged)]` attribute
-fn deserialize_untagged_enum(
-    params: &Parameters,
-    variants: &[Variant],
-    cattrs: &attr::Container,
-    first_attempt: Option<TokenStream>,
-) -> Fragment {
-    let attempts = variants
-        .iter()
-        .filter(|variant| !variant.attrs.skip_deserializing())
-        .map(|variant| Expr(deserialize_untagged_variant(params, variant, cattrs)));
-    // TODO this message could be better by saving the errors from the failed
-    // attempts. The heuristic used by TOML was to count the number of fields
-    // processed before an error, and use the error that happened after the
-    // largest number of fields. I'm not sure I like that. Maybe it would be
-    // better to save all the errors and combine them into one message that
-    // explains why none of the variants matched.
-    let fallthrough_msg = format!(
-        "data did not match any variant of untagged enum {}",
-        params.type_name()
-    );
-    let fallthrough_msg = cattrs.expecting().unwrap_or(&fallthrough_msg);
-
-    let private2 = private;
-    quote_block! {
-        let __content = _serde::de::DeserializeSeed::deserialize(_serde::#private::de::ContentVisitor::new(), __deserializer)?;
-        let __deserializer = _serde::#private::de::ContentRefDeserializer::<__D::Error>::new(&__content);
-
-        #first_attempt
-
-        #(
-            if let _serde::#private2::Ok(__ok) = #attempts {
-                return _serde::#private2::Ok(__ok);
-            }
-        )*
-
-        _serde::#private::Err(_serde::de::Error::custom(#fallthrough_msg))
-    }
-}
-
-fn deserialize_untagged_variant(
-    params: &Parameters,
-    variant: &Variant,
-    cattrs: &attr::Container,
-) -> Fragment {
-    if let Some(path) = variant.attrs.deserialize_with() {
-        let unwrap_fn = unwrap_to_variant_closure(params, variant, false);
-        return quote_block! {
-            _serde::#private::Result::map(#path(__deserializer), #unwrap_fn)
-        };
-    }
-
-    let variant_ident = &variant.ident;
-
-    match effective_style(variant) {
-        Style::Unit => {
-            let this_value = &params.this_value;
-            let type_name = params.type_name();
-            let variant_name = variant.ident.to_string();
-            let default = variant.fields.first().map(|field| {
-                let default = Expr(expr_is_missing(field, cattrs));
-                quote!((#default))
-            });
-            quote_expr! {
-                match _serde::Deserializer::deserialize_any(
-                    __deserializer,
-                    _serde::#private::de::UntaggedUnitVisitor::new(#type_name, #variant_name)
-                ) {
-                    _serde::#private::Ok(()) => _serde::#private::Ok(#this_value::#variant_ident #default),
-                    _serde::#private::Err(__err) => _serde::#private::Err(__err),
-                }
-            }
-        }
-        Style::Newtype => {
-            deserialize_untagged_newtype_variant(variant_ident, params, &variant.fields[0])
-        }
-        Style::Tuple => deserialize_tuple(
-            params,
-            &variant.fields,
-            cattrs,
-            TupleForm::Untagged(variant_ident),
-        ),
-        Style::Struct => deserialize_struct(
-            params,
-            &variant.fields,
-            cattrs,
-            StructForm::Untagged(variant_ident),
-        ),
-    }
-}
-
-fn deserialize_untagged_newtype_variant(
-    variant_ident: &syn::Ident,
-    params: &Parameters,
-    field: &Field,
-) -> Fragment {
-    let this_value = &params.this_value;
-    let field_ty = field.ty;
-    match field.attrs.deserialize_with() {
-        None => {
-            let span = field.original.span();
-            let func = quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize);
-            quote_expr! {
-                _serde::#private::Result::map(#func(__deserializer), #this_value::#variant_ident)
-            }
-        }
-        Some(path) => {
-            quote_block! {
-                let __value: _serde::#private::Result<#field_ty, _> = #path(__deserializer);
-                _serde::#private::Result::map(__value, #this_value::#variant_ident)
-            }
-        }
-    }
 }
 
 struct FieldWithAliases<'a> {
