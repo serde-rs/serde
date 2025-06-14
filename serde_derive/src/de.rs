@@ -1228,6 +1228,14 @@ fn deserialize_enum(
         Some(variant_idx) => {
             let (tagged, untagged) = variants.split_at(variant_idx);
             let tagged_frag = Expr(deserialize_homogeneous_enum(params, tagged, cattrs));
+            // Ignore any error associated with non-untagged deserialization so that we
+            // can fall through to the untagged variants. This may be infallible so we
+            // need to provide the error type.
+            let tagged_frag = quote! {
+                if let _serde::#private::Result::<_, __D::Error>::Ok(__ok) = (|| #tagged_frag)() {
+                    return _serde::#private::Ok(__ok);
+                }
+            };
             deserialize_untagged_enum(params, untagged, cattrs, Some(tagged_frag))
         }
         None => deserialize_homogeneous_enum(params, variants, cattrs),
@@ -1753,7 +1761,7 @@ fn deserialize_untagged_enum(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
-    first_attempt: Option<Expr>,
+    first_attempt: Option<TokenStream>,
 ) -> Fragment {
     let attempts = variants
         .iter()
@@ -1777,17 +1785,6 @@ fn deserialize_untagged_enum(
         params.type_name()
     );
     let fallthrough_msg = cattrs.expecting().unwrap_or(&fallthrough_msg);
-
-    // Ignore any error associated with non-untagged deserialization so that we
-    // can fall through to the untagged variants. This may be infallible so we
-    // need to provide the error type.
-    let first_attempt = first_attempt.map(|expr| {
-        quote! {
-            if let _serde::#private::Result::<_, __D::Error>::Ok(__ok) = (|| #expr)() {
-                return _serde::#private::Ok(__ok);
-            }
-        }
-    });
 
     let private2 = private;
     quote_block! {
