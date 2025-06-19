@@ -818,7 +818,7 @@ fn test_nonzero_usize() {
 
 #[test]
 #[cfg(feature = "unstable")]
-#[ignore = "serde_test lacks support for f128"]
+#[ignore = "serde_test lacks support for f16"]
 fn test_f16() {
     let test = test::<f16>;
 
