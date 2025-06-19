@@ -33,6 +33,11 @@ impl<'de> Deserializer<'de> for Enum {
         bytes byte_buf option unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any
     }
+
+    #[cfg(feature = "unstable")]
+    forward_to_deserialize_any! {
+        f16 f128
+    }
 }
 
 impl<'de> EnumAccess<'de> for Enum {
