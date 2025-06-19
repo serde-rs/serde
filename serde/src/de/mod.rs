@@ -996,6 +996,18 @@ pub trait Deserializer<'de>: Sized {
         Err(Error::custom("u128 is not supported"))
     }
 
+    /// Hint that the `Deserialize` type is expecting a `f16` value.
+    ///
+    /// The default behavior unconditionally returns an error.
+    #[cfg(feature = "unstable")]
+    fn deserialize_f16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::custom("f16 is not supported"))
+    }
+
     /// Hint that the `Deserialize` type is expecting a `f32` value.
     fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -1005,6 +1017,18 @@ pub trait Deserializer<'de>: Sized {
     fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>;
+
+    /// Hint that the `Deserialize` type is expecting a `f128` value.
+    ///
+    /// The default behavior unconditionally returns an error.
+    #[cfg(feature = "unstable")]
+    fn deserialize_f128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        let _ = visitor;
+        Err(Error::custom("f128 is not supported"))
+    }
 
     /// Hint that the `Deserialize` type is expecting a `char` value.
     fn deserialize_char<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -1439,6 +1463,17 @@ pub trait Visitor<'de>: Sized {
         ))
     }
 
+    /// The input contains a `f16`.
+    ///
+    /// The default implementation forwards to visit_f64.
+    #[cfg(feature = "unstable")]
+    fn visit_f16<E>(self, v: f16) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        self.visit_f64(v as f64)
+    }
+
     /// The input contains an `f32`.
     ///
     /// The default implementation forwards to [`visit_f64`].
@@ -1459,6 +1494,28 @@ pub trait Visitor<'de>: Sized {
         E: Error,
     {
         Err(Error::invalid_type(Unexpected::Float(v), &self))
+    }
+
+    /// The input contains a `f128`.
+    ///
+    /// The default implementation fails with a type error.
+    #[cfg(feature = "unstable")]
+    fn visit_f128<E>(self, v: f128) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        let mut buf = [0u8; 64];
+        let mut writer = crate::format::Buf::new(&mut buf);
+        fmt::Write::write_fmt(
+            &mut writer,
+            format_args!("float `{:x}` as f128", v.to_bits()),
+        )
+        .unwrap();
+
+        Err(Error::invalid_type(
+            Unexpected::Other(writer.as_str()),
+            &self,
+        ))
     }
 
     /// The input contains a `char`.

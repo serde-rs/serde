@@ -625,6 +625,34 @@ pub trait Serializer: Sized {
         Err(Error::custom("u128 is not supported"))
     }
 
+    /// Serialize an `f16` value.
+    ///
+    /// If the format does not differentiate between `f16` and `f32`, a
+    /// reasonable implementation would be to cast the value to `f32` and
+    /// forward to `serialize_f32`.
+    ///
+    /// ```edition2021
+    /// # #![feature(f16)]
+    /// # use serde::Serializer;
+    /// #
+    /// # serde::__private_serialize!();
+    /// #
+    /// impl Serialize for f16 {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///     where
+    ///         S: Serializer,
+    ///     {
+    ///         serializer.serialize_f16(*self)
+    ///     }
+    /// }
+    /// ```
+    /// The default behavior unconditionally returns an error.
+    #[cfg(feature = "unstable")]
+    fn serialize_f16(self, v: f16) -> Result<Self::Ok, Self::Error> {
+        let _ = v;
+        Err(Error::custom("f16 is not supported"))
+    }
+
     /// Serialize an `f32` value.
     ///
     /// If the format does not differentiate between `f32` and `f64`, a
@@ -664,6 +692,30 @@ pub trait Serializer: Sized {
     /// }
     /// ```
     fn serialize_f64(self, v: f64) -> Result<Self::Ok, Self::Error>;
+
+    /// Serialize an `f128` value.
+    ///
+    /// ```edition2021
+    /// # #![feature(f128)]
+    /// # use serde::Serializer;
+    /// #
+    /// # serde::__private_serialize!();
+    /// #
+    /// impl Serialize for f128 {
+    ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    ///     where
+    ///         S: Serializer,
+    ///     {
+    ///         serializer.serialize_f128(*self)
+    ///     }
+    /// }
+    /// ```
+    /// The default behavior unconditionally returns an error.
+    #[cfg(feature = "unstable")]
+    fn serialize_f128(self, v: f128) -> Result<Self::Ok, Self::Error> {
+        let _ = v;
+        Err(Error::custom("f128 is not supported"))
+    }
 
     /// Serialize a character.
     ///
