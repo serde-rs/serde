@@ -373,7 +373,6 @@ where
     }
 }
 
-// just why does this not use the `primitive_deserializer` macro??????
 impl<E> U32Deserializer<E> {
     #[allow(missing_docs)]
     pub fn new(value: u32) -> Self {
