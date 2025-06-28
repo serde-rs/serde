@@ -206,6 +206,7 @@ mod content {
     // This issue is tracking making some of this stuff public:
     // https://github.com/serde-rs/serde/issues/741
 
+    use crate::de::VariantAccess;
     use crate::lib::*;
 
     use crate::de::value::{MapDeserializer, SeqDeserializer};
@@ -248,6 +249,7 @@ mod content {
         Newtype(Box<Content<'de>>),
         Seq(Vec<Content<'de>>),
         Map(Vec<(Content<'de>, Content<'de>)>),
+        Enum(Box<(Content<'de>, Content<'de>)>),
     }
 
     impl<'de> Content<'de> {
@@ -285,6 +287,7 @@ mod content {
                 Content::Newtype(_) => Unexpected::NewtypeStruct,
                 Content::Seq(_) => Unexpected::Seq,
                 Content::Map(_) => Unexpected::Map,
+                Content::Enum(_) => Unexpected::Enum,
             }
         }
     }
@@ -524,13 +527,13 @@ mod content {
             Ok(Content::Map(vec))
         }
 
-        fn visit_enum<V>(self, _visitor: V) -> Result<Self::Value, V::Error>
+        fn visit_enum<V>(self, visitor: V) -> Result<Self::Value, V::Error>
         where
             V: EnumAccess<'de>,
         {
-            Err(de::Error::custom(
-                "untagged and internally tagged enums do not support enum input",
-            ))
+            let (variant, access) = tri!(visitor.variant());
+            let value = tri!(access.newtype_variant());
+            Ok(Content::Enum(Box::new((variant, value))))
         }
     }
 
@@ -1165,6 +1168,7 @@ mod content {
                 Content::Newtype(v) => visitor.visit_newtype_struct(ContentDeserializer::new(*v)),
                 Content::Seq(v) => visit_content_seq(v, visitor),
                 Content::Map(v) => visit_content_map(v, visitor),
+                Content::Enum(v) => visitor.visit_enum(EnumDeserializer::new(v.0, Some(v.1))),
             }
         }
 
@@ -1762,6 +1766,9 @@ mod content {
                 }
                 Content::Seq(ref v) => visit_content_seq_ref(v, visitor),
                 Content::Map(ref v) => visit_content_map_ref(v, visitor),
+                Content::Enum(ref v) => {
+                    visitor.visit_enum(EnumRefDeserializer::new(&v.0, Some(&v.1)))
+                }
             }
         }
 
@@ -2120,6 +2127,19 @@ mod content {
         variant: &'a Content<'de>,
         value: Option<&'a Content<'de>>,
         err: PhantomData<E>,
+    }
+
+    impl<'a, 'de: 'a, E> EnumRefDeserializer<'a, 'de, E>
+    where
+        E: de::Error,
+    {
+        fn new(variant: &'a Content<'de>, value: Option<&'a Content<'de>>) -> Self {
+            Self {
+                variant,
+                value,
+                err: PhantomData,
+            }
+        }
     }
 
     impl<'de, 'a, E> de::EnumAccess<'de> for EnumRefDeserializer<'a, 'de, E>
