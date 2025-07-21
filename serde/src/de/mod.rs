@@ -1466,6 +1466,8 @@ pub trait Visitor<'de>: Sized {
     /// The input contains a `f16`.
     ///
     /// The default implementation forwards to [`visit_f64`].
+    ///
+    /// [`visit_f64`]: #method.visit_f64
     #[cfg(feature = "unstable")]
     fn visit_f16<E>(self, v: f16) -> Result<Self::Value, E>
     where

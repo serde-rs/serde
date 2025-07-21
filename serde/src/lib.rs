@@ -315,7 +315,6 @@ pub mod ser;
 #[macro_use]
 mod integer128;
 
-
 mod format;
 
 #[doc(inline)]
