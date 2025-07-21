@@ -154,6 +154,13 @@ impl<'de> Visitor<'de> for IgnoredAny {
     }
 
     #[inline]
+    #[cfg(feature = "unstable")]
+    fn visit_f128<E>(self, x: f128) -> Result<Self::Value, E> {
+        let _ = x;
+        Ok(IgnoredAny)
+    }
+
+    #[inline]
     fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
     where
         E: Error,

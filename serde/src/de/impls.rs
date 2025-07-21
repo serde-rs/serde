@@ -448,6 +448,15 @@ impl_deserialize_num! {
     uint_to_self!(u32:visit_u32 u64:visit_u64);
 }
 
+#[cfg(feature = "unstable")]
+impl_deserialize_num! {
+    f16, deserialize_f16
+    num_self!(f16:visit_f16);
+    num_as_copysign_self!(f32:visit_f32 f64:visit_f64);
+    num_as_self!(i8:visit_i8 i16:visit_i16 i32:visit_i32 i64:visit_i64);
+    num_as_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32 u64:visit_u64);
+}
+
 impl_deserialize_num! {
     f32, deserialize_f32
     num_self!(f32:visit_f32);
@@ -515,6 +524,17 @@ macro_rules! num_128 {
             }
         }
     };
+}
+
+#[cfg(feature = "unstable")]
+impl_deserialize_num! {
+    f128, deserialize_f128
+    num_self!(f128:visit_f128);
+    num_as_copysign_self!(f32:visit_f32 f64:visit_f64);
+    num_as_self!(i8:visit_i8 i16:visit_i16 i32:visit_i32 i64:visit_i64);
+    num_as_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32 u64:visit_u64);
+    num_128!(u128:visit_u128);
+    num_128!(i128:visit_i128);
 }
 
 impl_deserialize_num! {
