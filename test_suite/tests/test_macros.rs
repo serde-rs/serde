@@ -1046,7 +1046,7 @@ fn test_alias_all_enum() {
         &TestEnum::VariantOne { field_one: 42 },
         &[
             Token::Enum { name: "TestEnum" },
-            Token::Str("VariantOne"),
+            Token::Str("variant-one"),
             Token::Struct {
                 name: "VariantOne",
                 len: 1,
@@ -1082,7 +1082,7 @@ fn test_alias_all_enum() {
         },
         &[
             Token::Enum { name: "TestEnum" },
-            Token::Str("VariantTwo"),
+            Token::Str("variant-two"),
             Token::Struct {
                 name: "VariantTwo",
                 len: 1,
