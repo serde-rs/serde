@@ -80,8 +80,14 @@ impl<'a> Container<'a> {
         match &mut data {
             Data::Enum(variants) => {
                 for variant in variants {
+                    for alias_all_rule in attrs.alias_all_rules() {
+                        variant.attrs.alias_by_rule(*alias_all_rule);
+                    }
                     variant.attrs.rename_by_rules(attrs.rename_all_rules());
                     for field in &mut variant.fields {
+                        for alias_all_rule in attrs.alias_all_rules() {
+                            field.attrs.alias_by_rule(*alias_all_rule);
+                        }
                         field.attrs.rename_by_rules(
                             variant
                                 .attrs
@@ -93,6 +99,9 @@ impl<'a> Container<'a> {
             }
             Data::Struct(_, fields) => {
                 for field in fields {
+                    for alias_all_rule in attrs.alias_all_rules() {
+                        field.attrs.alias_by_rule(*alias_all_rule);
+                    }
                     field.attrs.rename_by_rules(attrs.rename_all_rules());
                 }
             }
