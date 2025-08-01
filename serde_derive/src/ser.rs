@@ -1235,7 +1235,7 @@ fn wrap_serialize_with(
         #serialize_with(#(#self_var.values.#field_access, )* #serializer_var)
     };
 
-    quote!({
+    quote!(&{
         #[doc(hidden)]
         struct __SerializeWith #wrapper_impl_generics #where_clause {
             values: (#(&'__a #field_tys, )*),
@@ -1252,7 +1252,7 @@ fn wrap_serialize_with(
             }
         }
 
-        &__SerializeWith {
+        __SerializeWith {
             values: (#(#field_exprs, )*),
             phantom: _serde::__private::PhantomData::<#this_type #ty_generics>,
         }
