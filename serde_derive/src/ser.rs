@@ -396,9 +396,12 @@ fn serialize_enum(params: &Parameters, variants: &[Variant], cattrs: &attr::Cont
 
     let mut arms: Vec<_> = variants
         .iter()
-        .enumerate()
-        .map(|(variant_index, variant)| {
-            serialize_variant(params, variant, variant_index as u32, cattrs)
+        .scan(0, |next_variant_index, variant| {
+            let variant_index = *next_variant_index;
+            if !variant.attrs.skip_serializing() {
+                *next_variant_index += 1;
+            }
+            Some(serialize_variant(params, variant, variant_index, cattrs))
         })
         .collect();
 
