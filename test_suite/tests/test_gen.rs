@@ -18,7 +18,10 @@
     clippy::ptr_arg,
     clippy::too_many_lines,
     clippy::trivially_copy_pass_by_ref,
-    clippy::type_repetition_in_bounds
+    clippy::type_repetition_in_bounds,
+    // We use lots of declarations inside function bodies to avoid conflicts,
+    // but they aren't used. We just want to make sure they compile.
+    dead_code,
 )]
 #![deny(clippy::collection_is_never_read)]
 

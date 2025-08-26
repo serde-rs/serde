@@ -1,11 +1,11 @@
 error: #[serde(transparent)] requires at least one field that is neither skipped nor has a default
   --> tests/ui/transparent/de_at_least_one.rs:4:1
    |
-4  | / #[serde(transparent)]
-5  | | struct S {
-6  | |     #[serde(skip)]
-7  | |     a: u8,
-8  | |     #[serde(default)]
-9  | |     b: u8,
+ 4 | / #[serde(transparent)]
+ 5 | | struct S {
+ 6 | |     #[serde(skip)]
+ 7 | |     a: u8,
+ 8 | |     #[serde(default)]
+ 9 | |     b: u8,
 10 | | }
    | |_^

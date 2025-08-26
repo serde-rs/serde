@@ -1,11 +1,11 @@
 error: variant field name `conflict` conflicts with internal tag
   --> tests/ui/conflict/internal-tag.rs:4:1
    |
-4  | / #[serde(tag = "conflict")]
-5  | | enum E {
-6  | |     A {
-7  | |         #[serde(rename = "conflict")]
-8  | |         x: (),
-9  | |     },
+ 4 | / #[serde(tag = "conflict")]
+ 5 | | enum E {
+ 6 | |     A {
+ 7 | |         #[serde(rename = "conflict")]
+ 8 | |         x: (),
+ 9 | |     },
 10 | | }
    | |_^

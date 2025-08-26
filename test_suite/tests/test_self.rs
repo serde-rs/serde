@@ -1,4 +1,4 @@
-#![allow(clippy::used_underscore_binding)]
+#![allow(clippy::used_underscore_binding, dead_code)]
 
 use serde_derive::{Deserialize, Serialize};
 

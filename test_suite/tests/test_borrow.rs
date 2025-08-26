@@ -1,7 +1,10 @@
 #![allow(
     clippy::derive_partial_eq_without_eq,
     clippy::items_after_statements,
-    clippy::used_underscore_binding
+    clippy::used_underscore_binding,
+    // We use lots of declarations inside function bodies to avoid conflicts,
+    // but they aren't used. We just want to make sure they compile.
+    dead_code,
 )]
 
 use serde::de::value::{BorrowedStrDeserializer, MapDeserializer};

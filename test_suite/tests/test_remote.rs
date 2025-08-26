@@ -1,4 +1,4 @@
-#![allow(clippy::redundant_field_names)]
+#![allow(clippy::redundant_field_names, dead_code)]
 
 use serde_derive::{Deserialize, Serialize};
 

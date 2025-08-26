@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use serde_derive::Deserialize;
 
 macro_rules! bug {

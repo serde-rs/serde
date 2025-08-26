@@ -2,10 +2,7 @@ error[E0308]: mismatched types
  --> tests/ui/default-attribute/incorrect_type_tuple.rs:6:19
   |
 6 | #[serde(default = "main")]
-  |                   ^^^^^^
-  |                   |
-  |                   expected `Tuple`, found `()`
-  |                   expected due to this
+  |                   ^^^^^^ expected `Tuple`, found `()`
 
 error[E0308]: `match` arms have incompatible types
  --> tests/ui/default-attribute/incorrect_type_tuple.rs:7:36

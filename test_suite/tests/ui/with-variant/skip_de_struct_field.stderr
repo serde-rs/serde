@@ -1,10 +1,10 @@
 error: variant `Struct` cannot have both #[serde(deserialize_with)] and a field `f1` marked with #[serde(skip_deserializing)]
   --> tests/ui/with-variant/skip_de_struct_field.rs:5:5
    |
-5  | /     #[serde(deserialize_with = "deserialize_some_other_variant")]
-6  | |     Struct {
-7  | |         #[serde(skip_deserializing)]
-8  | |         f1: String,
-9  | |         f2: u8,
+ 5 | /     #[serde(deserialize_with = "deserialize_some_other_variant")]
+ 6 | |     Struct {
+ 7 | |         #[serde(skip_deserializing)]
+ 8 | |         f1: String,
+ 9 | |         f2: u8,
 10 | |     },
    | |_____^
