@@ -689,6 +689,7 @@ fn test_gen() {
 
     #[derive(Serialize, Deserialize)]
     #[serde(untagged)]
+    #[allow(dead_code)]
     pub enum UntaggedNewtypeVariantWith {
         Newtype(
             #[serde(serialize_with = "ser_x")]
@@ -699,6 +700,7 @@ fn test_gen() {
 
     #[derive(Serialize, Deserialize)]
     #[serde(transparent)]
+    #[allow(dead_code)]
     pub struct TransparentWith {
         #[serde(serialize_with = "ser_x")]
         #[serde(deserialize_with = "de_x")]
@@ -707,6 +709,7 @@ fn test_gen() {
 
     #[derive(Deserialize)]
     #[serde(untagged)]
+    #[allow(dead_code)]
     pub enum UntaggedWithBorrow<'a> {
         Single(
             #[serde(borrow)]
