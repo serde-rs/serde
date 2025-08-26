@@ -105,8 +105,13 @@
 // discussion of these features please refer to this issue:
 //
 //    https://github.com/serde-rs/serde/issues/812
-#![cfg_attr(feature = "unstable", feature(never_type))]
-#![allow(unknown_lints, bare_trait_objects, deprecated, mismatched_lifetime_syntaxes)]
+#![cfg_attr(feature = "unstable", feature(never_type, f16, f128))]
+#![allow(
+    unknown_lints,
+    bare_trait_objects,
+    deprecated,
+    mismatched_lifetime_syntaxes
+)]
 // Ignored clippy and clippy_pedantic lints
 #![allow(
     // clippy bug: https://github.com/rust-lang/rust-clippy/issues/5704
@@ -304,11 +309,11 @@ macro_rules! tri {
 #[macro_use]
 mod macros;
 
-#[macro_use]
-mod integer128;
-
 pub mod de;
 pub mod ser;
+
+#[macro_use]
+mod integer128;
 
 mod format;
 

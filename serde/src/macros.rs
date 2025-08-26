@@ -109,6 +109,8 @@
 /// [`Deserializer::deserialize_any`]: crate::Deserializer::deserialize_any
 #[macro_export(local_inner_macros)]
 macro_rules! forward_to_deserialize_any {
+    // there should be just a special case called all that implements all of this,
+    // this is a pain to update
     (<$visitor:ident: Visitor<$lifetime:tt>> $($func:ident)*) => {
         $(forward_to_deserialize_any_helper!{$func<$lifetime, $visitor>})*
     };
@@ -171,11 +173,17 @@ macro_rules! forward_to_deserialize_any_helper {
     (u128<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_u128<$l, $v>()}
     };
+    (f16<$l:tt, $v:ident>) => {
+        forward_to_deserialize_any_method!{deserialize_f16<$l, $v>()}
+    };
     (f32<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_f32<$l, $v>()}
     };
     (f64<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_f64<$l, $v>()}
+    };
+    (f128<$l:tt, $v:ident>) => {
+        forward_to_deserialize_any_method!{deserialize_f128<$l, $v>()}
     };
     (char<$l:tt, $v:ident>) => {
         forward_to_deserialize_any_method!{deserialize_char<$l, $v>()}

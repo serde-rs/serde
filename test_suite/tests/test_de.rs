@@ -8,7 +8,7 @@
     clippy::uninlined_format_args,
     clippy::unreadable_literal
 )]
-#![cfg_attr(feature = "unstable", feature(never_type))]
+#![cfg_attr(feature = "unstable", feature(never_type, f16, f128))]
 
 use serde::de::value::{F32Deserializer, F64Deserializer};
 use serde::de::{Deserialize, DeserializeOwned, Deserializer, IntoDeserializer};
@@ -817,6 +817,16 @@ fn test_nonzero_usize() {
 }
 
 #[test]
+#[cfg(feature = "unstable")]
+#[ignore = "serde_test lacks support for f16"]
+fn test_f16() {
+    let test = test::<f16>;
+
+    test(1.11, &[Token::F32(1.11)]);
+    test(1.11, &[Token::F64(1.11)]);
+}
+
+#[test]
 fn test_f32() {
     let test = test::<f32>;
 
@@ -829,6 +839,16 @@ fn test_f64() {
     let test = test::<f64>;
 
     test(1.11f32 as f64, &[Token::F32(1.11)]);
+    test(1.11, &[Token::F64(1.11)]);
+}
+
+#[test]
+#[cfg(feature = "unstable")]
+#[ignore = "serde_test lacks support for f128"]
+fn test_f128() {
+    let test = test::<f128>;
+
+    test(1.11, &[Token::F32(1.11)]);
     test(1.11, &[Token::F64(1.11)]);
 }
 
