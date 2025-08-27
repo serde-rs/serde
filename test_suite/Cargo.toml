@@ -19,3 +19,4 @@ serde = { path = "../serde", features = ["rc"] }
 serde_derive = { path = "../serde_derive", features = ["deserialize_in_place"] }
 serde_test = "1.0.176"
 trybuild = { version = "1.0.97", features = ["diff"] }
+validator = { version = "0.20", features = ["derive"] }
