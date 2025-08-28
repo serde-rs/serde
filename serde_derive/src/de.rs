@@ -2649,11 +2649,36 @@ fn deserialize_map(
                 }
                 Some(path) => quote!(#path),
             };
+
+            let no_variant_expr = if field.attrs.default().is_none() && cattrs.default().is_none() {
+                let span = field.original.span();
+                quote_spanned!(span=>
+                    return _serde::__private::Err(
+                        _serde::de::Error::custom(_e)
+                    );
+                )
+            } else {
+                let is_missing = Expr(expr_is_missing(field, cattrs));
+                quote!(#is_missing)
+            };
+
             quote! {
-                let #name: #field_ty = #func(
+                let #name: #field_ty = match #func(
                     _serde::__private::de::FlatMapDeserializer(
                         &mut __collect,
-                        _serde::__private::PhantomData))?;
+                        _serde::__private::PhantomData)) {
+                        _serde::__private::Ok(#name) => #name,
+                        _serde::__private::Err(
+                            _e @ _serde::__private::de::FlatMapDeserializerError::NoVariantFoundInFlattenedData(..)
+                        ) => {
+                            #no_variant_expr
+                        }
+                        _serde::__private::Err(
+                            _serde::__private::de::FlatMapDeserializerError::Inner(e)
+                        ) => {
+                            return _serde::__private::Err(e);
+                        }
+                    };
             }
         });
 
