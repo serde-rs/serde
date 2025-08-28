@@ -1223,6 +1223,12 @@ pub trait Deserializer<'de>: Sized {
         true
     }
 
+    ///
+    fn deserialize_buffer(self) -> Result<impl Buffer<'de, Error = Self::Error>, Self::Error> {
+        let content = crate::__private::de::Content::deserialize(self)?;
+        Ok(crate::__private::de::ContentDeserializer::new(content))
+    }
+
     // Not public API.
     #[cfg(all(not(no_serde_derive), any(feature = "std", feature = "alloc")))]
     #[doc(hidden)]
@@ -1232,6 +1238,29 @@ pub trait Deserializer<'de>: Sized {
     {
         self.deserialize_any(visitor)
     }
+}
+
+///
+pub trait Buffer<'de> {
+    ///
+    type Error: Error;
+
+    ///
+    type OwnedDeserializer: Deserializer<'de, Error = Self::Error>;
+
+    ///
+    type RefDeserializer<'a>: Deserializer<'de, Error = Self::Error> + Copy
+    where
+        'de: 'a,
+        Self: 'a;
+
+    ///
+    fn owned_deserializer(self) -> Self::OwnedDeserializer;
+
+    ///
+    fn ref_deserializer<'a>(&'a self) -> Self::RefDeserializer<'a>
+    where
+        'de: 'a;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1887,6 +1916,14 @@ pub trait MapAccess<'de> {
     #[inline]
     fn size_hint(&self) -> Option<usize> {
         None
+    }
+
+    ///
+    fn next_value_buffer(
+        &mut self,
+    ) -> Result<impl Buffer<'de, Error = Self::Error> + use<'de, Self>, Self::Error> {
+        let content = self.next_value::<crate::__private::de::Content>()?;
+        Ok(crate::__private::de::ContentDeserializer::new(content))
     }
 }
 
