@@ -2006,6 +2006,18 @@ pub trait EnumAccess<'de>: Sized {
     }
 }
 
+/// Variant Hint for VariantAccess
+pub enum VariantHint {
+    /// variant with no values
+    Unit,
+    /// variant with a single value
+    Newtype,
+    /// vuple-like variant with the length of the tuple
+    Tuple(usize),
+    /// struct-like variant. with names of the fields of the struct variant
+    Struct(&'static [&'static str]),
+}
+
 /// `VariantAccess` is a visitor that is created by the `Deserializer` and
 /// passed to the `Deserialize` to deserialize the content of a particular enum
 /// variant.
@@ -2121,6 +2133,49 @@ pub trait VariantAccess<'de>: Sized {
         T: Deserialize<'de>,
     {
         self.newtype_variant_seed(PhantomData)
+    }
+
+    /// Variant type hint
+    /// ```edition2021
+    /// # use serde::de::{self, value, DeserializeSeed, Visitor, VariantAccess, VariantHint, Unexpected};
+    /// #
+    /// # enum X {
+    /// #     Unit,
+    /// #     Newtype,
+    /// # }
+    /// #
+    /// # impl<'de> VariantAccess<'de> for X {
+    /// #     type Error = value::Error;
+    /// #
+    /// #     fn unit_variant(self) -> Result<(), Self::Error> {
+    /// #         unimplemented!()
+    /// #     }
+    /// #
+    /// fn hint(&self) -> Option<VariantHint> {
+    ///     Some(match self {
+    ///         Self::Unit => VariantHint::Unit,
+    ///         Self::Newtype => VariantHint::Newtype,
+    ///     })
+    /// }
+    /// #
+    /// #     fn newtype_variant_seed<T>(self, _seed: T) -> Result<T::Value, Self::Error>
+    /// #     where
+    /// #     T: DeserializeSeed<'de>,
+    /// #     { unimplemented!() }
+    /// #
+    /// #     fn tuple_variant<V>(self, _: usize, _: V) -> Result<V::Value, Self::Error>
+    /// #     where
+    /// #         V: Visitor<'de>,
+    /// #     { unimplemented!() }
+    /// #
+    /// #     fn struct_variant<V>(self, _: &[&str], _: V) -> Result<V::Value, Self::Error>
+    /// #     where
+    /// #         V: Visitor<'de>,
+    /// #     { unimplemented!() }
+    /// # }
+    /// ```
+    fn hint(&self) -> Option<VariantHint> {
+        None
     }
 
     /// Called when deserializing a tuple-like variant.
