@@ -1,5 +1,5 @@
 use crate::fragment::{Expr, Fragment, Match, Stmts};
-use crate::internals::ast::{Container, Data, Field, Style, Variant};
+use crate::internals::ast::{Container, Data, Discriminant, Field, Style, Variant};
 use crate::internals::name::Name;
 use crate::internals::{attr, replace_receiver, ungroup, Ctxt, Derive};
 use crate::{bound, dummy, pretend, this};
@@ -981,6 +981,7 @@ fn deserialize_struct(
         .map(|(i, field)| FieldWithAliases {
             ident: field_i(i),
             aliases: field.attrs.aliases(),
+            discriminant: None,
         })
         .collect();
 
@@ -1143,6 +1144,7 @@ fn deserialize_struct_in_place(
         .map(|(i, field)| FieldWithAliases {
             ident: field_i(i),
             aliases: field.attrs.aliases(),
+            discriminant: None,
         })
         .collect();
 
@@ -1239,7 +1241,10 @@ fn deserialize_homogeneous_enum(
     }
 }
 
-fn prepare_enum_variant_enum(variants: &[Variant]) -> (TokenStream, Stmts) {
+fn prepare_enum_variant_enum(
+    variants: &[Variant],
+    cattrs: &attr::Container,
+) -> (TokenStream, Stmts) {
     let deserialized_variants = variants
         .iter()
         .enumerate()
@@ -1263,10 +1268,32 @@ fn prepare_enum_variant_enum(variants: &[Variant]) -> (TokenStream, Stmts) {
         }
     };
 
+    let mut discr = 0;
     let deserialized_variants: Vec<_> = deserialized_variants
-        .map(|(i, variant)| FieldWithAliases {
-            ident: field_i(i),
-            aliases: variant.attrs.aliases(),
+        .map(|(i, variant)| {
+            let discriminant = if cattrs.explicit_tags() {
+                match &variant.discriminant {
+                    Discriminant::None => {}
+                    Discriminant::Explicit(d) => {
+                        discr = *d;
+                    }
+                    Discriminant::Other(_expr) => {
+                        // TODO: handle error properly
+                        panic!("unsupported discriminant expression");
+                    }
+                }
+                Some(discr)
+            } else {
+                None
+            };
+
+            discr += 1;
+
+            FieldWithAliases {
+                ident: field_i(i),
+                aliases: variant.attrs.aliases(),
+                discriminant,
+            }
         })
         .collect();
 
@@ -1295,7 +1322,7 @@ fn deserialize_externally_tagged_enum(
     let expecting = format!("enum {}", params.type_name());
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
-    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants);
+    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants, cattrs);
 
     // Match arms to extract a variant from a string
     let variant_arms = variants
@@ -1381,7 +1408,7 @@ fn deserialize_internally_tagged_enum(
     cattrs: &attr::Container,
     tag: &str,
 ) -> Fragment {
-    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants);
+    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants, cattrs);
 
     // Match arms to extract a variant from a string
     let variant_arms = variants
@@ -1435,7 +1462,7 @@ fn deserialize_adjacently_tagged_enum(
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
 
-    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants);
+    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants, cattrs);
 
     let variant_arms: &Vec<_> = &variants
         .iter()
@@ -2014,6 +2041,7 @@ fn deserialize_untagged_newtype_variant(
 struct FieldWithAliases<'a> {
     ident: Ident,
     aliases: &'a BTreeSet<Name>,
+    discriminant: Option<u32>,
 }
 
 fn deserialize_generated_identifier(
@@ -2159,6 +2187,7 @@ fn deserialize_custom_identifier(
         .map(|variant| FieldWithAliases {
             ident: variant.ident.clone(),
             aliases: variant.attrs.aliases(),
+            discriminant: None,
         })
         .collect();
 
@@ -2398,7 +2427,7 @@ fn deserialize_identifier(
         }
     } else {
         let u64_mapping = deserialized_fields.iter().enumerate().map(|(i, field)| {
-            let i = i as u64;
+            let i = field.discriminant.map_or(i as u64, |d| d as u64);
             let ident = &field.ident;
             quote!(#i => _serde::__private::Ok(#this_value::#ident))
         });

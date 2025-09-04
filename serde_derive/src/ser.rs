@@ -1,5 +1,5 @@
 use crate::fragment::{Fragment, Match, Stmts};
-use crate::internals::ast::{Container, Data, Field, Style, Variant};
+use crate::internals::ast::{Container, Data, Discriminant, Field, Style, Variant};
 use crate::internals::name::Name;
 use crate::internals::{attr, replace_receiver, Ctxt, Derive};
 use crate::{bound, dummy, pretend, this};
@@ -17,13 +17,14 @@ pub fn expand_derive_serialize(input: &mut syn::DeriveInput) -> syn::Result<Toke
         None => return Err(ctxt.check().unwrap_err()),
     };
     precondition(&ctxt, &cont);
-    ctxt.check()?;
 
     let ident = &cont.ident;
     let params = Parameters::new(&cont);
     let (impl_generics, ty_generics, where_clause) = params.generics.split_for_impl();
-    let body = Stmts(serialize_body(&cont, &params));
+    let body = Stmts(serialize_body(&ctxt, &cont, &params));
     let serde = cont.attrs.serde_path();
+
+    ctxt.check()?;
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
         let vis = &input.vis;
@@ -165,14 +166,14 @@ fn needs_serialize_bound(field: &attr::Field, variant: Option<&attr::Variant>) -
         })
 }
 
-fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
+fn serialize_body(cx: &Ctxt, cont: &Container, params: &Parameters) -> Fragment {
     if cont.attrs.transparent() {
         serialize_transparent(cont, params)
     } else if let Some(type_into) = cont.attrs.type_into() {
         serialize_into(params, type_into)
     } else {
         match &cont.data {
-            Data::Enum(variants) => serialize_enum(params, variants, &cont.attrs),
+            Data::Enum(variants) => serialize_enum(cx, params, variants, &cont.attrs),
             Data::Struct(Style::Struct, fields) => serialize_struct(params, fields, &cont.attrs),
             Data::Struct(Style::Tuple, fields) => {
                 serialize_tuple_struct(params, fields, &cont.attrs)
@@ -389,16 +390,40 @@ fn serialize_struct_as_map(
     }
 }
 
-fn serialize_enum(params: &Parameters, variants: &[Variant], cattrs: &attr::Container) -> Fragment {
+fn serialize_enum(
+    cx: &Ctxt,
+    params: &Parameters,
+    variants: &[Variant],
+    cattrs: &attr::Container,
+) -> Fragment {
     assert!(variants.len() as u64 <= u64::from(u32::MAX));
 
     let self_var = &params.self_var;
+
+    let mut discriminant = 0;
 
     let mut arms: Vec<_> = variants
         .iter()
         .enumerate()
         .map(|(variant_index, variant)| {
-            serialize_variant(params, variant, variant_index as u32, cattrs)
+            let variant_index = if cattrs.explicit_tags() {
+                match &variant.discriminant {
+                    Discriminant::None => {}
+                    Discriminant::Explicit(d) => {
+                        discriminant = *d;
+                    }
+                    Discriminant::Other(expr) => {
+                        cx.error_spanned_by(expr, "unsupported expression for enum discriminant");
+                    }
+                }
+                discriminant
+            } else {
+                variant_index as u32
+            };
+
+            discriminant += 1;
+
+            serialize_variant(params, variant, variant_index, cattrs)
         })
         .collect();
 

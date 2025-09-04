@@ -2,7 +2,7 @@
 
 use crate::internals::{attr, check, Ctxt, Derive};
 use syn::punctuated::Punctuated;
-use syn::Token;
+use syn::{Expr, Token};
 
 /// A source data structure annotated with `#[derive(Serialize)]` and/or `#[derive(Deserialize)]`,
 /// parsed into an internal representation.
@@ -31,9 +31,20 @@ pub enum Data<'a> {
 pub struct Variant<'a> {
     pub ident: syn::Ident,
     pub attrs: attr::Variant,
+    pub discriminant: Discriminant<'a>,
     pub style: Style,
     pub fields: Vec<Field<'a>>,
     pub original: &'a syn::Variant,
+}
+
+/// Optional discriminant of an enum variant, used to override `variant_index`.
+pub enum Discriminant<'a> {
+    /// No explicit discriminant.
+    None,
+    /// An explicit integer discriminant.
+    Explicit(u32),
+    /// An explicit discriminant that cannot be used for `variant_index`.
+    Other(&'a Expr),
 }
 
 /// A field of a struct.
@@ -134,11 +145,29 @@ fn enum_from_ast<'a>(
         .iter()
         .map(|variant| {
             let attrs = attr::Variant::from_ast(cx, variant);
+            let discriminant = if let Some((_eq, expr)) = &variant.discriminant {
+                if let syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Int(int),
+                    ..
+                }) = expr
+                {
+                    if let Ok(n) = int.base10_parse() {
+                        Discriminant::Explicit(n)
+                    } else {
+                        Discriminant::Other(expr)
+                    }
+                } else {
+                    Discriminant::Other(expr)
+                }
+            } else {
+                Discriminant::None
+            };
             let (style, fields) =
                 struct_from_ast(cx, &variant.fields, Some(&attrs), container_default);
             Variant {
                 ident: variant.ident.clone(),
                 attrs,
+                discriminant,
                 style,
                 fields,
                 original: variant,
