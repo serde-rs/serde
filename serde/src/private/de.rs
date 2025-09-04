@@ -12,8 +12,9 @@ use crate::de::{MapAccess, Unexpected};
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{
     Content, ContentDeserializer, ContentRefDeserializer, EnumDeserializer,
-    InternallyTaggedUnitVisitor, TagContentOtherField, TagContentOtherFieldVisitor,
-    TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
+    InternallyTaggedUnitVisitor, NoSeqTaggedContentVisitor, TagContentOtherField,
+    TagContentOtherFieldVisitor, TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor,
+    UntaggedUnitVisitor,
 };
 
 pub use crate::seed::InPlaceSeed;
@@ -825,6 +826,40 @@ mod content {
             ContentVisitor::new()
                 .visit_enum(visitor)
                 .map(TagOrContent::Content)
+        }
+    }
+
+    /// Used by generated code to deserialize an internally tagged enum without sequence format.
+    ///
+    /// Captures map from the original deserializer and searches
+    /// a tag in it.
+    ///
+    /// Not public API.
+    pub struct NoSeqTaggedContentVisitor<T>(TaggedContentVisitor<T>);
+
+    impl<T> NoSeqTaggedContentVisitor<T> {
+        /// Visitor for the content of an internally tagged enum with the given
+        /// tag name.
+        pub fn new(name: &'static str, expecting: &'static str) -> Self {
+            Self(TaggedContentVisitor::new(name, expecting))
+        }
+    }
+
+    impl<'de, T> Visitor<'de> for NoSeqTaggedContentVisitor<T>
+    where
+        T: Deserialize<'de>,
+    {
+        type Value = (T, Content<'de>);
+
+        fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            self.0.expecting(fmt)
+        }
+
+        fn visit_map<M>(self, map: M) -> Result<Self::Value, M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            self.0.visit_map(map)
         }
     }
 

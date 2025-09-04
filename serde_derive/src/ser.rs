@@ -311,7 +311,7 @@ fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Contai
 
 fn serialize_struct_tag_field(cattrs: &attr::Container, struct_trait: &StructTrait) -> TokenStream {
     match cattrs.tag() {
-        attr::TagType::Internal { tag } => {
+        attr::TagType::Internal { tag, .. } => {
             let type_name = cattrs.name().serialize_name();
             let func = struct_trait.serialize_field(Span::call_site());
             quote! {
@@ -473,10 +473,10 @@ fn serialize_variant(
             (attr::TagType::External, false) => {
                 serialize_externally_tagged_variant(params, variant, variant_index, cattrs)
             }
-            (attr::TagType::Internal { tag }, false) => {
+            (attr::TagType::Internal { tag, .. }, false) => {
                 serialize_internally_tagged_variant(params, variant, cattrs, tag)
             }
-            (attr::TagType::Adjacent { tag, content }, false) => {
+            (attr::TagType::Adjacent { tag, content, .. }, false) => {
                 serialize_adjacently_tagged_variant(
                     params,
                     variant,
