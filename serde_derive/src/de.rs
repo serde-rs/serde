@@ -148,12 +148,6 @@ impl Parameters {
             is_packed,
         }
     }
-
-    /// Type name to use in error messages and `&'static str` arguments to
-    /// various Deserializer methods.
-    fn type_name(&self) -> String {
-        self.this_type.segments.last().unwrap().ident.to_string()
-    }
 }
 
 // All the generics in the input, plus a bound `T: Deserialize` for each generic
@@ -415,7 +409,7 @@ fn deserialize_unit_struct(params: &Parameters, cattrs: &attr::Container) -> Fra
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
 
-    let expecting = format!("unit struct {}", params.type_name());
+    let expecting = format!("unit struct {type_name}");
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     quote_block! {
@@ -483,6 +477,7 @@ fn deserialize_tuple(
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
+    let type_name = cattrs.name().deserialize_name();
 
     // If there are getters (implying private fields), construct the local type
     // and use an `Into` conversion to get the remote type. If there are no
@@ -501,9 +496,9 @@ fn deserialize_tuple(
         }
     };
     let expecting = match form {
-        TupleForm::Tuple => format!("tuple struct {}", params.type_name()),
+        TupleForm::Tuple => format!("tuple struct {type_name}"),
         TupleForm::ExternallyTagged(variant_ident) | TupleForm::Untagged(variant_ident, _) => {
-            format!("tuple variant {}::{}", params.type_name(), variant_ident)
+            format!("tuple variant {type_name}::{variant_ident}")
         }
     };
     let expecting = cattrs.expecting().unwrap_or(&expecting);
@@ -529,13 +524,11 @@ fn deserialize_tuple(
     };
     let dispatch = match form {
         TupleForm::Tuple if nfields == 1 => {
-            let type_name = cattrs.name().deserialize_name();
             quote! {
                 _serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr)
             }
         }
         TupleForm::Tuple => {
-            let type_name = cattrs.name().deserialize_name();
             quote! {
                 _serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #field_count, #visitor_expr)
             }
@@ -604,8 +597,9 @@ fn deserialize_tuple_in_place(
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
+    let type_name = cattrs.name().deserialize_name();
 
-    let expecting = format!("tuple struct {}", params.type_name());
+    let expecting = format!("tuple struct {type_name}");
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     let nfields = fields.len();
@@ -637,7 +631,6 @@ fn deserialize_tuple_in_place(
         }
     };
 
-    let type_name = cattrs.name().deserialize_name();
     let dispatch = if nfields == 1 {
         quote!(_serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
     } else {
@@ -945,6 +938,7 @@ fn deserialize_struct(
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
+    let type_name = cattrs.name().deserialize_name();
 
     // If there are getters (implying private fields), construct the local type
     // and use an `Into` conversion to get the remote type. If there are no
@@ -963,11 +957,11 @@ fn deserialize_struct(
         | StructForm::Untagged(variant_ident, _) => quote!(#construct::#variant_ident),
     };
     let expecting = match form {
-        StructForm::Struct => format!("struct {}", params.type_name()),
+        StructForm::Struct => format!("struct {type_name}"),
         StructForm::ExternallyTagged(variant_ident)
         | StructForm::InternallyTagged(variant_ident, _)
         | StructForm::Untagged(variant_ident, _) => {
-            format!("struct variant {}::{}", params.type_name(), variant_ident)
+            format!("struct variant {type_name}::{variant_ident}")
         }
     };
     let expecting = cattrs.expecting().unwrap_or(&expecting);
@@ -1061,7 +1055,6 @@ fn deserialize_struct(
             _serde::Deserializer::deserialize_map(__deserializer, #visitor_expr)
         },
         StructForm::Struct => {
-            let type_name = cattrs.name().deserialize_name();
             quote! {
                 _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
             }
@@ -1132,8 +1125,9 @@ fn deserialize_struct_in_place(
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
         split_with_de_lifetime(params);
     let delife = params.borrowed.de_lifetime();
+    let type_name = cattrs.name().deserialize_name();
 
-    let expecting = format!("struct {}", params.type_name());
+    let expecting = format!("struct {type_name}");
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     let deserialized_fields: Vec<_> = fields
@@ -1156,7 +1150,6 @@ fn deserialize_struct_in_place(
     let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
     let visit_map = Stmts(deserialize_map_in_place(params, fields, cattrs));
     let field_names = deserialized_fields.iter().flat_map(|field| field.aliases);
-    let type_name = cattrs.name().deserialize_name();
 
     let in_place_impl_generics = de_impl_generics.in_place();
     let in_place_ty_generics = de_ty_generics.in_place();
@@ -1292,7 +1285,7 @@ fn deserialize_externally_tagged_enum(
     let delife = params.borrowed.de_lifetime();
 
     let type_name = cattrs.name().deserialize_name();
-    let expecting = format!("enum {}", params.type_name());
+    let expecting = format!("enum {type_name}");
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants);
@@ -1403,7 +1396,8 @@ fn deserialize_internally_tagged_enum(
             }
         });
 
-    let expecting = format!("internally tagged enum {}", params.type_name());
+    let type_name = cattrs.name().deserialize_name();
+    let expecting = format!("internally tagged enum {type_name}");
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     quote_block! {
@@ -1457,10 +1451,9 @@ fn deserialize_adjacently_tagged_enum(
         })
         .collect();
 
-    let rust_name = params.type_name();
-    let expecting = format!("adjacently tagged enum {}", rust_name);
-    let expecting = cattrs.expecting().unwrap_or(&expecting);
     let type_name = cattrs.name().deserialize_name();
+    let expecting = format!("adjacently tagged enum {type_name}");
+    let expecting = cattrs.expecting().unwrap_or(&expecting);
     let deny_unknown_fields = cattrs.deny_unknown_fields();
 
     // If unknown fields are allowed, we pick the visitor that can step over
@@ -1480,7 +1473,7 @@ fn deserialize_adjacently_tagged_enum(
 
     let variant_seed = quote! {
         _serde::__private::de::AdjacentlyTaggedEnumVariantSeed::<__Field> {
-            enum_name: #rust_name,
+            enum_name: #type_name,
             variants: VARIANTS,
             fields_enum: _serde::__private::PhantomData
         }
@@ -1765,16 +1758,15 @@ fn deserialize_untagged_enum_after(
                 quote!(__deserializer),
             ))
         });
+    let type_name = cattrs.name().deserialize_name();
+
     // TODO this message could be better by saving the errors from the failed
     // attempts. The heuristic used by TOML was to count the number of fields
     // processed before an error, and use the error that happened after the
     // largest number of fields. I'm not sure I like that. Maybe it would be
     // better to save all the errors and combine them into one message that
     // explains why none of the variants matched.
-    let fallthrough_msg = format!(
-        "data did not match any variant of untagged enum {}",
-        params.type_name()
-    );
+    let fallthrough_msg = format!("data did not match any variant of untagged enum {type_name}");
     let fallthrough_msg = cattrs.expecting().unwrap_or(&fallthrough_msg);
 
     // Ignore any error associated with non-untagged deserialization so that we
@@ -1866,7 +1858,7 @@ fn deserialize_internally_tagged_variant(
     match effective_style(variant) {
         Style::Unit => {
             let this_value = &params.this_value;
-            let type_name = params.type_name();
+            let type_name = cattrs.name().deserialize_name();
             let variant_name = variant.ident.to_string();
             let default = variant.fields.first().map(|field| {
                 let default = Expr(expr_is_missing(field, cattrs));
@@ -1911,7 +1903,7 @@ fn deserialize_untagged_variant(
     match effective_style(variant) {
         Style::Unit => {
             let this_value = &params.this_value;
-            let type_name = params.type_name();
+            let type_name = cattrs.name().deserialize_name();
             let variant_name = variant.ident.to_string();
             let default = variant.fields.first().map(|field| {
                 let default = Expr(expr_is_missing(field, cattrs));
