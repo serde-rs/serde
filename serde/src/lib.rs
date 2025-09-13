@@ -94,6 +94,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#![feature(precise_capturing_in_traits)]
 // Serde types in rustdoc of other crates get linked to here.
 #![doc(html_root_url = "https://docs.rs/serde/1.0.219")]
 // Support using Serde without the standard library!
