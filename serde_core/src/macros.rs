@@ -1,7 +1,6 @@
 // Super explicit first paragraph because this shows up at the top level and
 // trips up people who are just looking for basic Serialize / Deserialize
 // documentation.
-//
 /// Helper macro when implementing the `Deserializer` part of a new data format
 /// for Serde.
 ///
@@ -123,7 +122,7 @@ macro_rules! forward_to_deserialize_any {
 macro_rules! forward_to_deserialize_any_method {
     ($func:ident<$l:tt, $v:ident>($($arg:ident : $ty:ty),*)) => {
         #[inline]
-        fn $func<$v>(self, $($arg: $ty,)* visitor: $v) -> $crate::__private::Result<$v::Value, <Self as $crate::de::Deserializer<$l>>::Error>
+        fn $func<$v>(self, $($arg: $ty,)* visitor: $v) -> $crate::Result<$v::Value, <Self as $crate::de::Deserializer<$l>>::Error>
         where
             $v: $crate::de::Visitor<$l>,
         {
