@@ -15,17 +15,17 @@ repository = "https://github.com/serde-rs/serde"
 rust-version = "1.56"
 
 [dependencies]
-serde_core = { version = "=1.0.219", path = "../serde_core", default-features = false }
+serde_core = { version = "=1.0.219", path = "../serde_core", default-features = false, features = ["result"] }
 serde_derive = { version = "1", optional = true, path = "../serde_derive" }
 
 [dev-dependencies]
 serde_derive = { version = "1", path = "../serde_derive" }
 
 [package.metadata.playground]
-features = ["derive", "rc", "result"]
+features = ["derive", "rc"]
 
 [package.metadata.docs.rs]
-features = ["derive", "rc", "result", "unstable"]
+features = ["derive", "rc", "unstable"]
 targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = [
     "--generate-link-to-definition",
@@ -46,7 +46,7 @@ serde_derive = { version = "=1.0.219", path = "../serde_derive" }
 ### FEATURES #################################################################
 
 [features]
-default = ["std", "result"]
+default = ["std"]
 
 # Provide derive(Serialize, Deserialize) macros.
 derive = ["serde_derive"]
@@ -70,7 +70,3 @@ alloc = ["serde_core/alloc"]
 # does not preserve identity and may result in multiple copies of the same data.
 # Be sure that this is what you want before enabling this feature.
 rc = ["serde_core/rc"]
-
-# Provide impls for Result<T, E>. Convenient in some contexts but can lead to
-# confusion if ? or unwrap are used incautiously.
-result = ["serde_core/result"]
