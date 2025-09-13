@@ -55,7 +55,6 @@ alloc = []
 # Be sure that this is what you want before enabling this feature.
 rc = []
 
-# Provide impls for Result<T, E>. Enabling these impls allows for serialization
-# and deserialization of Result types, which may be useful in certain contexts
-# but could lead to confusion if ? or unwrap are overused.
+# Provide impls for Result<T, E>. Convenient in some contexts but can lead to
+# confusion if ? or unwrap are used incautiously.
 result = []
