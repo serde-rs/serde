@@ -16,7 +16,7 @@ pub use self::content::{
     TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
 };
 
-pub use serde_core::de::InPlaceSeed;
+pub use serde_core::__private::InPlaceSeed;
 
 /// If the missing field is of type `Option<T>` then treat is as `None`,
 /// otherwise it is an error.

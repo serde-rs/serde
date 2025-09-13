@@ -122,7 +122,7 @@ mod ignored_any;
 mod impls;
 
 pub use self::ignored_any::IgnoredAny;
-pub use crate::seed::InPlaceSeed;
+pub use crate::private::InPlaceSeed;
 #[cfg(all(not(feature = "std"), no_core_error))]
 #[doc(no_inline)]
 pub use crate::std_error::Error as StdError;
