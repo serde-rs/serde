@@ -208,7 +208,6 @@ mod content {
 
     use crate::lib::*;
 
-    use crate::de::value::{MapDeserializer, SeqDeserializer};
     use crate::de::{
         self, size_hint, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected,
         IgnoredAny, MapAccess, SeqAccess, Unexpected, Visitor,
@@ -829,8 +828,7 @@ mod content {
         V: Visitor<'de>,
         E: de::Error,
     {
-        let mut seq_visitor =
-            SeqDeserializer::new(content.into_iter().map(ContentDeserializer::new));
+        let mut seq_visitor = SeqDeserializer::new(content);
         let value = tri!(visitor.visit_seq(&mut seq_visitor));
         tri!(seq_visitor.end());
         Ok(value)
@@ -844,11 +842,7 @@ mod content {
         V: Visitor<'de>,
         E: de::Error,
     {
-        let mut map_visitor = MapDeserializer::new(
-            content
-                .into_iter()
-                .map(|(k, v)| (ContentDeserializer::new(k), ContentDeserializer::new(v))),
-        );
+        let mut map_visitor = MapDeserializer::new(content);
         let value = tri!(visitor.visit_map(&mut map_visitor));
         tri!(map_visitor.end());
         Ok(value)
@@ -1240,6 +1234,362 @@ mod content {
         }
     }
 
+    struct SeqDeserializer<'de, E> {
+        iter: <Vec<Content<'de>> as IntoIterator>::IntoIter,
+        count: usize,
+        marker: PhantomData<E>,
+    }
+
+    impl<'de, E> SeqDeserializer<'de, E> {
+        fn new(content: Vec<Content<'de>>) -> Self {
+            SeqDeserializer {
+                iter: content.into_iter(),
+                count: 0,
+                marker: PhantomData,
+            }
+        }
+    }
+
+    impl<'de, E> SeqDeserializer<'de, E>
+    where
+        E: de::Error,
+    {
+        fn end(self) -> Result<(), E> {
+            let remaining = self.iter.count();
+            if remaining == 0 {
+                Ok(())
+            } else {
+                // First argument is the number of elements in the data, second
+                // argument is the number of elements expected by the Deserialize.
+                Err(de::Error::invalid_length(
+                    self.count + remaining,
+                    &ExpectedInSeq(self.count),
+                ))
+            }
+        }
+    }
+
+    impl<'de, E> Deserializer<'de> for SeqDeserializer<'de, E>
+    where
+        E: de::Error,
+    {
+        type Error = E;
+
+        fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            let v = tri!(visitor.visit_seq(&mut self));
+            tri!(self.end());
+            Ok(v)
+        }
+
+        serde_core::forward_to_deserialize_any! {
+            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+            bytes byte_buf option unit unit_struct newtype_struct seq tuple
+            tuple_struct map struct enum identifier ignored_any
+        }
+    }
+
+    impl<'de, E> SeqAccess<'de> for SeqDeserializer<'de, E>
+    where
+        E: de::Error,
+    {
+        type Error = E;
+
+        fn next_element_seed<V>(&mut self, seed: V) -> Result<Option<V::Value>, Self::Error>
+        where
+            V: DeserializeSeed<'de>,
+        {
+            match self.iter.next() {
+                Some(value) => {
+                    self.count += 1;
+                    seed.deserialize(ContentDeserializer::new(value)).map(Some)
+                }
+                None => Ok(None),
+            }
+        }
+
+        fn size_hint(&self) -> Option<usize> {
+            size_hint::from_bounds(&self.iter)
+        }
+    }
+
+    struct ExpectedInSeq(usize);
+
+    impl Expected for ExpectedInSeq {
+        fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            if self.0 == 1 {
+                formatter.write_str("1 element in sequence")
+            } else {
+                write!(formatter, "{} elements in sequence", self.0)
+            }
+        }
+    }
+
+    struct MapDeserializer<'de, E> {
+        iter: <Vec<(Content<'de>, Content<'de>)> as IntoIterator>::IntoIter,
+        value: Option<Content<'de>>,
+        count: usize,
+        lifetime: PhantomData<&'de ()>,
+        error: PhantomData<E>,
+    }
+
+    impl<'de, E> MapDeserializer<'de, E> {
+        fn new(content: Vec<(Content<'de>, Content<'de>)>) -> Self {
+            MapDeserializer {
+                iter: content.into_iter(),
+                value: None,
+                count: 0,
+                lifetime: PhantomData,
+                error: PhantomData,
+            }
+        }
+    }
+
+    impl<'de, E> MapDeserializer<'de, E>
+    where
+        E: de::Error,
+    {
+        fn end(self) -> Result<(), E> {
+            let remaining = self.iter.count();
+            if remaining == 0 {
+                Ok(())
+            } else {
+                // First argument is the number of elements in the data, second
+                // argument is the number of elements expected by the Deserialize.
+                Err(de::Error::invalid_length(
+                    self.count + remaining,
+                    &ExpectedInMap(self.count),
+                ))
+            }
+        }
+    }
+
+    impl<'de, E> MapDeserializer<'de, E> {
+        fn next_pair(&mut self) -> Option<(Content<'de>, Content<'de>)> {
+            match self.iter.next() {
+                Some((k, v)) => {
+                    self.count += 1;
+                    Some((k, v))
+                }
+                None => None,
+            }
+        }
+    }
+
+    impl<'de, E> Deserializer<'de> for MapDeserializer<'de, E>
+    where
+        E: de::Error,
+    {
+        type Error = E;
+
+        fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            let value = tri!(visitor.visit_map(&mut self));
+            tri!(self.end());
+            Ok(value)
+        }
+
+        fn deserialize_seq<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            let value = tri!(visitor.visit_seq(&mut self));
+            tri!(self.end());
+            Ok(value)
+        }
+
+        fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            let _ = len;
+            self.deserialize_seq(visitor)
+        }
+
+        serde_core::forward_to_deserialize_any! {
+            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+            bytes byte_buf option unit unit_struct newtype_struct tuple_struct map
+            struct enum identifier ignored_any
+        }
+    }
+
+    impl<'de, E> MapAccess<'de> for MapDeserializer<'de, E>
+    where
+        E: de::Error,
+    {
+        type Error = E;
+
+        fn next_key_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+        where
+            T: DeserializeSeed<'de>,
+        {
+            match self.next_pair() {
+                Some((key, value)) => {
+                    self.value = Some(value);
+                    seed.deserialize(ContentDeserializer::new(key)).map(Some)
+                }
+                None => Ok(None),
+            }
+        }
+
+        fn next_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
+        where
+            T: DeserializeSeed<'de>,
+        {
+            let value = self.value.take();
+            // Panic because this indicates a bug in the program rather than an
+            // expected failure.
+            let value = value.expect("MapAccess::next_value called before next_key");
+            seed.deserialize(ContentDeserializer::new(value))
+        }
+
+        fn next_entry_seed<TK, TV>(
+            &mut self,
+            kseed: TK,
+            vseed: TV,
+        ) -> Result<Option<(TK::Value, TV::Value)>, Self::Error>
+        where
+            TK: DeserializeSeed<'de>,
+            TV: DeserializeSeed<'de>,
+        {
+            match self.next_pair() {
+                Some((key, value)) => {
+                    let key = tri!(kseed.deserialize(ContentDeserializer::new(key)));
+                    let value = tri!(vseed.deserialize(ContentDeserializer::new(value)));
+                    Ok(Some((key, value)))
+                }
+                None => Ok(None),
+            }
+        }
+
+        fn size_hint(&self) -> Option<usize> {
+            size_hint::from_bounds(&self.iter)
+        }
+    }
+
+    impl<'de, E> SeqAccess<'de> for MapDeserializer<'de, E>
+    where
+        E: de::Error,
+    {
+        type Error = E;
+
+        fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+        where
+            T: de::DeserializeSeed<'de>,
+        {
+            match self.next_pair() {
+                Some((k, v)) => {
+                    let de = PairDeserializer(k, v, PhantomData);
+                    seed.deserialize(de).map(Some)
+                }
+                None => Ok(None),
+            }
+        }
+
+        fn size_hint(&self) -> Option<usize> {
+            size_hint::from_bounds(&self.iter)
+        }
+    }
+
+    struct PairDeserializer<'de, E>(Content<'de>, Content<'de>, PhantomData<E>);
+
+    impl<'de, E> Deserializer<'de> for PairDeserializer<'de, E>
+    where
+        E: de::Error,
+    {
+        type Error = E;
+
+        serde_core::forward_to_deserialize_any! {
+            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+            bytes byte_buf option unit unit_struct newtype_struct tuple_struct map
+            struct enum identifier ignored_any
+        }
+
+        fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            self.deserialize_seq(visitor)
+        }
+
+        fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            let mut pair_visitor = PairVisitor(Some(self.0), Some(self.1), PhantomData);
+            let pair = tri!(visitor.visit_seq(&mut pair_visitor));
+            if pair_visitor.1.is_none() {
+                Ok(pair)
+            } else {
+                let remaining = pair_visitor.size_hint().unwrap();
+                // First argument is the number of elements in the data, second
+                // argument is the number of elements expected by the Deserialize.
+                Err(de::Error::invalid_length(2, &ExpectedInSeq(2 - remaining)))
+            }
+        }
+
+        fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: de::Visitor<'de>,
+        {
+            if len == 2 {
+                self.deserialize_seq(visitor)
+            } else {
+                // First argument is the number of elements in the data, second
+                // argument is the number of elements expected by the Deserialize.
+                Err(de::Error::invalid_length(2, &ExpectedInSeq(len)))
+            }
+        }
+    }
+
+    struct PairVisitor<'de, E>(Option<Content<'de>>, Option<Content<'de>>, PhantomData<E>);
+
+    impl<'de, E> SeqAccess<'de> for PairVisitor<'de, E>
+    where
+        E: de::Error,
+    {
+        type Error = E;
+
+        fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+        where
+            T: DeserializeSeed<'de>,
+        {
+            if let Some(k) = self.0.take() {
+                seed.deserialize(ContentDeserializer::new(k)).map(Some)
+            } else if let Some(v) = self.1.take() {
+                seed.deserialize(ContentDeserializer::new(v)).map(Some)
+            } else {
+                Ok(None)
+            }
+        }
+
+        fn size_hint(&self) -> Option<usize> {
+            if self.0.is_some() {
+                Some(2)
+            } else if self.1.is_some() {
+                Some(1)
+            } else {
+                Some(0)
+            }
+        }
+    }
+
+    struct ExpectedInMap(usize);
+
+    impl Expected for ExpectedInMap {
+        fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            if self.0 == 1 {
+                formatter.write_str("1 element in map")
+            } else {
+                write!(formatter, "{} elements in map", self.0)
+            }
+        }
+    }
+
     pub struct EnumDeserializer<'de, E>
     where
         E: de::Error,
@@ -1321,10 +1671,9 @@ mod content {
             V: de::Visitor<'de>,
         {
             match self.value {
-                Some(Content::Seq(v)) => de::Deserializer::deserialize_any(
-                    SeqDeserializer::new(v.into_iter().map(ContentDeserializer::new)),
-                    visitor,
-                ),
+                Some(Content::Seq(v)) => {
+                    de::Deserializer::deserialize_any(SeqDeserializer::new(v), visitor)
+                }
                 Some(other) => Err(de::Error::invalid_type(
                     content_unexpected(&other),
                     &"tuple variant",
@@ -1346,17 +1695,11 @@ mod content {
         {
             match self.value {
                 Some(Content::Map(v)) => {
-                    de::Deserializer::deserialize_any(
-                        MapDeserializer::new(v.into_iter().map(|(k, v)| {
-                            (ContentDeserializer::new(k), ContentDeserializer::new(v))
-                        })),
-                        visitor,
-                    )
+                    de::Deserializer::deserialize_any(MapDeserializer::new(v), visitor)
                 }
-                Some(Content::Seq(v)) => de::Deserializer::deserialize_any(
-                    SeqDeserializer::new(v.into_iter().map(ContentDeserializer::new)),
-                    visitor,
-                ),
+                Some(Content::Seq(v)) => {
+                    de::Deserializer::deserialize_any(SeqDeserializer::new(v), visitor)
+                }
                 Some(other) => Err(de::Error::invalid_type(
                     content_unexpected(&other),
                     &"struct variant",
@@ -1429,7 +1772,7 @@ mod content {
         V: Visitor<'de>,
         E: de::Error,
     {
-        let mut seq_visitor = SeqDeserializer::new(content.iter().map(ContentRefDeserializer::new));
+        let mut seq_visitor = SeqRefDeserializer::new(content);
         let value = tri!(visitor.visit_seq(&mut seq_visitor));
         tri!(seq_visitor.end());
         Ok(value)
@@ -1443,20 +1786,7 @@ mod content {
         V: Visitor<'de>,
         E: de::Error,
     {
-        fn content_ref_deserializer_pair<'a, 'de, E>(
-            (k, v): &'a (Content<'de>, Content<'de>),
-        ) -> (
-            ContentRefDeserializer<'a, 'de, E>,
-            ContentRefDeserializer<'a, 'de, E>,
-        ) {
-            (
-                ContentRefDeserializer::new(k),
-                ContentRefDeserializer::new(v),
-            )
-        }
-
-        let map = content.iter().map(content_ref_deserializer_pair);
-        let mut map_visitor = MapDeserializer::new(map);
+        let mut map_visitor = MapRefDeserializer::new(content);
         let value = tri!(visitor.visit_map(&mut map_visitor));
         tri!(map_visitor.end());
         Ok(value)
@@ -1847,6 +2177,341 @@ mod content {
     impl<'a, 'de: 'a, E> Clone for ContentRefDeserializer<'a, 'de, E> {
         fn clone(&self) -> Self {
             *self
+        }
+    }
+
+    struct SeqRefDeserializer<'a, 'de, E> {
+        iter: <&'a [Content<'de>] as IntoIterator>::IntoIter,
+        count: usize,
+        marker: PhantomData<E>,
+    }
+
+    impl<'a, 'de, E> SeqRefDeserializer<'a, 'de, E> {
+        fn new(content: &'a [Content<'de>]) -> Self {
+            SeqRefDeserializer {
+                iter: content.iter(),
+                count: 0,
+                marker: PhantomData,
+            }
+        }
+    }
+
+    impl<'a, 'de, E> SeqRefDeserializer<'a, 'de, E>
+    where
+        E: de::Error,
+    {
+        fn end(self) -> Result<(), E> {
+            let remaining = self.iter.count();
+            if remaining == 0 {
+                Ok(())
+            } else {
+                // First argument is the number of elements in the data, second
+                // argument is the number of elements expected by the Deserialize.
+                Err(de::Error::invalid_length(
+                    self.count + remaining,
+                    &ExpectedInSeq(self.count),
+                ))
+            }
+        }
+    }
+
+    impl<'a, 'de, E> Deserializer<'de> for SeqRefDeserializer<'a, 'de, E>
+    where
+        E: de::Error,
+    {
+        type Error = E;
+
+        fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            let v = tri!(visitor.visit_seq(&mut self));
+            tri!(self.end());
+            Ok(v)
+        }
+
+        serde_core::forward_to_deserialize_any! {
+            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+            bytes byte_buf option unit unit_struct newtype_struct seq tuple
+            tuple_struct map struct enum identifier ignored_any
+        }
+    }
+
+    impl<'a, 'de, E> SeqAccess<'de> for SeqRefDeserializer<'a, 'de, E>
+    where
+        E: de::Error,
+    {
+        type Error = E;
+
+        fn next_element_seed<V>(&mut self, seed: V) -> Result<Option<V::Value>, Self::Error>
+        where
+            V: DeserializeSeed<'de>,
+        {
+            match self.iter.next() {
+                Some(value) => {
+                    self.count += 1;
+                    seed.deserialize(ContentRefDeserializer::new(value))
+                        .map(Some)
+                }
+                None => Ok(None),
+            }
+        }
+
+        fn size_hint(&self) -> Option<usize> {
+            size_hint::from_bounds(&self.iter)
+        }
+    }
+
+    struct MapRefDeserializer<'a, 'de, E> {
+        iter: <&'a [(Content<'de>, Content<'de>)] as IntoIterator>::IntoIter,
+        value: Option<&'a Content<'de>>,
+        count: usize,
+        error: PhantomData<E>,
+    }
+
+    impl<'a, 'de, E> MapRefDeserializer<'a, 'de, E> {
+        fn new(content: &'a [(Content<'de>, Content<'de>)]) -> Self {
+            MapRefDeserializer {
+                iter: content.iter(),
+                value: None,
+                count: 0,
+                error: PhantomData,
+            }
+        }
+    }
+
+    impl<'a, 'de, E> MapRefDeserializer<'a, 'de, E>
+    where
+        E: de::Error,
+    {
+        fn end(self) -> Result<(), E> {
+            let remaining = self.iter.count();
+            if remaining == 0 {
+                Ok(())
+            } else {
+                // First argument is the number of elements in the data, second
+                // argument is the number of elements expected by the Deserialize.
+                Err(de::Error::invalid_length(
+                    self.count + remaining,
+                    &ExpectedInMap(self.count),
+                ))
+            }
+        }
+    }
+
+    impl<'a, 'de, E> MapRefDeserializer<'a, 'de, E> {
+        fn next_pair(&mut self) -> Option<(&'a Content<'de>, &'a Content<'de>)> {
+            match self.iter.next() {
+                Some((k, v)) => {
+                    self.count += 1;
+                    Some((k, v))
+                }
+                None => None,
+            }
+        }
+    }
+
+    impl<'a, 'de, E> Deserializer<'de> for MapRefDeserializer<'a, 'de, E>
+    where
+        E: de::Error,
+    {
+        type Error = E;
+
+        fn deserialize_any<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            let value = tri!(visitor.visit_map(&mut self));
+            tri!(self.end());
+            Ok(value)
+        }
+
+        fn deserialize_seq<V>(mut self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            let value = tri!(visitor.visit_seq(&mut self));
+            tri!(self.end());
+            Ok(value)
+        }
+
+        fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            let _ = len;
+            self.deserialize_seq(visitor)
+        }
+
+        serde_core::forward_to_deserialize_any! {
+            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+            bytes byte_buf option unit unit_struct newtype_struct tuple_struct map
+            struct enum identifier ignored_any
+        }
+    }
+
+    impl<'a, 'de, E> MapAccess<'de> for MapRefDeserializer<'a, 'de, E>
+    where
+        E: de::Error,
+    {
+        type Error = E;
+
+        fn next_key_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+        where
+            T: DeserializeSeed<'de>,
+        {
+            match self.next_pair() {
+                Some((key, value)) => {
+                    self.value = Some(value);
+                    seed.deserialize(ContentRefDeserializer::new(key)).map(Some)
+                }
+                None => Ok(None),
+            }
+        }
+
+        fn next_value_seed<T>(&mut self, seed: T) -> Result<T::Value, Self::Error>
+        where
+            T: DeserializeSeed<'de>,
+        {
+            let value = self.value.take();
+            // Panic because this indicates a bug in the program rather than an
+            // expected failure.
+            let value = value.expect("MapAccess::next_value called before next_key");
+            seed.deserialize(ContentRefDeserializer::new(value))
+        }
+
+        fn next_entry_seed<TK, TV>(
+            &mut self,
+            kseed: TK,
+            vseed: TV,
+        ) -> Result<Option<(TK::Value, TV::Value)>, Self::Error>
+        where
+            TK: DeserializeSeed<'de>,
+            TV: DeserializeSeed<'de>,
+        {
+            match self.next_pair() {
+                Some((key, value)) => {
+                    let key = tri!(kseed.deserialize(ContentRefDeserializer::new(key)));
+                    let value = tri!(vseed.deserialize(ContentRefDeserializer::new(value)));
+                    Ok(Some((key, value)))
+                }
+                None => Ok(None),
+            }
+        }
+
+        fn size_hint(&self) -> Option<usize> {
+            size_hint::from_bounds(&self.iter)
+        }
+    }
+
+    impl<'a, 'de, E> SeqAccess<'de> for MapRefDeserializer<'a, 'de, E>
+    where
+        E: de::Error,
+    {
+        type Error = E;
+
+        fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+        where
+            T: de::DeserializeSeed<'de>,
+        {
+            match self.next_pair() {
+                Some((k, v)) => {
+                    let de = PairRefDeserializer(k, v, PhantomData);
+                    seed.deserialize(de).map(Some)
+                }
+                None => Ok(None),
+            }
+        }
+
+        fn size_hint(&self) -> Option<usize> {
+            size_hint::from_bounds(&self.iter)
+        }
+    }
+
+    struct PairRefDeserializer<'a, 'de, E>(&'a Content<'de>, &'a Content<'de>, PhantomData<E>);
+
+    impl<'a, 'de, E> Deserializer<'de> for PairRefDeserializer<'a, 'de, E>
+    where
+        E: de::Error,
+    {
+        type Error = E;
+
+        serde_core::forward_to_deserialize_any! {
+            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+            bytes byte_buf option unit unit_struct newtype_struct tuple_struct map
+            struct enum identifier ignored_any
+        }
+
+        fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            self.deserialize_seq(visitor)
+        }
+
+        fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            let mut pair_visitor = PairRefVisitor(Some(self.0), Some(self.1), PhantomData);
+            let pair = tri!(visitor.visit_seq(&mut pair_visitor));
+            if pair_visitor.1.is_none() {
+                Ok(pair)
+            } else {
+                let remaining = pair_visitor.size_hint().unwrap();
+                // First argument is the number of elements in the data, second
+                // argument is the number of elements expected by the Deserialize.
+                Err(de::Error::invalid_length(2, &ExpectedInSeq(2 - remaining)))
+            }
+        }
+
+        fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: de::Visitor<'de>,
+        {
+            if len == 2 {
+                self.deserialize_seq(visitor)
+            } else {
+                // First argument is the number of elements in the data, second
+                // argument is the number of elements expected by the Deserialize.
+                Err(de::Error::invalid_length(2, &ExpectedInSeq(len)))
+            }
+        }
+    }
+
+    struct PairRefVisitor<'a, 'de, E>(
+        Option<&'a Content<'de>>,
+        Option<&'a Content<'de>>,
+        PhantomData<E>,
+    );
+
+    impl<'a, 'de, E> SeqAccess<'de> for PairRefVisitor<'a, 'de, E>
+    where
+        E: de::Error,
+    {
+        type Error = E;
+
+        fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+        where
+            T: DeserializeSeed<'de>,
+        {
+            if let Some(k) = self.0.take() {
+                seed.deserialize(ContentRefDeserializer::new(k)).map(Some)
+            } else if let Some(v) = self.1.take() {
+                seed.deserialize(ContentRefDeserializer::new(v)).map(Some)
+            } else {
+                Ok(None)
+            }
+        }
+
+        fn size_hint(&self) -> Option<usize> {
+            if self.0.is_some() {
+                Some(2)
+            } else if self.1.is_some() {
+                Some(1)
+            } else {
+                Some(0)
+            }
         }
     }
 
