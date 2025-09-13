@@ -413,7 +413,7 @@ pub trait Serializer: Sized {
     /// ```edition2021
     /// # use serde::Serializer;
     /// #
-    /// # serde::__private_serialize!();
+    /// # serde_core::__private_serialize!();
     /// #
     /// impl Serialize for bool {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -435,7 +435,7 @@ pub trait Serializer: Sized {
     /// ```edition2021
     /// # use serde::Serializer;
     /// #
-    /// # serde::__private_serialize!();
+    /// # serde_core::__private_serialize!();
     /// #
     /// impl Serialize for i8 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -457,7 +457,7 @@ pub trait Serializer: Sized {
     /// ```edition2021
     /// # use serde::Serializer;
     /// #
-    /// # serde::__private_serialize!();
+    /// # serde_core::__private_serialize!();
     /// #
     /// impl Serialize for i16 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -479,7 +479,7 @@ pub trait Serializer: Sized {
     /// ```edition2021
     /// # use serde::Serializer;
     /// #
-    /// # serde::__private_serialize!();
+    /// # serde_core::__private_serialize!();
     /// #
     /// impl Serialize for i32 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -497,7 +497,7 @@ pub trait Serializer: Sized {
     /// ```edition2021
     /// # use serde::Serializer;
     /// #
-    /// # serde::__private_serialize!();
+    /// # serde_core::__private_serialize!();
     /// #
     /// impl Serialize for i64 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -515,7 +515,7 @@ pub trait Serializer: Sized {
     /// ```edition2021
     /// # use serde::Serializer;
     /// #
-    /// # serde::__private_serialize!();
+    /// # serde_core::__private_serialize!();
     /// #
     /// impl Serialize for i128 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -542,7 +542,7 @@ pub trait Serializer: Sized {
     /// ```edition2021
     /// # use serde::Serializer;
     /// #
-    /// # serde::__private_serialize!();
+    /// # serde_core::__private_serialize!();
     /// #
     /// impl Serialize for u8 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -564,7 +564,7 @@ pub trait Serializer: Sized {
     /// ```edition2021
     /// # use serde::Serializer;
     /// #
-    /// # serde::__private_serialize!();
+    /// # serde_core::__private_serialize!();
     /// #
     /// impl Serialize for u16 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -586,7 +586,7 @@ pub trait Serializer: Sized {
     /// ```edition2021
     /// # use serde::Serializer;
     /// #
-    /// # serde::__private_serialize!();
+    /// # serde_core::__private_serialize!();
     /// #
     /// impl Serialize for u32 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -604,7 +604,7 @@ pub trait Serializer: Sized {
     /// ```edition2021
     /// # use serde::Serializer;
     /// #
-    /// # serde::__private_serialize!();
+    /// # serde_core::__private_serialize!();
     /// #
     /// impl Serialize for u64 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -622,7 +622,7 @@ pub trait Serializer: Sized {
     /// ```edition2021
     /// # use serde::Serializer;
     /// #
-    /// # serde::__private_serialize!();
+    /// # serde_core::__private_serialize!();
     /// #
     /// impl Serialize for u128 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -649,7 +649,7 @@ pub trait Serializer: Sized {
     /// ```edition2021
     /// # use serde::Serializer;
     /// #
-    /// # serde::__private_serialize!();
+    /// # serde_core::__private_serialize!();
     /// #
     /// impl Serialize for f32 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -667,7 +667,7 @@ pub trait Serializer: Sized {
     /// ```edition2021
     /// # use serde::Serializer;
     /// #
-    /// # serde::__private_serialize!();
+    /// # serde_core::__private_serialize!();
     /// #
     /// impl Serialize for f64 {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -688,7 +688,7 @@ pub trait Serializer: Sized {
     /// ```edition2021
     /// # use serde::Serializer;
     /// #
-    /// # serde::__private_serialize!();
+    /// # serde_core::__private_serialize!();
     /// #
     /// impl Serialize for char {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -706,7 +706,7 @@ pub trait Serializer: Sized {
     /// ```edition2021
     /// # use serde::Serializer;
     /// #
-    /// # serde::__private_serialize!();
+    /// # serde_core::__private_serialize!();
     /// #
     /// impl Serialize for str {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -729,7 +729,7 @@ pub trait Serializer: Sized {
     ///
     /// ```edition2021
     /// # use serde::ser::{Serializer, SerializeSeq};
-    /// # use serde::__private::doc::Error;
+    /// # use serde_core::__private::doc::Error;
     /// #
     /// # struct MySerializer;
     /// #
@@ -745,7 +745,7 @@ pub trait Serializer: Sized {
     ///     seq.end()
     /// }
     /// #
-    /// #     serde::__serialize_unimplemented! {
+    /// #     serde_core::__serialize_unimplemented! {
     /// #         bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str none some
     /// #         unit unit_struct unit_variant newtype_struct newtype_variant
     /// #         seq tuple tuple_struct tuple_variant map struct struct_variant
@@ -827,7 +827,7 @@ pub trait Serializer: Sized {
     /// ```edition2021
     /// # use serde::Serializer;
     /// #
-    /// # serde::__private_serialize!();
+    /// # serde_core::__private_serialize!();
     /// #
     /// impl Serialize for () {
     ///     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
