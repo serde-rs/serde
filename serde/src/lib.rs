@@ -233,11 +233,10 @@ macro_rules! tri {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[doc(inline)]
-pub use crate::de::{Deserialize, Deserializer};
-#[doc(inline)]
-pub use crate::ser::{Serialize, Serializer};
-pub use serde_core::*;
+pub use serde_core::{
+    de, forward_to_deserialize_any, ser, serde_if_integer128, Deserialize, Deserializer, Serialize,
+    Serializer,
+};
 
 // Used by generated code and doc tests. Not public API.
 #[doc(hidden)]
