@@ -256,3 +256,9 @@ extern crate serde_derive;
 #[cfg(feature = "serde_derive")]
 #[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
 pub use serde_derive::{Deserialize, Serialize};
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __require_serde_not_serde_core {
+    () => {};
+}
