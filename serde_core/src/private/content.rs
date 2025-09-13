@@ -1,7 +1,6 @@
-use crate::de::{
-    self, size_hint, Deserialize, Deserializer, EnumAccess, MapAccess, SeqAccess, Visitor,
-};
+use crate::de::{self, Deserialize, Deserializer, EnumAccess, MapAccess, SeqAccess, Visitor};
 use crate::lib::*;
+use crate::private::size_hint;
 
 // Used from generated code to buffer the contents of the Deserializer when
 // deserializing untagged enums and internally tagged enums.
