@@ -221,8 +221,6 @@ macro_rules! tri {
 
 #[macro_use]
 mod macros;
-#[doc(hidden)]
-pub use crate::lib::result::Result;
 
 #[macro_use]
 mod integer128;
