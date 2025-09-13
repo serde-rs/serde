@@ -18,9 +18,6 @@ rust-version = "1.56"
 serde_core = { version = "=1.0.219", path = "../serde_core", default-features = false, features = ["result"] }
 serde_derive = { version = "1", optional = true, path = "../serde_derive" }
 
-[dev-dependencies]
-serde_derive = { version = "1", path = "../serde_derive" }
-
 [package.metadata.playground]
 features = ["derive", "rc"]
 

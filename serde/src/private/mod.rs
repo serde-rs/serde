@@ -3,9 +3,6 @@ pub mod de;
 #[cfg(not(no_serde_derive))]
 pub mod ser;
 
-// FIXME: #[cfg(doctest)] once https://github.com/rust-lang/rust/issues/67295 is fixed.
-pub mod doc;
-
 pub use crate::lib::clone::Clone;
 pub use crate::lib::convert::{From, Into, TryFrom};
 pub use crate::lib::default::Default;

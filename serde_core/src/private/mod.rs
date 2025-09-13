@@ -2,6 +2,10 @@
 mod content;
 mod seed;
 
+// FIXME: #[cfg(doctest)] once https://github.com/rust-lang/rust/issues/67295 is fixed.
+#[doc(hidden)]
+pub mod doc;
+
 #[doc(hidden)]
 pub mod size_hint;
 
