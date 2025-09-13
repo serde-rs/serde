@@ -1,4 +1,4 @@
-error[E0277]: the trait bound `MyStruct: serde_core::ser::Serialize` is not satisfied
+error[E0277]: the trait bound `MyStruct: serde::Serialize` is not satisfied
  --> tests/ui/unimplemented/required_by_dependency.rs:4:35
   |
 4 |     serde_test::assert_ser_tokens(&MyStruct, &[]);
@@ -32,7 +32,7 @@ note: required by a bound in `assert_ser_tokens`
   |     T: ?Sized + Serialize,
   |                 ^^^^^^^^^ required by this bound in `assert_ser_tokens`
 
-error[E0277]: the trait bound `MyStruct: serde_core::de::Deserialize<'_>` is not satisfied
+error[E0277]: the trait bound `MyStruct: serde::Deserialize<'de>` is not satisfied
  --> tests/ui/unimplemented/required_by_dependency.rs:5:34
   |
 5 |     serde_test::assert_de_tokens(&MyStruct, &[]);

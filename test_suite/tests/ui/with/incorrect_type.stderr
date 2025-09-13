@@ -1,4 +1,4 @@
-error[E0277]: the trait bound `&u8: Serializer` is not satisfied
+error[E0277]: the trait bound `&u8: serde::Serializer` is not satisfied
   --> tests/ui/with/incorrect_type.rs:14:10
    |
 14 | #[derive(Serialize, Deserialize)]
@@ -30,7 +30,7 @@ note: function defined here
  9 |     pub fn serialize<T, S: Serializer>(_: S) -> Result<S::Ok, S::Error> {
    |            ^^^^^^^^^
 
-error[E0277]: the trait bound `&u8: Serializer` is not satisfied
+error[E0277]: the trait bound `&u8: serde::Serializer` is not satisfied
   --> tests/ui/with/incorrect_type.rs:15:25
    |
 15 | struct W(#[serde(with = "w")] u8, u8);
@@ -49,7 +49,7 @@ error[E0308]: `?` operator has incompatible types
    |
    = note: `?` operator cannot convert from `()` to `u8`
 
-error[E0277]: the trait bound `&u8: Serializer` is not satisfied
+error[E0277]: the trait bound `&u8: serde::Serializer` is not satisfied
   --> tests/ui/with/incorrect_type.rs:17:10
    |
 17 | #[derive(Serialize, Deserialize)]
@@ -81,7 +81,7 @@ note: function defined here
  9 |     pub fn serialize<T, S: Serializer>(_: S) -> Result<S::Ok, S::Error> {
    |            ^^^^^^^^^
 
-error[E0277]: the trait bound `&u8: Serializer` is not satisfied
+error[E0277]: the trait bound `&u8: serde::Serializer` is not satisfied
   --> tests/ui/with/incorrect_type.rs:18:35
    |
 18 | struct S(#[serde(serialize_with = "w::serialize")] u8, u8);

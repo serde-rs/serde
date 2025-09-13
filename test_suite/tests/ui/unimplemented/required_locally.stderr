@@ -1,4 +1,4 @@
-error[E0277]: the trait bound `MyStruct: Serialize` is not satisfied
+error[E0277]: the trait bound `MyStruct: serde::Serialize` is not satisfied
   --> tests/ui/unimplemented/required_locally.rs:21:15
    |
 21 |     to_string(&MyStruct);
@@ -32,7 +32,7 @@ note: required by a bound in `to_string`
  6 |     T: Serialize,
    |        ^^^^^^^^^ required by this bound in `to_string`
 
-error[E0277]: the trait bound `MyStruct: Deserialize<'_>` is not satisfied
+error[E0277]: the trait bound `MyStruct: serde::Deserialize<'de>` is not satisfied
   --> tests/ui/unimplemented/required_locally.rs:22:23
    |
 22 |     let _: MyStruct = from_str("");
