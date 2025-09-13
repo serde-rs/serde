@@ -212,9 +212,6 @@ mod lib {
     pub use alloc::boxed::Box;
     #[cfg(feature = "std")]
     pub use std::boxed::Box;
-
-    #[cfg(feature = "std")]
-    pub use std::error;
 }
 
 // None of this crate's error handling needs the `From::from` error conversion
