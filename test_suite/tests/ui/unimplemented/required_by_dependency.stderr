@@ -1,0 +1,113 @@
+error[E0277]: the trait bound `MyStruct: serde::Serialize` is not satisfied
+ --> tests/ui/unimplemented/required_by_dependency.rs:4:35
+  |
+4 |     serde_test::assert_ser_tokens(&MyStruct, &[]);
+  |     ----------------------------- ^^^^^^^^^ unsatisfied trait bound
+  |     |
+  |     required by a bound introduced by this call
+  |
+help: the trait `serde_core::ser::Serialize` is not implemented for `MyStruct`
+ --> tests/ui/unimplemented/required_by_dependency.rs:1:1
+  |
+1 | struct MyStruct;
+  | ^^^^^^^^^^^^^^^
+  = note: for local types consider adding `#[derive(serde::Serialize)]` to your `MyStruct` type
+  = note: for types from other crates check whether the crate offers a `serde` feature flag
+  = help: the following other types implement trait `serde_core::ser::Serialize`:
+            &'a T
+            &'a mut T
+            ()
+            (T,)
+            (T0, T1)
+            (T0, T1, T2)
+            (T0, T1, T2, T3)
+            (T0, T1, T2, T3, T4)
+          and $N others
+note: required by a bound in `assert_ser_tokens`
+ --> $CARGO/serde_test-$VERSION/src/assert.rs
+  |
+  | pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token])
+  |        ----------------- required by a bound in this function
+  | where
+  |     T: ?Sized + Serialize,
+  |                 ^^^^^^^^^ required by this bound in `assert_ser_tokens`
+
+error[E0277]: the trait bound `MyStruct: serde::Deserialize<'de>` is not satisfied
+ --> tests/ui/unimplemented/required_by_dependency.rs:5:34
+  |
+5 |     serde_test::assert_de_tokens(&MyStruct, &[]);
+  |     ---------------------------- ^^^^^^^^^ unsatisfied trait bound
+  |     |
+  |     required by a bound introduced by this call
+  |
+help: the trait `serde_core::de::Deserialize<'_>` is not implemented for `MyStruct`
+ --> tests/ui/unimplemented/required_by_dependency.rs:1:1
+  |
+1 | struct MyStruct;
+  | ^^^^^^^^^^^^^^^
+  = note: for local types consider adding `#[derive(serde::Deserialize)]` to your `MyStruct` type
+  = note: for types from other crates check whether the crate offers a `serde` feature flag
+  = help: the following other types implement trait `serde_core::de::Deserialize<'de>`:
+            &'a Path
+            &'a [u8]
+            &'a str
+            ()
+            (T,)
+            (T0, T1)
+            (T0, T1, T2)
+            (T0, T1, T2, T3)
+          and $N others
+note: required by a bound in `assert_de_tokens`
+ --> $CARGO/serde_test-$VERSION/src/assert.rs
+  |
+  | pub fn assert_de_tokens<'de, T>(value: &T, tokens: &'de [Token])
+  |        ---------------- required by a bound in this function
+  | where
+  |     T: Deserialize<'de> + PartialEq + Debug,
+  |        ^^^^^^^^^^^^^^^^ required by this bound in `assert_de_tokens`
+
+error[E0277]: can't compare `MyStruct` with `MyStruct`
+ --> tests/ui/unimplemented/required_by_dependency.rs:5:34
+  |
+5 |     serde_test::assert_de_tokens(&MyStruct, &[]);
+  |     ---------------------------- ^^^^^^^^^ no implementation for `MyStruct == MyStruct`
+  |     |
+  |     required by a bound introduced by this call
+  |
+  = help: the trait `PartialEq` is not implemented for `MyStruct`
+note: required by a bound in `assert_de_tokens`
+ --> $CARGO/serde_test-$VERSION/src/assert.rs
+  |
+  | pub fn assert_de_tokens<'de, T>(value: &T, tokens: &'de [Token])
+  |        ---------------- required by a bound in this function
+  | where
+  |     T: Deserialize<'de> + PartialEq + Debug,
+  |                           ^^^^^^^^^ required by this bound in `assert_de_tokens`
+help: consider annotating `MyStruct` with `#[derive(PartialEq)]`
+  |
+  1 + #[derive(PartialEq)]
+  2 | struct MyStruct;
+    |
+
+error[E0277]: `MyStruct` doesn't implement `Debug`
+ --> tests/ui/unimplemented/required_by_dependency.rs:5:34
+  |
+5 |     serde_test::assert_de_tokens(&MyStruct, &[]);
+  |     ---------------------------- ^^^^^^^^^ the trait `Debug` is not implemented for `MyStruct`
+  |     |
+  |     required by a bound introduced by this call
+  |
+  = note: add `#[derive(Debug)]` to `MyStruct` or manually `impl Debug for MyStruct`
+note: required by a bound in `assert_de_tokens`
+ --> $CARGO/serde_test-$VERSION/src/assert.rs
+  |
+  | pub fn assert_de_tokens<'de, T>(value: &T, tokens: &'de [Token])
+  |        ---------------- required by a bound in this function
+  | where
+  |     T: Deserialize<'de> + PartialEq + Debug,
+  |                                       ^^^^^ required by this bound in `assert_de_tokens`
+help: consider annotating `MyStruct` with `#[derive(Debug)]`
+  |
+  1 + #[derive(Debug)]
+  2 | struct MyStruct;
+    |
