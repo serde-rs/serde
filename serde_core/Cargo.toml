@@ -10,7 +10,6 @@ edition = "2021"
 homepage = "https://serde.rs"
 keywords = ["serde", "serialization", "no_std"]
 license = "MIT OR Apache-2.0"
-readme = "crates-io.md"
 repository = "https://github.com/serde-rs/serde"
 rust-version = "1.56"
 

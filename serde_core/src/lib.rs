@@ -1,18 +1,19 @@
-//! # Serde Core
-//!
 //! Serde is a framework for ***ser***ializing and ***de***serializing Rust data
 //! structures efficiently and generically.
 //!
-//! `serde_core` provides essential traits and functions that form the backbone of Serde. It is intended for use by data format implementations;
-//! while it is possible to depend on `serde` crate in a crate that implements a data format,
-//! doing so means that the build of data format crate cannot start until serde_derive is done building (if that feature is enabled).
-//! Thus, implementing a data format in terms of serde_core and not of serde should improve compile times of users of your data format.
+//! The `serde_core` crate contains Serde's trait definitions with **no support
+//! for #\[derive()\]**.
 //!
-//! Alternatively, as an user of data formats you could use `serde_core` instead of `serde` if you do not intend to enable derive feature on `serde`.
+//! In crates that derive an implementation of `Serialize` or `Deserialize`, you
+//! must depend on the [`serde`] crate, not `serde_core`.
 //!
-//! If you're still unsure which crate to use, favor `serde` for the most straightforward experience.
-//! For more detailed information and usage examples, refer to Serde's documentation at <https://serde.rs/>.
+//! In crates that handwrite implementations of Serde traits, or only use them
+//! as trait bounds, depending on `serde_core` is permitted. But `serde`
+//! re-exports all of these traits and can be used for this use case too. If in
+//! doubt, disregard `serde_core` and always use `serde`.
 //!
+//! [`serde`]: https://crates.io/crates/serde
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // Serde types in rustdoc of other crates get linked to here.
