@@ -13,3 +13,5 @@ pub mod string;
 pub use self::content::{Content, ContentVisitor};
 #[doc(hidden)]
 pub use self::seed::InPlaceSeed;
+#[doc(hidden)]
+pub use crate::lib::result::Result;
