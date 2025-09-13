@@ -263,9 +263,8 @@ pub use crate::ser::{Serialize, Serializer};
 pub use lib::from_utf8_lossy;
 
 // Used by generated code. Not public API.
-#[cfg(all(not(no_serde_derive), any(feature = "std", feature = "alloc")))]
 #[doc(hidden)]
-#[path = "private.rs"]
+#[path = "private/mod.rs"]
 pub mod __private;
 #[cfg(all(not(no_serde_derive), any(feature = "std", feature = "alloc")))]
 use self::__private as private;
