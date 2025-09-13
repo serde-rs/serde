@@ -120,7 +120,6 @@ pub mod value;
 
 mod ignored_any;
 mod impls;
-pub mod size_hint;
 
 pub use self::ignored_any::IgnoredAny;
 pub use crate::seed::InPlaceSeed;
