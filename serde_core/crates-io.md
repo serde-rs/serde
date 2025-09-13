@@ -12,7 +12,7 @@ Serde Core does _not_ offer any convenience functions for automatically implemen
 
 You may be looking for:
 
-- [API documentation](https://docs.rs/serde_core)
+- [API documentation](https://docs.rs/serde)
 - [An overview of Serde](https://serde.rs/)
 - [Data formats supported by Serde](https://serde.rs/#data-formats)
 - [Examples](https://serde.rs/examples.html)
