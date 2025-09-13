@@ -70,7 +70,7 @@ jobs:
       - run: cd serde && cargo build --no-default-features --features alloc
       - run: cd serde && cargo build --no-default-features --features rc,alloc
       - run: cd serde && cargo build --no-default-features --features unstable
-      - run: cd serde && cargo test --features derive,rc,unstable
+      - run: cd serde_core && cargo test --features rc,unstable
       - run: cd test_suite/no_std && cargo build
         if: matrix.os != 'windows'
       - run: cd serde_derive && cargo check --tests
@@ -145,6 +145,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@clippy
       - run: cd serde && cargo clippy --features rc,unstable -- -Dclippy::all -Dclippy::pedantic
+      - run: cd serde_core && cargo clippy --features rc,unstable -- -Dclippy::all -Dclippy::pedantic
       - run: cd serde_derive && cargo clippy -- -Dclippy::all -Dclippy::pedantic
       - run: cd serde_derive_internals && cargo clippy -- -Dclippy::all -Dclippy::pedantic
       - run: cd test_suite && cargo clippy --tests --features unstable -- -Dclippy::all -Dclippy::pedantic
@@ -160,7 +161,7 @@ jobs:
         with:
           toolchain: nightly-2025-05-16  # https://github.com/rust-lang/miri/issues/4323
       - run: cargo miri setup
-      - run: cd serde && cargo miri test --features derive,rc,unstable
+      - run: cd serde_core && cargo miri test --features rc,unstable
         env:
           MIRIFLAGS: -Zmiri-strict-provenance
       - run: cd test_suite && cargo miri test --features unstable
