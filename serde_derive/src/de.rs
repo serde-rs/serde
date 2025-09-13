@@ -2662,7 +2662,7 @@ fn deserialize_map(
             if let _serde::__private::Some(_serde::__private::Some((__key, _))) =
                 __collect.into_iter().filter(_serde::__private::Option::is_some).next()
             {
-                if let _serde::__private::Some(__key) = __key.as_str() {
+                if let _serde::__private::Some(__key) = _serde::__private::de::content_as_str(&__key) {
                     return _serde::__private::Err(
                         _serde::de::Error::custom(format_args!("unknown field `{}`", &__key)));
                 } else {

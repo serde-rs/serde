@@ -1255,6 +1255,16 @@ pub trait Deserializer<'de>: Sized {
     fn is_human_readable(&self) -> bool {
         true
     }
+
+    // Not public API.
+    #[cfg(all(not(no_serde_derive), any(feature = "std", feature = "alloc")))]
+    #[doc(hidden)]
+    fn __deserialize_content_v1<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de, Value = crate::private::Content<'de>>,
+    {
+        self.deserialize_any(visitor)
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
