@@ -106,7 +106,12 @@
 //
 //    https://github.com/serde-rs/serde/issues/812
 #![cfg_attr(feature = "unstable", feature(never_type))]
-#![allow(unknown_lints, bare_trait_objects, deprecated, mismatched_lifetime_syntaxes)]
+#![allow(
+    unknown_lints,
+    bare_trait_objects,
+    deprecated,
+    mismatched_lifetime_syntaxes
+)]
 // Ignored clippy and clippy_pedantic lints
 #![allow(
     // clippy bug: https://github.com/rust-lang/rust-clippy/issues/5704
