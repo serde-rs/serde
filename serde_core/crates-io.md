@@ -16,7 +16,7 @@ You may be looking for:
 - [An overview of Serde](https://serde.rs/)
 - [Data formats supported by Serde](https://serde.rs/#data-formats)
 - [Examples](https://serde.rs/examples.html)
-- [Release notes](https://github.com/serde-rs/serde_core/releases)
+- [Release notes](https://github.com/serde-rs/serde/releases)
 
 ## Getting help
 
