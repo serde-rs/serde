@@ -4,8 +4,7 @@ use crate::de::{
     Deserialize, Deserializer, EnumAccess, Error, MapAccess, SeqAccess, Unexpected, VariantAccess,
     Visitor,
 };
-use crate::private;
-use crate::seed::InPlaceSeed;
+use crate::private::{self, InPlaceSeed};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 use crate::private::size_hint;

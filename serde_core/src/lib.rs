@@ -243,9 +243,6 @@ pub use crate::ser::{Serialize, Serializer};
 pub mod __private;
 use self::__private as private;
 
-#[path = "de/seed.rs"]
-mod seed;
-
 #[cfg(all(not(feature = "std"), no_core_error))]
 mod std_error;
 
