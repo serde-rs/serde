@@ -266,3 +266,13 @@ mod seed;
 
 #[cfg(all(not(feature = "std"), no_core_error))]
 mod std_error;
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! __require_serde_not_serde_core {
+    () => {
+        ::core::compile_error!(
+            "Serde derive requires a dependency on the serde crate, not serde_core"
+        );
+    };
+}
