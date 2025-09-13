@@ -8,7 +8,7 @@ use crate::private;
 use crate::seed::InPlaceSeed;
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use crate::de::size_hint;
+use crate::private::size_hint;
 
 ////////////////////////////////////////////////////////////////////////////////
 
