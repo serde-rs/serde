@@ -1669,7 +1669,7 @@ fn deserialize_adjacently_tagged_enum(
                     // First key is the content.
                     _serde::__private::Some(_serde::__private::de::TagOrContentField::Content) => {
                         // Buffer up the content.
-                        let __content = _serde::de::MapAccess::next_value::<_serde::__private::de::Content>(&mut __map)?;
+                        let __content = _serde::de::MapAccess::next_value_seed(&mut __map, _serde::__private::de::ContentVisitor::new())?;
                         // Visit the second key.
                         match #next_relevant_key {
                             // Second key is the tag.
@@ -1789,7 +1789,7 @@ fn deserialize_untagged_enum_after(
     });
 
     quote_block! {
-        let __content = <_serde::__private::de::Content as _serde::Deserialize>::deserialize(__deserializer)?;
+        let __content = _serde::de::DeserializeSeed::deserialize(_serde::__private::de::ContentVisitor::new(), __deserializer)?;
         let __deserializer = _serde::__private::de::ContentRefDeserializer::<__D::Error>::new(&__content);
 
         #first_attempt
@@ -2592,7 +2592,7 @@ fn deserialize_map(
             __Field::__other(__name) => {
                 __collect.push(_serde::__private::Some((
                     __name,
-                    _serde::de::MapAccess::next_value(&mut __map)?)));
+                    _serde::de::MapAccess::next_value_seed(&mut __map, _serde::__private::de::ContentVisitor::new())?)));
             }
         })
     } else if cattrs.deny_unknown_fields() {

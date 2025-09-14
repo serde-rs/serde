@@ -11,9 +11,10 @@ use crate::de::{MapAccess, Unexpected};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{
-    content_as_str, Content, ContentDeserializer, ContentRefDeserializer, EnumDeserializer,
-    InternallyTaggedUnitVisitor, TagContentOtherField, TagContentOtherFieldVisitor,
-    TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor, UntaggedUnitVisitor,
+    content_as_str, Content, ContentDeserializer, ContentRefDeserializer, ContentVisitor,
+    EnumDeserializer, InternallyTaggedUnitVisitor, TagContentOtherField,
+    TagContentOtherFieldVisitor, TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor,
+    UntaggedUnitVisitor,
 };
 
 pub use serde_core::__private::InPlaceSeed;
@@ -212,8 +213,8 @@ mod content {
         self, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected, IgnoredAny,
         MapAccess, SeqAccess, Unexpected, Visitor,
     };
+    use serde_core::__private::size_hint;
     pub use serde_core::__private::Content;
-    use serde_core::__private::{size_hint, ContentVisitor};
 
     pub fn content_as_str<'a, 'de>(content: &'a Content<'de>) -> Option<&'a str> {
         match *content {
@@ -280,6 +281,228 @@ mod content {
             Content::Newtype(_) => Unexpected::NewtypeStruct,
             Content::Seq(_) => Unexpected::Seq,
             Content::Map(_) => Unexpected::Map,
+        }
+    }
+
+    pub struct ContentVisitor<'de> {
+        value: PhantomData<Content<'de>>,
+    }
+
+    impl<'de> ContentVisitor<'de> {
+        pub fn new() -> Self {
+            ContentVisitor { value: PhantomData }
+        }
+    }
+
+    impl<'de> DeserializeSeed<'de> for ContentVisitor<'de> {
+        type Value = Content<'de>;
+
+        fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            deserializer.__deserialize_content_v1(self)
+        }
+    }
+
+    impl<'de> Visitor<'de> for ContentVisitor<'de> {
+        type Value = Content<'de>;
+
+        fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            fmt.write_str("any value")
+        }
+
+        fn visit_bool<F>(self, value: bool) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::Bool(value))
+        }
+
+        fn visit_i8<F>(self, value: i8) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::I8(value))
+        }
+
+        fn visit_i16<F>(self, value: i16) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::I16(value))
+        }
+
+        fn visit_i32<F>(self, value: i32) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::I32(value))
+        }
+
+        fn visit_i64<F>(self, value: i64) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::I64(value))
+        }
+
+        fn visit_u8<F>(self, value: u8) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::U8(value))
+        }
+
+        fn visit_u16<F>(self, value: u16) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::U16(value))
+        }
+
+        fn visit_u32<F>(self, value: u32) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::U32(value))
+        }
+
+        fn visit_u64<F>(self, value: u64) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::U64(value))
+        }
+
+        fn visit_f32<F>(self, value: f32) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::F32(value))
+        }
+
+        fn visit_f64<F>(self, value: f64) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::F64(value))
+        }
+
+        fn visit_char<F>(self, value: char) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::Char(value))
+        }
+
+        fn visit_str<F>(self, value: &str) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::String(value.into()))
+        }
+
+        fn visit_borrowed_str<F>(self, value: &'de str) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::Str(value))
+        }
+
+        fn visit_string<F>(self, value: String) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::String(value))
+        }
+
+        fn visit_bytes<F>(self, value: &[u8]) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::ByteBuf(value.into()))
+        }
+
+        fn visit_borrowed_bytes<F>(self, value: &'de [u8]) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::Bytes(value))
+        }
+
+        fn visit_byte_buf<F>(self, value: Vec<u8>) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::ByteBuf(value))
+        }
+
+        fn visit_unit<F>(self) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::Unit)
+        }
+
+        fn visit_none<F>(self) -> Result<Self::Value, F>
+        where
+            F: de::Error,
+        {
+            Ok(Content::None)
+        }
+
+        fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let v = tri!(ContentVisitor::new().deserialize(deserializer));
+            Ok(Content::Some(Box::new(v)))
+        }
+
+        fn visit_newtype_struct<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let v = tri!(ContentVisitor::new().deserialize(deserializer));
+            Ok(Content::Newtype(Box::new(v)))
+        }
+
+        fn visit_seq<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
+        where
+            V: SeqAccess<'de>,
+        {
+            let mut vec =
+                Vec::<Content>::with_capacity(size_hint::cautious::<Content>(visitor.size_hint()));
+            while let Some(e) = tri!(visitor.next_element_seed(ContentVisitor::new())) {
+                vec.push(e);
+            }
+            Ok(Content::Seq(vec))
+        }
+
+        fn visit_map<V>(self, mut visitor: V) -> Result<Self::Value, V::Error>
+        where
+            V: MapAccess<'de>,
+        {
+            let mut vec =
+                Vec::<(Content, Content)>::with_capacity(
+                    size_hint::cautious::<(Content, Content)>(visitor.size_hint()),
+                );
+            while let Some(kv) =
+                tri!(visitor.next_entry_seed(ContentVisitor::new(), ContentVisitor::new()))
+            {
+                vec.push(kv);
+            }
+            Ok(Content::Map(vec))
+        }
+
+        fn visit_enum<V>(self, _visitor: V) -> Result<Self::Value, V::Error>
+        where
+            V: EnumAccess<'de>,
+        {
+            Err(de::Error::custom(
+                "untagged and internally tagged enums do not support enum input",
+            ))
         }
     }
 
@@ -622,7 +845,7 @@ mod content {
                 }
             };
             let rest = de::value::SeqAccessDeserializer::new(seq);
-            Ok((tag, tri!(Content::deserialize(rest))))
+            Ok((tag, tri!(ContentVisitor::new().deserialize(rest))))
         }
 
         fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
@@ -643,7 +866,7 @@ mod content {
                         tag = Some(tri!(map.next_value()));
                     }
                     TagOrContent::Content(k) => {
-                        let v = tri!(map.next_value());
+                        let v = tri!(map.next_value_seed(ContentVisitor::new()));
                         vec.push((k, v));
                     }
                 }
