@@ -231,9 +231,11 @@ macro_rules! tri {
 ////////////////////////////////////////////////////////////////////////////////
 
 pub use serde_core::{
-    de, forward_to_deserialize_any, ser, serde_if_integer128, Deserialize, Deserializer, Serialize,
-    Serializer,
+    de, forward_to_deserialize_any, ser, Deserialize, Deserializer, Serialize, Serializer,
 };
+
+#[macro_use]
+mod integer128;
 
 // Used by generated code and doc tests. Not public API.
 #[doc(hidden)]
