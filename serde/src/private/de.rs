@@ -1585,7 +1585,6 @@ mod content {
         iter: <Vec<(Content<'de>, Content<'de>)> as IntoIterator>::IntoIter,
         value: Option<Content<'de>>,
         count: usize,
-        lifetime: PhantomData<&'de ()>,
         error: PhantomData<E>,
     }
 
@@ -1595,7 +1594,6 @@ mod content {
                 iter: content.into_iter(),
                 value: None,
                 count: 0,
-                lifetime: PhantomData,
                 error: PhantomData,
             }
         }
