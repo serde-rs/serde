@@ -225,6 +225,37 @@ mod content {
         }
     }
 
+    fn content_clone<'de>(content: &Content<'de>) -> Content<'de> {
+        match content {
+            Content::Bool(b) => Content::Bool(*b),
+            Content::U8(n) => Content::U8(*n),
+            Content::U16(n) => Content::U16(*n),
+            Content::U32(n) => Content::U32(*n),
+            Content::U64(n) => Content::U64(*n),
+            Content::I8(n) => Content::I8(*n),
+            Content::I16(n) => Content::I16(*n),
+            Content::I32(n) => Content::I32(*n),
+            Content::I64(n) => Content::I64(*n),
+            Content::F32(f) => Content::F32(*f),
+            Content::F64(f) => Content::F64(*f),
+            Content::Char(c) => Content::Char(*c),
+            Content::String(s) => Content::String(s.clone()),
+            Content::Str(s) => Content::Str(*s),
+            Content::ByteBuf(b) => Content::ByteBuf(b.clone()),
+            Content::Bytes(b) => Content::Bytes(b),
+            Content::None => Content::None,
+            Content::Some(content) => Content::Some(Box::new(content_clone(content))),
+            Content::Unit => Content::Unit,
+            Content::Newtype(content) => Content::Newtype(Box::new(content_clone(content))),
+            Content::Seq(seq) => Content::Seq(seq.iter().map(content_clone).collect()),
+            Content::Map(map) => Content::Map(
+                map.iter()
+                    .map(|(k, v)| (content_clone(k), content_clone(v)))
+                    .collect(),
+            ),
+        }
+    }
+
     #[cold]
     fn content_unexpected<'a, 'de>(content: &'a Content<'de>) -> Unexpected<'a> {
         match *content {
@@ -2158,7 +2189,7 @@ mod content {
             V: Visitor<'de, Value = Content<'de>>,
         {
             let _ = visitor;
-            Ok(self.content.clone())
+            Ok(content_clone(self.content))
         }
     }
 

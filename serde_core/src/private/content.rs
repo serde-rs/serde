@@ -8,7 +8,6 @@ use crate::private::size_hint;
 // Not public API. Use serde-value instead.
 //
 // Obsoleted by format-specific buffer types (https://github.com/serde-rs/serde/pull/2912).
-#[derive(Clone)]
 #[doc(hidden)]
 pub enum Content<'de> {
     Bool(bool),
