@@ -11,6 +11,7 @@ resolver = "2"
 [patch.crates-io]
 serde = { path = "serde" }
 serde_core = { path = "serde_core" }
+serde_derive = { path = "serde_derive" }
 
 [workspace.dependencies]
 proc-macro2 = { version = "1.0.74", default-features = false }
