@@ -7,7 +7,7 @@ use crate::de::{
 };
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use crate::de::{MapAccess, Unexpected};
+use crate::de::{Expected, MapAccess, StdError, Unexpected};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{
@@ -3181,6 +3181,72 @@ where
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
+#[derive(Debug)]
+pub enum FlatMapDeserializerError<E> {
+    Inner(E),
+    NoVariantFoundInFlattenedData(&'static str),
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<E> Display for FlatMapDeserializerError<E>
+where
+    E: Display,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FlatMapDeserializerError::Inner(e) => write!(f, "{}", e),
+            FlatMapDeserializerError::NoVariantFoundInFlattenedData(name) => {
+                write!(f, "no variant of enum {} found in flattened data", name)
+            }
+        }
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<E> StdError for FlatMapDeserializerError<E> where E: StdError {}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<E> Error for FlatMapDeserializerError<E>
+where
+    E: Error,
+{
+    fn custom<T>(msg: T) -> Self
+    where
+        T: Display,
+    {
+        FlatMapDeserializerError::Inner(Error::custom(msg))
+    }
+
+    fn invalid_type(unexp: Unexpected, exp: &Expected) -> Self {
+        FlatMapDeserializerError::Inner(Error::invalid_type(unexp, exp))
+    }
+
+    fn invalid_value(unexp: Unexpected, exp: &Expected) -> Self {
+        FlatMapDeserializerError::Inner(Error::invalid_value(unexp, exp))
+    }
+
+    fn invalid_length(len: usize, exp: &Expected) -> Self {
+        FlatMapDeserializerError::Inner(Error::invalid_length(len, exp))
+    }
+
+    fn unknown_variant(variant: &str, exp: &'static [&'static str]) -> Self {
+        FlatMapDeserializerError::Inner(Error::unknown_variant(variant, exp))
+    }
+
+    fn unknown_field(field: &str, exp: &'static [&'static str]) -> Self {
+        FlatMapDeserializerError::Inner(Error::unknown_field(field, exp))
+    }
+
+    fn missing_field(field: &'static str) -> Self {
+        FlatMapDeserializerError::Inner(Error::missing_field(field))
+    }
+
+    fn duplicate_field(field: &'static str) -> Self {
+        FlatMapDeserializerError::Inner(Error::duplicate_field(field))
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
 pub struct FlatMapDeserializer<'a, 'de: 'a, E>(
     pub &'a mut Vec<Option<(Content<'de>, Content<'de>)>>,
     pub PhantomData<E>,
@@ -3191,7 +3257,7 @@ impl<'a, 'de, E> FlatMapDeserializer<'a, 'de, E>
 where
     E: Error,
 {
-    fn deserialize_other<V>() -> Result<V, E> {
+    fn deserialize_other<V>() -> Result<V, FlatMapDeserializerError<E>> {
         Err(Error::custom("can only flatten structs and maps"))
     }
 }
@@ -3216,7 +3282,7 @@ impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
 where
     E: Error,
 {
-    type Error = E;
+    type Error = FlatMapDeserializerError<E>;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -3240,10 +3306,9 @@ where
             }
         }
 
-        Err(Error::custom(format_args!(
-            "no variant of enum {} found in flattened data",
-            name
-        )))
+        Err(FlatMapDeserializerError::NoVariantFoundInFlattenedData(
+            name,
+        ))
     }
 
     fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Self::Error>
