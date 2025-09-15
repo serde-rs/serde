@@ -17,7 +17,7 @@ pub use self::content::{
     UntaggedUnitVisitor,
 };
 
-pub use serde_core::__private::InPlaceSeed;
+pub use crate::serde_core_private::InPlaceSeed;
 
 /// If the missing field is of type `Option<T>` then treat is as `None`,
 /// otherwise it is an error.
@@ -216,8 +216,8 @@ mod content {
         self, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected, IgnoredAny,
         MapAccess, SeqAccess, Unexpected, Visitor,
     };
-    use serde_core::__private::size_hint;
-    pub use serde_core::__private::Content;
+    use crate::serde_core_private::size_hint;
+    pub use crate::serde_core_private::Content;
 
     pub fn content_as_str<'a, 'de>(content: &'a Content<'de>) -> Option<&'a str> {
         match *content {
