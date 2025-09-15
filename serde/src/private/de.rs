@@ -28,6 +28,7 @@ where
 {
     struct MissingFieldDeserializer<E>(&'static str, PhantomData<E>);
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, E> Deserializer<'de> for MissingFieldDeserializer<E>
     where
         E: Error,
@@ -67,6 +68,7 @@ where
 {
     struct CowStrVisitor;
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'a> Visitor<'a> for CowStrVisitor {
         type Value = Cow<'a, str>;
 
@@ -140,6 +142,7 @@ where
 {
     struct CowBytesVisitor;
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'a> Visitor<'a> for CowBytesVisitor {
         type Value = Cow<'a, [u8]>;
 
@@ -294,6 +297,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de> DeserializeSeed<'de> for ContentVisitor<'de> {
         type Value = Content<'de>;
 
@@ -305,6 +309,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de> Visitor<'de> for ContentVisitor<'de> {
         type Value = Content<'de>;
 
@@ -530,6 +535,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de> DeserializeSeed<'de> for TagOrContentVisitor<'de> {
         type Value = TagOrContent<'de>;
 
@@ -543,6 +549,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de> Visitor<'de> for TagOrContentVisitor<'de> {
         type Value = TagOrContent<'de>;
 
@@ -824,6 +831,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, T> Visitor<'de> for TaggedContentVisitor<T>
     where
         T: Deserialize<'de>,
@@ -894,6 +902,7 @@ mod content {
         pub content: &'static str,
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de> DeserializeSeed<'de> for TagOrContentFieldVisitor {
         type Value = TagOrContentField;
 
@@ -905,6 +914,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de> Visitor<'de> for TagOrContentFieldVisitor {
         type Value = TagOrContentField;
 
@@ -971,6 +981,7 @@ mod content {
         pub content: &'static str,
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de> DeserializeSeed<'de> for TagContentOtherFieldVisitor {
         type Value = TagContentOtherField;
 
@@ -982,6 +993,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de> Visitor<'de> for TagContentOtherFieldVisitor {
         type Value = TagContentOtherField;
 
@@ -1104,6 +1116,7 @@ mod content {
 
     /// Used when deserializing an internally tagged enum because the content
     /// will be used exactly once.
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, E> Deserializer<'de> for ContentDeserializer<'de, E>
     where
         E: de::Error,
@@ -1523,6 +1536,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, E> Deserializer<'de> for SeqDeserializer<'de, E>
     where
         E: de::Error,
@@ -1545,6 +1559,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, E> SeqAccess<'de> for SeqDeserializer<'de, E>
     where
         E: de::Error,
@@ -1571,6 +1586,7 @@ mod content {
 
     struct ExpectedInSeq(usize);
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl Expected for ExpectedInSeq {
         fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
             if self.0 == 1 {
@@ -1630,6 +1646,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, E> Deserializer<'de> for MapDeserializer<'de, E>
     where
         E: de::Error,
@@ -1669,6 +1686,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, E> MapAccess<'de> for MapDeserializer<'de, E>
     where
         E: de::Error,
@@ -1723,6 +1741,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, E> SeqAccess<'de> for MapDeserializer<'de, E>
     where
         E: de::Error,
@@ -1749,6 +1768,7 @@ mod content {
 
     struct PairDeserializer<'de, E>(Content<'de>, Content<'de>, PhantomData<E>);
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, E> Deserializer<'de> for PairDeserializer<'de, E>
     where
         E: de::Error,
@@ -1800,6 +1820,7 @@ mod content {
 
     struct PairVisitor<'de, E>(Option<Content<'de>>, Option<Content<'de>>, PhantomData<E>);
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, E> SeqAccess<'de> for PairVisitor<'de, E>
     where
         E: de::Error,
@@ -1832,6 +1853,7 @@ mod content {
 
     struct ExpectedInMap(usize);
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl Expected for ExpectedInMap {
         fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
             if self.0 == 1 {
@@ -1864,6 +1886,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, E> de::EnumAccess<'de> for EnumDeserializer<'de, E>
     where
         E: de::Error,
@@ -1892,6 +1915,7 @@ mod content {
         err: PhantomData<E>,
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, E> de::VariantAccess<'de> for VariantDeserializer<'de, E>
     where
         E: de::Error,
@@ -2046,6 +2070,7 @@ mod content {
 
     /// Used when deserializing an untagged enum because the content may need
     /// to be used more than once.
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, 'a, E> Deserializer<'de> for ContentRefDeserializer<'a, 'de, E>
     where
         E: de::Error,
@@ -2424,8 +2449,10 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'a, 'de: 'a, E> Copy for ContentRefDeserializer<'a, 'de, E> {}
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'a, 'de: 'a, E> Clone for ContentRefDeserializer<'a, 'de, E> {
         fn clone(&self) -> Self {
             *self
@@ -2467,6 +2494,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'a, 'de, E> Deserializer<'de> for SeqRefDeserializer<'a, 'de, E>
     where
         E: de::Error,
@@ -2489,6 +2517,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'a, 'de, E> SeqAccess<'de> for SeqRefDeserializer<'a, 'de, E>
     where
         E: de::Error,
@@ -2563,6 +2592,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'a, 'de, E> Deserializer<'de> for MapRefDeserializer<'a, 'de, E>
     where
         E: de::Error,
@@ -2602,6 +2632,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'a, 'de, E> MapAccess<'de> for MapRefDeserializer<'a, 'de, E>
     where
         E: de::Error,
@@ -2656,6 +2687,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'a, 'de, E> SeqAccess<'de> for MapRefDeserializer<'a, 'de, E>
     where
         E: de::Error,
@@ -2682,6 +2714,7 @@ mod content {
 
     struct PairRefDeserializer<'a, 'de, E>(&'a Content<'de>, &'a Content<'de>, PhantomData<E>);
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'a, 'de, E> Deserializer<'de> for PairRefDeserializer<'a, 'de, E>
     where
         E: de::Error,
@@ -2737,6 +2770,7 @@ mod content {
         PhantomData<E>,
     );
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'a, 'de, E> SeqAccess<'de> for PairRefVisitor<'a, 'de, E>
     where
         E: de::Error,
@@ -2776,6 +2810,7 @@ mod content {
         err: PhantomData<E>,
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, 'a, E> de::EnumAccess<'de> for EnumRefDeserializer<'a, 'de, E>
     where
         E: de::Error,
@@ -2804,6 +2839,7 @@ mod content {
         err: PhantomData<E>,
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, 'a, E> de::VariantAccess<'de> for VariantRefDeserializer<'a, 'de, E>
     where
         E: de::Error,
@@ -2890,6 +2926,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, E> de::IntoDeserializer<'de, E> for ContentDeserializer<'de, E>
     where
         E: de::Error,
@@ -2901,6 +2938,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, 'a, E> de::IntoDeserializer<'de, E> for ContentRefDeserializer<'a, 'de, E>
     where
         E: de::Error,
@@ -2930,6 +2968,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, 'a> Visitor<'de> for InternallyTaggedUnitVisitor<'a> {
         type Value = ();
 
@@ -2975,6 +3014,7 @@ mod content {
         }
     }
 
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, 'a> Visitor<'de> for UntaggedUnitVisitor<'a> {
         type Value = ();
 
@@ -3022,6 +3062,7 @@ pub trait IdentifierDeserializer<'de, E: Error> {
 
 pub struct Borrowed<'de, T: 'de + ?Sized>(pub &'de T);
 
+#[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
 impl<'de, E> IdentifierDeserializer<'de, E> for u64
 where
     E: Error,
@@ -3038,6 +3079,7 @@ pub struct StrDeserializer<'a, E> {
     marker: PhantomData<E>,
 }
 
+#[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
 impl<'de, 'a, E> Deserializer<'de> for StrDeserializer<'a, E>
 where
     E: Error,
@@ -3063,6 +3105,7 @@ pub struct BorrowedStrDeserializer<'de, E> {
     marker: PhantomData<E>,
 }
 
+#[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
 impl<'de, E> Deserializer<'de> for BorrowedStrDeserializer<'de, E>
 where
     E: Error,
@@ -3083,6 +3126,7 @@ where
     }
 }
 
+#[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
 impl<'a, E> IdentifierDeserializer<'a, E> for &'a str
 where
     E: Error,
@@ -3097,6 +3141,7 @@ where
     }
 }
 
+#[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
 impl<'de, E> IdentifierDeserializer<'de, E> for Borrowed<'de, str>
 where
     E: Error,
@@ -3111,6 +3156,7 @@ where
     }
 }
 
+#[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
 impl<'a, E> IdentifierDeserializer<'a, E> for &'a [u8]
 where
     E: Error,
@@ -3122,6 +3168,7 @@ where
     }
 }
 
+#[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
 impl<'de, E> IdentifierDeserializer<'de, E> for Borrowed<'de, [u8]>
 where
     E: Error,
@@ -3164,6 +3211,7 @@ macro_rules! forward_to_deserialize_other {
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
+#[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
 impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
 where
     E: Error,
@@ -3300,6 +3348,7 @@ struct FlatMapAccess<'a, 'de: 'a, E> {
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
+#[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
 impl<'a, 'de, E> MapAccess<'de> for FlatMapAccess<'a, 'de, E>
 where
     E: Error,
@@ -3344,6 +3393,7 @@ struct FlatStructAccess<'a, 'de: 'a, E> {
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
+#[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
 impl<'a, 'de, E> MapAccess<'de> for FlatStructAccess<'a, 'de, E>
 where
     E: Error,
@@ -3407,6 +3457,7 @@ pub struct AdjacentlyTaggedEnumVariantVisitor<F> {
     fields_enum: PhantomData<F>,
 }
 
+#[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
 impl<'de, F> Visitor<'de> for AdjacentlyTaggedEnumVariantVisitor<F>
 where
     F: Deserialize<'de>,
@@ -3427,6 +3478,7 @@ where
     }
 }
 
+#[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
 impl<'de, F> DeserializeSeed<'de> for AdjacentlyTaggedEnumVariantSeed<F>
 where
     F: Deserialize<'de>,

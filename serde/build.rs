@@ -14,12 +14,19 @@ fn main() {
     };
 
     if minor >= 77 {
+        println!("cargo:rustc-check-cfg=cfg(no_diagnostic_namespace)");
         println!("cargo:rustc-check-cfg=cfg(no_serde_derive)");
     }
 
     // Current minimum supported version of serde_derive crate is Rust 1.61.
     if minor < 61 {
         println!("cargo:rustc-cfg=no_serde_derive");
+    }
+
+    // Support for the `#[diagnostic]` tool attribute namespace
+    // https://blog.rust-lang.org/2024/05/02/Rust-1.78.0.html#diagnostic-attributes
+    if minor < 78 {
+        println!("cargo:rustc-cfg=no_diagnostic_namespace");
     }
 }
 
