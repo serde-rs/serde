@@ -27,7 +27,6 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
     let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
     let body = Stmts(deserialize_body(&cont, &params));
     let delife = params.borrowed.de_lifetime();
-    let serde = cont.attrs.serde_path();
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
         let vis = &input.vis;
@@ -35,9 +34,9 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
         quote! {
             #[automatically_derived]
             impl #de_impl_generics #ident #ty_generics #where_clause {
-                #vis fn deserialize<__D>(__deserializer: __D) -> #serde::#private::Result<#remote #ty_generics, __D::Error>
+                #vis fn deserialize<__D>(__deserializer: __D) -> _serde::#private::Result<#remote #ty_generics, __D::Error>
                 where
-                    __D: #serde::Deserializer<#delife>,
+                    __D: _serde::Deserializer<#delife>,
                 {
                     #used
                     #body
@@ -49,10 +48,10 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
 
         quote! {
             #[automatically_derived]
-            impl #de_impl_generics #serde::Deserialize<#delife> for #ident #ty_generics #where_clause {
-                fn deserialize<__D>(__deserializer: __D) -> #serde::#private::Result<Self, __D::Error>
+            impl #de_impl_generics _serde::Deserialize<#delife> for #ident #ty_generics #where_clause {
+                fn deserialize<__D>(__deserializer: __D) -> _serde::#private::Result<Self, __D::Error>
                 where
-                    __D: #serde::Deserializer<#delife>,
+                    __D: _serde::Deserializer<#delife>,
                 {
                     #body
                 }

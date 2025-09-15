@@ -3,14 +3,13 @@ use crate::internals::symbol::*;
 use crate::internals::{ungroup, Ctxt};
 use proc_macro2::{Spacing, Span, TokenStream, TokenTree};
 use quote::ToTokens;
-use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::iter::FromIterator;
 use syn::meta::ParseNestedMeta;
 use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{parse_quote, token, Ident, Lifetime, Token};
+use syn::{token, Ident, Lifetime, Token};
 
 // This module handles parsing of `#[serde(...)]` attributes. The entrypoints
 // are `attr::Container::from_ast`, `attr::Variant::from_ast`, and
@@ -607,11 +606,6 @@ impl Container {
 
     pub fn custom_serde_path(&self) -> Option<&syn::Path> {
         self.serde_path.as_ref()
-    }
-
-    pub fn serde_path(&self) -> Cow<syn::Path> {
-        self.custom_serde_path()
-            .map_or_else(|| Cow::Owned(parse_quote!(_serde)), Cow::Borrowed)
     }
 
     /// Error message generated when type can't be deserialized.
