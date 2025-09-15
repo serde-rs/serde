@@ -239,8 +239,9 @@ mod integer128;
 
 // Used by generated code and doc tests. Not public API.
 #[doc(hidden)]
-#[path = "private/mod.rs"]
-pub mod __private;
+mod private;
+
+include!(concat!(env!("OUT_DIR"), "/private.rs"));
 
 // Re-export #[derive(Serialize, Deserialize)].
 //

@@ -96,7 +96,10 @@ struct private;
 
 impl private {
     fn ident(&self) -> Ident {
-        Ident::new("__private", Span::call_site())
+        Ident::new(
+            concat!("__private", env!("CARGO_PKG_VERSION_PATCH")),
+            Span::call_site(),
+        )
     }
 }
 

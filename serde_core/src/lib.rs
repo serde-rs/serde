@@ -252,9 +252,18 @@ pub use crate::ser::{Serialize, Serializer};
 
 // Used by generated code. Not public API.
 #[doc(hidden)]
-#[path = "private/mod.rs"]
-pub mod __private;
-use self::__private as private;
+mod private;
+
+// Used by declarative macro generated code. Not public API.
+#[doc(hidden)]
+pub mod __private {
+    #[doc(hidden)]
+    pub use crate::private::doc;
+    #[doc(hidden)]
+    pub use core::result::Result;
+}
+
+include!(concat!(env!("OUT_DIR"), "/private.rs"));
 
 #[cfg(all(not(feature = "std"), no_core_error))]
 mod std_error;
