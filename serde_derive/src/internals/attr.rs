@@ -173,6 +173,7 @@ pub struct Container {
     /// Error message generated when type can't be deserialized
     expecting: Option<String>,
     non_exhaustive: bool,
+    explicit_tags: bool,
 }
 
 /// Styles of representing an enum.
@@ -258,6 +259,7 @@ impl Container {
         let mut variant_identifier = BoolAttr::none(cx, VARIANT_IDENTIFIER);
         let mut serde_path = Attr::none(cx, CRATE);
         let mut expecting = Attr::none(cx, EXPECTING);
+        let mut explicit_tags = BoolAttr::none(cx, EXPLICIT_TAGS);
         let mut non_exhaustive = false;
 
         for attr in &item.attrs {
@@ -491,6 +493,9 @@ impl Container {
                     if let Some(s) = get_lit_str(cx, EXPECTING, &meta)? {
                         expecting.set(&meta.path, s.value());
                     }
+                } else if meta.path == EXPLICIT_TAGS {
+                    // #[serde(explicit_tags)]
+                    explicit_tags.set_true(meta.path);
                 } else {
                     let path = meta.path.to_token_stream().to_string().replace(' ', "");
                     return Err(
@@ -542,6 +547,7 @@ impl Container {
             is_packed,
             expecting: expecting.get(),
             non_exhaustive,
+            explicit_tags: explicit_tags.get(),
         }
     }
 
@@ -622,6 +628,10 @@ impl Container {
 
     pub fn non_exhaustive(&self) -> bool {
         self.non_exhaustive
+    }
+
+    pub fn explicit_tags(&self) -> bool {
+        self.explicit_tags
     }
 }
 
