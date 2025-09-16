@@ -3,32 +3,28 @@
 
 use serde_derive::{Deserialize, Serialize};
 
-/// deprecated enum
 #[derive(Serialize, Deserialize)]
 #[deprecated]
-enum E1 {
+enum DeprecatedEnum {
     A,
     B,
 }
 
-/// deprecated struct
 #[derive(Serialize, Deserialize)]
 #[deprecated]
-struct S1 {
+struct DeprecatedStruct {
     a: bool,
 }
 
-/// deprecated enum variant
 #[derive(Serialize, Deserialize)]
-enum E2 {
+enum DeprecatedVariant {
     A,
     #[deprecated]
     B,
 }
 
-/// deprecated struct field
 #[derive(Serialize, Deserialize)]
-struct S2 {
+struct DeprecatedField {
     #[deprecated]
     a: bool,
 }

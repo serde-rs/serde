@@ -1,6 +1,6 @@
+use crate::deprecated::allow_deprecated;
 use crate::fragment::{Expr, Fragment, Match, Stmts};
 use crate::internals::ast::{Container, Data, Field, Style, Variant};
-use crate::internals::deprecated::allow_deprecated;
 use crate::internals::name::Name;
 use crate::internals::{attr, replace_receiver, ungroup, Ctxt, Derive};
 use crate::{bound, dummy, pretend, private, this};
@@ -23,13 +23,12 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
     precondition(&ctxt, &cont);
     ctxt.check()?;
 
-    let allow_deprecated = allow_deprecated(input)?;
-
     let ident = &cont.ident;
     let params = Parameters::new(&cont);
     let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
     let body = Stmts(deserialize_body(&cont, &params));
     let delife = params.borrowed.de_lifetime();
+    let allow_deprecated = allow_deprecated(input);
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
         let vis = &input.vis;

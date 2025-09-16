@@ -86,6 +86,7 @@ mod bound;
 mod fragment;
 
 mod de;
+mod deprecated;
 mod dummy;
 mod pretend;
 mod ser;
