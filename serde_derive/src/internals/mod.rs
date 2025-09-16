@@ -1,5 +1,6 @@
 pub mod ast;
 pub mod attr;
+pub mod deprecated;
 pub mod name;
 
 mod case;
