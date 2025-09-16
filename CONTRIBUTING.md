@@ -27,11 +27,11 @@ pull request with your changes. If anything does not pass, typically it will be
 easier to iterate and fix it locally than waiting for the CI servers to run
 tests for you.
 
-##### In the [`serde`] directory
+##### In the [`serde_core`] directory
 
 ```sh
 # Test all the example code in Serde documentation
-cargo test --features derive
+cargo test
 ```
 
 ##### In the [`test_suite`] directory
@@ -43,7 +43,7 @@ cargo +nightly test --features unstable
 
 Note that this test suite currently only supports running on a nightly compiler.
 
-[`serde`]: https://github.com/serde-rs/serde/tree/master/serde
+[`serde_core`]: https://github.com/serde-rs/serde/tree/master/serde_core
 [`test_suite`]: https://github.com/serde-rs/serde/tree/master/test_suite
 
 ## Conduct
