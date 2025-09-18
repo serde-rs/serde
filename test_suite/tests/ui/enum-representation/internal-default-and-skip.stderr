@@ -1,0 +1,13 @@
+error: variant `V2` cannot have both #[serde(default)] and #[serde(skip)] or #[serde(skip_deserializing)]
+ --> tests/ui/enum-representation/internal-default-and-skip.rs:7:5
+  |
+7 | /     #[serde(default, skip)]
+8 | |     V2 { f: u8 },
+  | |________________^
+
+error: variant `V2` cannot have both #[serde(default)] and #[serde(skip)] or #[serde(skip_deserializing)]
+  --> tests/ui/enum-representation/internal-default-and-skip.rs:15:5
+   |
+15 | /     #[serde(default, skip_deserializing)]
+16 | |     V2 { f: u8 },
+   | |________________^
