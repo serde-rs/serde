@@ -816,17 +816,18 @@ mod content {
     pub struct TaggedContentVisitor<T> {
         tag_name: &'static str,
         expecting: &'static str,
-        value: PhantomData<T>,
+        /// If set, this tag will be used if tag will not be found in data
+        default: Option<T>,
     }
 
     impl<T> TaggedContentVisitor<T> {
         /// Visitor for the content of an internally tagged enum with the given
         /// tag name.
-        pub fn new(name: &'static str, expecting: &'static str) -> Self {
+        pub fn new(name: &'static str, expecting: &'static str, default: Option<T>) -> Self {
             TaggedContentVisitor {
                 tag_name: name,
                 expecting,
-                value: PhantomData,
+                default,
             }
         }
     }
@@ -846,6 +847,8 @@ mod content {
         where
             S: SeqAccess<'de>,
         {
+            // We do not support sequence representation without tags, because that may
+            // create ambiguity during deserialization
             let tag = match tri!(seq.next_element()) {
                 Some(tag) => tag,
                 None => {
@@ -879,7 +882,7 @@ mod content {
                     }
                 }
             }
-            match tag {
+            match tag.or(self.default) {
                 None => Err(de::Error::missing_field(self.tag_name)),
                 Some(tag) => Ok((tag, Content::Map(vec))),
             }
