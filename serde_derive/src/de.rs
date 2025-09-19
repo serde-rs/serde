@@ -1474,12 +1474,7 @@ fn deserialize_adjacently_tagged_enum(
         .map(|(i, variant)| {
             let variant_index = field_i(i);
 
-            let block = Match(deserialize_untagged_variant(
-                params,
-                variant,
-                cattrs,
-                quote!(__deserializer),
-            ));
+            let block = Match(deserialize_untagged_variant(params, variant, cattrs));
 
             quote! {
                 __Field::#variant_index => #block
@@ -1773,14 +1768,7 @@ fn deserialize_untagged_enum(
     let attempts = variants
         .iter()
         .filter(|variant| !variant.attrs.skip_deserializing())
-        .map(|variant| {
-            Expr(deserialize_untagged_variant(
-                params,
-                variant,
-                cattrs,
-                quote!(__deserializer),
-            ))
-        });
+        .map(|variant| Expr(deserialize_untagged_variant(params, variant, cattrs)));
     // TODO this message could be better by saving the errors from the failed
     // attempts. The heuristic used by TOML was to count the number of fields
     // processed before an error, and use the error that happened after the
@@ -1905,12 +1893,11 @@ fn deserialize_untagged_variant(
     params: &Parameters,
     variant: &Variant,
     cattrs: &attr::Container,
-    deserializer: TokenStream,
 ) -> Fragment {
     if let Some(path) = variant.attrs.deserialize_with() {
         let unwrap_fn = unwrap_to_variant_closure(params, variant, false);
         return quote_block! {
-            _serde::#private::Result::map(#path(#deserializer), #unwrap_fn)
+            _serde::#private::Result::map(#path(__deserializer), #unwrap_fn)
         };
     }
 
@@ -1927,7 +1914,7 @@ fn deserialize_untagged_variant(
             });
             quote_expr! {
                 match _serde::Deserializer::deserialize_any(
-                    #deserializer,
+                    __deserializer,
                     _serde::#private::de::UntaggedUnitVisitor::new(#type_name, #variant_name)
                 ) {
                     _serde::#private::Ok(()) => _serde::#private::Ok(#this_value::#variant_ident #default),
@@ -1939,19 +1926,19 @@ fn deserialize_untagged_variant(
             variant_ident,
             params,
             &variant.fields[0],
-            &deserializer,
+            &quote!(__deserializer),
         ),
         Style::Tuple => deserialize_tuple(
             params,
             &variant.fields,
             cattrs,
-            TupleForm::Untagged(variant_ident, deserializer),
+            TupleForm::Untagged(variant_ident, quote!(__deserializer)),
         ),
         Style::Struct => deserialize_struct(
             params,
             &variant.fields,
             cattrs,
-            StructForm::Untagged(variant_ident, deserializer),
+            StructForm::Untagged(variant_ident, quote!(__deserializer)),
         ),
     }
 }
