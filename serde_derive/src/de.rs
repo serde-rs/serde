@@ -1425,10 +1425,7 @@ fn deserialize_internally_tagged_enum(
             let variant_name = field_i(i);
 
             let block = Match(deserialize_internally_tagged_variant(
-                params,
-                variant,
-                cattrs,
-                quote!(__deserializer),
+                params, variant, cattrs,
             ));
 
             quote! {
@@ -1864,12 +1861,11 @@ fn deserialize_internally_tagged_variant(
     params: &Parameters,
     variant: &Variant,
     cattrs: &attr::Container,
-    deserializer: TokenStream,
 ) -> Fragment {
     if let Some(path) = variant.attrs.deserialize_with() {
         let unwrap_fn = unwrap_to_variant_closure(params, variant, false);
         return quote_block! {
-            _serde::#private::Result::map(#path(#deserializer), #unwrap_fn)
+            _serde::#private::Result::map(#path(__deserializer), #unwrap_fn)
         };
     }
 
@@ -1885,7 +1881,7 @@ fn deserialize_internally_tagged_variant(
                 quote!((#default))
             });
             quote_block! {
-                _serde::Deserializer::deserialize_any(#deserializer, _serde::#private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name))?;
+                _serde::Deserializer::deserialize_any(__deserializer, _serde::#private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name))?;
                 _serde::#private::Ok(#this_value::#variant_ident #default)
             }
         }
@@ -1893,13 +1889,13 @@ fn deserialize_internally_tagged_variant(
             variant_ident,
             params,
             &variant.fields[0],
-            &deserializer,
+            &quote!(__deserializer),
         ),
         Style::Struct => deserialize_struct(
             params,
             &variant.fields,
             cattrs,
-            StructForm::InternallyTagged(variant_ident, deserializer),
+            StructForm::InternallyTagged(variant_ident, quote!(__deserializer)),
         ),
         Style::Tuple => unreachable!("checked in serde_derive_internals"),
     }
