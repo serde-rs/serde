@@ -480,9 +480,8 @@ enum TupleForm<'a> {
     Tuple,
     /// Contains a variant name
     ExternallyTagged(&'a syn::Ident),
-    /// Contains a variant name and an intermediate deserializer from which actual
-    /// deserialization will be performed
-    Untagged(&'a syn::Ident, TokenStream),
+    /// Contains a variant name
+    Untagged(&'a syn::Ident),
 }
 
 /// Generates `Deserialize::deserialize` body for a `struct Tuple(...);` including `struct Newtype(T);`
@@ -519,13 +518,13 @@ fn deserialize_tuple(
 
     let type_path = match form {
         TupleForm::Tuple => construct,
-        TupleForm::ExternallyTagged(variant_ident) | TupleForm::Untagged(variant_ident, _) => {
+        TupleForm::ExternallyTagged(variant_ident) | TupleForm::Untagged(variant_ident) => {
             quote!(#construct::#variant_ident)
         }
     };
     let expecting = match form {
         TupleForm::Tuple => format!("tuple struct {}", params.type_name()),
-        TupleForm::ExternallyTagged(variant_ident) | TupleForm::Untagged(variant_ident, _) => {
+        TupleForm::ExternallyTagged(variant_ident) | TupleForm::Untagged(variant_ident) => {
             format!("tuple variant {}::{}", params.type_name(), variant_ident)
         }
     };
@@ -566,8 +565,8 @@ fn deserialize_tuple(
         TupleForm::ExternallyTagged(_) => quote! {
             _serde::de::VariantAccess::tuple_variant(__variant, #field_count, #visitor_expr)
         },
-        TupleForm::Untagged(_, deserializer) => quote! {
-            _serde::Deserializer::deserialize_tuple(#deserializer, #field_count, #visitor_expr)
+        TupleForm::Untagged(_) => quote! {
+            _serde::Deserializer::deserialize_tuple(__deserializer, #field_count, #visitor_expr)
         },
     };
 
@@ -1926,7 +1925,7 @@ fn deserialize_untagged_variant(
             params,
             &variant.fields,
             cattrs,
-            TupleForm::Untagged(variant_ident, quote!(__deserializer)),
+            TupleForm::Untagged(variant_ident),
         ),
         Style::Struct => deserialize_struct(
             params,
