@@ -2309,19 +2309,18 @@ fn test_never_result() {
 fn test_osstring() {
     use std::os::unix::ffi::OsStringExt;
 
-    let value = OsString::from_vec(vec![1, 2, 3]);
-    let tokens = [
-        Token::Enum { name: "OsString" },
-        Token::Str("Unix"),
-        Token::Seq { len: Some(2) },
-        Token::U8(1),
-        Token::U8(2),
-        Token::U8(3),
-        Token::SeqEnd,
-    ];
-
-    assert_de_tokens(&value, &tokens);
-    assert_de_tokens_ignore(&tokens);
+    test(
+        OsString::from_vec(vec![1, 2, 3]),
+        &[
+            Token::Enum { name: "OsString" },
+            Token::Str("Unix"),
+            Token::Seq { len: Some(2) },
+            Token::U8(1),
+            Token::U8(2),
+            Token::U8(3),
+            Token::SeqEnd,
+        ],
+    );
 }
 
 #[cfg(windows)]
@@ -2329,19 +2328,18 @@ fn test_osstring() {
 fn test_osstring() {
     use std::os::windows::ffi::OsStringExt;
 
-    let value = OsString::from_wide(&[1, 2, 3]);
-    let tokens = [
-        Token::Enum { name: "OsString" },
-        Token::Str("Windows"),
-        Token::Seq { len: Some(2) },
-        Token::U16(1),
-        Token::U16(2),
-        Token::U16(3),
-        Token::SeqEnd,
-    ];
-
-    assert_de_tokens(&value, &tokens);
-    assert_de_tokens_ignore(&tokens);
+    test(
+        OsString::from_wide(&[1, 2, 3]),
+        &[
+            Token::Enum { name: "OsString" },
+            Token::Str("Windows"),
+            Token::Seq { len: Some(2) },
+            Token::U16(1),
+            Token::U16(2),
+            Token::U16(3),
+            Token::SeqEnd,
+        ],
+    );
 }
 
 #[test]
