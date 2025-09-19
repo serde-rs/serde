@@ -948,9 +948,8 @@ enum StructForm<'a> {
     Struct,
     /// Contains a variant name
     ExternallyTagged(&'a syn::Ident),
-    /// Contains a variant name and an intermediate deserializer from which actual
-    /// deserialization will be performed
-    InternallyTagged(&'a syn::Ident, TokenStream),
+    /// Contains a variant name
+    InternallyTagged(&'a syn::Ident),
     /// Contains a variant name
     Untagged(&'a syn::Ident),
 }
@@ -980,13 +979,13 @@ fn deserialize_struct(
     let type_path = match form {
         StructForm::Struct => construct,
         StructForm::ExternallyTagged(variant_ident)
-        | StructForm::InternallyTagged(variant_ident, _)
+        | StructForm::InternallyTagged(variant_ident)
         | StructForm::Untagged(variant_ident) => quote!(#construct::#variant_ident),
     };
     let expecting = match form {
         StructForm::Struct => format!("struct {}", params.type_name()),
         StructForm::ExternallyTagged(variant_ident)
-        | StructForm::InternallyTagged(variant_ident, _)
+        | StructForm::InternallyTagged(variant_ident)
         | StructForm::Untagged(variant_ident) => {
             format!("struct variant {}::{}", params.type_name(), variant_ident)
         }
@@ -1093,8 +1092,8 @@ fn deserialize_struct(
         StructForm::ExternallyTagged(_) => quote! {
             _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
         },
-        StructForm::InternallyTagged(_, deserializer) => quote! {
-            _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
+        StructForm::InternallyTagged(_) => quote! {
+            _serde::Deserializer::deserialize_any(__deserializer, #visitor_expr)
         },
         StructForm::Untagged(_) => quote! {
             _serde::Deserializer::deserialize_any(__deserializer, #visitor_expr)
@@ -1878,7 +1877,7 @@ fn deserialize_internally_tagged_variant(
             params,
             &variant.fields,
             cattrs,
-            StructForm::InternallyTagged(variant_ident, quote!(__deserializer)),
+            StructForm::InternallyTagged(variant_ident),
         ),
         Style::Tuple => unreachable!("checked in serde_derive_internals"),
     }
