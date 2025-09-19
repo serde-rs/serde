@@ -1873,12 +1873,9 @@ fn deserialize_internally_tagged_variant(
                 _serde::#private::Ok(#this_value::#variant_ident #default)
             }
         }
-        Style::Newtype => deserialize_untagged_newtype_variant(
-            variant_ident,
-            params,
-            &variant.fields[0],
-            &quote!(__deserializer),
-        ),
+        Style::Newtype => {
+            deserialize_untagged_newtype_variant(variant_ident, params, &variant.fields[0])
+        }
         Style::Struct => deserialize_struct(
             params,
             &variant.fields,
@@ -1922,12 +1919,9 @@ fn deserialize_untagged_variant(
                 }
             }
         }
-        Style::Newtype => deserialize_untagged_newtype_variant(
-            variant_ident,
-            params,
-            &variant.fields[0],
-            &quote!(__deserializer),
-        ),
+        Style::Newtype => {
+            deserialize_untagged_newtype_variant(variant_ident, params, &variant.fields[0])
+        }
         Style::Tuple => deserialize_tuple(
             params,
             &variant.fields,
@@ -1985,7 +1979,6 @@ fn deserialize_untagged_newtype_variant(
     variant_ident: &syn::Ident,
     params: &Parameters,
     field: &Field,
-    deserializer: &TokenStream,
 ) -> Fragment {
     let this_value = &params.this_value;
     let field_ty = field.ty;
@@ -1994,12 +1987,12 @@ fn deserialize_untagged_newtype_variant(
             let span = field.original.span();
             let func = quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize);
             quote_expr! {
-                _serde::#private::Result::map(#func(#deserializer), #this_value::#variant_ident)
+                _serde::#private::Result::map(#func(__deserializer), #this_value::#variant_ident)
             }
         }
         Some(path) => {
             quote_block! {
-                let __value: _serde::#private::Result<#field_ty, _> = #path(#deserializer);
+                let __value: _serde::#private::Result<#field_ty, _> = #path(__deserializer);
                 _serde::#private::Result::map(__value, #this_value::#variant_ident)
             }
         }
