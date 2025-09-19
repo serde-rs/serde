@@ -330,8 +330,11 @@ fn serialize_struct_as_struct(
     fields: &[Field],
     cattrs: &attr::Container,
 ) -> Fragment {
-    let serialize_fields =
+    let mut implied_fields =
+        serialize_implied_fields(cattrs.implied(), &StructTrait::SerializeStruct);
+    let mut serialize_fields =
         serialize_struct_visitor(fields, params, false, &StructTrait::SerializeStruct);
+    serialize_fields.append(&mut implied_fields);
 
     let type_name = cattrs.name().serialize_name();
 
@@ -345,6 +348,8 @@ fn serialize_struct_as_struct(
 
     let let_mut = mut_if(serialized_fields.peek().is_some() || tag_field_exists);
 
+    let implied_fields = cattrs.implied().len();
+
     let len = serialized_fields
         .map(|field| match field.attrs.skip_serializing_if() {
             None => quote!(1),
@@ -354,7 +359,7 @@ fn serialize_struct_as_struct(
             }
         })
         .fold(
-            quote!(#tag_field_exists as usize),
+            quote!(#tag_field_exists as usize + #implied_fields as usize),
             |sum, expr| quote!(#sum + #expr),
         );
 
@@ -1164,6 +1169,25 @@ fn serialize_struct_visitor(
                     }
                 }
             }
+        })
+        .collect()
+}
+
+fn serialize_implied_fields(
+    fields: &[(Name, Name)],
+    struct_trait: &StructTrait,
+) -> Vec<TokenStream> {
+    fields
+        .iter()
+        .map(|(key, value)| {
+            let ser = {
+                let func = struct_trait.serialize_field(key.span());
+                quote! {
+                    #func(&mut __serde_state, #key, #value)?;
+                }
+            };
+
+            ser
         })
         .collect()
 }

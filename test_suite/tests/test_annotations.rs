@@ -1471,6 +1471,31 @@ fn test_missing_renamed_field_enum() {
     );
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[serde(implied(key = "test", value = "one"))]
+struct ImpliedStruct {
+    val: (),
+}
+
+#[test]
+fn test_implied() {
+    assert_tokens(
+        &ImpliedStruct { val: () },
+        &[
+            Token::Struct {
+                name: "ImpliedStruct",
+                len: 2,
+            },
+            Token::Str("val"),
+            Token::Unit,
+            Token::Str("test"),
+            Token::Str("one"),
+            Token::StructEnd,
+        ],
+    );
+}
+
 #[derive(Debug, PartialEq, Deserialize)]
 enum InvalidLengthEnum {
     A(i32, i32, i32),
