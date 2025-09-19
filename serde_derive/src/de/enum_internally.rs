@@ -9,8 +9,7 @@ use crate::de::enum_;
 use crate::de::enum_untagged;
 use crate::de::struct_;
 use crate::de::{
-    effective_style, expr_is_missing, field_i,
-    unwrap_to_variant_closure, Parameters, StructForm,
+    effective_style, expr_is_missing, field_i, unwrap_to_variant_closure, Parameters, StructForm,
 };
 use crate::fragment::{Expr, Fragment, Match};
 use crate::internals::ast::{Style, Variant};
@@ -19,7 +18,7 @@ use crate::private;
 use quote::quote;
 
 /// Generates `Deserialize::deserialize` body for an `enum Enum {...}` with `#[serde(tag)]` attribute
-pub fn deserialize_internally_tagged_enum(
+pub fn generate_body(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
@@ -94,9 +93,9 @@ fn deserialize_internally_tagged_variant(
             }
         }
         Style::Newtype => {
-            enum_untagged::deserialize_untagged_newtype_variant(variant_ident, params, &variant.fields[0])
+            enum_untagged::generate_newtype_variant(variant_ident, params, &variant.fields[0])
         }
-        Style::Struct => struct_::deserialize_struct(
+        Style::Struct => struct_::generate_body(
             params,
             &variant.fields,
             cattrs,

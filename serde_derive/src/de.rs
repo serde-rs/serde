@@ -312,18 +312,18 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
         deserialize_try_from(type_try_from)
     } else if let attr::Identifier::No = cont.attrs.identifier() {
         match &cont.data {
-            Data::Enum(variants) => enum_::deserialize_enum(params, variants, &cont.attrs),
+            Data::Enum(variants) => enum_::generate_body(params, variants, &cont.attrs),
             Data::Struct(Style::Struct, fields) => {
-                struct_::deserialize_struct(params, fields, &cont.attrs, StructForm::Struct)
+                struct_::generate_body(params, fields, &cont.attrs, StructForm::Struct)
             }
             Data::Struct(Style::Tuple, fields) | Data::Struct(Style::Newtype, fields) => {
-                tuple::deserialize_tuple(params, fields, &cont.attrs, TupleForm::Tuple)
+                tuple::generate_body(params, fields, &cont.attrs, TupleForm::Tuple)
             }
-            Data::Struct(Style::Unit, _) => unit::deserialize_unit_struct(params, &cont.attrs),
+            Data::Struct(Style::Unit, _) => unit::generate_body(params, &cont.attrs),
         }
     } else {
         match &cont.data {
-            Data::Enum(variants) => identifier::deserialize_custom_identifier(params, variants, &cont.attrs),
+            Data::Enum(variants) => identifier::generate_body(params, variants, &cont.attrs),
             Data::Struct(_, _) => unreachable!("checked in serde_derive_internals"),
         }
     }
@@ -349,10 +349,10 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
 
     let code = match &cont.data {
         Data::Struct(Style::Struct, fields) => {
-            struct_::deserialize_struct_in_place(params, fields, &cont.attrs)?
+            struct_::generate_body_in_place(params, fields, &cont.attrs)?
         }
         Data::Struct(Style::Tuple, fields) | Data::Struct(Style::Newtype, fields) => {
-            tuple::deserialize_tuple_in_place(params, fields, &cont.attrs)
+            tuple::generate_body_in_place(params, fields, &cont.attrs)
         }
         Data::Enum(_) | Data::Struct(Style::Unit, _) => {
             return None;

@@ -8,8 +8,7 @@
 use crate::de::struct_;
 use crate::de::tuple;
 use crate::de::{
-    effective_style, expr_is_missing,
-    unwrap_to_variant_closure, Parameters, StructForm, TupleForm,
+    effective_style, expr_is_missing, unwrap_to_variant_closure, Parameters, StructForm, TupleForm,
 };
 use crate::fragment::{Expr, Fragment};
 use crate::internals::ast::{Field, Style, Variant};
@@ -20,7 +19,7 @@ use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 
 /// Generates `Deserialize::deserialize` body for an `enum Enum {...}` with `#[serde(untagged)]` attribute
-pub fn deserialize_untagged_enum(
+pub fn generate_body(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
@@ -29,7 +28,7 @@ pub fn deserialize_untagged_enum(
     let attempts = variants
         .iter()
         .filter(|variant| !variant.attrs.skip_deserializing())
-        .map(|variant| Expr(deserialize_untagged_variant(params, variant, cattrs)));
+        .map(|variant| Expr(generate_variant(params, variant, cattrs)));
     // TODO this message could be better by saving the errors from the failed
     // attempts. The heuristic used by TOML was to count the number of fields
     // processed before an error, and use the error that happened after the
@@ -59,7 +58,8 @@ pub fn deserialize_untagged_enum(
     }
 }
 
-pub fn deserialize_untagged_variant(
+// Also used by adjacently tagged enums
+pub fn generate_variant(
     params: &Parameters,
     variant: &Variant,
     cattrs: &attr::Container,
@@ -92,16 +92,14 @@ pub fn deserialize_untagged_variant(
                 }
             }
         }
-        Style::Newtype => {
-            deserialize_untagged_newtype_variant(variant_ident, params, &variant.fields[0])
-        }
-        Style::Tuple => tuple::deserialize_tuple(
+        Style::Newtype => generate_newtype_variant(variant_ident, params, &variant.fields[0]),
+        Style::Tuple => tuple::generate_body(
             params,
             &variant.fields,
             cattrs,
             TupleForm::Untagged(variant_ident),
         ),
-        Style::Struct => struct_::deserialize_struct(
+        Style::Struct => struct_::generate_body(
             params,
             &variant.fields,
             cattrs,
@@ -110,7 +108,9 @@ pub fn deserialize_untagged_variant(
     }
 }
 
-pub fn deserialize_untagged_newtype_variant(
+// Also used by internally tagged enums
+// Implicitly (via `generate_variant`) used by adjacently tagged enums
+pub fn generate_newtype_variant(
     variant_ident: &syn::Ident,
     params: &Parameters,
     field: &Field,

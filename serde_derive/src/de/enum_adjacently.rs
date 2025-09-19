@@ -16,7 +16,7 @@ use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 
 /// Generates `Deserialize::deserialize` body for an `enum Enum {...}` with `#[serde(tag, content)]` attributes
-pub fn deserialize_adjacently_tagged_enum(
+pub fn generate_body(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
@@ -37,7 +37,7 @@ pub fn deserialize_adjacently_tagged_enum(
         .map(|(i, variant)| {
             let variant_index = field_i(i);
 
-            let block = Match(enum_untagged::deserialize_untagged_variant(params, variant, cattrs));
+            let block = Match(enum_untagged::generate_variant(params, variant, cattrs));
 
             quote! {
                 __Field::#variant_index => #block

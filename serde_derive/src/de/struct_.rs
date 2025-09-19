@@ -1,7 +1,7 @@
 use crate::de::identifier;
 use crate::de::{
-    deserialize_seq, expr_is_missing, field_i, has_flatten,
-    wrap_deserialize_field_with, FieldWithAliases, Parameters, StructForm,
+    deserialize_seq, expr_is_missing, field_i, has_flatten, wrap_deserialize_field_with,
+    FieldWithAliases, Parameters, StructForm,
 };
 #[cfg(feature = "deserialize_in_place")]
 use crate::de::{deserialize_seq_in_place, place_lifetime};
@@ -14,7 +14,7 @@ use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 
 /// Generates `Deserialize::deserialize` body for a `struct Struct {...}`
-pub fn deserialize_struct(
+pub fn generate_body(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
@@ -197,7 +197,7 @@ pub fn deserialize_struct(
 
 /// Generates `Deserialize::deserialize_in_place` body for a `struct Struct {...}`
 #[cfg(feature = "deserialize_in_place")]
-pub fn deserialize_struct_in_place(
+pub fn generate_body_in_place(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
@@ -304,7 +304,7 @@ fn deserialize_field_identifier(
         (Some(ignore_variant), Some(fallthrough))
     };
 
-    Stmts(identifier::deserialize_generated_identifier(
+    Stmts(identifier::generate_identifier(
         deserialized_fields,
         has_flatten,
         false,

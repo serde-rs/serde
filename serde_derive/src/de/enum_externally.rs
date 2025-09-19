@@ -8,9 +8,8 @@ use crate::de::enum_;
 use crate::de::struct_;
 use crate::de::tuple;
 use crate::de::{
-    expr_is_missing, field_i,
-    unwrap_to_variant_closure, wrap_deserialize_field_with, wrap_deserialize_with, Parameters,
-    StructForm, TupleForm,
+    expr_is_missing, field_i, unwrap_to_variant_closure, wrap_deserialize_field_with,
+    wrap_deserialize_with, Parameters, StructForm, TupleForm,
 };
 use crate::fragment::{Expr, Fragment, Match};
 use crate::internals::ast::{Field, Style, Variant};
@@ -21,7 +20,7 @@ use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 
 /// Generates `Deserialize::deserialize` body for an `enum Enum {...}` without additional attributes
-pub fn deserialize_externally_tagged_enum(
+pub fn generate_body(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
@@ -144,13 +143,13 @@ fn deserialize_externally_tagged_variant(
             &variant.fields[0],
             cattrs,
         ),
-        Style::Tuple => tuple::deserialize_tuple(
+        Style::Tuple => tuple::generate_body(
             params,
             &variant.fields,
             cattrs,
             TupleForm::ExternallyTagged(variant_ident),
         ),
-        Style::Struct => struct_::deserialize_struct(
+        Style::Struct => struct_::generate_body(
             params,
             &variant.fields,
             cattrs,

@@ -12,7 +12,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 /// Generates `Deserialize::deserialize` body for an `enum Enum {...}`
-pub fn deserialize_enum(
+pub fn generate_body(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
@@ -30,7 +30,7 @@ pub fn deserialize_enum(
                     return _serde::#private::Ok(__ok);
                 }
             };
-            enum_untagged::deserialize_untagged_enum(params, untagged, cattrs, Some(tagged_frag))
+            enum_untagged::generate_body(params, untagged, cattrs, Some(tagged_frag))
         }
         None => deserialize_homogeneous_enum(params, variants, cattrs),
     }
@@ -42,14 +42,14 @@ fn deserialize_homogeneous_enum(
     cattrs: &attr::Container,
 ) -> Fragment {
     match cattrs.tag() {
-        attr::TagType::External => enum_externally::deserialize_externally_tagged_enum(params, variants, cattrs),
+        attr::TagType::External => enum_externally::generate_body(params, variants, cattrs),
         attr::TagType::Internal { tag } => {
-            enum_internally::deserialize_internally_tagged_enum(params, variants, cattrs, tag)
+            enum_internally::generate_body(params, variants, cattrs, tag)
         }
         attr::TagType::Adjacent { tag, content } => {
-            enum_adjacently::deserialize_adjacently_tagged_enum(params, variants, cattrs, tag, content)
+            enum_adjacently::generate_body(params, variants, cattrs, tag, content)
         }
-        attr::TagType::None => enum_untagged::deserialize_untagged_enum(params, variants, cattrs, None),
+        attr::TagType::None => enum_untagged::generate_body(params, variants, cattrs, None),
     }
 }
 
@@ -84,7 +84,7 @@ pub fn prepare_enum_variant_enum(variants: &[Variant]) -> (TokenStream, Stmts) {
         })
         .collect();
 
-    let variant_visitor = Stmts(identifier::deserialize_generated_identifier(
+    let variant_visitor = Stmts(identifier::generate_identifier(
         &deserialized_variants,
         false, // variant identifiers do not depend on the presence of flatten fields
         true,
