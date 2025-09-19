@@ -12,6 +12,7 @@ use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::{parse_quote, Ident, Index, Member};
 
+mod enum_;
 mod enum_adjacently;
 mod enum_externally;
 mod enum_internally;
@@ -307,7 +308,7 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
         deserialize_try_from(type_try_from)
     } else if let attr::Identifier::No = cont.attrs.identifier() {
         match &cont.data {
-            Data::Enum(variants) => deserialize_enum(params, variants, &cont.attrs),
+            Data::Enum(variants) => enum_::deserialize_enum(params, variants, &cont.attrs),
             Data::Struct(Style::Struct, fields) => {
                 deserialize_struct(params, fields, &cont.attrs, StructForm::Struct)
             }
@@ -1229,90 +1230,6 @@ fn deserialize_struct_in_place(
             lifetime: _serde::#private::PhantomData,
         })
     })
-}
-
-/// Generates `Deserialize::deserialize` body for an `enum Enum {...}`
-fn deserialize_enum(
-    params: &Parameters,
-    variants: &[Variant],
-    cattrs: &attr::Container,
-) -> Fragment {
-    // The variants have already been checked (in ast.rs) that all untagged variants appear at the end
-    match variants.iter().position(|var| var.attrs.untagged()) {
-        Some(variant_idx) => {
-            let (tagged, untagged) = variants.split_at(variant_idx);
-            let tagged_frag = Expr(deserialize_homogeneous_enum(params, tagged, cattrs));
-            // Ignore any error associated with non-untagged deserialization so that we
-            // can fall through to the untagged variants. This may be infallible so we
-            // need to provide the error type.
-            let tagged_frag = quote! {
-                if let _serde::#private::Result::<_, __D::Error>::Ok(__ok) = (|| #tagged_frag)() {
-                    return _serde::#private::Ok(__ok);
-                }
-            };
-            enum_untagged::deserialize_untagged_enum(params, untagged, cattrs, Some(tagged_frag))
-        }
-        None => deserialize_homogeneous_enum(params, variants, cattrs),
-    }
-}
-
-fn deserialize_homogeneous_enum(
-    params: &Parameters,
-    variants: &[Variant],
-    cattrs: &attr::Container,
-) -> Fragment {
-    match cattrs.tag() {
-        attr::TagType::External => enum_externally::deserialize_externally_tagged_enum(params, variants, cattrs),
-        attr::TagType::Internal { tag } => {
-            enum_internally::deserialize_internally_tagged_enum(params, variants, cattrs, tag)
-        }
-        attr::TagType::Adjacent { tag, content } => {
-            enum_adjacently::deserialize_adjacently_tagged_enum(params, variants, cattrs, tag, content)
-        }
-        attr::TagType::None => enum_untagged::deserialize_untagged_enum(params, variants, cattrs, None),
-    }
-}
-
-fn prepare_enum_variant_enum(variants: &[Variant]) -> (TokenStream, Stmts) {
-    let deserialized_variants = variants
-        .iter()
-        .enumerate()
-        .filter(|&(_i, variant)| !variant.attrs.skip_deserializing());
-
-    let fallthrough = deserialized_variants
-        .clone()
-        .find(|(_i, variant)| variant.attrs.other())
-        .map(|(i, _variant)| {
-            let ignore_variant = field_i(i);
-            quote!(_serde::#private::Ok(__Field::#ignore_variant))
-        });
-
-    let variants_stmt = {
-        let variant_names = deserialized_variants
-            .clone()
-            .flat_map(|(_i, variant)| variant.attrs.aliases());
-        quote! {
-            #[doc(hidden)]
-            const VARIANTS: &'static [&'static str] = &[ #(#variant_names),* ];
-        }
-    };
-
-    let deserialized_variants: Vec<_> = deserialized_variants
-        .map(|(i, variant)| FieldWithAliases {
-            ident: field_i(i),
-            aliases: variant.attrs.aliases(),
-        })
-        .collect();
-
-    let variant_visitor = Stmts(deserialize_generated_identifier(
-        &deserialized_variants,
-        false, // variant identifiers do not depend on the presence of flatten fields
-        true,
-        None,
-        fallthrough,
-    ));
-
-    (variants_stmt, variant_visitor)
 }
 
 struct FieldWithAliases<'a> {

@@ -5,9 +5,10 @@
 //! enum Enum {}
 //! ```
 
+use crate::de::enum_;
 use crate::de::enum_untagged;
 use crate::de::{
-    deserialize_struct, effective_style, expr_is_missing, field_i, prepare_enum_variant_enum,
+    deserialize_struct, effective_style, expr_is_missing, field_i,
     unwrap_to_variant_closure, Parameters, StructForm,
 };
 use crate::fragment::{Expr, Fragment, Match};
@@ -23,7 +24,7 @@ pub fn deserialize_internally_tagged_enum(
     cattrs: &attr::Container,
     tag: &str,
 ) -> Fragment {
-    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants);
+    let (variants_stmt, variant_visitor) = enum_::prepare_enum_variant_enum(variants);
 
     // Match arms to extract a variant from a string
     let variant_arms = variants

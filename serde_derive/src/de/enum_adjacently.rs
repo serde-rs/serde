@@ -5,8 +5,9 @@
 //! enum Enum {}
 //! ```
 
+use crate::de::enum_;
 use crate::de::enum_untagged;
-use crate::de::{field_i, prepare_enum_variant_enum, Parameters};
+use crate::de::{field_i, Parameters};
 use crate::fragment::{Fragment, Match};
 use crate::internals::ast::{Style, Variant};
 use crate::internals::attr;
@@ -27,7 +28,7 @@ pub fn deserialize_adjacently_tagged_enum(
     let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = params.generics();
     let delife = params.borrowed.de_lifetime();
 
-    let (variants_stmt, variant_visitor) = prepare_enum_variant_enum(variants);
+    let (variants_stmt, variant_visitor) = enum_::prepare_enum_variant_enum(variants);
 
     let variant_arms: &Vec<_> = &variants
         .iter()
