@@ -1,5 +1,6 @@
+use crate::de::identifier;
 use crate::de::{
-    deserialize_generated_identifier, deserialize_seq, expr_is_missing, field_i, has_flatten,
+    deserialize_seq, expr_is_missing, field_i, has_flatten,
     wrap_deserialize_field_with, FieldWithAliases, Parameters, StructForm,
 };
 #[cfg(feature = "deserialize_in_place")]
@@ -303,7 +304,7 @@ fn deserialize_field_identifier(
         (Some(ignore_variant), Some(fallthrough))
     };
 
-    Stmts(deserialize_generated_identifier(
+    Stmts(identifier::deserialize_generated_identifier(
         deserialized_fields,
         has_flatten,
         false,

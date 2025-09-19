@@ -2,7 +2,8 @@ use crate::de::enum_adjacently;
 use crate::de::enum_externally;
 use crate::de::enum_internally;
 use crate::de::enum_untagged;
-use crate::de::{deserialize_generated_identifier, field_i, FieldWithAliases, Parameters};
+use crate::de::identifier;
+use crate::de::{field_i, FieldWithAliases, Parameters};
 use crate::fragment::{Expr, Fragment, Stmts};
 use crate::internals::ast::Variant;
 use crate::internals::attr;
@@ -83,7 +84,7 @@ pub fn prepare_enum_variant_enum(variants: &[Variant]) -> (TokenStream, Stmts) {
         })
         .collect();
 
-    let variant_visitor = Stmts(deserialize_generated_identifier(
+    let variant_visitor = Stmts(identifier::deserialize_generated_identifier(
         &deserialized_variants,
         false, // variant identifiers do not depend on the presence of flatten fields
         true,
