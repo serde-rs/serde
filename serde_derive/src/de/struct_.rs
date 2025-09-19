@@ -195,124 +195,6 @@ pub fn generate_body(
     }
 }
 
-/// Generates `Deserialize::deserialize_in_place` body for a `struct Struct {...}`
-#[cfg(feature = "deserialize_in_place")]
-pub fn generate_body_in_place(
-    params: &Parameters,
-    fields: &[Field],
-    cattrs: &attr::Container,
-) -> Option<Fragment> {
-    // for now we do not support in_place deserialization for structs that
-    // are represented as map.
-    if has_flatten(fields) {
-        return None;
-    }
-
-    let this_type = &params.this_type;
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = params.generics();
-    let delife = params.borrowed.de_lifetime();
-
-    let expecting = format!("struct {}", params.type_name());
-    let expecting = cattrs.expecting().unwrap_or(&expecting);
-
-    let deserialized_fields: Vec<_> = fields
-        .iter()
-        .enumerate()
-        .filter(|&(_, field)| !field.attrs.skip_deserializing())
-        .map(|(i, field)| FieldWithAliases {
-            ident: field_i(i),
-            aliases: field.attrs.aliases(),
-        })
-        .collect();
-
-    let field_visitor = deserialize_field_identifier(&deserialized_fields, cattrs, false);
-
-    let mut_seq = if deserialized_fields.is_empty() {
-        quote!(_)
-    } else {
-        quote!(mut __seq)
-    };
-    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
-    let visit_map = Stmts(deserialize_map_in_place(params, fields, cattrs));
-    let field_names = deserialized_fields.iter().flat_map(|field| field.aliases);
-    let type_name = cattrs.name().deserialize_name();
-
-    let in_place_impl_generics = de_impl_generics.in_place();
-    let in_place_ty_generics = de_ty_generics.in_place();
-    let place_life = place_lifetime();
-
-    Some(quote_block! {
-        #field_visitor
-
-        #[doc(hidden)]
-        struct __Visitor #in_place_impl_generics #where_clause {
-            place: &#place_life mut #this_type #ty_generics,
-            lifetime: _serde::#private::PhantomData<&#delife ()>,
-        }
-
-        #[automatically_derived]
-        impl #in_place_impl_generics _serde::de::Visitor<#delife> for __Visitor #in_place_ty_generics #where_clause {
-            type Value = ();
-
-            fn expecting(&self, __formatter: &mut _serde::#private::Formatter) -> _serde::#private::fmt::Result {
-                _serde::#private::Formatter::write_str(__formatter, #expecting)
-            }
-
-            #[inline]
-            fn visit_seq<__A>(self, #mut_seq: __A) -> _serde::#private::Result<Self::Value, __A::Error>
-            where
-                __A: _serde::de::SeqAccess<#delife>,
-            {
-                #visit_seq
-            }
-
-            #[inline]
-            fn visit_map<__A>(self, mut __map: __A) -> _serde::#private::Result<Self::Value, __A::Error>
-            where
-                __A: _serde::de::MapAccess<#delife>,
-            {
-                #visit_map
-            }
-        }
-
-        #[doc(hidden)]
-        const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
-
-        _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, __Visitor {
-            place: __place,
-            lifetime: _serde::#private::PhantomData,
-        })
-    })
-}
-
-/// Generates enum and its `Deserialize` implementation that represents each
-/// non-skipped field of the struct
-fn deserialize_field_identifier(
-    deserialized_fields: &[FieldWithAliases],
-    cattrs: &attr::Container,
-    has_flatten: bool,
-) -> Stmts {
-    let (ignore_variant, fallthrough) = if has_flatten {
-        let ignore_variant = quote!(__other(_serde::#private::de::Content<'de>),);
-        let fallthrough = quote!(_serde::#private::Ok(__Field::__other(__value)));
-        (Some(ignore_variant), Some(fallthrough))
-    } else if cattrs.deny_unknown_fields() {
-        (None, None)
-    } else {
-        let ignore_variant = quote!(__ignore,);
-        let fallthrough = quote!(_serde::#private::Ok(__Field::__ignore));
-        (Some(ignore_variant), Some(fallthrough))
-    };
-
-    Stmts(identifier::generate_identifier(
-        deserialized_fields,
-        has_flatten,
-        false,
-        ignore_variant,
-        fallthrough,
-    ))
-}
-
 fn deserialize_map(
     struct_path: &TokenStream,
     params: &Parameters,
@@ -535,6 +417,96 @@ fn deserialize_map(
     }
 }
 
+/// Generates `Deserialize::deserialize_in_place` body for a `struct Struct {...}`
+#[cfg(feature = "deserialize_in_place")]
+pub fn generate_body_in_place(
+    params: &Parameters,
+    fields: &[Field],
+    cattrs: &attr::Container,
+) -> Option<Fragment> {
+    // for now we do not support in_place deserialization for structs that
+    // are represented as map.
+    if has_flatten(fields) {
+        return None;
+    }
+
+    let this_type = &params.this_type;
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = params.generics();
+    let delife = params.borrowed.de_lifetime();
+
+    let expecting = format!("struct {}", params.type_name());
+    let expecting = cattrs.expecting().unwrap_or(&expecting);
+
+    let deserialized_fields: Vec<_> = fields
+        .iter()
+        .enumerate()
+        .filter(|&(_, field)| !field.attrs.skip_deserializing())
+        .map(|(i, field)| FieldWithAliases {
+            ident: field_i(i),
+            aliases: field.attrs.aliases(),
+        })
+        .collect();
+
+    let field_visitor = deserialize_field_identifier(&deserialized_fields, cattrs, false);
+
+    let mut_seq = if deserialized_fields.is_empty() {
+        quote!(_)
+    } else {
+        quote!(mut __seq)
+    };
+    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
+    let visit_map = Stmts(deserialize_map_in_place(params, fields, cattrs));
+    let field_names = deserialized_fields.iter().flat_map(|field| field.aliases);
+    let type_name = cattrs.name().deserialize_name();
+
+    let in_place_impl_generics = de_impl_generics.in_place();
+    let in_place_ty_generics = de_ty_generics.in_place();
+    let place_life = place_lifetime();
+
+    Some(quote_block! {
+        #field_visitor
+
+        #[doc(hidden)]
+        struct __Visitor #in_place_impl_generics #where_clause {
+            place: &#place_life mut #this_type #ty_generics,
+            lifetime: _serde::#private::PhantomData<&#delife ()>,
+        }
+
+        #[automatically_derived]
+        impl #in_place_impl_generics _serde::de::Visitor<#delife> for __Visitor #in_place_ty_generics #where_clause {
+            type Value = ();
+
+            fn expecting(&self, __formatter: &mut _serde::#private::Formatter) -> _serde::#private::fmt::Result {
+                _serde::#private::Formatter::write_str(__formatter, #expecting)
+            }
+
+            #[inline]
+            fn visit_seq<__A>(self, #mut_seq: __A) -> _serde::#private::Result<Self::Value, __A::Error>
+            where
+                __A: _serde::de::SeqAccess<#delife>,
+            {
+                #visit_seq
+            }
+
+            #[inline]
+            fn visit_map<__A>(self, mut __map: __A) -> _serde::#private::Result<Self::Value, __A::Error>
+            where
+                __A: _serde::de::MapAccess<#delife>,
+            {
+                #visit_map
+            }
+        }
+
+        #[doc(hidden)]
+        const FIELDS: &'static [&'static str] = &[ #(#field_names),* ];
+
+        _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, __Visitor {
+            place: __place,
+            lifetime: _serde::#private::PhantomData,
+        })
+    })
+}
+
 #[cfg(feature = "deserialize_in_place")]
 fn deserialize_map_in_place(
     params: &Parameters,
@@ -692,4 +664,32 @@ fn deserialize_map_in_place(
 
         _serde::#private::Ok(())
     }
+}
+
+/// Generates enum and its `Deserialize` implementation that represents each
+/// non-skipped field of the struct
+fn deserialize_field_identifier(
+    deserialized_fields: &[FieldWithAliases],
+    cattrs: &attr::Container,
+    has_flatten: bool,
+) -> Stmts {
+    let (ignore_variant, fallthrough) = if has_flatten {
+        let ignore_variant = quote!(__other(_serde::#private::de::Content<'de>),);
+        let fallthrough = quote!(_serde::#private::Ok(__Field::__other(__value)));
+        (Some(ignore_variant), Some(fallthrough))
+    } else if cattrs.deny_unknown_fields() {
+        (None, None)
+    } else {
+        let ignore_variant = quote!(__ignore,);
+        let fallthrough = quote!(_serde::#private::Ok(__Field::__ignore));
+        (Some(ignore_variant), Some(fallthrough))
+    };
+
+    Stmts(identifier::generate_identifier(
+        deserialized_fields,
+        has_flatten,
+        false,
+        ignore_variant,
+        fallthrough,
+    ))
 }
