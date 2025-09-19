@@ -951,9 +951,8 @@ enum StructForm<'a> {
     /// Contains a variant name and an intermediate deserializer from which actual
     /// deserialization will be performed
     InternallyTagged(&'a syn::Ident, TokenStream),
-    /// Contains a variant name and an intermediate deserializer from which actual
-    /// deserialization will be performed
-    Untagged(&'a syn::Ident, TokenStream),
+    /// Contains a variant name
+    Untagged(&'a syn::Ident),
 }
 
 /// Generates `Deserialize::deserialize` body for a `struct Struct {...}`
@@ -982,13 +981,13 @@ fn deserialize_struct(
         StructForm::Struct => construct,
         StructForm::ExternallyTagged(variant_ident)
         | StructForm::InternallyTagged(variant_ident, _)
-        | StructForm::Untagged(variant_ident, _) => quote!(#construct::#variant_ident),
+        | StructForm::Untagged(variant_ident) => quote!(#construct::#variant_ident),
     };
     let expecting = match form {
         StructForm::Struct => format!("struct {}", params.type_name()),
         StructForm::ExternallyTagged(variant_ident)
         | StructForm::InternallyTagged(variant_ident, _)
-        | StructForm::Untagged(variant_ident, _) => {
+        | StructForm::Untagged(variant_ident) => {
             format!("struct variant {}::{}", params.type_name(), variant_ident)
         }
     };
@@ -1012,7 +1011,7 @@ fn deserialize_struct(
     // untagged struct variants do not get a visit_seq method. The same applies to
     // structs that only have a map representation.
     let visit_seq = match form {
-        StructForm::Untagged(..) => None,
+        StructForm::Untagged(_) => None,
         _ if has_flatten => None,
         _ => {
             let mut_seq = if deserialized_fields.is_empty() {
@@ -1097,8 +1096,8 @@ fn deserialize_struct(
         StructForm::InternallyTagged(_, deserializer) => quote! {
             _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
         },
-        StructForm::Untagged(_, deserializer) => quote! {
-            _serde::Deserializer::deserialize_any(#deserializer, #visitor_expr)
+        StructForm::Untagged(_) => quote! {
+            _serde::Deserializer::deserialize_any(__deserializer, #visitor_expr)
         },
     };
 
@@ -1931,7 +1930,7 @@ fn deserialize_untagged_variant(
             params,
             &variant.fields,
             cattrs,
-            StructForm::Untagged(variant_ident, quote!(__deserializer)),
+            StructForm::Untagged(variant_ident),
         ),
     }
 }
