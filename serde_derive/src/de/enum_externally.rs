@@ -6,8 +6,9 @@
 
 use crate::de::enum_;
 use crate::de::struct_;
+use crate::de::tuple;
 use crate::de::{
-    deserialize_tuple, expr_is_missing, field_i,
+    expr_is_missing, field_i,
     unwrap_to_variant_closure, wrap_deserialize_field_with, wrap_deserialize_with, Parameters,
     StructForm, TupleForm,
 };
@@ -143,7 +144,7 @@ fn deserialize_externally_tagged_variant(
             &variant.fields[0],
             cattrs,
         ),
-        Style::Tuple => deserialize_tuple(
+        Style::Tuple => tuple::deserialize_tuple(
             params,
             &variant.fields,
             cattrs,

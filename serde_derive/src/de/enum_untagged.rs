@@ -6,8 +6,9 @@
 //! ```
 
 use crate::de::struct_;
+use crate::de::tuple;
 use crate::de::{
-    deserialize_tuple, effective_style, expr_is_missing,
+    effective_style, expr_is_missing,
     unwrap_to_variant_closure, Parameters, StructForm, TupleForm,
 };
 use crate::fragment::{Expr, Fragment};
@@ -94,7 +95,7 @@ pub fn deserialize_untagged_variant(
         Style::Newtype => {
             deserialize_untagged_newtype_variant(variant_ident, params, &variant.fields[0])
         }
-        Style::Tuple => deserialize_tuple(
+        Style::Tuple => tuple::deserialize_tuple(
             params,
             &variant.fields,
             cattrs,
