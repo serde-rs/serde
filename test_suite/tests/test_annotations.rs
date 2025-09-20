@@ -3010,7 +3010,7 @@ mod flatten {
                         Token::MapEnd,
                     ],
                 );
-                // Field order: [content, tag], outer - did not work
+                // Field order: [content, tag], outer
                 assert_de_tokens(
                     &value,
                     &[
@@ -3050,7 +3050,7 @@ mod flatten {
                         Token::MapEnd,
                     ],
                 );
-                // Field order: [content], outer, [tag] - did not work
+                // Field order: [content], outer, [tag]
                 assert_de_tokens(
                     &value,
                     &[
