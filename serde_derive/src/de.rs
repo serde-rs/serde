@@ -352,6 +352,7 @@ fn deserialize_in_place_body(_cont: &Container, _params: &Parameters) -> Option<
     None
 }
 
+/// Generates `Deserialize::deserialize` body for a type with `#[serde(transparent)]` attribute
 fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
     let fields = match &cont.data {
         Data::Struct(_, fields) => fields,
@@ -394,6 +395,7 @@ fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
     }
 }
 
+/// Generates `Deserialize::deserialize` body for a type with `#[serde(from)]` attribute
 fn deserialize_from(type_from: &syn::Type) -> Fragment {
     quote_block! {
         _serde::#private::Result::map(
@@ -402,6 +404,7 @@ fn deserialize_from(type_from: &syn::Type) -> Fragment {
     }
 }
 
+/// Generates `Deserialize::deserialize` body for a type with `#[serde(try_from)]` attribute
 fn deserialize_try_from(type_try_from: &syn::Type) -> Fragment {
     quote_block! {
         _serde::#private::Result::and_then(
@@ -410,6 +413,7 @@ fn deserialize_try_from(type_try_from: &syn::Type) -> Fragment {
     }
 }
 
+/// Generates `Deserialize::deserialize` body for a `struct Unit;`
 fn deserialize_unit_struct(params: &Parameters, cattrs: &attr::Container) -> Fragment {
     let this_type = &params.this_type;
     let this_value = &params.this_value;
@@ -465,6 +469,7 @@ enum TupleForm<'a> {
     Untagged(&'a syn::Ident, TokenStream),
 }
 
+/// Generates `Deserialize::deserialize` body for a `struct Tuple(...);` including `struct Newtype(T);`
 fn deserialize_tuple(
     params: &Parameters,
     fields: &[Field],
@@ -587,6 +592,7 @@ fn deserialize_tuple(
     }
 }
 
+/// Generates `Deserialize::deserialize_in_place` body for a `struct Tuple(...);` including `struct Newtype(T);`
 #[cfg(feature = "deserialize_in_place")]
 fn deserialize_tuple_in_place(
     params: &Parameters,
@@ -937,6 +943,7 @@ enum StructForm<'a> {
     Untagged(&'a syn::Ident, TokenStream),
 }
 
+/// Generates `Deserialize::deserialize` body for a `struct Struct {...}`
 fn deserialize_struct(
     params: &Parameters,
     fields: &[Field],
@@ -1119,6 +1126,7 @@ fn deserialize_struct(
     }
 }
 
+/// Generates `Deserialize::deserialize_in_place` body for a `struct Struct {...}`
 #[cfg(feature = "deserialize_in_place")]
 fn deserialize_struct_in_place(
     params: &Parameters,
@@ -1209,6 +1217,7 @@ fn deserialize_struct_in_place(
     })
 }
 
+/// Generates `Deserialize::deserialize` body for an `enum Enum {...}`
 fn deserialize_enum(
     params: &Parameters,
     variants: &[Variant],
@@ -1284,6 +1293,7 @@ fn prepare_enum_variant_enum(variants: &[Variant]) -> (TokenStream, Stmts) {
     (variants_stmt, variant_visitor)
 }
 
+/// Generates `Deserialize::deserialize` body for an `enum Enum {...}` without additional attributes
 fn deserialize_externally_tagged_enum(
     params: &Parameters,
     variants: &[Variant],
@@ -1378,6 +1388,7 @@ fn deserialize_externally_tagged_enum(
     }
 }
 
+/// Generates `Deserialize::deserialize` body for an `enum Enum {...}` with `#[serde(tag)]` attribute
 fn deserialize_internally_tagged_enum(
     params: &Parameters,
     variants: &[Variant],
@@ -1425,6 +1436,7 @@ fn deserialize_internally_tagged_enum(
     }
 }
 
+/// Generates `Deserialize::deserialize` body for an `enum Enum {...}` with `#[serde(tag, content)]` attributes
 fn deserialize_adjacently_tagged_enum(
     params: &Parameters,
     variants: &[Variant],
@@ -1474,21 +1486,6 @@ fn deserialize_adjacently_tagged_enum(
         quote! { _serde::#private::de::TagContentOtherFieldVisitor }
     };
 
-    let tag_or_content = quote! {
-        #field_visitor_ty {
-            tag: #tag,
-            content: #content,
-        }
-    };
-
-    let variant_seed = quote! {
-        _serde::#private::de::AdjacentlyTaggedEnumVariantSeed::<__Field> {
-            enum_name: #rust_name,
-            variants: VARIANTS,
-            fields_enum: _serde::#private::PhantomData
-        }
-    };
-
     let mut missing_content = quote! {
         _serde::#private::Err(<__A::Error as _serde::de::Error>::missing_field(#content))
     };
@@ -1533,11 +1530,18 @@ fn deserialize_adjacently_tagged_enum(
 
     // Advance the map by one key, returning early in case of error.
     let next_key = quote! {
-        _serde::de::MapAccess::next_key_seed(&mut __map, #tag_or_content)?
+        _serde::de::MapAccess::next_key_seed(&mut __map, #field_visitor_ty {
+            tag: #tag,
+            content: #content,
+        })?
     };
 
     let variant_from_map = quote! {
-        _serde::de::MapAccess::next_value_seed(&mut __map, #variant_seed)?
+        _serde::de::MapAccess::next_value_seed(&mut __map, _serde::#private::de::AdjacentlyTaggedEnumVariantSeed::<__Field> {
+            enum_name: #rust_name,
+            variants: VARIANTS,
+            fields_enum: _serde::#private::PhantomData
+        })?
     };
 
     // When allowing unknown fields, we want to transparently step through keys
@@ -1589,10 +1593,13 @@ fn deserialize_adjacently_tagged_enum(
         }
     } else {
         quote! {
-            let __ret = match #variant_from_map {
-                // Deserialize the buffered content now that we know the variant.
-                #(#variant_arms)*
-            }?;
+            let __seed = __Seed {
+                variant: #variant_from_map,
+                marker: _serde::#private::PhantomData,
+                lifetime: _serde::#private::PhantomData,
+            };
+            let __deserializer = _serde::#private::de::ContentDeserializer::<__A::Error>::new(__content);
+            let __ret = _serde::de::DeserializeSeed::deserialize(__seed, __deserializer)?;
             // Visit remaining keys, looking for duplicates.
             #visit_remaining_keys
         }
@@ -1605,7 +1612,7 @@ fn deserialize_adjacently_tagged_enum(
 
         #[doc(hidden)]
         struct __Seed #de_impl_generics #where_clause {
-            field: __Field,
+            variant: __Field,
             marker: _serde::#private::PhantomData<#this_type #ty_generics>,
             lifetime: _serde::#private::PhantomData<&#delife ()>,
         }
@@ -1618,7 +1625,7 @@ fn deserialize_adjacently_tagged_enum(
             where
                 __D: _serde::Deserializer<#delife>,
             {
-                match self.field {
+                match self.variant {
                     #(#variant_arms)*
                 }
             }
@@ -1658,7 +1665,7 @@ fn deserialize_adjacently_tagged_enum(
                             _serde::#private::Some(_serde::#private::de::TagOrContentField::Content) => {
                                 let __ret = _serde::de::MapAccess::next_value_seed(&mut __map,
                                     __Seed {
-                                        field: __field,
+                                        variant: __field,
                                         marker: _serde::#private::PhantomData,
                                         lifetime: _serde::#private::PhantomData,
                                     })?;
@@ -1677,7 +1684,6 @@ fn deserialize_adjacently_tagged_enum(
                         match #next_relevant_key {
                             // Second key is the tag.
                             _serde::#private::Some(_serde::#private::de::TagOrContentField::Tag) => {
-                                let __deserializer = _serde::#private::de::ContentDeserializer::<__A::Error>::new(__content);
                                 #finish_content_then_tag
                             }
                             // Second key is a duplicate of the content.
@@ -1703,12 +1709,12 @@ fn deserialize_adjacently_tagged_enum(
             {
                 // Visit the first element - the tag.
                 match _serde::de::SeqAccess::next_element(&mut __seq)? {
-                    _serde::#private::Some(__field) => {
+                    _serde::#private::Some(__variant) => {
                         // Visit the second element - the content.
                         match _serde::de::SeqAccess::next_element_seed(
                             &mut __seq,
                             __Seed {
-                                field: __field,
+                                variant: __variant,
                                 marker: _serde::#private::PhantomData,
                                 lifetime: _serde::#private::PhantomData,
                             },
@@ -1742,6 +1748,7 @@ fn deserialize_adjacently_tagged_enum(
     }
 }
 
+/// Generates `Deserialize::deserialize` body for an `enum Enum {...}` with `#[serde(untagged)]` attribute
 fn deserialize_untagged_enum(
     params: &Parameters,
     variants: &[Variant],
