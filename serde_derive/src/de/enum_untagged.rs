@@ -19,7 +19,7 @@ use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 
 /// Generates `Deserialize::deserialize` body for an `enum Enum {...}` with `#[serde(untagged)]` attribute
-pub fn generate_body(
+pub(super) fn generate_body(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
@@ -59,7 +59,7 @@ pub fn generate_body(
 }
 
 // Also used by adjacently tagged enums
-pub fn generate_variant(
+pub(super) fn generate_variant(
     params: &Parameters,
     variant: &Variant,
     cattrs: &attr::Container,
@@ -110,7 +110,7 @@ pub fn generate_variant(
 
 // Also used by internally tagged enums
 // Implicitly (via `generate_variant`) used by adjacently tagged enums
-pub fn generate_newtype_variant(
+pub(super) fn generate_newtype_variant(
     variant_ident: &syn::Ident,
     params: &Parameters,
     field: &Field,

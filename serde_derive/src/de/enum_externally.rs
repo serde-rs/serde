@@ -20,7 +20,7 @@ use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 
 /// Generates `Deserialize::deserialize` body for an `enum Enum {...}` without additional attributes
-pub fn generate_body(
+pub(super) fn generate_body(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,

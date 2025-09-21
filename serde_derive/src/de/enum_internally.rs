@@ -18,7 +18,7 @@ use crate::private;
 use quote::quote;
 
 /// Generates `Deserialize::deserialize` body for an `enum Enum {...}` with `#[serde(tag)]` attribute
-pub fn generate_body(
+pub(super) fn generate_body(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,

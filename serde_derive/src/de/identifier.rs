@@ -10,7 +10,7 @@ use quote::{quote, ToTokens};
 
 // Generates `Deserialize::deserialize` body for an enum with
 // `serde(field_identifier)` or `serde(variant_identifier)` attribute.
-pub fn generate_body(
+pub(super) fn generate_body(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
@@ -120,7 +120,7 @@ pub fn generate_body(
     }
 }
 
-pub fn generate_identifier(
+pub(super) fn generate_identifier(
     deserialized_fields: &[FieldWithAliases],
     has_flatten: bool,
     is_variant: bool,

@@ -10,7 +10,7 @@ use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 
 /// Generates `Deserialize::deserialize` body for a `struct Tuple(...);` including `struct Newtype(T);`
-pub fn generate_body(
+pub(super) fn generate_body(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
@@ -182,7 +182,7 @@ fn deserialize_newtype_struct(
 
 /// Generates `Deserialize::deserialize_in_place` body for a `struct Tuple(...);` including `struct Newtype(T);`
 #[cfg(feature = "deserialize_in_place")]
-pub fn generate_body_in_place(
+pub(super) fn generate_body_in_place(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
