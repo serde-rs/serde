@@ -19,7 +19,7 @@ use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 
 /// Generates `Deserialize::deserialize` body for an `enum Enum {...}` with `#[serde(untagged)]` attribute
-pub(super) fn generate_body(
+pub(super) fn deserialize(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
@@ -93,13 +93,13 @@ pub(super) fn generate_variant(
             }
         }
         Style::Newtype => generate_newtype_variant(variant_ident, params, &variant.fields[0]),
-        Style::Tuple => tuple::generate_body(
+        Style::Tuple => tuple::deserialize(
             params,
             &variant.fields,
             cattrs,
             TupleForm::Untagged(variant_ident),
         ),
-        Style::Struct => struct_::generate_body(
+        Style::Struct => struct_::deserialize(
             params,
             &variant.fields,
             cattrs,

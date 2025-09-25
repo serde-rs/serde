@@ -16,7 +16,7 @@ use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 
 /// Generates `Deserialize::deserialize` body for an `enum Enum {...}` with `#[serde(tag, content)]` attributes
-pub(super) fn generate_body(
+pub(super) fn deserialize(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,

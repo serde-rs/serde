@@ -312,14 +312,14 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
         deserialize_try_from(type_try_from)
     } else if let attr::Identifier::No = cont.attrs.identifier() {
         match &cont.data {
-            Data::Enum(variants) => enum_::generate_body(params, variants, &cont.attrs),
+            Data::Enum(variants) => enum_::deserialize(params, variants, &cont.attrs),
             Data::Struct(Style::Struct, fields) => {
-                struct_::generate_body(params, fields, &cont.attrs, StructForm::Struct)
+                struct_::deserialize(params, fields, &cont.attrs, StructForm::Struct)
             }
             Data::Struct(Style::Tuple, fields) | Data::Struct(Style::Newtype, fields) => {
-                tuple::generate_body(params, fields, &cont.attrs, TupleForm::Tuple)
+                tuple::deserialize(params, fields, &cont.attrs, TupleForm::Tuple)
             }
-            Data::Struct(Style::Unit, _) => unit::generate_body(params, &cont.attrs),
+            Data::Struct(Style::Unit, _) => unit::deserialize(params, &cont.attrs),
         }
     } else {
         match &cont.data {

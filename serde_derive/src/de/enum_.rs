@@ -12,7 +12,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 /// Generates `Deserialize::deserialize` body for an `enum Enum {...}`
-pub(super) fn generate_body(
+pub(super) fn deserialize(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
@@ -30,7 +30,7 @@ pub(super) fn generate_body(
                     return _serde::#private::Ok(__ok);
                 }
             };
-            enum_untagged::generate_body(params, untagged, cattrs, Some(first_attempt))
+            enum_untagged::deserialize(params, untagged, cattrs, Some(first_attempt))
         }
         None => deserialize_homogeneous_enum(params, variants, cattrs),
     }
@@ -42,14 +42,14 @@ fn deserialize_homogeneous_enum(
     cattrs: &attr::Container,
 ) -> Fragment {
     match cattrs.tag() {
-        attr::TagType::External => enum_externally::generate_body(params, variants, cattrs),
+        attr::TagType::External => enum_externally::deserialize(params, variants, cattrs),
         attr::TagType::Internal { tag } => {
-            enum_internally::generate_body(params, variants, cattrs, tag)
+            enum_internally::deserialize(params, variants, cattrs, tag)
         }
         attr::TagType::Adjacent { tag, content } => {
-            enum_adjacently::generate_body(params, variants, cattrs, tag, content)
+            enum_adjacently::deserialize(params, variants, cattrs, tag, content)
         }
-        attr::TagType::None => enum_untagged::generate_body(params, variants, cattrs, None),
+        attr::TagType::None => enum_untagged::deserialize(params, variants, cattrs, None),
     }
 }
 

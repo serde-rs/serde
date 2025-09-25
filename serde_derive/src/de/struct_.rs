@@ -14,7 +14,7 @@ use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 
 /// Generates `Deserialize::deserialize` body for a `struct Struct {...}`
-pub(super) fn generate_body(
+pub(super) fn deserialize(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
