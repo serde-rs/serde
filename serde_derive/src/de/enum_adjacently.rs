@@ -1,4 +1,4 @@
-//! Generator of the deserialization code for the adjacently tagged enums:
+//! Deserialization for adjacently tagged enums:
 //!
 //! ```ignore
 //! #[serde(tag = "...", content = "...")]

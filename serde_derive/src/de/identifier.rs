@@ -1,4 +1,5 @@
-//! Contains generators of enums that represents identifiers of fields in structs or variants in enums.
+//! Deserialization of struct field identifiers and enum variant identifiers by
+//! way of a Rust enum.
 
 use crate::de::{FieldWithAliases, Parameters};
 use crate::fragment::{Fragment, Stmts};

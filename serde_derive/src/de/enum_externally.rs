@@ -1,4 +1,4 @@
-//! Generator of the deserialization code for the externally tagged enums:
+//! Deserialization for externally tagged enums:
 //!
 //! ```ignore
 //! enum Enum {}

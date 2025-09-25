@@ -1,4 +1,4 @@
-//! Generator of the deserialization code for the internally tagged enums:
+//! Deserialization for internally tagged enums:
 //!
 //! ```ignore
 //! #[serde(tag = "...")]

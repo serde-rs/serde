@@ -168,9 +168,9 @@ impl Parameters {
         self.this_type.segments.last().unwrap().ident.to_string()
     }
 
-    /// Split a deserialized type's generics into the pieces required for impl'ing
-    /// a `Deserialize` trait for that type. Additionally appends the `'de` lifetime
-    /// to list of impl generics.
+    /// Split the data structure's generics into the pieces to use for its
+    /// `Deserialize` impl, augmented with an additional `'de` lifetime for use
+    /// as the `Deserialize` trait's lifetime.
     fn generics_with_de_lifetime(
         &self,
     ) -> (

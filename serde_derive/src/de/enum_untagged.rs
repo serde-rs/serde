@@ -1,4 +1,4 @@
-//! Generator of the deserialization code for the untagged enums:
+//! Deserialization for untagged enums:
 //!
 //! ```ignore
 //! #[serde(untagged)]
