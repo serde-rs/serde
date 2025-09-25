@@ -323,7 +323,7 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
         }
     } else {
         match &cont.data {
-            Data::Enum(variants) => identifier::generate_body(params, variants, &cont.attrs),
+            Data::Enum(variants) => identifier::deserialize_custom(params, variants, &cont.attrs),
             Data::Struct(_, _) => unreachable!("checked in serde_derive_internals"),
         }
     }
