@@ -38,7 +38,7 @@ pub(super) fn deserialize(
         .map(|(i, variant)| {
             let variant_index = field_i(i);
 
-            let block = Match(enum_untagged::generate_variant(params, variant, cattrs));
+            let block = Match(enum_untagged::deserialize_variant(params, variant, cattrs));
 
             quote! {
                 __Field::#variant_index => #block

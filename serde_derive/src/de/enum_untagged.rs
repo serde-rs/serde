@@ -28,7 +28,7 @@ pub(super) fn deserialize(
     let attempts = variants
         .iter()
         .filter(|variant| !variant.attrs.skip_deserializing())
-        .map(|variant| Expr(generate_variant(params, variant, cattrs)));
+        .map(|variant| Expr(deserialize_variant(params, variant, cattrs)));
     // TODO this message could be better by saving the errors from the failed
     // attempts. The heuristic used by TOML was to count the number of fields
     // processed before an error, and use the error that happened after the
@@ -59,7 +59,7 @@ pub(super) fn deserialize(
 }
 
 // Also used by adjacently tagged enums
-pub(super) fn generate_variant(
+pub(super) fn deserialize_variant(
     params: &Parameters,
     variant: &Variant,
     cattrs: &attr::Container,
