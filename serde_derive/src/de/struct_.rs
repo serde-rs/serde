@@ -635,7 +635,7 @@ fn deserialize_map_in_place(
         });
 
     let this_type = &params.this_type;
-    let (_, _, ty_generics, _) = params.generics_with_de_lifetime();
+    let (_, ty_generics, _) = params.generics.split_for_impl();
 
     let let_default = match cattrs.default() {
         attr::Default::Default => Some(quote!(
