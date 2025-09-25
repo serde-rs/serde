@@ -25,12 +25,12 @@ pub(super) fn generate_body(
             // Ignore any error associated with non-untagged deserialization so that we
             // can fall through to the untagged variants. This may be infallible so we
             // need to provide the error type.
-            let tagged_frag = quote! {
+            let first_attempt = quote! {
                 if let _serde::#private::Result::<_, __D::Error>::Ok(__ok) = (|| #tagged_frag)() {
                     return _serde::#private::Ok(__ok);
                 }
             };
-            enum_untagged::generate_body(params, untagged, cattrs, Some(tagged_frag))
+            enum_untagged::generate_body(params, untagged, cattrs, Some(first_attempt))
         }
         None => deserialize_homogeneous_enum(params, variants, cattrs),
     }
