@@ -35,7 +35,7 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
 
     let ident = &cont.ident;
     let params = Parameters::new(&cont);
-    let (de_impl_generics, _, ty_generics, where_clause) = params.generics();
+    let (de_impl_generics, _, ty_generics, where_clause) = params.generics_with_de_lifetime();
     let body = Stmts(deserialize_body(&cont, &params));
     let delife = params.borrowed.de_lifetime();
     let allow_deprecated = allow_deprecated(input);
@@ -171,7 +171,7 @@ impl Parameters {
     /// Split a deserialized type's generics into the pieces required for impl'ing
     /// a `Deserialize` trait for that type. Additionally appends the `'de` lifetime
     /// to list of impl generics.
-    fn generics(
+    fn generics_with_de_lifetime(
         &self,
     ) -> (
         DeImplGenerics,
@@ -664,7 +664,8 @@ fn wrap_deserialize_with(
     deserialize_with: &syn::ExprPath,
 ) -> (TokenStream, TokenStream) {
     let this_type = &params.this_type;
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = params.generics();
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
+        params.generics_with_de_lifetime();
     let delife = params.borrowed.de_lifetime();
     let deserializer_var = quote!(__deserializer);
 

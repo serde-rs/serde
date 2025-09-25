@@ -22,7 +22,8 @@ pub(super) fn generate_body(
 ) -> Fragment {
     let this_type = &params.this_type;
     let this_value = &params.this_value;
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = params.generics();
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
+        params.generics_with_de_lifetime();
     let delife = params.borrowed.de_lifetime();
 
     // If there are getters (implying private fields), construct the local type
@@ -431,7 +432,8 @@ pub(super) fn generate_body_in_place(
     }
 
     let this_type = &params.this_type;
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = params.generics();
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
+        params.generics_with_de_lifetime();
     let delife = params.borrowed.de_lifetime();
 
     let expecting = format!("struct {}", params.type_name());
@@ -633,7 +635,7 @@ fn deserialize_map_in_place(
         });
 
     let this_type = &params.this_type;
-    let (_, _, ty_generics, _) = params.generics();
+    let (_, _, ty_generics, _) = params.generics_with_de_lifetime();
 
     let let_default = match cattrs.default() {
         attr::Default::Default => Some(quote!(
