@@ -34,6 +34,7 @@ fn main() {
         println!("cargo:rustc-check-cfg=cfg(no_core_net)");
         println!("cargo:rustc-check-cfg=cfg(no_core_num_saturating)");
         println!("cargo:rustc-check-cfg=cfg(no_diagnostic_namespace)");
+        println!("cargo:rustc-check-cfg=cfg(no_serde_core)");
         println!("cargo:rustc-check-cfg=cfg(no_serde_derive)");
         println!("cargo:rustc-check-cfg=cfg(no_std_atomic)");
         println!("cargo:rustc-check-cfg=cfg(no_std_atomic64)");
