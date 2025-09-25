@@ -92,7 +92,7 @@ pub(super) fn deserialize_variant(
                 }
             }
         }
-        Style::Newtype => generate_newtype_variant(variant_ident, params, &variant.fields[0]),
+        Style::Newtype => deserialize_newtype_variant(variant_ident, params, &variant.fields[0]),
         Style::Tuple => tuple::deserialize(
             params,
             &variant.fields,
@@ -110,7 +110,7 @@ pub(super) fn deserialize_variant(
 
 // Also used by internally tagged enums
 // Implicitly (via `generate_variant`) used by adjacently tagged enums
-pub(super) fn generate_newtype_variant(
+pub(super) fn deserialize_newtype_variant(
     variant_ident: &syn::Ident,
     params: &Parameters,
     field: &Field,
