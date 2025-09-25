@@ -5,11 +5,12 @@ use crate::private;
 use quote::quote;
 
 /// Generates `Deserialize::deserialize` body for a `struct Unit;`
-pub(super) fn generate_body(params: &Parameters, cattrs: &attr::Container) -> Fragment {
+pub(super) fn deserialize(params: &Parameters, cattrs: &attr::Container) -> Fragment {
     let this_type = &params.this_type;
     let this_value = &params.this_value;
     let type_name = cattrs.name().deserialize_name();
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = params.generics();
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
+        params.generics_with_de_lifetime();
     let delife = params.borrowed.de_lifetime();
 
     let expecting = format!("unit struct {}", params.type_name());

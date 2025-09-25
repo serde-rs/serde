@@ -1,4 +1,4 @@
-//! Generator of the deserialization code for the externally tagged enums:
+//! Deserialization for externally tagged enums:
 //!
 //! ```ignore
 //! enum Enum {}
@@ -20,13 +20,14 @@ use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 
 /// Generates `Deserialize::deserialize` body for an `enum Enum {...}` without additional attributes
-pub(super) fn generate_body(
+pub(super) fn deserialize(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
 ) -> Fragment {
     let this_type = &params.this_type;
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = params.generics();
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
+        params.generics_with_de_lifetime();
     let delife = params.borrowed.de_lifetime();
 
     let type_name = cattrs.name().deserialize_name();
@@ -143,13 +144,13 @@ fn deserialize_externally_tagged_variant(
             &variant.fields[0],
             cattrs,
         ),
-        Style::Tuple => tuple::generate_body(
+        Style::Tuple => tuple::deserialize(
             params,
             &variant.fields,
             cattrs,
             TupleForm::ExternallyTagged(variant_ident),
         ),
-        Style::Struct => struct_::generate_body(
+        Style::Struct => struct_::deserialize(
             params,
             &variant.fields,
             cattrs,

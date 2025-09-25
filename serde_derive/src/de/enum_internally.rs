@@ -1,4 +1,4 @@
-//! Generator of the deserialization code for the internally tagged enums:
+//! Deserialization for internally tagged enums:
 //!
 //! ```ignore
 //! #[serde(tag = "...")]
@@ -18,7 +18,7 @@ use crate::private;
 use quote::quote;
 
 /// Generates `Deserialize::deserialize` body for an `enum Enum {...}` with `#[serde(tag)]` attribute
-pub(super) fn generate_body(
+pub(super) fn deserialize(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
@@ -93,9 +93,9 @@ fn deserialize_internally_tagged_variant(
             }
         }
         Style::Newtype => {
-            enum_untagged::generate_newtype_variant(variant_ident, params, &variant.fields[0])
+            enum_untagged::deserialize_newtype_variant(variant_ident, params, &variant.fields[0])
         }
-        Style::Struct => struct_::generate_body(
+        Style::Struct => struct_::deserialize(
             params,
             &variant.fields,
             cattrs,

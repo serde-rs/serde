@@ -1,4 +1,4 @@
-//! Generator of the deserialization code for the untagged enums:
+//! Deserialization for untagged enums:
 //!
 //! ```ignore
 //! #[serde(untagged)]
@@ -19,7 +19,7 @@ use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 
 /// Generates `Deserialize::deserialize` body for an `enum Enum {...}` with `#[serde(untagged)]` attribute
-pub(super) fn generate_body(
+pub(super) fn deserialize(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
@@ -28,7 +28,7 @@ pub(super) fn generate_body(
     let attempts = variants
         .iter()
         .filter(|variant| !variant.attrs.skip_deserializing())
-        .map(|variant| Expr(generate_variant(params, variant, cattrs)));
+        .map(|variant| Expr(deserialize_variant(params, variant, cattrs)));
     // TODO this message could be better by saving the errors from the failed
     // attempts. The heuristic used by TOML was to count the number of fields
     // processed before an error, and use the error that happened after the
@@ -59,7 +59,7 @@ pub(super) fn generate_body(
 }
 
 // Also used by adjacently tagged enums
-pub(super) fn generate_variant(
+pub(super) fn deserialize_variant(
     params: &Parameters,
     variant: &Variant,
     cattrs: &attr::Container,
@@ -92,14 +92,14 @@ pub(super) fn generate_variant(
                 }
             }
         }
-        Style::Newtype => generate_newtype_variant(variant_ident, params, &variant.fields[0]),
-        Style::Tuple => tuple::generate_body(
+        Style::Newtype => deserialize_newtype_variant(variant_ident, params, &variant.fields[0]),
+        Style::Tuple => tuple::deserialize(
             params,
             &variant.fields,
             cattrs,
             TupleForm::Untagged(variant_ident),
         ),
-        Style::Struct => struct_::generate_body(
+        Style::Struct => struct_::deserialize(
             params,
             &variant.fields,
             cattrs,
@@ -110,7 +110,7 @@ pub(super) fn generate_variant(
 
 // Also used by internally tagged enums
 // Implicitly (via `generate_variant`) used by adjacently tagged enums
-pub(super) fn generate_newtype_variant(
+pub(super) fn deserialize_newtype_variant(
     variant_ident: &syn::Ident,
     params: &Parameters,
     field: &Field,

@@ -1,4 +1,5 @@
-//! Contains generators of enums that represents identifiers of fields in structs or variants in enums.
+//! Deserialization of struct field identifiers and enum variant identifiers by
+//! way of a Rust enum.
 
 use crate::de::{FieldWithAliases, Parameters};
 use crate::fragment::{Fragment, Stmts};
@@ -10,7 +11,7 @@ use quote::{quote, ToTokens};
 
 // Generates `Deserialize::deserialize` body for an enum with
 // `serde(field_identifier)` or `serde(variant_identifier)` attribute.
-pub(super) fn generate_body(
+pub(super) fn deserialize_custom(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
@@ -84,7 +85,8 @@ pub(super) fn generate_body(
         Some(fields)
     };
 
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = params.generics();
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
+        params.generics_with_de_lifetime();
     let delife = params.borrowed.de_lifetime();
     let visitor_impl = Stmts(deserialize_identifier(
         &this_value,
@@ -120,7 +122,7 @@ pub(super) fn generate_body(
     }
 }
 
-pub(super) fn generate_identifier(
+pub(super) fn deserialize_generated(
     deserialized_fields: &[FieldWithAliases],
     has_flatten: bool,
     is_variant: bool,

@@ -1,4 +1,4 @@
-//! Generator of the deserialization code for the adjacently tagged enums:
+//! Deserialization for adjacently tagged enums:
 //!
 //! ```ignore
 //! #[serde(tag = "...", content = "...")]
@@ -16,7 +16,7 @@ use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 
 /// Generates `Deserialize::deserialize` body for an `enum Enum {...}` with `#[serde(tag, content)]` attributes
-pub(super) fn generate_body(
+pub(super) fn deserialize(
     params: &Parameters,
     variants: &[Variant],
     cattrs: &attr::Container,
@@ -25,7 +25,8 @@ pub(super) fn generate_body(
 ) -> Fragment {
     let this_type = &params.this_type;
     let this_value = &params.this_value;
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = params.generics();
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
+        params.generics_with_de_lifetime();
     let delife = params.borrowed.de_lifetime();
 
     let (variants_stmt, variant_visitor) = enum_::prepare_enum_variant_enum(variants);
@@ -37,7 +38,7 @@ pub(super) fn generate_body(
         .map(|(i, variant)| {
             let variant_index = field_i(i);
 
-            let block = Match(enum_untagged::generate_variant(params, variant, cattrs));
+            let block = Match(enum_untagged::deserialize_variant(params, variant, cattrs));
 
             quote! {
                 __Field::#variant_index => #block

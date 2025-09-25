@@ -35,7 +35,7 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
 
     let ident = &cont.ident;
     let params = Parameters::new(&cont);
-    let (de_impl_generics, _, ty_generics, where_clause) = params.generics();
+    let (de_impl_generics, _, ty_generics, where_clause) = params.generics_with_de_lifetime();
     let body = Stmts(deserialize_body(&cont, &params));
     let delife = params.borrowed.de_lifetime();
     let allow_deprecated = allow_deprecated(input);
@@ -168,10 +168,10 @@ impl Parameters {
         self.this_type.segments.last().unwrap().ident.to_string()
     }
 
-    /// Split a deserialized type's generics into the pieces required for impl'ing
-    /// a `Deserialize` trait for that type. Additionally appends the `'de` lifetime
-    /// to list of impl generics.
-    fn generics(
+    /// Split the data structure's generics into the pieces to use for its
+    /// `Deserialize` impl, augmented with an additional `'de` lifetime for use
+    /// as the `Deserialize` trait's lifetime.
+    fn generics_with_de_lifetime(
         &self,
     ) -> (
         DeImplGenerics,
@@ -312,18 +312,18 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
         deserialize_try_from(type_try_from)
     } else if let attr::Identifier::No = cont.attrs.identifier() {
         match &cont.data {
-            Data::Enum(variants) => enum_::generate_body(params, variants, &cont.attrs),
+            Data::Enum(variants) => enum_::deserialize(params, variants, &cont.attrs),
             Data::Struct(Style::Struct, fields) => {
-                struct_::generate_body(params, fields, &cont.attrs, StructForm::Struct)
+                struct_::deserialize(params, fields, &cont.attrs, StructForm::Struct)
             }
             Data::Struct(Style::Tuple, fields) | Data::Struct(Style::Newtype, fields) => {
-                tuple::generate_body(params, fields, &cont.attrs, TupleForm::Tuple)
+                tuple::deserialize(params, fields, &cont.attrs, TupleForm::Tuple)
             }
-            Data::Struct(Style::Unit, _) => unit::generate_body(params, &cont.attrs),
+            Data::Struct(Style::Unit, _) => unit::deserialize(params, &cont.attrs),
         }
     } else {
         match &cont.data {
-            Data::Enum(variants) => identifier::generate_body(params, variants, &cont.attrs),
+            Data::Enum(variants) => identifier::deserialize_custom(params, variants, &cont.attrs),
             Data::Struct(_, _) => unreachable!("checked in serde_derive_internals"),
         }
     }
@@ -349,10 +349,10 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
 
     let code = match &cont.data {
         Data::Struct(Style::Struct, fields) => {
-            struct_::generate_body_in_place(params, fields, &cont.attrs)?
+            struct_::deserialize_in_place(params, fields, &cont.attrs)?
         }
         Data::Struct(Style::Tuple, fields) | Data::Struct(Style::Newtype, fields) => {
-            tuple::generate_body_in_place(params, fields, &cont.attrs)
+            tuple::deserialize_in_place(params, fields, &cont.attrs)
         }
         Data::Enum(_) | Data::Struct(Style::Unit, _) => {
             return None;
@@ -664,7 +664,8 @@ fn wrap_deserialize_with(
     deserialize_with: &syn::ExprPath,
 ) -> (TokenStream, TokenStream) {
     let this_type = &params.this_type;
-    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) = params.generics();
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
+        params.generics_with_de_lifetime();
     let delife = params.borrowed.de_lifetime();
     let deserializer_var = quote!(__deserializer);
 
