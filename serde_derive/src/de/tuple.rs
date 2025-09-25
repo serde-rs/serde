@@ -183,7 +183,7 @@ fn deserialize_newtype_struct(
 
 /// Generates `Deserialize::deserialize_in_place` body for a `struct Tuple(...);` including `struct Newtype(T);`
 #[cfg(feature = "deserialize_in_place")]
-pub(super) fn generate_body_in_place(
+pub(super) fn deserialize_in_place(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
