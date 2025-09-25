@@ -122,7 +122,7 @@ pub(super) fn deserialize_custom(
     }
 }
 
-pub(super) fn generate_identifier(
+pub(super) fn deserialize_generated(
     deserialized_fields: &[FieldWithAliases],
     has_flatten: bool,
     is_variant: bool,

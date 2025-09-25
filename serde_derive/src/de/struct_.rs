@@ -687,7 +687,7 @@ fn deserialize_field_identifier(
         (Some(ignore_variant), Some(fallthrough))
     };
 
-    Stmts(identifier::generate_identifier(
+    Stmts(identifier::deserialize_generated(
         deserialized_fields,
         has_flatten,
         false,

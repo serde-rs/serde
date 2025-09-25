@@ -84,7 +84,7 @@ pub fn prepare_enum_variant_enum(variants: &[Variant]) -> (TokenStream, Stmts) {
         })
         .collect();
 
-    let variant_visitor = Stmts(identifier::generate_identifier(
+    let variant_visitor = Stmts(identifier::deserialize_generated(
         &deserialized_variants,
         false, // variant identifiers do not depend on the presence of flatten fields
         true,
