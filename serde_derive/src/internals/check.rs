@@ -1,4 +1,4 @@
-use crate::internals::ast::{Container, Data, Field, Style};
+use crate::internals::ast::{Container, Data, Field, Style, Variant};
 use crate::internals::attr::{Default, Identifier, TagType};
 use crate::internals::{ungroup, Ctxt, Derive};
 use syn::{Member, Type};
@@ -13,6 +13,7 @@ pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     check_identifier(cx, cont);
     check_variant_skip_attrs(cx, cont);
     check_internal_tag_field_name_conflict(cx, cont);
+    check_internal_default_variant(cx, cont);
     check_adjacent_tag_conflict(cx, cont);
     check_transparent(cx, cont, derive);
     check_from_and_try_from(cx, cont);
@@ -343,6 +344,48 @@ fn check_internal_tag_field_name_conflict(cx: &Ctxt, cont: &Container) {
                 }
             }
             Style::Unit | Style::Newtype | Style::Tuple => {}
+        }
+    }
+}
+
+// Variants may be marked with #[serde(default)] attribute, but only in internally-tagged
+// enums and only when not skipped. Also, there must be only one such variant
+fn check_internal_default_variant(cx: &Ctxt, cont: &Container) {
+    let variants = match &cont.data {
+        Data::Enum(variants) => variants,
+        Data::Struct(_, _) => return,
+    };
+
+    let mut default: Option<&Variant<'_>> = None;
+    for variant in variants {
+        if variant.attrs.default() {
+            if let TagType::Internal { .. } = cont.attrs.tag() {
+                if let Some(default) = default {
+                    cx.error_spanned_by(
+                        variant.original,
+                        format!(
+                            "#[serde(default)] already defined at variant {}",
+                            default.ident
+                        ),
+                    );
+                    continue;
+                }
+                default = Some(variant);
+
+                if variant.attrs.skip_deserializing() {
+                    cx.error_spanned_by(
+                        variant.original,
+                        format!("variant `{}` cannot have both #[serde(default)] and #[serde(skip)] or #[serde(skip_deserializing)]", variant.ident),
+                    );
+                }
+            } else {
+                cx.error_spanned_by(
+                    variant.original,
+                    "#[serde(default)] can only be used on variants of internally tagged enums",
+                );
+                // We do not want to repeat this error for each variant with #[serde(default)]
+                return;
+            }
         }
     }
 }
