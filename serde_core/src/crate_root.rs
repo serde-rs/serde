@@ -132,12 +132,12 @@ macro_rules! crate_root {
             };
         }
 
-        #[cfg_attr(no_serde_core, path = "core/de/mod.rs")]
+        #[cfg_attr(all(docsrs, if_docsrs_then_no_serde_core), path = "core/de/mod.rs")]
         pub mod de;
-        #[cfg_attr(no_serde_core, path = "core/ser/mod.rs")]
+        #[cfg_attr(all(docsrs, if_docsrs_then_no_serde_core), path = "core/ser/mod.rs")]
         pub mod ser;
 
-        #[cfg_attr(no_serde_core, path = "core/format.rs")]
+        #[cfg_attr(all(docsrs, if_docsrs_then_no_serde_core), path = "core/format.rs")]
         mod format;
 
         #[doc(inline)]
@@ -147,7 +147,10 @@ macro_rules! crate_root {
 
         // Used by generated code. Not public API.
         #[doc(hidden)]
-        #[cfg_attr(no_serde_core, path = "core/private/mod.rs")]
+        #[cfg_attr(
+            all(docsrs, if_docsrs_then_no_serde_core),
+            path = "core/private/mod.rs"
+        )]
         mod private;
 
         // Used by declarative macro generated code. Not public API.
@@ -162,7 +165,7 @@ macro_rules! crate_root {
         include!(concat!(env!("OUT_DIR"), "/private.rs"));
 
         #[cfg(all(not(feature = "std"), no_core_error))]
-        #[cfg_attr(no_serde_core, path = "core/std_error.rs")]
+        #[cfg_attr(all(docsrs, if_docsrs_then_no_serde_core), path = "core/std_error.rs")]
         mod std_error;
     };
 }
