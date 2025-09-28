@@ -31,10 +31,53 @@ pub enum Data<'a> {
 /// A variant of an enum.
 pub struct Variant<'a> {
     pub ident: syn::Ident,
+    /// #[serde(...)] attributes of this variant
     pub attrs: attr::Variant,
+    /// Style used by Rust code to represent enum variant. Can differ from the
+    /// style of the serialized form due to fields skipping
     pub style: Style,
     pub fields: Vec<Field<'a>>,
     pub original: &'a syn::Variant,
+}
+impl<'a> Variant<'a> {
+    /// Effective style of serialized representation used for deserialization,
+    /// calculated by taking into account fields skipped for deserialization.
+    pub fn de_style(&self) -> Style {
+        effective_style(
+            self.style,
+            self.fields
+                .iter()
+                .filter(|f| !f.attrs.skip_deserializing())
+                .count(),
+        )
+    }
+
+    /// Effective style of serialized representation used for serialization,
+    /// calculated by taking into account fields skipped for serialization.
+    pub fn ser_style(&self) -> Style {
+        effective_style(
+            self.style,
+            self.fields
+                .iter()
+                .filter(|f| !f.attrs.skip_serializing())
+                .count(),
+        )
+    }
+}
+
+fn effective_style(style: Style, fields: usize) -> Style {
+    match (style, fields) {
+        (Style::Unit, _) => Style::Unit,
+
+        (Style::Newtype, 0) => Style::Unit,
+        (Style::Newtype, _) => Style::Newtype,
+
+        (Style::Tuple, 0) => Style::Unit,
+        (Style::Tuple, 1) => Style::Newtype,
+        (Style::Tuple, _) => Style::Tuple,
+
+        (Style::Struct, _) => Style::Struct,
+    }
 }
 
 /// A field of a struct.
@@ -45,7 +88,7 @@ pub struct Field<'a> {
     pub original: &'a syn::Field,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Style {
     /// Named fields.
     Struct,
