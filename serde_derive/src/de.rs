@@ -594,12 +594,15 @@ fn deserialize_seq_in_place(
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
                     quote!({
                         #wrapper
-                        match _serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)? {
-                            _serde::#private::Some(__wrap) => {
+                        match _serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq) {
+                            _serde::#private::Ok(_serde::#private::Some(__wrap)) => {
                                 self.place.#member = __wrap.value;
                             }
-                            _serde::#private::None => {
+                            _serde::#private::Ok(_serde::#private::None) => {
                                 #value_if_none;
+                            }
+                            _serde::#private::Err(__err) => {
+                                return _serde::#private::Err(__err);
                             }
                         }
                     })
