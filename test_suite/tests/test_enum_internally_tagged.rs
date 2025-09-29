@@ -1038,6 +1038,126 @@ mod struct_enum {
 }
 
 #[test]
+fn default_variant() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "tag")]
+    enum InternallyTaggedWithDefault {
+        Unit,
+        NewtypeUnit(()),
+        NewtypeUnitStruct(Unit),
+        NewtypeNewtype(Newtype),
+        NewtypeMap(BTreeMap<String, String>),
+        NewtypeStruct(Struct),
+        NewtypeEnum(Enum),
+        #[serde(default)]
+        Struct {
+            a: u8,
+        },
+        StructEnum {
+            enum_: Enum,
+        },
+    }
+
+    let value = InternallyTaggedWithDefault::Struct { a: 1 };
+
+    // Special case: no tag field, use enum tokens
+    assert_de_tokens(
+        &value,
+        &[
+            Token::Struct {
+                name: "InternallyTagged",
+                len: 1,
+            },
+            Token::Str("a"),
+            Token::U8(1),
+            Token::StructEnd,
+        ],
+    );
+    assert_de_tokens(
+        &value,
+        &[
+            Token::Struct {
+                name: "InternallyTagged",
+                len: 1,
+            },
+            Token::BorrowedStr("a"),
+            Token::U8(1),
+            Token::StructEnd,
+        ],
+    );
+
+    // Special case: no tag field, Map representation
+    assert_de_tokens(
+        &value,
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("a"),
+            Token::U8(1),
+            Token::MapEnd,
+        ],
+    );
+    assert_de_tokens(
+        &value,
+        &[
+            Token::Map { len: Some(1) },
+            Token::BorrowedStr("a"),
+            Token::U8(1),
+            Token::MapEnd,
+        ],
+    );
+
+    // Special case: Map representation, unknown tag
+    assert_de_tokens_error::<InternallyTaggedWithDefault>(
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("tag"),
+            Token::Str("Z"),
+            Token::MapEnd,
+        ],
+        "unknown variant `Z`, expected one of \
+        `Unit`, \
+        `NewtypeUnit`, \
+        `NewtypeUnitStruct`, \
+        `NewtypeNewtype`, \
+        `NewtypeMap`, \
+        `NewtypeStruct`, \
+        `NewtypeEnum`, \
+        `Struct`, \
+        `StructEnum`",
+    );
+
+    // Special case: Seq representation, unknown tag
+    assert_de_tokens_error::<InternallyTaggedWithDefault>(
+        &[
+            Token::Seq { len: Some(1) },
+            Token::Str("Z"), // tag
+            Token::SeqEnd,
+        ],
+        "unknown variant `Z`, expected one of \
+        `Unit`, \
+        `NewtypeUnit`, \
+        `NewtypeUnitStruct`, \
+        `NewtypeNewtype`, \
+        `NewtypeMap`, \
+        `NewtypeStruct`, \
+        `NewtypeEnum`, \
+        `Struct`, \
+        `StructEnum`",
+    );
+
+    // Special case: Seq representation cannot be used without a tag due to ambiguity
+    assert_de_tokens_error::<InternallyTaggedWithDefault>(
+        &[
+            Token::Seq { len: Some(1) },
+            Token::U8(1), // tag (== NewtypeUnit)
+            Token::SeqEnd,
+        ],
+        // The error is not very clear, because actually we got end of sequence instead of a Unit
+        "invalid type: sequence, expected unit",
+    );
+}
+
+#[test]
 fn wrong_tag() {
     assert_de_tokens_error::<InternallyTagged>(
         &[Token::Map { len: Some(0) }, Token::MapEnd],
