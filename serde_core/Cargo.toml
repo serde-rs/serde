@@ -6,12 +6,12 @@ build = "build.rs"
 categories = ["encoding", "no-std", "no-std::no-alloc"]
 description = "Serde traits only, with no support for derive -- use the `serde` crate instead"
 documentation = "https://docs.rs/serde_core"
-edition = "2021"
+edition = "2024"
 homepage = "https://serde.rs"
 keywords = ["serde", "serialization", "no_std"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/serde-rs/serde"
-rust-version = "1.56"
+rust-version = "1.90.0"
 
 [dev-dependencies]
 serde = { version = "1", path = "../serde" }
