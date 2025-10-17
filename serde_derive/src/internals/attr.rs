@@ -1185,13 +1185,11 @@ impl Field {
             }
         }
 
-        // Is skip_deserializing, initialize the field to Default::default() unless a
+        // If skip_deserializing, initialize the field to Default::default() unless a
         // different default is specified by `#[serde(default = "...")]` on
         // ourselves or our container (e.g. the struct we are in).
-        if let Default::None = *container_default {
-            if skip_deserializing.0.value.is_some() {
-                default.set_if_none(Default::Default);
-            }
+        if container_default.is_none() && skip_deserializing.0.value.is_some() {
+            default.set_if_none(Default::Default);
         }
 
         let mut borrowed_lifetimes = borrowed_lifetimes.get().unwrap_or_default();
