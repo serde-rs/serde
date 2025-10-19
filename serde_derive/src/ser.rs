@@ -13,9 +13,8 @@ pub fn expand_derive_serialize(input: &mut syn::DeriveInput) -> syn::Result<Toke
     replace_receiver(input);
 
     let ctxt = Ctxt::new();
-    let cont = match Container::from_ast(&ctxt, input, Derive::Serialize, &private.ident()) {
-        Some(cont) => cont,
-        None => return Err(ctxt.check().unwrap_err()),
+    let Some(cont) = Container::from_ast(&ctxt, input, Derive::Serialize, &private.ident()) else {
+        return Err(ctxt.check().unwrap_err());
     };
     precondition(&ctxt, &cont);
     ctxt.check()?;

@@ -26,9 +26,9 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
     replace_receiver(input);
 
     let ctxt = Ctxt::new();
-    let cont = match Container::from_ast(&ctxt, input, Derive::Deserialize, &private.ident()) {
-        Some(cont) => cont,
-        None => return Err(ctxt.check().unwrap_err()),
+    let Some(cont) = Container::from_ast(&ctxt, input, Derive::Deserialize, &private.ident())
+    else {
+        return Err(ctxt.check().unwrap_err());
     };
     precondition(&ctxt, &cont);
     ctxt.check()?;
