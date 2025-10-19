@@ -45,8 +45,8 @@ fn main() {
         println!("cargo:rustc-check-cfg=cfg(no_target_has_atomic)");
     }
 
-    // Current minimum supported version of serde_derive crate is Rust 1.65.
-    if minor < 65 {
+    // Current minimum supported version of serde_derive crate is Rust 1.68.
+    if minor < 68 {
         println!("cargo:rustc-cfg=no_serde_derive");
     }
 

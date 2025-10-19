@@ -98,12 +98,12 @@ jobs:
       - run: cd serde && cargo build
 
   derive:
-    name: Rust 1.65.0
+    name: Rust 1.68.0
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.65.0
+      - uses: dtolnay/rust-toolchain@1.68.0
       - run: |
           sed -i 's/proc-macro2 = { workspace = true/proc-macro2 = { version = "1"/' serde_derive*/Cargo.toml
           sed -i 's/quote = { workspace = true/quote = { version = "1"/' serde_derive*/Cargo.toml
