@@ -29,6 +29,9 @@ pub(super) fn deserialize(
         .iter()
         .filter(|variant| !variant.attrs.skip_deserializing())
         .map(|variant| Expr(deserialize_variant(params, variant, cattrs)));
+
+    let variant_labels = variants.iter().map(|v| format!("{}", v.ident));
+
     // TODO this message could be better by saving the errors from the failed
     // attempts. The heuristic used by TOML was to count the number of fields
     // processed before an error, and use the error that happened after the
@@ -36,25 +39,45 @@ pub(super) fn deserialize(
     // better to save all the errors and combine them into one message that
     // explains why none of the variants matched.
     let fallthrough_msg = format!(
-        "data did not match any variant of untagged enum {}",
+        "data did not match any variant of untagged enum {}:",
         params.type_name()
     );
-    let fallthrough_msg = cattrs.expecting().unwrap_or(&fallthrough_msg);
+    let expected = cattrs.expecting().unwrap_or("");
 
     let private2 = private;
     quote_block! {
         let __content = _serde::de::DeserializeSeed::deserialize(_serde::#private::de::ContentVisitor::new(), __deserializer)?;
         let __deserializer = _serde::#private::de::ContentRefDeserializer::<__D::Error>::new(&__content);
+        let mut __errors = vec![];
 
         #first_attempt
 
+        // Collect errors during a run
         #(
-            if let _serde::#private2::Ok(__ok) = #attempts {
-                return _serde::#private2::Ok(__ok);
+            match #attempts {
+                _serde::#private2::Ok(__ok) => return _serde::#private2::Ok(__ok),
+                _serde::#private2::Err(__err) => __errors.push(__err)
             }
-        )*
+        )*;
 
-        _serde::#private::Err(_serde::de::Error::custom(#fallthrough_msg))
+        // Combine the errors into a single message
+        let mut __counter = __errors.iter();
+        let mut __list = vec![];
+        #(
+            let label = #variant_labels;
+            if let _serde::#private2::Some(value) = __counter.next() {
+                __list.push(format!("- {label}: {value}"));
+            }
+        )*;
+
+        // Respect the expected error if set by the user
+        let error = if !#expected.is_empty() {
+            #expected.to_string()
+        } else {
+            format!("{}\n{}", #fallthrough_msg, __list.join("\n"))
+        };
+
+        _serde::#private::Err(_serde::de::Error::custom(error))
     }
 }
 
