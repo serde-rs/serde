@@ -9,7 +9,7 @@
 mod bytes;
 
 use serde_derive::{Deserialize, Serialize};
-use serde_test::{assert_de_tokens, assert_de_tokens_error, assert_tokens, Token};
+use serde_test::{Token, assert_de_tokens, assert_de_tokens_error, assert_tokens};
 use std::collections::BTreeMap;
 
 #[test]
@@ -71,7 +71,7 @@ fn complex() {
 
     assert_de_tokens_error::<Untagged>(
         &[Token::Tuple { len: 1 }, Token::U8(1), Token::TupleEnd],
-        "data did not match any variant of untagged enum Untagged",
+        "data did not match any variant of untagged enum Untagged:\n- A: invalid type: sequence, expected struct variant Untagged::A\n- B: invalid type: sequence, expected struct variant Untagged::B\n- C: invalid type: sequence, expected unit variant Untagged::C\n- D: invalid type: sequence, expected u8\n- E: invalid type: sequence, expected a string\n- F: invalid length 1, expected tuple variant Untagged::F with 2 elements",
     );
 
     assert_de_tokens_error::<Untagged>(
@@ -82,7 +82,7 @@ fn complex() {
             Token::U8(3),
             Token::TupleEnd,
         ],
-        "data did not match any variant of untagged enum Untagged",
+        "data did not match any variant of untagged enum Untagged:\n- A: invalid type: sequence, expected struct variant Untagged::A\n- B: invalid type: sequence, expected struct variant Untagged::B\n- C: invalid type: sequence, expected unit variant Untagged::C\n- D: invalid type: sequence, expected u8\n- E: invalid type: sequence, expected a string\n- F: invalid length 3, expected 2 elements in sequence",
     );
 }
 
