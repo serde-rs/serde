@@ -119,7 +119,7 @@
     // clippy bug: https://github.com/rust-lang/rust-clippy/issues/7768
     clippy::semicolon_if_nothing_returned,
     // not available in our oldest supported compiler
-    clippy::empty_enum,
+    clippy::empty_enums,
     clippy::type_repetition_in_bounds, // https://github.com/rust-lang/rust-clippy/issues/8772
     // integer and float ser/de requires these sorts of casts
     clippy::cast_possible_truncation,

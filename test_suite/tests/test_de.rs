@@ -2,7 +2,7 @@
     clippy::cast_lossless,
     clippy::decimal_literal_representation,
     clippy::derive_partial_eq_without_eq,
-    clippy::empty_enum,
+    clippy::empty_enums,
     clippy::manual_assert,
     clippy::needless_pass_by_value,
     clippy::uninlined_format_args,

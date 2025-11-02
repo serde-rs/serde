@@ -1,6 +1,6 @@
 #![allow(
     clippy::derive_partial_eq_without_eq,
-    clippy::empty_enum,
+    clippy::empty_enums,
     clippy::unreadable_literal
 )]
 #![cfg_attr(feature = "unstable", feature(never_type))]
