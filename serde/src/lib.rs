@@ -64,6 +64,7 @@
 //! - [Hjson], a syntax extension to JSON designed around human reading and
 //!   editing. *(deserialization only)*
 //! - [CSV], Comma-separated values is a tabular text file format.
+//! - [TOON], Token-Oriented Object Notation, a compact format optimized for LLMs.
 //!
 //! [JSON]: https://github.com/serde-rs/json
 //! [Postcard]: https://github.com/jamesmunns/postcard
@@ -91,6 +92,7 @@
 //! [rusoto_dynamodb]: https://docs.rs/rusoto_dynamodb
 //! [Hjson]: https://github.com/Canop/deser-hjson
 //! [CSV]: https://docs.rs/csv
+//! [TOON]: https://github.com/hxphsts/serde_toon
 
 ////////////////////////////////////////////////////////////////////////////////
 
