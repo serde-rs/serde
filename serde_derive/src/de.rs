@@ -257,13 +257,15 @@ fn requires_default(field: &attr::Field, _variant: Option<&attr::Variant>) -> bo
 enum BorrowedLifetimes {
     Borrowed(BTreeSet<syn::Lifetime>),
     Static,
+    User(syn::Lifetime),
 }
 
 impl BorrowedLifetimes {
     fn de_lifetime(&self) -> syn::Lifetime {
-        match *self {
+        match self {
             BorrowedLifetimes::Borrowed(_) => syn::Lifetime::new("'de", Span::call_site()),
             BorrowedLifetimes::Static => syn::Lifetime::new("'static", Span::call_site()),
+            BorrowedLifetimes::User(a) => a.clone(),
         }
     }
 
@@ -276,6 +278,7 @@ impl BorrowedLifetimes {
                 bounds: bounds.iter().cloned().collect(),
             }),
             BorrowedLifetimes::Static => None,
+            BorrowedLifetimes::User(_) => None,
         }
     }
 }
@@ -296,7 +299,9 @@ fn borrowed_lifetimes(cont: &Container) -> BorrowedLifetimes {
             lifetimes.extend(field.attrs.borrowed_lifetimes().iter().cloned());
         }
     }
-    if lifetimes.iter().any(|b| b.to_string() == "'static") {
+    if let Some(a) = cont.attrs.lifetime() {
+        BorrowedLifetimes::User(a.clone())
+    } else if lifetimes.iter().any(|b| b.to_string() == "'static") {
         BorrowedLifetimes::Static
     } else {
         BorrowedLifetimes::Borrowed(lifetimes)
