@@ -16,6 +16,7 @@ pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     check_adjacent_tag_conflict(cx, cont);
     check_transparent(cx, cont, derive);
     check_from_and_try_from(cx, cont);
+    check_enum_untagged(cx, cont, derive);
 }
 
 // If some field of a tuple struct is marked #[serde(default)] then all fields
@@ -473,5 +474,38 @@ fn check_from_and_try_from(cx: &Ctxt, cont: &mut Container) {
             cont.original,
             "#[serde(from = \"...\")] and #[serde(try_from = \"...\")] conflict with each other",
         );
+    }
+}
+
+/// Checks that untagged enum has only one unit variant, because we cannot distinguish between
+/// different variants when deserializing
+fn check_enum_untagged(cx: &Ctxt, cont: &mut Container, derive: Derive) {
+    // We allow serialization of enums with multiple units, because new units could
+    // be added to maintain backward compatibility
+    if let Derive::Serialize = derive {
+        return;
+    }
+    let variants = match &cont.data {
+        Data::Enum(variants) => variants,
+        Data::Struct(_, _) => return,
+    };
+    if !matches!(cont.attrs.tag(), TagType::None) {
+        return;
+    }
+
+    let mut unit = None;
+    for variant in variants {
+        if variant.attrs.skip_deserializing() {
+            continue;
+        }
+        if let Style::Unit = variant.style {
+            if unit.is_some() {
+                cx.error_spanned_by(
+                    variant.original,
+                    "untagged enums can contain only one unit variant. Use #[serde(skip_deserializing)] if you really want several unit variants",
+                );
+            }
+            unit = Some(variant);
+        }
     }
 }
