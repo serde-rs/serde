@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
       - run: cd test_suite && cargo test --features unstable
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: Cargo.lock
