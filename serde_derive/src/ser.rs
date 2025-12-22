@@ -168,7 +168,9 @@ fn needs_serialize_bound(field: &attr::Field, variant: Option<&attr::Variant>) -
 }
 
 fn serialize_body(cont: &Container, params: &Parameters) -> Fragment {
-    if cont.attrs.transparent() {
+    if let Some(path) = cont.attrs.serialize_with() {
+        serialize_with(params, path)
+    } else if cont.attrs.transparent() {
         serialize_transparent(cont, params)
     } else if let Some(type_into) = cont.attrs.type_into() {
         serialize_into(params, type_into)
@@ -216,6 +218,18 @@ fn serialize_into(params: &Parameters, type_into: &syn::Type) -> Fragment {
         _serde::Serialize::serialize(
             &_serde::#private::Into::<#type_into>::into(_serde::#private::Clone::clone(#self_var)),
             __serializer)
+    }
+}
+
+fn serialize_with(params: &Parameters, path: &syn::ExprPath) -> Fragment {
+    let self_var = &params.self_var;
+    // Attach type errors to the path in #[serialize(serialize_with = "path")]
+    let serializer_var = quote!(__serializer);
+    let wrapper_serialize = quote_spanned! {path.span()=>
+        #path(#self_var, #serializer_var)
+    };
+    quote_expr! {
+        #wrapper_serialize
     }
 }
 
