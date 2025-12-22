@@ -11,7 +11,7 @@ fn d<T>() -> T {
 struct T1(u8, #[serde(default = "d")] u8);
 
 // ERROR: The first field can get default value only if sequence is empty, but
-// that mean that all other fields cannot be deserialized without errors.
+// that means that all other fields cannot be deserialized without errors.
 #[derive(Deserialize)]
 struct T2(#[serde(default = "d")] u8, u8, u8);
 
