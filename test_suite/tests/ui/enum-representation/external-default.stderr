@@ -1,0 +1,6 @@
+error: #[serde(default)] can only be used on variants of internally tagged enums
+ --> tests/ui/enum-representation/external-default.rs:6:5
+  |
+6 | /     #[serde(default)]
+7 | |     V2 { f: u8 },
+  | |________________^
