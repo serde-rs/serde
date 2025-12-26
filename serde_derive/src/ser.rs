@@ -142,12 +142,19 @@ fn build_generics(cont: &Container) -> syn::Generics {
 
     match cont.attrs.ser_bound() {
         Some(predicates) => bound::with_where_predicates(&generics, predicates),
-        None => bound::with_bound(
-            cont,
-            &generics,
-            needs_serialize_bound,
-            &parse_quote!(_serde::Serialize),
-        ),
+        None => {
+            // Don't add `T: Serialize` if it's serialized by converting into other type.
+            if cont.attrs.type_into().is_some() {
+                generics
+            } else {
+                bound::with_bound(
+                    cont,
+                    &generics,
+                    needs_serialize_bound,
+                    &parse_quote!(_serde::Serialize),
+                )
+            }
+        }
     }
 }
 
