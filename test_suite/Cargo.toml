@@ -17,5 +17,5 @@ foldhash = "0.2"
 rustversion = "1.0"
 serde = { path = "../serde", features = ["rc"] }
 serde_derive = { path = "../serde_derive", features = ["deserialize_in_place"] }
-serde_test = "1.0.176"
+serde_test = { git = "https://github.com/Mingun/serde-test", branch = "integer128" }
 trybuild = { version = "1.0.108", features = ["diff"] }
