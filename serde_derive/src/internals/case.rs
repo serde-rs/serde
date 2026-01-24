@@ -57,24 +57,23 @@ impl RenameRule {
     pub fn apply_to_variant(self, variant: &str) -> String {
         match self {
             None | PascalCase => variant.to_owned(),
-            LowerCase => variant.to_ascii_lowercase(),
-            UpperCase => variant.to_ascii_uppercase(),
-            CamelCase => variant[..1].to_ascii_lowercase() + &variant[1..],
-            SnakeCase => {
-                let mut snake = String::new();
-                for (i, ch) in variant.char_indices() {
-                    if i > 0 && ch.is_uppercase() {
-                        snake.push('_');
-                    }
-                    snake.push(ch.to_ascii_lowercase());
-                }
-                snake
+            LowerCase => variant.to_lowercase(),
+            UpperCase => variant.to_uppercase(),
+            CamelCase => {
+                let mut chars = variant.chars();
+                let Some(first) = chars.next() else {
+                    return String::new();
+                };
+
+                let mut camel = String::with_capacity(variant.len());
+                camel.extend(first.to_uppercase());
+                camel.push_str(chars.as_str());
+                camel
             }
-            ScreamingSnakeCase => SnakeCase.apply_to_variant(variant).to_ascii_uppercase(),
-            KebabCase => SnakeCase.apply_to_variant(variant).replace('_', "-"),
-            ScreamingKebabCase => ScreamingSnakeCase
-                .apply_to_variant(variant)
-                .replace('_', "-"),
+            SnakeCase => separate_pascal_case(variant, false, '_'),
+            ScreamingSnakeCase => separate_pascal_case(variant, true, '_'),
+            KebabCase => separate_pascal_case(variant, false, '-'),
+            ScreamingKebabCase => separate_pascal_case(variant, true, '-'),
         }
     }
 
@@ -82,29 +81,23 @@ impl RenameRule {
     pub fn apply_to_field(self, field: &str) -> String {
         match self {
             None | LowerCase | SnakeCase => field.to_owned(),
-            UpperCase => field.to_ascii_uppercase(),
-            PascalCase => {
-                let mut pascal = String::new();
-                let mut capitalize = true;
-                for ch in field.chars() {
-                    if ch == '_' {
-                        capitalize = true;
-                    } else if capitalize {
-                        pascal.push(ch.to_ascii_uppercase());
-                        capitalize = false;
-                    } else {
-                        pascal.push(ch);
+            UpperCase => field.to_uppercase(),
+            PascalCase => snake_case_to_camel_case(field, true),
+            CamelCase => snake_case_to_camel_case(field, false),
+            ScreamingSnakeCase => field.to_uppercase(),
+            KebabCase => field.replace('_', "-"),
+            ScreamingKebabCase => {
+                let kebab = field.to_uppercase();
+
+                let mut kebab_vec = Vec::from(kebab);
+                for b in &mut kebab_vec {
+                    if *b == b'_' {
+                        *b = b'-';
                     }
                 }
-                pascal
+                // we only replaced ASCII in place, it's still valid UTF-8
+                String::from_utf8(kebab_vec).unwrap()
             }
-            CamelCase => {
-                let pascal = PascalCase.apply_to_field(field);
-                pascal[..1].to_ascii_lowercase() + &pascal[1..]
-            }
-            ScreamingSnakeCase => field.to_ascii_uppercase(),
-            KebabCase => field.replace('_', "-"),
-            ScreamingKebabCase => ScreamingSnakeCase.apply_to_field(field).replace('_', "-"),
         }
     }
 
@@ -115,6 +108,37 @@ impl RenameRule {
             _ => self,
         }
     }
+}
+
+fn separate_pascal_case(pascal: &str, screaming: bool, line: char) -> String {
+    let mut separated = String::with_capacity(pascal.len());
+    for (i, ch) in pascal.char_indices() {
+        if i > 0 && ch.is_uppercase() {
+            separated.push(line);
+        }
+        if screaming {
+            separated.extend(ch.to_uppercase());
+        } else {
+            separated.extend(ch.to_lowercase());
+        }
+    }
+    separated
+}
+
+fn snake_case_to_camel_case(snake: &str, pascal: bool) -> String {
+    let mut camel = String::with_capacity(snake.len());
+    let mut capitalize = pascal;
+    for ch in snake.chars() {
+        if ch == '_' {
+            capitalize = true;
+        } else if capitalize {
+            camel.extend(ch.to_uppercase());
+            capitalize = false;
+        } else {
+            camel.push(ch);
+        }
+    }
+    camel
 }
 
 pub struct ParseError<'a> {
