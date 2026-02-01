@@ -640,6 +640,105 @@ fn skipped_variant() {
 }
 
 #[test]
+fn duplicated_tag() {
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Unit",
+            },
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Struct",
+            },
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::Str("content"),
+            // Token::Unit,
+            // Token::MapEnd,
+        ],
+        "duplicate field `t`",
+    );
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("c"),
+            Token::Unit,
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Unit",
+            },
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Struct",
+            },
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::MapEnd,
+        ],
+        "duplicate field `t`",
+    );
+}
+
+#[test]
+fn duplicated_content() {
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Unit",
+            },
+            Token::Str("c"),
+            Token::Unit,
+            Token::Str("c"),
+            Token::NewtypeStruct { name: "Newtype" },
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::I32(42),
+            // Token::MapEnd,
+        ],
+        "duplicate field `c`",
+    );
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("c"),
+            Token::Unit,
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Unit",
+            },
+            Token::Str("c"),
+            Token::NewtypeStruct { name: "Newtype" },
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::I32(42),
+            // Token::MapEnd,
+        ],
+        "duplicate field `c`",
+    );
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("c"),
+            Token::Unit,
+            Token::Str("c"),
+            Token::NewtypeStruct { name: "Newtype" },
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::I32(42),
+            // Token::Str("tag"),
+            // Token::Str("Unit"),
+            // Token::MapEnd,
+        ],
+        "duplicate field `c`",
+    );
+}
+
+#[test]
 fn struct_with_flatten() {
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     #[serde(tag = "t", content = "c")]

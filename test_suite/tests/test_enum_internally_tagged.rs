@@ -1112,6 +1112,36 @@ fn wrong_tag() {
 }
 
 #[test]
+fn duplicated_tag() {
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Map { len: None },
+            Token::Str("tag"),
+            Token::Str("Struct"),
+            Token::Str("a"),
+            Token::I32(1),
+            Token::Str("tag"),
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::MapEnd,
+        ],
+        "duplicate field `tag`",
+    );
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Map { len: None },
+            Token::Str("a"),
+            Token::I32(1),
+            Token::Str("tag"),
+            Token::Str("Struct"),
+            Token::Str("tag"),
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::MapEnd,
+        ],
+        "duplicate field `tag`",
+    );
+}
+
+#[test]
 fn untagged_variant() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "tag")]
