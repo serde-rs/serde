@@ -1085,7 +1085,7 @@ fn skipped_variant() {
 }
 
 #[test]
-fn wrong_tag() {
+fn unknown_variant_name() {
     assert_de_tokens_error::<InternallyTagged>(
         &[Token::Map { len: Some(0) }, Token::MapEnd],
         "missing field `tag`",
@@ -1108,6 +1108,46 @@ fn wrong_tag() {
         `NewtypeEnum`, \
         `Struct`, \
         `StructEnum`",
+    );
+
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Seq { len: Some(1) },
+            Token::Str("Z"), // tag
+            Token::SeqEnd,
+        ],
+        "unknown variant `Z`, expected one of \
+        `Unit`, \
+        `NewtypeUnit`, \
+        `NewtypeUnitStruct`, \
+        `NewtypeNewtype`, \
+        `NewtypeMap`, \
+        `NewtypeStruct`, \
+        `NewtypeEnum`, \
+        `Struct`, \
+        `StructEnum`",
+    );
+}
+
+#[test]
+fn unknown_variant_index() {
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("tag"),
+            Token::U32(9),
+            Token::MapEnd,
+        ],
+        "invalid value: integer `9`, expected variant index 0 <= i < 9",
+    );
+
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Seq { len: Some(1) },
+            Token::U32(9), // tag
+            Token::SeqEnd,
+        ],
+        "invalid value: integer `9`, expected variant index 0 <= i < 9",
     );
 }
 
