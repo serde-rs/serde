@@ -3452,11 +3452,6 @@ pub struct AdjacentlyTaggedEnumVariantSeed<F> {
     pub fields_enum: PhantomData<F>,
 }
 
-pub struct AdjacentlyTaggedEnumVariantVisitor<F> {
-    enum_name: &'static str,
-    fields_enum: PhantomData<F>,
-}
-
 // Although we may forward all methods to corresponding methods of `F`, but because
 // this is not public API struct and `F` is always the `__Fields` type from serde
 // derive which visitor implements only
@@ -3466,7 +3461,7 @@ pub struct AdjacentlyTaggedEnumVariantVisitor<F> {
 //
 // we forward only those methods.
 #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
-impl<'de, F> Visitor<'de> for AdjacentlyTaggedEnumVariantVisitor<F>
+impl<'de, F> Visitor<'de> for AdjacentlyTaggedEnumVariantSeed<F>
 where
     F: Deserialize<'de>,
 {
@@ -3527,10 +3522,7 @@ where
         deserializer.deserialize_enum(
             self.enum_name,
             self.variants,
-            AdjacentlyTaggedEnumVariantVisitor {
-                enum_name: self.enum_name,
-                fields_enum: PhantomData,
-            },
+            self,
         )
     }
 }
