@@ -35,6 +35,9 @@ enum Enum {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "tag")]
 enum InternallyTagged {
+    #[allow(dead_code)]
+    #[serde(skip_deserializing)]
+    Skipped,
     Unit,
     NewtypeUnit(()),
     NewtypeUnitStruct(Unit),
@@ -42,8 +45,12 @@ enum InternallyTagged {
     NewtypeMap(BTreeMap<String, String>),
     NewtypeStruct(Struct),
     NewtypeEnum(Enum),
-    Struct { a: u8 },
-    StructEnum { enum_: Enum },
+    Struct {
+        a: u8,
+    },
+    StructEnum {
+        enum_: Enum,
+    },
 }
 
 #[test]
@@ -1035,6 +1042,46 @@ mod struct_enum {
             ],
         );
     }
+}
+
+#[test]
+fn skipped_variant() {
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Map { len: None },
+            Token::Str("tag"),
+            Token::Str("Skipped"),
+            Token::MapEnd,
+        ],
+        "unknown variant `Skipped`, expected one of \
+        `Unit`, \
+        `NewtypeUnit`, \
+        `NewtypeUnitStruct`, \
+        `NewtypeNewtype`, \
+        `NewtypeMap`, \
+        `NewtypeStruct`, \
+        `NewtypeEnum`, \
+        `Struct`, \
+        `StructEnum`",
+    );
+
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Seq { len: None },
+            Token::Str("Skipped"), // tag
+            Token::SeqEnd,
+        ],
+        "unknown variant `Skipped`, expected one of \
+        `Unit`, \
+        `NewtypeUnit`, \
+        `NewtypeUnitStruct`, \
+        `NewtypeNewtype`, \
+        `NewtypeMap`, \
+        `NewtypeStruct`, \
+        `NewtypeEnum`, \
+        `Struct`, \
+        `StructEnum`",
+    );
 }
 
 #[test]

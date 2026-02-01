@@ -12,10 +12,15 @@ use serde_test::{assert_de_tokens, assert_de_tokens_error, assert_tokens, Token}
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "t", content = "c")]
 enum AdjacentlyTagged<T> {
+    #[allow(dead_code)]
+    #[serde(skip_deserializing)]
+    Skipped,
     Unit,
     Newtype(T),
     Tuple(u8, u8),
-    Struct { f: u8 },
+    Struct {
+        f: u8,
+    },
 }
 
 mod unit {
@@ -594,6 +599,44 @@ mod struct_ {
             ],
         );
     }
+}
+
+#[test]
+fn skipped_variant() {
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Skipped",
+            },
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::MapEnd,
+        ],
+        "unknown variant `Skipped`, expected one of \
+        `Unit`, \
+        `Newtype`, \
+        `Tuple`, \
+        `Struct`",
+    );
+
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Seq { len: Some(1) },
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Skipped",
+            },
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::SeqEnd,
+        ],
+        "unknown variant `Skipped`, expected one of \
+        `Unit`, \
+        `Newtype`, \
+        `Tuple`, \
+        `Struct`",
+    );
 }
 
 #[test]
