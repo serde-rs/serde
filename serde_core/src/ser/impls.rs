@@ -928,8 +928,8 @@ impl Serialize for PathBuf {
     }
 }
 
-#[cfg(all(feature = "std", any(unix, windows)))]
-#[cfg_attr(docsrs, doc(cfg(all(feature = "std", any(unix, windows)))))]
+#[cfg(all(feature = "std", any(unix, windows, target_family = "wasi")))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "std", any(unix, windows, target_family = "wasi")))))]
 impl Serialize for OsStr {
     #[cfg(unix)]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -937,6 +937,15 @@ impl Serialize for OsStr {
         S: Serializer,
     {
         use std::os::unix::ffi::OsStrExt;
+        serializer.serialize_newtype_variant("OsString", 0, "Unix", self.as_bytes())
+    }
+
+    #[cfg(target_family = "wasi")]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use std::os::wasi::ffi::OsStrExt;
         serializer.serialize_newtype_variant("OsString", 0, "Unix", self.as_bytes())
     }
 
@@ -951,8 +960,8 @@ impl Serialize for OsStr {
     }
 }
 
-#[cfg(all(feature = "std", any(unix, windows)))]
-#[cfg_attr(docsrs, doc(cfg(all(feature = "std", any(unix, windows)))))]
+#[cfg(all(feature = "std", any(unix, windows, target_family = "wasi")))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "std", any(unix, windows, target_family = "wasi")))))]
 impl Serialize for OsString {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

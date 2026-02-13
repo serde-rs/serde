@@ -1887,17 +1887,17 @@ forwarded_impl! {
 //
 //    #[derive(Deserialize)]
 //    #[serde(variant_identifier)]
-#[cfg(all(feature = "std", any(unix, windows)))]
+#[cfg(all(feature = "std", any(unix, windows, target_family = "wasi")))]
 variant_identifier! {
     OsStringKind (Unix; b"Unix"; 0, Windows; b"Windows"; 1)
     "`Unix` or `Windows`",
     OSSTR_VARIANTS
 }
 
-#[cfg(all(feature = "std", any(unix, windows)))]
+#[cfg(all(feature = "std", any(unix, windows, target_family = "wasi")))]
 struct OsStringVisitor;
 
-#[cfg(all(feature = "std", any(unix, windows)))]
+#[cfg(all(feature = "std", any(unix, windows, target_family = "wasi")))]
 impl<'de> Visitor<'de> for OsStringVisitor {
     type Value = OsString;
 
@@ -1920,6 +1920,21 @@ impl<'de> Visitor<'de> for OsStringVisitor {
         }
     }
 
+    #[cfg(target_family = "wasi")]
+    fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
+    where
+        A: EnumAccess<'de>,
+    {
+        use std::os::wasi::ffi::OsStringExt;
+
+        match tri!(data.variant()) {
+            (OsStringKind::Unix, v) => v.newtype_variant().map(OsString::from_vec),
+            (OsStringKind::Windows, _) => Err(Error::custom(
+                "cannot deserialize Windows OS string on WASI",
+            )),
+        }
+    }
+
     #[cfg(windows)]
     fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
     where
@@ -1938,8 +1953,8 @@ impl<'de> Visitor<'de> for OsStringVisitor {
     }
 }
 
-#[cfg(all(feature = "std", any(unix, windows)))]
-#[cfg_attr(docsrs, doc(cfg(all(feature = "std", any(unix, windows)))))]
+#[cfg(all(feature = "std", any(unix, windows, target_family = "wasi")))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "std", any(unix, windows, target_family = "wasi")))))]
 impl<'de> Deserialize<'de> for OsString {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -1970,8 +1985,8 @@ forwarded_impl! {
 }
 
 forwarded_impl! {
-    #[cfg(all(feature = "std", any(unix, windows)))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "std", any(unix, windows)))))]
+    #[cfg(all(feature = "std", any(unix, windows, target_family = "wasi")))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "std", any(unix, windows, target_family = "wasi")))))]
     (), Box<OsStr>, OsString::into_boxed_os_str
 }
 
