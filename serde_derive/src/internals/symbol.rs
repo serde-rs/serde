@@ -14,6 +14,7 @@ pub const DENY_UNKNOWN_FIELDS: Symbol = Symbol("deny_unknown_fields");
 pub const DESERIALIZE: Symbol = Symbol("deserialize");
 pub const DESERIALIZE_WITH: Symbol = Symbol("deserialize_with");
 pub const EXPECTING: Symbol = Symbol("expecting");
+pub const ALLOW_PARTIAL_UPDATE: Symbol = Symbol("allow_partial_update");
 pub const FIELD_IDENTIFIER: Symbol = Symbol("field_identifier");
 pub const FLATTEN: Symbol = Symbol("flatten");
 pub const FROM: Symbol = Symbol("from");

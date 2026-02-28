@@ -156,6 +156,7 @@ pub struct Container {
     name: MultiName,
     transparent: bool,
     deny_unknown_fields: bool,
+    allow_partial_update: bool,
     default: Default,
     rename_all_rules: RenameAllRules,
     rename_all_fields_rules: RenameAllRules,
@@ -239,6 +240,7 @@ impl Container {
         let mut de_name = Attr::none(cx, RENAME);
         let mut transparent = BoolAttr::none(cx, TRANSPARENT);
         let mut deny_unknown_fields = BoolAttr::none(cx, DENY_UNKNOWN_FIELDS);
+        let mut allow_partial_update = BoolAttr::none(cx, ALLOW_PARTIAL_UPDATE);
         let mut default = Attr::none(cx, DEFAULT);
         let mut rename_all_ser_rule = Attr::none(cx, RENAME_ALL);
         let mut rename_all_de_rule = Attr::none(cx, RENAME_ALL);
@@ -490,7 +492,10 @@ impl Container {
                     if let Some(s) = get_lit_str(cx, EXPECTING, &meta)? {
                         expecting.set(&meta.path, s.value());
                     }
-                } else {
+                } else if meta.path == ALLOW_PARTIAL_UPDATE {
+                    // #[serde(allow_partial_update)]
+                    allow_partial_update.set_true(meta.path);
+                }else {
                     let path = meta.path.to_token_stream().to_string().replace(' ', "");
                     return Err(
                         meta.error(format_args!("unknown serde container attribute `{}`", path))
@@ -541,6 +546,7 @@ impl Container {
             is_packed,
             expecting: expecting.get(),
             non_exhaustive,
+            allow_partial_update: allow_partial_update.get(),
         }
     }
 
@@ -562,6 +568,10 @@ impl Container {
 
     pub fn deny_unknown_fields(&self) -> bool {
         self.deny_unknown_fields
+    }
+
+    pub fn allow_partial_update(&self) -> bool {
+        self.allow_partial_update
     }
 
     pub fn default(&self) -> &Default {

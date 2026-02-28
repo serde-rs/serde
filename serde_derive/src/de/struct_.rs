@@ -610,6 +610,9 @@ fn deserialize_map_in_place(
         .iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
         .map(|(field, name)| {
+            if cattrs.allow_partial_update() {
+                return quote! {};
+            }
             let missing_expr = expr_is_missing(field, cattrs);
             // If missing_expr unconditionally returns an error, don't try
             // to assign its value to self.place.
