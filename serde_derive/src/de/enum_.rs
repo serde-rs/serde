@@ -26,8 +26,13 @@ pub(super) fn deserialize(
             // can fall through to the untagged variants. This may be infallible so we
             // need to provide the error type.
             let first_attempt = quote! {
-                if let _serde::#private::Result::<_, __D::Error>::Ok(__ok) = (|| #tagged_frag)() {
-                    return _serde::#private::Ok(__ok);
+                match (|| #tagged_frag)() {
+                    _serde::#private::Result::<_, __D::Error>::Ok(__ok) => {
+                        return _serde::#private::Ok(__ok);
+                    }
+                    _serde::#private::Result::Err(__err) => {
+                        __errors.push(_serde::#private::ToString::to_string(&__err));
+                    }
                 }
             };
             enum_untagged::deserialize(params, untagged, cattrs, Some(first_attempt))
