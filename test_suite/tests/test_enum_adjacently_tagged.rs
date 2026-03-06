@@ -12,10 +12,15 @@ use serde_test::{assert_de_tokens, assert_de_tokens_error, assert_tokens, Token}
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "t", content = "c")]
 enum AdjacentlyTagged<T> {
+    #[allow(dead_code)]
+    #[serde(skip_deserializing)]
+    Skipped,
     Unit,
     Newtype(T),
     Tuple(u8, u8),
-    Struct { f: u8 },
+    Struct {
+        f: u8,
+    },
 }
 
 mod unit {
@@ -299,6 +304,17 @@ mod unit {
                 Token::SeqEnd,
             ],
         );
+
+        // Seq: tag (as number) and content
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Seq { len: None },
+                Token::U16(0), // tag
+                Token::Unit,   // content
+                Token::SeqEnd,
+            ],
+        );
     }
 }
 
@@ -407,6 +423,17 @@ mod newtype {
                 Token::SeqEnd,
             ],
         );
+
+        // Seq: tag (as number) and content
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: None },
+                Token::U16(1), // tag
+                Token::U8(1),  // content
+                Token::SeqEnd,
+            ],
+        );
     }
 }
 
@@ -493,7 +520,7 @@ mod tuple {
     fn seq() {
         let value = AdjacentlyTagged::Tuple::<u8>(1, 1);
 
-        // Seq: tag + content
+        // Seq: tag and content
         assert_de_tokens(
             &value,
             &[
@@ -502,6 +529,48 @@ mod tuple {
                     name: "AdjacentlyTagged",
                     variant: "Tuple",
                 },
+                Token::Tuple { len: 2 },
+                Token::U8(1),
+                Token::U8(1),
+                Token::TupleEnd,
+                Token::SeqEnd,
+            ],
+        );
+
+        // Seq: tag (as string) and content
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: None },
+                Token::Str("Tuple"), // tag
+                Token::Tuple { len: 2 },
+                Token::U8(1),
+                Token::U8(1),
+                Token::TupleEnd,
+                Token::SeqEnd,
+            ],
+        );
+
+        // Seq: tag (as borrowed string) and content
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: None },
+                Token::BorrowedStr("Tuple"), // tag
+                Token::Tuple { len: 2 },
+                Token::U8(1),
+                Token::U8(1),
+                Token::TupleEnd,
+                Token::SeqEnd,
+            ],
+        );
+
+        // Seq: tag (as number) and content
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: None },
+                Token::U16(2), // tag
                 Token::Tuple { len: 2 },
                 Token::U8(1),
                 Token::U8(1),
@@ -574,7 +643,7 @@ mod struct_ {
     fn seq() {
         let value = AdjacentlyTagged::Struct::<u8> { f: 1 };
 
-        // Seq: tag + content
+        // Seq: tag and content
         assert_de_tokens(
             &value,
             &[
@@ -593,7 +662,321 @@ mod struct_ {
                 Token::SeqEnd,
             ],
         );
+
+        // Seq: tag (as string) and content
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: None },
+                Token::Str("Struct"), // tag
+                Token::Struct {
+                    name: "Struct",
+                    len: 1,
+                },
+                Token::Str("f"),
+                Token::U8(1),
+                Token::StructEnd,
+                Token::SeqEnd,
+            ],
+        );
+
+        // Seq: tag (as borrowed string) and content
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: None },
+                Token::BorrowedStr("Struct"), // tag
+                Token::Struct {
+                    name: "Struct",
+                    len: 1,
+                },
+                Token::Str("f"),
+                Token::U8(1),
+                Token::StructEnd,
+                Token::SeqEnd,
+            ],
+        );
+
+        // Seq: tag (as number) and content
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Seq { len: None },
+                Token::U16(3), // tag
+                Token::Struct {
+                    name: "Struct",
+                    len: 1,
+                },
+                Token::Str("f"),
+                Token::U8(1),
+                Token::StructEnd,
+                Token::SeqEnd,
+            ],
+        );
     }
+}
+
+#[test]
+fn skipped_variant() {
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Skipped",
+            },
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::MapEnd,
+        ],
+        "unknown variant `Skipped`, expected one of \
+        `Unit`, \
+        `Newtype`, \
+        `Tuple`, \
+        `Struct`",
+    );
+
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Seq { len: Some(1) },
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Skipped",
+            },
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::SeqEnd,
+        ],
+        "unknown variant `Skipped`, expected one of \
+        `Unit`, \
+        `Newtype`, \
+        `Tuple`, \
+        `Struct`",
+    );
+}
+
+#[test]
+fn unknown_variant_name() {
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Foo",
+            },
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::MapEnd,
+        ],
+        "unknown variant `Foo`, expected one of \
+        `Unit`, \
+        `Newtype`, \
+        `Tuple`, \
+        `Struct`",
+    );
+
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Seq { len: Some(1) },
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Foo",
+            },
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::SeqEnd,
+        ],
+        "unknown variant `Foo`, expected one of \
+        `Unit`, \
+        `Newtype`, \
+        `Tuple`, \
+        `Struct`",
+    );
+}
+
+#[test]
+fn unknown_variant_index() {
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Map { len: None },
+            Token::Str("t"),
+            Token::U32(4),
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::MapEnd,
+        ],
+        "invalid value: integer `4`, expected variant index 0 <= i < 4",
+    );
+
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Seq { len: None },
+            Token::U16(4),
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::Unit, // if the unknown tag were a unit variant
+            // Token::SeqEnd,
+        ],
+        "invalid value: integer `4`, expected variant index 0 <= i < 4",
+    );
+}
+
+#[test]
+fn duplicated_tag() {
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Unit",
+            },
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Struct",
+            },
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::Str("content"),
+            // Token::Unit,
+            // Token::MapEnd,
+        ],
+        "duplicate field `t`",
+    );
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("c"),
+            Token::Unit,
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Unit",
+            },
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Struct",
+            },
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::MapEnd,
+        ],
+        "duplicate field `t`",
+    );
+}
+
+#[test]
+fn duplicated_content() {
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Unit",
+            },
+            Token::Str("c"),
+            Token::Unit,
+            Token::Str("c"),
+            Token::NewtypeStruct { name: "Newtype" },
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::I32(42),
+            // Token::MapEnd,
+        ],
+        "duplicate field `c`",
+    );
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("c"),
+            Token::Unit,
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Unit",
+            },
+            Token::Str("c"),
+            Token::NewtypeStruct { name: "Newtype" },
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::I32(42),
+            // Token::MapEnd,
+        ],
+        "duplicate field `c`",
+    );
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("c"),
+            Token::Unit,
+            Token::Str("c"),
+            Token::NewtypeStruct { name: "Newtype" },
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::I32(42),
+            // Token::Str("tag"),
+            // Token::Str("Unit"),
+            // Token::MapEnd,
+        ],
+        "duplicate field `c`",
+    );
+}
+
+#[test]
+fn duplicated_field_in_struct() {
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Struct",
+            },
+            Token::Str("c"),
+            Token::Map { len: Some(2) },
+            Token::Str("f"),
+            Token::I32(1),
+            Token::Str("f"),
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::I32(2),
+            // Token::MapEnd,
+            // Token::MapEnd,
+        ],
+        "duplicate field `f`",
+    );
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("c"),
+            Token::Map { len: Some(2) },
+            Token::Str("f"),
+            Token::I32(1),
+            Token::Str("f"),
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            Token::I32(2),
+            Token::MapEnd,
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Struct",
+            },
+            Token::MapEnd,
+        ],
+        "duplicate field `f`",
+    );
+
+    assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+        &[
+            Token::Seq { len: Some(2) },
+            Token::UnitVariant {
+                name: "AdjacentlyTagged",
+                variant: "Struct",
+            },
+            Token::Map { len: Some(2) }, // content
+            Token::Str("f"),
+            Token::I32(1),
+            Token::Str("f"),
+            Token::I32(2),
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::MapEnd,
+            // Token::SeqEnd,
+        ],
+        "duplicate field `f`",
+    );
 }
 
 #[test]
