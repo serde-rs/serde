@@ -339,14 +339,16 @@ pub fn with_self_bound(
             bounded_ty: type_of_item(cont),
             colon_token: <Token![:]>::default(),
             // the bound e.g. Default
-            bounds: vec![syn::TypeParamBound::Trait(syn::TraitBound {
-                paren_token: None,
-                modifier: syn::TraitBoundModifier::None,
-                lifetimes: None,
-                path: bound.clone(),
-            })]
-            .into_iter()
-            .collect(),
+            bounds: {
+                let mut punct = Punctuated::new();
+                punct.push(syn::TypeParamBound::Trait(syn::TraitBound {
+                    paren_token: None,
+                    modifier: syn::TraitBoundModifier::None,
+                    lifetimes: None,
+                    path: bound.clone(),
+                }));
+                punct
+            },
         }));
     generics
 }
@@ -360,23 +362,24 @@ pub fn with_lifetime_bound(generics: &syn::Generics, lifetime: &str) -> syn::Gen
         bounds: Punctuated::new(),
     };
 
-    let params = Some(syn::GenericParam::Lifetime(def))
-        .into_iter()
-        .chain(generics.params.iter().cloned().map(|mut param| {
-            match &mut param {
-                syn::GenericParam::Lifetime(param) => {
-                    param.bounds.push(bound.clone());
-                }
-                syn::GenericParam::Type(param) => {
-                    param
-                        .bounds
-                        .push(syn::TypeParamBound::Lifetime(bound.clone()));
-                }
-                syn::GenericParam::Const(_) => {}
+    let mut params = Punctuated::new();
+    params.push(syn::GenericParam::Lifetime(def));
+
+    for param in &generics.params {
+        let mut param = param.clone();
+        match &mut param {
+            syn::GenericParam::Lifetime(param) => {
+                param.bounds.push(bound.clone());
             }
-            param
-        }))
-        .collect();
+            syn::GenericParam::Type(param) => {
+                param
+                    .bounds
+                    .push(syn::TypeParamBound::Lifetime(bound.clone()));
+            }
+            syn::GenericParam::Const(_) => {}
+        }
+        params.push(param);
+    }
 
     syn::Generics {
         params,
@@ -389,37 +392,42 @@ fn type_of_item(cont: &Container) -> syn::Type {
         qself: None,
         path: syn::Path {
             leading_colon: None,
-            segments: vec![syn::PathSegment {
-                ident: cont.ident.clone(),
-                arguments: syn::PathArguments::AngleBracketed(
-                    syn::AngleBracketedGenericArguments {
-                        colon2_token: None,
-                        lt_token: <Token![<]>::default(),
-                        args: cont
-                            .generics
-                            .params
-                            .iter()
-                            .map(|param| match param {
-                                syn::GenericParam::Type(param) => {
-                                    syn::GenericArgument::Type(syn::Type::Path(syn::TypePath {
-                                        qself: None,
-                                        path: param.ident.clone().into(),
-                                    }))
+            segments: {
+                let mut punct = Punctuated::new();
+                punct.push(syn::PathSegment {
+                    ident: cont.ident.clone(),
+                    arguments: syn::PathArguments::AngleBracketed(
+                        syn::AngleBracketedGenericArguments {
+                            colon2_token: None,
+                            lt_token: <Token![<]>::default(),
+                            args: {
+                                let mut punct = Punctuated::new();
+                                for param in &cont.generics.params {
+                                    punct.push(match param {
+                                        syn::GenericParam::Type(param) => {
+                                            syn::GenericArgument::Type(syn::Type::Path(
+                                                syn::TypePath {
+                                                    qself: None,
+                                                    path: param.ident.clone().into(),
+                                                },
+                                            ))
+                                        }
+                                        syn::GenericParam::Lifetime(param) => {
+                                            syn::GenericArgument::Lifetime(param.lifetime.clone())
+                                        }
+                                        syn::GenericParam::Const(_) => {
+                                            panic!("Serde does not support const generics yet");
+                                        }
+                                    });
                                 }
-                                syn::GenericParam::Lifetime(param) => {
-                                    syn::GenericArgument::Lifetime(param.lifetime.clone())
-                                }
-                                syn::GenericParam::Const(_) => {
-                                    panic!("Serde does not support const generics yet");
-                                }
-                            })
-                            .collect(),
-                        gt_token: <Token![>]>::default(),
-                    },
-                ),
-            }]
-            .into_iter()
-            .collect(),
+                                punct
+                            },
+                            gt_token: <Token![>]>::default(),
+                        },
+                    ),
+                });
+                punct
+            },
         },
     })
 }
