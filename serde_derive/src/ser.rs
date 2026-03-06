@@ -32,13 +32,24 @@ pub fn expand_derive_serialize(input: &mut syn::DeriveInput) -> syn::Result<Toke
         quote! {
             #[automatically_derived]
             #allow_deprecated
-            impl #impl_generics #ident #ty_generics #where_clause {
-                #vis fn serialize<__S>(__self: &#remote #ty_generics, __serializer: __S) -> _serde::#private::Result<__S::Ok, __S::Error>
+            impl #impl_generics _serde::ser::RemoteSerialize<#remote #ty_generics> for #ident #ty_generics #where_clause {
+                fn serialize<__S>(__self: &#remote #ty_generics, __serializer: __S) -> _serde::#private::Result<__S::Ok, __S::Error>
                 where
                     __S: _serde::Serializer,
                 {
                     #used
                     #body
+                }
+            }
+
+            #[automatically_derived]
+            #allow_deprecated
+            impl #impl_generics #ident #ty_generics #where_clause {
+                #vis fn serialize<__S>(__self: &#remote #ty_generics, __serializer: __S) -> _serde::#private::Result<__S::Ok, __S::Error>
+                where
+                    __S: _serde::Serializer,
+                {
+                    <#ident #ty_generics as _serde::ser::RemoteSerialize::<#remote #ty_generics>>::serialize(__self, __serializer)
                 }
             }
         }
