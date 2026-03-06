@@ -272,8 +272,9 @@ fn serialize_tuple_struct(
 
     let let_mut = mut_if(serialized_fields.peek().is_some());
 
-    let len = serialized_fields
-        .map(|(i, field)| match field.attrs.skip_serializing_if() {
+    let len = sum_tokens(
+        quote!(0),
+        serialized_fields.map(|(i, field)| match field.attrs.skip_serializing_if() {
             None => quote!(1),
             Some(path) => {
                 let index = syn::Index {
@@ -283,14 +284,24 @@ fn serialize_tuple_struct(
                 let field_expr = get_member(params, field, &Member::Unnamed(index));
                 quote!(if #path(#field_expr) { 0 } else { 1 })
             }
-        })
-        .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
+        }),
+    );
 
     quote_block! {
         let #let_mut __serde_state = _serde::Serializer::serialize_tuple_struct(__serializer, #type_name, #len)?;
         #(#serialize_stmts)*
         _serde::ser::SerializeTupleStruct::end(__serde_state)
     }
+}
+
+/// `quote!(#init + #item + ...)`
+fn sum_tokens(init: TokenStream, iter: impl Iterator<Item = TokenStream>) -> TokenStream {
+    let mut tokens = init;
+    for item in iter {
+        tokens.extend(quote!( + ));
+        tokens.extend(item);
+    }
+    tokens
 }
 
 fn serialize_struct(params: &Parameters, fields: &[Field], cattrs: &attr::Container) -> Fragment {
@@ -345,18 +356,16 @@ fn serialize_struct_as_struct(
 
     let let_mut = mut_if(serialized_fields.peek().is_some() || tag_field_exists);
 
-    let len = serialized_fields
-        .map(|field| match field.attrs.skip_serializing_if() {
+    let len = sum_tokens(
+        quote!(#tag_field_exists as usize),
+        serialized_fields.map(|field| match field.attrs.skip_serializing_if() {
             None => quote!(1),
             Some(path) => {
                 let field_expr = get_member(params, field, &field.member);
                 quote!(if #path(#field_expr) { 0 } else { 1 })
             }
-        })
-        .fold(
-            quote!(#tag_field_exists as usize),
-            |sum, expr| quote!(#sum + #expr),
-        );
+        }),
+    );
 
     quote_block! {
         let #let_mut __serde_state = _serde::Serializer::serialize_struct(__serializer, #type_name, #len)?;
@@ -830,15 +839,16 @@ fn serialize_tuple_variant(
 
     let let_mut = mut_if(serialized_fields.peek().is_some());
 
-    let len = serialized_fields
-        .map(|(i, field)| match field.attrs.skip_serializing_if() {
+    let len = sum_tokens(
+        quote!(0),
+        serialized_fields.map(|(i, field)| match field.attrs.skip_serializing_if() {
             None => quote!(1),
             Some(path) => {
                 let field_expr = field_i(i);
                 quote!(if #path(#field_expr) { 0 } else { 1 })
             }
-        })
-        .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
+        }),
+    );
 
     match context {
         TupleVariant::ExternallyTagged {
@@ -907,16 +917,17 @@ fn serialize_struct_variant(
 
     let let_mut = mut_if(serialized_fields.peek().is_some());
 
-    let len = serialized_fields
-        .map(|field| {
+    let len = sum_tokens(
+        quote!(0),
+        serialized_fields.map(|field| {
             let member = &field.member;
 
             match field.attrs.skip_serializing_if() {
                 Some(path) => quote!(if #path(#member) { 0 } else { 1 }),
                 None => quote!(1),
             }
-        })
-        .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
+        }),
+    );
 
     match context {
         StructVariant::ExternallyTagged {
