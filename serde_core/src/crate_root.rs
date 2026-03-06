@@ -22,7 +22,9 @@ macro_rules! crate_root {
             pub use self::core::fmt::{self, Debug, Display, Write as FmtWrite};
             pub use self::core::marker::PhantomData;
             pub use self::core::num::Wrapping;
-            pub use self::core::ops::{Bound, Range, RangeFrom, RangeInclusive, RangeTo};
+            pub use self::core::ops::{
+                Bound, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive,
+            };
             pub use self::core::result;
             pub use self::core::time::Duration;
 
