@@ -263,12 +263,25 @@ fn deserialize_map(
                     })
                 }
             };
-            quote! {
-                __Field::#name => {
-                    if _serde::#private::Option::is_some(&#name) {
-                        return _serde::#private::Err(<__A::Error as _serde::de::Error>::duplicate_field(#deser_name));
+            if let Some(on_duplicate) = field.attrs.on_duplicate() {
+                quote! {
+                    __Field::#name => {
+                        let value = #visit;
+                        if let _serde::#private::Option::Some(exist) = &mut #name {
+                            #on_duplicate(exist, value)?;
+                        } else {
+                            #name = _serde::#private::Some(value);
+                        }
                     }
-                    #name = _serde::#private::Some(#visit);
+                }
+            } else {
+                quote! {
+                    __Field::#name => {
+                        if _serde::#private::Option::is_some(&#name) {
+                            return _serde::#private::Err(<__A::Error as _serde::de::Error>::duplicate_field(#deser_name));
+                        }
+                        #name = _serde::#private::Some(#visit);
+                    }
                 }
             }
         });
@@ -546,32 +559,59 @@ fn deserialize_map_in_place(
             let deser_name = field.attrs.name().deserialize_name();
             let member = &field.member;
 
-            let visit = match field.attrs.deserialize_with() {
-                None => {
-                    quote! {
-                        _serde::de::MapAccess::next_value_seed(&mut __map, _serde::#private::de::InPlaceSeed(&mut self.place.#member))?
+            let (wrapper, visit_deserialize_with) = if let Some(path) = field.attrs.deserialize_with() {
+                let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
+                (wrapper, Some(quote!{
+                    match _serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map) {
+                        _serde::#private::Ok(__wrapper) => __wrapper.value,
+                        _serde::#private::Err(__err) => {
+                            return _serde::#private::Err(__err);
+                        }
                     }
+                }))
+            } else {
+                (quote! {}, None)
+            };
+
+            let first_visit = if let Some(visit) = &visit_deserialize_with {
+                quote! {
+                    self.place.#member = #visit
                 }
-                Some(path) => {
-                    let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
-                    quote!({
-                        #wrapper
-                        self.place.#member = match _serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map) {
-                            _serde::#private::Ok(__wrapper) => __wrapper.value,
-                            _serde::#private::Err(__err) => {
-                                return _serde::#private::Err(__err);
-                            }
-                        };
-                    })
+            } else {
+                quote! {
+                    _serde::de::MapAccess::next_value_seed(&mut __map, _serde::#private::de::InPlaceSeed(&mut self.place.#member))?
                 }
             };
+
+            let duplicate_visit = if let Some(visit) = &visit_deserialize_with {
+                visit
+            } else {
+                let field_ty = field.ty;
+                &quote! {
+                    _serde::de::MapAccess::next_value::<#field_ty>(&mut __map)?
+                }
+            };
+
+            let on_duplicate = if let Some(handler) = field.attrs.on_duplicate() {
+                quote! {
+                    let another = #duplicate_visit;
+                    #handler(&mut self.place.#member, another)?;
+                }
+            } else {
+                quote! {
+                    return _serde::#private::Err(<__A::Error as _serde::de::Error>::duplicate_field(#deser_name));
+                }
+            };
+
             quote! {
                 __Field::#name => {
+                    #wrapper
                     if #name {
-                        return _serde::#private::Err(<__A::Error as _serde::de::Error>::duplicate_field(#deser_name));
+                        #on_duplicate
+                    } else {
+                        #first_visit;
+                        #name = true;
                     }
-                    #visit;
-                    #name = true;
                 }
             }
         });
