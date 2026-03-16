@@ -1660,7 +1660,6 @@ fn test_partially_untagged_enum_generic() {
         type Assoc2 = bool;
     }
 
-    type MyE = E<(), bool, u32>;
     use E::*;
 
     assert_tokens(&B::<(), bool, u32>(true).readable(), &[Token::Bool(true)]);
