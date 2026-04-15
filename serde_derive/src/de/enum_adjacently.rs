@@ -293,10 +293,8 @@ pub(super) fn deserialize(
                             },
                         ) {
                             _serde::#private::Ok(_serde::#private::Some(__ret)) => _serde::#private::Ok(__ret),
-                            // There is no second element.
-                            _serde::#private::Ok(_serde::#private::None) => {
-                                _serde::#private::Err(_serde::de::Error::invalid_length(1, &self))
-                            }
+                            // There is no second element; might be okay if the we have a unit variant.
+                            _serde::#private::Ok(_serde::#private::None) => #missing_content,
                             _serde::#private::Err(__err) => _serde::#private::Err(__err),
                         }
                     }
