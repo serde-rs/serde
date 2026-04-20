@@ -163,7 +163,7 @@ macro_rules! declare_error_trait {
             )
         )]
         pub trait Error: Sized $(+ $($supertrait)::+)* {
-            /// Raised when there is general error when deserializing a type.
+            /// Raised when there is a general error when deserializing a type.
             ///
             /// The message should not be capitalized and should not end with a period.
             ///
