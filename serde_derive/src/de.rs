@@ -448,7 +448,7 @@ enum TupleForm<'a> {
     Untagged(&'a syn::Ident),
 }
 
-fn deserialize_seq(
+fn read_fields_in_order(
     type_path: &TokenStream,
     params: &Parameters,
     fields: &[Field],
@@ -565,7 +565,7 @@ fn read_from_seq_access(
 }
 
 #[cfg(feature = "deserialize_in_place")]
-fn deserialize_seq_in_place(
+fn read_fields_in_order_in_place(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
