@@ -9,9 +9,11 @@
 //! # fn main() {}
 //! ```
 //!
-//! Please refer to [https://serde.rs/derive.html] for how to set this up.
+//! For an introduction, see [https://serde.rs/derive.html]. For container and field
+//! attributes accepted by the derives, see [https://serde.rs/attributes.html].
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
+//! [https://serde.rs/attributes.html]: https://serde.rs/attributes.html
 
 #![doc(html_root_url = "https://docs.rs/serde_derive/1.0.228")]
 #![cfg_attr(not(check_cfg), allow(unexpected_cfgs))]
