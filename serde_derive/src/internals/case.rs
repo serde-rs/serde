@@ -59,7 +59,13 @@ impl RenameRule {
             None | PascalCase => variant.to_owned(),
             LowerCase => variant.to_ascii_lowercase(),
             UpperCase => variant.to_ascii_uppercase(),
-            CamelCase => variant[..1].to_ascii_lowercase() + &variant[1..],
+            CamelCase => {
+                if variant.is_empty() {
+                    variant.to_owned()
+                } else {
+                    variant[..1].to_ascii_lowercase() + &variant[1..]
+                }
+            }
             SnakeCase => {
                 let mut snake = String::new();
                 for (i, ch) in variant.char_indices() {
@@ -100,7 +106,11 @@ impl RenameRule {
             }
             CamelCase => {
                 let pascal = PascalCase.apply_to_field(field);
-                pascal[..1].to_ascii_lowercase() + &pascal[1..]
+                if pascal.is_empty() {
+                    pascal
+                } else {
+                    pascal[..1].to_ascii_lowercase() + &pascal[1..]
+                }
             }
             ScreamingSnakeCase => field.to_ascii_uppercase(),
             KebabCase => field.replace('_', "-"),
@@ -187,6 +197,8 @@ fn rename_fields() {
         ),
         ("a", "A", "A", "a", "A", "a", "A"),
         ("z42", "Z42", "Z42", "z42", "Z42", "z42", "Z42"),
+        ("", "", "", "", "", "", ""),
+        ("_", "_", "", "", "_", "-", "-"),
     ] {
         assert_eq!(None.apply_to_field(original), original);
         assert_eq!(UpperCase.apply_to_field(original), upper);
