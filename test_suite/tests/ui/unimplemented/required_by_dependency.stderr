@@ -97,7 +97,6 @@ error[E0277]: `MyStruct` doesn't implement `Debug`
   |     |
   |     required by a bound introduced by this call
   |
-  = note: add `#[derive(Debug)]` to `MyStruct` or manually `impl Debug for MyStruct`
 note: required by a bound in `assert_de_tokens`
  --> $CARGO/serde_test-$VERSION/src/assert.rs
   |
