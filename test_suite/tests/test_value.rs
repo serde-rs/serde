@@ -1,6 +1,6 @@
 #![allow(clippy::derive_partial_eq_without_eq, clippy::similar_names)]
 
-use serde::de::value::{self, MapAccessDeserializer};
+use serde::de::value::{self, MapAccessDeserializer, MapDeserializer};
 use serde::de::{Deserialize, Deserializer, IntoDeserializer, MapAccess, Visitor};
 use serde_derive::Deserialize;
 use serde_test::{assert_de_tokens, Token};
@@ -91,5 +91,38 @@ fn test_map_access_to_enum() {
             Token::MapEnd,
             Token::MapEnd,
         ],
+    );
+}
+
+#[test]
+fn test_option_from_value_deserializer() {
+    // A value deserializer holding a present value must deserialize into
+    // `Option<T>` as `Some(value)`, not error with "invalid type ..., expected
+    // option".
+    let de = IntoDeserializer::<value::Error>::into_deserializer("value");
+    let opt = Option::<String>::deserialize(de).unwrap();
+    assert_eq!(opt, Some("value".to_owned()));
+
+    let de = IntoDeserializer::<value::Error>::into_deserializer(7u32);
+    let opt = Option::<u32>::deserialize(de).unwrap();
+    assert_eq!(opt, Some(7));
+}
+
+#[test]
+fn test_map_deserializer_optional_field() {
+    // Regression test for https://github.com/serde-rs/serde/issues/3050
+    #[derive(Debug, PartialEq, Deserialize)]
+    struct Map {
+        optional: Option<String>,
+    }
+
+    let iter = [("optional", "value")].into_iter();
+    let de = MapDeserializer::<_, value::Error>::new(iter);
+    let map = Map::deserialize(de).unwrap();
+    assert_eq!(
+        map,
+        Map {
+            optional: Some("value".to_owned()),
+        },
     );
 }

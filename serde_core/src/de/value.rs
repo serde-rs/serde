@@ -46,6 +46,24 @@ macro_rules! impl_copy_clone {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+// A value deserializer always holds a value that is present, so deserializing
+// it as an `Option` must produce `Some`. Forwarding `deserialize_option` to
+// `deserialize_any` would instead make the visitor receive the held value
+// directly, which fails for `Option<T>` with "invalid type ..., expected
+// option".
+macro_rules! deserialize_option_some {
+    () => {
+        fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: de::Visitor<'de>,
+        {
+            visitor.visit_some(self)
+        }
+    };
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 /// A minimal representation of all possible errors that can occur using the
 /// `IntoDeserializer` trait.
 #[derive(Clone, PartialEq)]
@@ -291,9 +309,11 @@ macro_rules! primitive_deserializer {
 
             forward_to_deserialize_any! {
                 bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str
-                string bytes byte_buf option unit unit_struct newtype_struct seq
+                string bytes byte_buf unit unit_struct newtype_struct seq
                 tuple tuple_struct map struct enum identifier ignored_any
             }
+
+            deserialize_option_some!();
 
             fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
             where
@@ -378,9 +398,11 @@ where
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct identifier ignored_any
     }
+
+    deserialize_option_some!();
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -499,9 +521,11 @@ where
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct identifier ignored_any
     }
+
+    deserialize_option_some!();
 }
 
 impl<'de, 'a, E> IntoDeserializer<'de, E> for StrDeserializer<'a, E>
@@ -589,9 +613,11 @@ where
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct identifier ignored_any
     }
+
+    deserialize_option_some!();
 }
 
 impl<'de, E> IntoDeserializer<'de, E> for BorrowedStrDeserializer<'de, E>
@@ -703,9 +729,11 @@ where
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct identifier ignored_any
     }
+
+    deserialize_option_some!();
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
@@ -823,9 +851,11 @@ where
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct identifier ignored_any
     }
+
+    deserialize_option_some!();
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
@@ -912,9 +942,11 @@ where
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any
     }
+
+    deserialize_option_some!();
 }
 
 impl<'de, 'a, E> IntoDeserializer<'de, E> for BytesDeserializer<'a, E>
@@ -971,9 +1003,11 @@ where
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any
     }
+
+    deserialize_option_some!();
 }
 
 impl<'de, E> IntoDeserializer<'de, E> for BorrowedBytesDeserializer<'de, E>
@@ -1061,9 +1095,11 @@ where
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any
     }
+
+    deserialize_option_some!();
 }
 
 impl<'de, I, T, E> IntoDeserializer<'de, E> for SeqDeserializer<I, E>
@@ -1205,9 +1241,11 @@ where
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any
     }
+
+    deserialize_option_some!();
 }
 
 impl<'de, A> IntoDeserializer<'de, A::Error> for SeqAccessDeserializer<A>
@@ -1330,9 +1368,11 @@ where
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct tuple_struct map
+        bytes byte_buf unit unit_struct newtype_struct tuple_struct map
         struct enum identifier ignored_any
     }
+
+    deserialize_option_some!();
 }
 
 impl<'de, I, E> IntoDeserializer<'de, E> for MapDeserializer<'de, I, E>
@@ -1484,9 +1524,11 @@ where
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct tuple_struct map
+        bytes byte_buf unit unit_struct newtype_struct tuple_struct map
         struct enum identifier ignored_any
     }
+
+    deserialize_option_some!();
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -1646,9 +1688,11 @@ where
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct identifier ignored_any
     }
+
+    deserialize_option_some!();
 }
 
 impl<'de, A> IntoDeserializer<'de, A::Error> for MapAccessDeserializer<A>
@@ -1710,9 +1754,11 @@ where
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any
     }
+
+    deserialize_option_some!();
 }
 
 impl<'de, A> IntoDeserializer<'de, A::Error> for EnumAccessDeserializer<A>
