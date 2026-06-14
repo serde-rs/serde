@@ -36,7 +36,11 @@ rustdoc-args = [
 ### FEATURES #################################################################
 
 [features]
-default = ["std"]
+default = ["std", "floats"]
+
+# Provide serialization support for floats
+# Disable this when running in embedded environments that do not support floating point numbers
+floats = ["serde_core/floats"]
 
 # Provide derive(Serialize, Deserialize) macros.
 derive = ["serde_derive"]

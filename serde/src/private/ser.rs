@@ -46,6 +46,7 @@ struct TaggedSerializer<S> {
 enum Unsupported {
     Boolean,
     Integer,
+    #[cfg(feature = "floats")]
     Float,
     Char,
     String,
@@ -64,6 +65,7 @@ impl Display for Unsupported {
         match *self {
             Unsupported::Boolean => formatter.write_str("a boolean"),
             Unsupported::Integer => formatter.write_str("an integer"),
+            #[cfg(feature = "floats")]
             Unsupported::Float => formatter.write_str("a float"),
             Unsupported::Char => formatter.write_str("a char"),
             Unsupported::String => formatter.write_str("a string"),
@@ -150,10 +152,12 @@ where
         Err(self.bad_type(Unsupported::Integer))
     }
 
+    #[cfg(feature = "floats")]
     fn serialize_f32(self, _: f32) -> Result<Self::Ok, Self::Error> {
         Err(self.bad_type(Unsupported::Float))
     }
 
+    #[cfg(feature = "floats")]
     fn serialize_f64(self, _: f64) -> Result<Self::Ok, Self::Error> {
         Err(self.bad_type(Unsupported::Float))
     }

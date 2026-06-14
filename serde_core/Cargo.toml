@@ -43,7 +43,11 @@ serde_derive = { version = "=1.0.228", path = "../serde_derive" }
 ### FEATURES #################################################################
 
 [features]
-default = ["std", "result"]
+default = ["std", "result", "floats"]
+
+# Provide serialization support for floats
+# Disable this when running in embedded environments that do not support floating point numbers
+floats = []
 
 # Provide impls for common standard library types like Vec<T> and HashMap<K, V>.
 # Requires a dependency on the Rust standard library.

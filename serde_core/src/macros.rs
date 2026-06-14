@@ -171,9 +171,11 @@ macro_rules! forward_to_deserialize_any_helper {
         forward_to_deserialize_any_method!{deserialize_u128<$l, $v>()}
     };
     (f32<$l:tt, $v:ident>) => {
+        #[cfg(feature = "floats")]
         forward_to_deserialize_any_method!{deserialize_f32<$l, $v>()}
     };
     (f64<$l:tt, $v:ident>) => {
+        #[cfg(feature = "floats")]
         forward_to_deserialize_any_method!{deserialize_f64<$l, $v>()}
     };
     (char<$l:tt, $v:ident>) => {
