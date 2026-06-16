@@ -570,6 +570,109 @@ fn contains_flatten_with_integer_key() {
     );
 }
 
+// https://github.com/serde-rs/serde/issues/1374
+//
+// A unit variant of an untagged enum must be reachable when the input is an
+// empty map (or empty seq), not only when it is `unit`/`none`. This shows up in
+// particular together with `flatten`, where "no remaining fields" is presented
+// to the enum as an empty map rather than as a unit.
+#[test]
+fn unit_variant_from_empty_map() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(untagged)]
+    enum Untagged {
+        NonEmpty { key: u16 },
+        Empty,
+    }
+
+    // Empty map falls through the struct variant and matches the unit variant.
+    assert_de_tokens(
+        &Untagged::Empty,
+        &[Token::Map { len: Some(0) }, Token::MapEnd],
+    );
+
+    // Empty seq matches the unit variant as well.
+    assert_de_tokens(
+        &Untagged::Empty,
+        &[Token::Seq { len: Some(0) }, Token::SeqEnd],
+    );
+
+    // The struct variant still wins when its fields are present.
+    assert_de_tokens(
+        &Untagged::NonEmpty { key: 12 },
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("key"),
+            Token::U16(12),
+            Token::MapEnd,
+        ],
+    );
+
+    // A non-empty map that does not match the struct variant must not be
+    // silently swallowed by the unit variant.
+    assert_de_tokens_error::<Untagged>(
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("unknown"),
+            Token::U16(12),
+            Token::MapEnd,
+        ],
+        "data did not match any variant of untagged enum Untagged",
+    );
+}
+
+#[test]
+fn flatten_unit_variant() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    struct Container {
+        other: u16,
+        #[serde(flatten)]
+        inner: DeEnum,
+    }
+
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(untagged)]
+    enum DeEnum {
+        NonEmpty(NonEmpty),
+        Empty,
+    }
+
+    #[derive(Debug, PartialEq, Deserialize)]
+    struct NonEmpty {
+        key: u16,
+    }
+
+    // Flattened field present -> non-empty variant.
+    assert_de_tokens(
+        &Container {
+            other: 12,
+            inner: DeEnum::NonEmpty(NonEmpty { key: 34 }),
+        },
+        &[
+            Token::Map { len: None },
+            Token::Str("other"),
+            Token::U16(12),
+            Token::Str("key"),
+            Token::U16(34),
+            Token::MapEnd,
+        ],
+    );
+
+    // Flattened field absent -> the empty unit variant, instead of failing.
+    assert_de_tokens(
+        &Container {
+            other: 12,
+            inner: DeEnum::Empty,
+        },
+        &[
+            Token::Map { len: None },
+            Token::Str("other"),
+            Token::U16(12),
+            Token::MapEnd,
+        ],
+    );
+}
+
 #[test]
 fn expecting_message() {
     #[derive(Deserialize)]

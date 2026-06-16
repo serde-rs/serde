@@ -3039,6 +3039,34 @@ mod content {
         {
             Ok(())
         }
+
+        // An empty seq is treated as unit so that a unit variant of an untagged
+        // enum is reachable for formats that present "no data" as an empty seq.
+        // A non-empty seq must not be silently accepted as a unit variant.
+        fn visit_seq<A>(self, mut seq: A) -> Result<(), A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            match tri!(seq.next_element::<IgnoredAny>()) {
+                None => Ok(()),
+                Some(_) => Err(de::Error::invalid_type(Unexpected::Seq, &self)),
+            }
+        }
+
+        // An empty map is treated as unit so that a unit variant of an untagged
+        // enum is reachable. This is what makes a unit variant work behind
+        // `flatten`, where the absence of fields is presented as an empty map
+        // rather than as unit. See https://github.com/serde-rs/serde/issues/1374
+        // A non-empty map must not be silently accepted as a unit variant.
+        fn visit_map<A>(self, mut map: A) -> Result<(), A::Error>
+        where
+            A: MapAccess<'de>,
+        {
+            match tri!(map.next_key::<IgnoredAny>()) {
+                None => Ok(()),
+                Some(_) => Err(de::Error::invalid_type(Unexpected::Map, &self)),
+            }
+        }
     }
 }
 
