@@ -1,7 +1,8 @@
 use crate::lib::*;
 
 use crate::de::{
-    Deserialize, Deserializer, EnumAccess, Error, MapAccess, SeqAccess, VariantAccess, Visitor,
+    Deserialize, DeserializeSeed, Deserializer, EnumAccess, Error, MapAccess, SeqAccess,
+    VariantAccess, Visitor,
 };
 
 /// An efficient way of discarding data from a deserializer.
@@ -110,69 +111,123 @@ use crate::de::{
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct IgnoredAny;
 
-impl<'de> Visitor<'de> for IgnoredAny {
-    type Value = IgnoredAny;
+// Bound the recursion so that ignoring an already constructed, deeply nested
+// structure errors out rather than exhausting the stack and aborting.
+const RECURSION_LIMIT: u32 = 128;
 
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("anything at all")
-    }
+// The scalar visits are the same whether or not recursion depth is being
+// tracked, so both `IgnoredAny` and `IgnoredAnyDepth` share them from here.
+macro_rules! ignored_scalars {
+    () => {
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("anything at all")
+        }
 
+        #[inline]
+        fn visit_bool<E>(self, x: bool) -> Result<Self::Value, E> {
+            let _ = x;
+            Ok(IgnoredAny)
+        }
+
+        #[inline]
+        fn visit_i64<E>(self, x: i64) -> Result<Self::Value, E> {
+            let _ = x;
+            Ok(IgnoredAny)
+        }
+
+        #[inline]
+        fn visit_i128<E>(self, x: i128) -> Result<Self::Value, E> {
+            let _ = x;
+            Ok(IgnoredAny)
+        }
+
+        #[inline]
+        fn visit_u64<E>(self, x: u64) -> Result<Self::Value, E> {
+            let _ = x;
+            Ok(IgnoredAny)
+        }
+
+        #[inline]
+        fn visit_u128<E>(self, x: u128) -> Result<Self::Value, E> {
+            let _ = x;
+            Ok(IgnoredAny)
+        }
+
+        #[inline]
+        fn visit_f64<E>(self, x: f64) -> Result<Self::Value, E> {
+            let _ = x;
+            Ok(IgnoredAny)
+        }
+
+        #[inline]
+        fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            let _ = s;
+            Ok(IgnoredAny)
+        }
+
+        #[inline]
+        fn visit_bytes<E>(self, bytes: &[u8]) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            let _ = bytes;
+            Ok(IgnoredAny)
+        }
+
+        #[inline]
+        fn visit_none<E>(self) -> Result<Self::Value, E> {
+            Ok(IgnoredAny)
+        }
+
+        #[inline]
+        fn visit_unit<E>(self) -> Result<Self::Value, E> {
+            Ok(IgnoredAny)
+        }
+    };
+}
+
+#[derive(Copy, Clone)]
+struct IgnoredAnyDepth(u32);
+
+impl IgnoredAnyDepth {
     #[inline]
-    fn visit_bool<E>(self, x: bool) -> Result<Self::Value, E> {
-        let _ = x;
-        Ok(IgnoredAny)
-    }
-
-    #[inline]
-    fn visit_i64<E>(self, x: i64) -> Result<Self::Value, E> {
-        let _ = x;
-        Ok(IgnoredAny)
-    }
-
-    #[inline]
-    fn visit_i128<E>(self, x: i128) -> Result<Self::Value, E> {
-        let _ = x;
-        Ok(IgnoredAny)
-    }
-
-    #[inline]
-    fn visit_u64<E>(self, x: u64) -> Result<Self::Value, E> {
-        let _ = x;
-        Ok(IgnoredAny)
-    }
-
-    #[inline]
-    fn visit_u128<E>(self, x: u128) -> Result<Self::Value, E> {
-        let _ = x;
-        Ok(IgnoredAny)
-    }
-
-    #[inline]
-    fn visit_f64<E>(self, x: f64) -> Result<Self::Value, E> {
-        let _ = x;
-        Ok(IgnoredAny)
-    }
-
-    #[inline]
-    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+    fn descend<E>(&self) -> Result<u32, E>
     where
         E: Error,
     {
-        let _ = s;
-        Ok(IgnoredAny)
+        match self.0.checked_sub(1) {
+            Some(remaining) => Ok(remaining),
+            None => Err(E::custom("recursion limit exceeded")),
+        }
     }
+}
+
+impl<'de> DeserializeSeed<'de> for IgnoredAnyDepth {
+    type Value = IgnoredAny;
 
     #[inline]
-    fn visit_none<E>(self) -> Result<Self::Value, E> {
-        Ok(IgnoredAny)
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_ignored_any(self)
     }
+}
+
+impl<'de> Visitor<'de> for IgnoredAnyDepth {
+    type Value = IgnoredAny;
+
+    ignored_scalars!();
 
     #[inline]
     fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
         D: Deserializer<'de>,
     {
-        IgnoredAny::deserialize(deserializer)
+        deserializer.deserialize_ignored_any(self)
     }
 
     #[inline]
@@ -180,12 +235,7 @@ impl<'de> Visitor<'de> for IgnoredAny {
     where
         D: Deserializer<'de>,
     {
-        IgnoredAny::deserialize(deserializer)
-    }
-
-    #[inline]
-    fn visit_unit<E>(self) -> Result<Self::Value, E> {
-        Ok(IgnoredAny)
+        deserializer.deserialize_ignored_any(self)
     }
 
     #[inline]
@@ -193,7 +243,8 @@ impl<'de> Visitor<'de> for IgnoredAny {
     where
         A: SeqAccess<'de>,
     {
-        while let Some(IgnoredAny) = tri!(seq.next_element()) {
+        let seed = IgnoredAnyDepth(tri!(self.descend()));
+        while tri!(seq.next_element_seed(seed)).is_some() {
             // Gobble
         }
         Ok(IgnoredAny)
@@ -204,18 +255,10 @@ impl<'de> Visitor<'de> for IgnoredAny {
     where
         A: MapAccess<'de>,
     {
-        while let Some((IgnoredAny, IgnoredAny)) = tri!(map.next_entry()) {
-            // Gobble
+        let depth = tri!(self.descend());
+        while tri!(map.next_key::<IgnoredAny>()).is_some() {
+            tri!(map.next_value_seed(IgnoredAnyDepth(depth)));
         }
-        Ok(IgnoredAny)
-    }
-
-    #[inline]
-    fn visit_bytes<E>(self, bytes: &[u8]) -> Result<Self::Value, E>
-    where
-        E: Error,
-    {
-        let _ = bytes;
         Ok(IgnoredAny)
     }
 
@@ -223,7 +266,55 @@ impl<'de> Visitor<'de> for IgnoredAny {
     where
         A: EnumAccess<'de>,
     {
-        tri!(data.variant::<IgnoredAny>()).1.newtype_variant()
+        let depth = tri!(self.descend());
+        tri!(data.variant::<IgnoredAny>())
+            .1
+            .newtype_variant_seed(IgnoredAnyDepth(depth))
+    }
+}
+
+impl<'de> Visitor<'de> for IgnoredAny {
+    type Value = IgnoredAny;
+
+    ignored_scalars!();
+
+    #[inline]
+    fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_ignored_any(IgnoredAnyDepth(RECURSION_LIMIT))
+    }
+
+    #[inline]
+    fn visit_newtype_struct<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_ignored_any(IgnoredAnyDepth(RECURSION_LIMIT))
+    }
+
+    #[inline]
+    fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        IgnoredAnyDepth(RECURSION_LIMIT).visit_seq(seq)
+    }
+
+    #[inline]
+    fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        IgnoredAnyDepth(RECURSION_LIMIT).visit_map(map)
+    }
+
+    fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
+    where
+        A: EnumAccess<'de>,
+    {
+        IgnoredAnyDepth(RECURSION_LIMIT).visit_enum(data)
     }
 }
 

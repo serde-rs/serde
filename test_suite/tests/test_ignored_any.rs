@@ -7,6 +7,7 @@ use serde::de::{
 };
 use serde::forward_to_deserialize_any;
 use serde_derive::Deserialize;
+use std::iter;
 
 #[derive(PartialEq, Debug, Deserialize)]
 enum Target {
@@ -105,4 +106,43 @@ fn test_deserialize_enum() {
     IgnoredAny::deserialize(Enum("Newtype")).unwrap();
     IgnoredAny::deserialize(Enum("Tuple")).unwrap();
     IgnoredAny::deserialize(Enum("Struct")).unwrap();
+}
+
+// A deserializer that nests single-element sequences without itself recursing,
+// so the recursion happens entirely inside IgnoredAny.
+struct Nested(u32);
+
+impl<'de> Deserializer<'de> for Nested {
+    type Error = Error;
+
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        match self.0 {
+            0 => visitor.visit_unit(),
+            remaining => visitor.visit_seq(SeqDeserializer::new(iter::once(Nested(remaining - 1)))),
+        }
+    }
+
+    forward_to_deserialize_any! {
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        tuple_struct map struct enum identifier ignored_any
+    }
+}
+
+impl<'de> IntoDeserializer<'de, Error> for Nested {
+    type Deserializer = Self;
+
+    fn into_deserializer(self) -> Self {
+        self
+    }
+}
+
+// Regression test for https://github.com/serde-rs/serde/issues/3023.
+#[test]
+fn test_ignored_any_recursion_limit() {
+    IgnoredAny::deserialize(Nested(64)).unwrap();
+    IgnoredAny::deserialize(Nested(100_000)).unwrap_err();
 }
