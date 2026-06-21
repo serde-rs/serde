@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 use std::ptr;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{parse_quote, Ident, Index, Member};
+use syn::{parse_quote, Ident, Index};
 
 mod enum_;
 mod enum_adjacently;
@@ -448,13 +448,18 @@ enum TupleForm<'a> {
     Untagged(&'a syn::Ident),
 }
 
-fn deserialize_seq(
+/// Generates code that will read specified `fields` in order, one-by-one,
+/// and then construct a final value from them. All skipped fields will receive
+/// their default values, all other will be read using the code, returned by
+/// the `read_field` function.
+fn read_fields_in_order(
     type_path: &TokenStream,
     params: &Parameters,
     fields: &[Field],
     is_struct: bool,
     cattrs: &attr::Container,
     expecting: &str,
+    read_field: impl Fn(&Parameters, usize, &Field, &attr::Container, &str) -> TokenStream,
 ) -> Fragment {
     let vars = (0..fields.len()).map(field_i as fn(_) -> _);
 
@@ -477,33 +482,11 @@ fn deserialize_seq(
                 let #var = #default;
             }
         } else {
-            let visit = match field.attrs.deserialize_with() {
-                None => {
-                    let field_ty = field.ty;
-                    let span = field.original.span();
-                    let func =
-                        quote_spanned!(span=> _serde::de::SeqAccess::next_element::<#field_ty>);
-                    quote!(#func(&mut __seq)?)
-                }
-                Some(path) => {
-                    let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
-                    quote!({
-                        #wrapper
-                        _serde::#private::Option::map(
-                            _serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)?,
-                            |__wrap| __wrap.value)
-                    })
-                }
-            };
-            let value_if_none = expr_is_missing_seq(None, index_in_seq, field, cattrs, expecting);
-            let assign = quote! {
-                let #var = match #visit {
-                    _serde::#private::Some(__value) => __value,
-                    _serde::#private::None => #value_if_none,
-                };
-            };
+            let read = read_field(params, index_in_seq, field, cattrs, expecting);
             index_in_seq += 1;
-            assign
+            quote! {
+                let #var = #read;
+            }
         }
     });
 
@@ -551,8 +534,46 @@ fn deserialize_seq(
     }
 }
 
+/// Generates code that reads specified field from a `SeqAccess`. The field is located at `index`
+/// position in the list of fields in the serialized form.
+fn read_from_seq_access(
+    params: &Parameters,
+    index: usize,
+    field: &Field,
+    cattrs: &attr::Container,
+    expecting: &str,
+) -> TokenStream {
+    let visit = match field.attrs.deserialize_with() {
+        None => {
+            let field_ty = field.ty;
+            let span = field.original.span();
+            let func = quote_spanned!(span=> _serde::de::SeqAccess::next_element::<#field_ty>);
+            quote!(#func(&mut __seq)?)
+        }
+        Some(path) => {
+            let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
+            quote!({
+                #wrapper
+                _serde::#private::Option::map(
+                    _serde::de::SeqAccess::next_element::<#wrapper_ty>(&mut __seq)?,
+                    |__wrap| __wrap.value)
+            })
+        }
+    };
+    let value_if_none = expr_is_missing_seq(None, index, field, cattrs, expecting);
+    quote! {
+        match #visit {
+            _serde::#private::Some(__value) => __value,
+            _serde::#private::None => #value_if_none,
+        }
+    }
+}
+
+/// Generates code that will read specified `fields` in order, one-by-one,
+/// and then construct a final value from them. All skipped fields will receive
+/// their default values, all other will be read from a `SeqAccess`.
 #[cfg(feature = "deserialize_in_place")]
-fn deserialize_seq_in_place(
+fn read_fields_in_order_in_place(
     params: &Parameters,
     fields: &[Field],
     cattrs: &attr::Container,
@@ -719,26 +740,24 @@ fn wrap_deserialize_field_with(
 fn unwrap_to_variant_closure(
     params: &Parameters,
     variant: &Variant,
+    cattrs: &attr::Container,
     with_wrapper: bool,
 ) -> TokenStream {
     let this_value = &params.this_value;
     let variant_ident = &variant.ident;
 
+    let fields = variant
+        .fields
+        .iter()
+        .filter(|field| !field.attrs.skip_deserializing());
     let (arg, wrapper) = if with_wrapper {
         (quote! { __wrap }, quote! { __wrap.value })
     } else {
-        let field_tys = variant.fields.iter().map(|field| field.ty);
+        let field_tys = fields.clone().map(|field| field.ty);
         (quote! { __wrap: (#(#field_tys),*) }, quote! { __wrap })
     };
 
-    let field_access = (0..variant.fields.len()).map(|n| {
-        Member::Unnamed(Index {
-            index: n as u32,
-            span: Span::call_site(),
-        })
-    });
-
-    match variant.style {
+    match variant.de_style() {
         Style::Struct if variant.fields.len() == 1 => {
             let member = &variant.fields[0].member;
             quote! {
@@ -746,14 +765,40 @@ fn unwrap_to_variant_closure(
             }
         }
         Style::Struct => {
-            let members = variant.fields.iter().map(|field| &field.member);
+            let mut i = 0;
+            let members = variant.fields.iter().map(|field| {
+                let name = &field.member;
+                let index = Index::from(i);
+                i += 1;
+
+                if field.attrs.skip_deserializing() {
+                    let expr = Expr(expr_is_missing(&field, cattrs));
+                    quote!(#name: #expr)
+                } else {
+                    quote!(#name: #wrapper.#index)
+                }
+            });
             quote! {
-                |#arg| #this_value::#variant_ident { #(#members: #wrapper.#field_access),* }
+                |#arg| #this_value::#variant_ident { #(#members),* }
             }
         }
-        Style::Tuple => quote! {
-            |#arg| #this_value::#variant_ident(#(#wrapper.#field_access),*)
-        },
+        Style::Tuple => {
+            let mut i = 0;
+            let members = variant.fields.iter().map(|field| {
+                let index = Index::from(i);
+                i += 1;
+
+                if field.attrs.skip_deserializing() {
+                    let expr = Expr(expr_is_missing(&field, cattrs));
+                    quote!(#expr)
+                } else {
+                    quote!(#wrapper.#index)
+                }
+            });
+            quote! {
+                |#arg| #this_value::#variant_ident(#(#members),*)
+            }
+        }
         Style::Newtype => quote! {
             |#arg| #this_value::#variant_ident(#wrapper)
         },
@@ -763,6 +808,13 @@ fn unwrap_to_variant_closure(
     }
 }
 
+/// The expression, generated by this function, depends on the `__A` type, if field
+/// or a container does not have a `#[serde(default)]` attribute and have a
+/// `#[serde(deserialize_with)]` attribute. In that case type `__A::Error` should be
+/// valid.
+///
+/// If field is skipped, then it automatically gets the `#[serde(default)]` attribute,
+/// so this function can be safely called for skipped fields in any context.
 fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
     match field.attrs.default() {
         attr::Default::Default => {
@@ -835,13 +887,6 @@ fn expr_is_missing_seq(
         attr::Default::None => quote!(
             return _serde::#private::Err(_serde::de::Error::invalid_length(#index, &#expecting))
         ),
-    }
-}
-
-fn effective_style(variant: &Variant) -> Style {
-    match variant.style {
-        Style::Newtype if variant.fields[0].attrs.skip_deserializing() => Style::Unit,
-        other => other,
     }
 }
 

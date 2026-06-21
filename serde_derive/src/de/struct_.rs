@@ -1,10 +1,10 @@
 use crate::de::identifier;
 use crate::de::{
-    deserialize_seq, expr_is_missing, field_i, has_flatten, wrap_deserialize_field_with,
-    FieldWithAliases, Parameters, StructForm,
+    expr_is_missing, field_i, has_flatten, read_fields_in_order, read_from_seq_access,
+    wrap_deserialize_field_with, FieldWithAliases, Parameters, StructForm,
 };
 #[cfg(feature = "deserialize_in_place")]
-use crate::de::{deserialize_seq_in_place, place_lifetime};
+use crate::de::{place_lifetime, read_fields_in_order_in_place};
 use crate::fragment::{Expr, Fragment, Match, Stmts};
 use crate::internals::ast::Field;
 use crate::internals::attr;
@@ -79,8 +79,14 @@ pub(super) fn deserialize(
                 quote!(mut __seq)
             };
 
-            let visit_seq = Stmts(deserialize_seq(
-                &type_path, params, fields, true, cattrs, expecting,
+            let visit_seq = Stmts(read_fields_in_order(
+                &type_path,
+                params,
+                fields,
+                true,
+                cattrs,
+                expecting,
+                read_from_seq_access,
             ));
 
             Some(quote! {
@@ -456,7 +462,9 @@ pub(super) fn deserialize_in_place(
     } else {
         quote!(mut __seq)
     };
-    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
+    let visit_seq = Stmts(read_fields_in_order_in_place(
+        params, fields, cattrs, expecting,
+    ));
     let visit_map = Stmts(deserialize_map_in_place(params, fields, cattrs));
     let field_names = deserialized_fields.iter().flat_map(|field| field.aliases);
     let type_name = cattrs.name().deserialize_name();

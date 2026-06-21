@@ -14,7 +14,7 @@ use syn::Type;
 pub use self::ctxt::Ctxt;
 pub use self::receiver::replace_receiver;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Derive {
     Serialize,
     Deserialize,
