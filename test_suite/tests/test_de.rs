@@ -1938,6 +1938,42 @@ fn test_range_to() {
 }
 
 #[test]
+fn test_range_full() {
+    test(
+        ..,
+        &[
+            Token::Struct {
+                name: "RangeFull",
+                len: 0,
+            },
+            Token::StructEnd,
+        ],
+    );
+    test(.., &[Token::Seq { len: Some(0) }, Token::SeqEnd]);
+    test(.., &[Token::Unit]);
+}
+
+#[test]
+fn test_range_to_inclusive() {
+    test(
+        ..=2u32,
+        &[
+            Token::Struct {
+                name: "RangeToInclusive",
+                len: 1,
+            },
+            Token::Str("end"),
+            Token::U32(2),
+            Token::StructEnd,
+        ],
+    );
+    test(
+        ..=2u32,
+        &[Token::Seq { len: Some(1) }, Token::U32(2), Token::SeqEnd],
+    );
+}
+
+#[test]
 fn test_bound() {
     test(
         Bound::Unbounded::<()>,
