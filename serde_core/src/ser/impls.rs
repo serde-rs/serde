@@ -260,9 +260,44 @@ where
     }
 }
 
+#[cfg(feature = "unstable")]
+#[cfg_attr(docsrs, doc(cfg(feature = "unstable")))]
+impl<Idx> Serialize for core::range::Range<Idx>
+where
+    Idx: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use super::SerializeStruct;
+        let mut state = tri!(serializer.serialize_struct("Range", 2));
+        tri!(state.serialize_field("start", &self.start));
+        tri!(state.serialize_field("end", &self.end));
+        state.end()
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 impl<Idx> Serialize for RangeFrom<Idx>
+where
+    Idx: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use super::SerializeStruct;
+        let mut state = tri!(serializer.serialize_struct("RangeFrom", 1));
+        tri!(state.serialize_field("start", &self.start));
+        state.end()
+    }
+}
+
+#[cfg(feature = "unstable")]
+#[cfg_attr(docsrs, doc(cfg(feature = "unstable")))]
+impl<Idx> Serialize for core::range::RangeFrom<Idx>
 where
     Idx: Serialize,
 {
@@ -291,6 +326,25 @@ where
         let mut state = tri!(serializer.serialize_struct("RangeInclusive", 2));
         tri!(state.serialize_field("start", &self.start()));
         tri!(state.serialize_field("end", &self.end()));
+        state.end()
+    }
+}
+
+#[cfg(feature = "unstable")]
+#[cfg_attr(docsrs, doc(cfg(feature = "unstable")))]
+impl<Idx> Serialize for core::range::RangeInclusive<Idx>
+where
+    Idx: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use super::SerializeStruct;
+        let mut state = tri!(serializer.serialize_struct("RangeInclusive", 2));
+        tri!(state.serialize_field("start", &self.start));
+        // We serialize this as "end" instead of "last" for parity with the original RangeInclusive
+        tri!(state.serialize_field("end", &self.last));
         state.end()
     }
 }

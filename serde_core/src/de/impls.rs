@@ -2440,6 +2440,20 @@ where
     }
 }
 
+#[cfg(feature = "unstable")]
+#[cfg_attr(docsrs, doc(cfg(feature = "unstable")))]
+impl<'de, Idx> Deserialize<'de> for core::range::Range<Idx>
+where
+    Idx: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(tri!(Range::deserialize(deserializer)).into())
+    }
+}
+
 impl<'de, Idx> Deserialize<'de> for RangeInclusive<Idx>
 where
     Idx: Deserialize<'de>,
@@ -2457,6 +2471,20 @@ where
             },
         ));
         Ok(RangeInclusive::new(start, end))
+    }
+}
+
+#[cfg(feature = "unstable")]
+#[cfg_attr(docsrs, doc(cfg(feature = "unstable")))]
+impl<'de, Idx> Deserialize<'de> for core::range::RangeInclusive<Idx>
+where
+    Idx: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(tri!(RangeInclusive::deserialize(deserializer)).into())
     }
 }
 
@@ -2616,6 +2644,20 @@ where
             },
         ));
         Ok(start..)
+    }
+}
+
+#[cfg(feature = "unstable")]
+#[cfg_attr(docsrs, doc(cfg(feature = "unstable")))]
+impl<'de, Idx> Deserialize<'de> for core::range::RangeFrom<Idx>
+where
+    Idx: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(tri!(RangeFrom::deserialize(deserializer)).into())
     }
 }
 
