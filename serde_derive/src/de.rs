@@ -570,15 +570,12 @@ fn deserialize_seq_in_place(
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
     let mut index_in_seq = 0usize;
-    let write_values = fields.iter().map(|field| {
-        let member = &field.member;
+    let write_values = fields
+        .iter()
+        .filter(|field| !field.attrs.skip_deserializing())
+        .map(|field| {
+            let member = &field.member;
 
-        if field.attrs.skip_deserializing() {
-            let default = Expr(expr_is_missing(field, cattrs));
-            quote! {
-                self.place.#member = #default;
-            }
-        } else {
             let value_if_none = expr_is_missing_seq(Some(quote!(self.place.#member = )), index_in_seq, field, cattrs, expecting);
             let write = match field.attrs.deserialize_with() {
                 None => {
@@ -610,8 +607,7 @@ fn deserialize_seq_in_place(
             };
             index_in_seq += 1;
             write
-        }
-    });
+        });
 
     let this_type = &params.this_type;
     let (_, ty_generics, _) = params.generics.split_for_impl();
