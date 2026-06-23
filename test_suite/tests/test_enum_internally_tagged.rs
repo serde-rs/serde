@@ -35,6 +35,9 @@ enum Enum {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "tag")]
 enum InternallyTagged {
+    #[allow(dead_code)]
+    #[serde(skip_deserializing)]
+    Skipped,
     Unit,
     NewtypeUnit(()),
     NewtypeUnitStruct(Unit),
@@ -42,8 +45,12 @@ enum InternallyTagged {
     NewtypeMap(BTreeMap<String, String>),
     NewtypeStruct(Struct),
     NewtypeEnum(Enum),
-    Struct { a: u8 },
-    StructEnum { enum_: Enum },
+    Struct {
+        a: u8,
+    },
+    StructEnum {
+        enum_: Enum,
+    },
 }
 
 #[test]
@@ -1038,7 +1045,47 @@ mod struct_enum {
 }
 
 #[test]
-fn wrong_tag() {
+fn skipped_variant() {
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Map { len: None },
+            Token::Str("tag"),
+            Token::Str("Skipped"),
+            Token::MapEnd,
+        ],
+        "unknown variant `Skipped`, expected one of \
+        `Unit`, \
+        `NewtypeUnit`, \
+        `NewtypeUnitStruct`, \
+        `NewtypeNewtype`, \
+        `NewtypeMap`, \
+        `NewtypeStruct`, \
+        `NewtypeEnum`, \
+        `Struct`, \
+        `StructEnum`",
+    );
+
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Seq { len: None },
+            Token::Str("Skipped"), // tag
+            Token::SeqEnd,
+        ],
+        "unknown variant `Skipped`, expected one of \
+        `Unit`, \
+        `NewtypeUnit`, \
+        `NewtypeUnitStruct`, \
+        `NewtypeNewtype`, \
+        `NewtypeMap`, \
+        `NewtypeStruct`, \
+        `NewtypeEnum`, \
+        `Struct`, \
+        `StructEnum`",
+    );
+}
+
+#[test]
+fn unknown_variant_name() {
     assert_de_tokens_error::<InternallyTagged>(
         &[Token::Map { len: Some(0) }, Token::MapEnd],
         "missing field `tag`",
@@ -1061,6 +1108,119 @@ fn wrong_tag() {
         `NewtypeEnum`, \
         `Struct`, \
         `StructEnum`",
+    );
+
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Seq { len: Some(1) },
+            Token::Str("Z"), // tag
+            Token::SeqEnd,
+        ],
+        "unknown variant `Z`, expected one of \
+        `Unit`, \
+        `NewtypeUnit`, \
+        `NewtypeUnitStruct`, \
+        `NewtypeNewtype`, \
+        `NewtypeMap`, \
+        `NewtypeStruct`, \
+        `NewtypeEnum`, \
+        `Struct`, \
+        `StructEnum`",
+    );
+}
+
+#[test]
+fn unknown_variant_index() {
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("tag"),
+            Token::U32(9),
+            Token::MapEnd,
+        ],
+        "invalid value: integer `9`, expected variant index 0 <= i < 9",
+    );
+
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Seq { len: Some(1) },
+            Token::U32(9), // tag
+            Token::SeqEnd,
+        ],
+        "invalid value: integer `9`, expected variant index 0 <= i < 9",
+    );
+}
+
+#[test]
+fn duplicated_tag() {
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Map { len: None },
+            Token::Str("tag"),
+            Token::Str("Struct"),
+            Token::Str("a"),
+            Token::I32(1),
+            Token::Str("tag"),
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::MapEnd,
+        ],
+        "duplicate field `tag`",
+    );
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Map { len: None },
+            Token::Str("a"),
+            Token::I32(1),
+            Token::Str("tag"),
+            Token::Str("Struct"),
+            Token::Str("tag"),
+            // Tokens that could follow, but assert_de_tokens_error do not want them
+            // Token::MapEnd,
+        ],
+        "duplicate field `tag`",
+    );
+}
+
+#[test]
+fn duplicate_field_in_struct() {
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Map { len: None },
+            Token::Str("tag"),
+            Token::Str("Struct"),
+            Token::Str("a"),
+            Token::I32(1),
+            Token::Str("a"),
+            Token::I32(2),
+            Token::MapEnd,
+        ],
+        "duplicate field `a`",
+    );
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Map { len: None },
+            Token::Str("a"),
+            Token::I32(1),
+            Token::Str("tag"),
+            Token::Str("Struct"),
+            Token::Str("a"),
+            Token::I32(2),
+            Token::MapEnd,
+        ],
+        "duplicate field `a`",
+    );
+    assert_de_tokens_error::<InternallyTagged>(
+        &[
+            Token::Map { len: None },
+            Token::Str("a"),
+            Token::I32(1),
+            Token::Str("a"),
+            Token::I32(2),
+            Token::Str("tag"),
+            Token::Str("Struct"),
+            Token::MapEnd,
+        ],
+        "duplicate field `a`",
     );
 }
 
