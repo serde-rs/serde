@@ -657,10 +657,7 @@ fn test_rename_all() {
     #[serde(rename_all = "snake_case")]
     enum E {
         #[serde(rename_all = "camelCase")]
-        Serialize {
-            serialize: bool,
-            serialize_seq: bool,
-        },
+        Ändern { ändern: bool, serialize_seq: bool },
         #[serde(rename_all = "kebab-case")]
         SerializeSeq {
             serialize: bool,
@@ -688,17 +685,17 @@ fn test_rename_all() {
     }
 
     assert_tokens(
-        &E::Serialize {
-            serialize: true,
+        &E::Ändern {
+            ändern: true,
             serialize_seq: true,
         },
         &[
             Token::StructVariant {
                 name: "E",
-                variant: "serialize",
+                variant: "Ändern",
                 len: 2,
             },
-            Token::Str("serialize"),
+            Token::Str("ändern"),
             Token::Bool(true),
             Token::Str("serializeSeq"),
             Token::Bool(true),
