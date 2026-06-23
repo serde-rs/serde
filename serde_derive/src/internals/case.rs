@@ -59,7 +59,7 @@ impl RenameRule {
             None | PascalCase => variant.to_owned(),
             LowerCase => variant.to_ascii_lowercase(),
             UpperCase => variant.to_ascii_uppercase(),
-            CamelCase => variant[..1].to_ascii_lowercase() + &variant[1..],
+            CamelCase => Self::lowercase_first_char_unicode(variant),
             SnakeCase => {
                 let mut snake = String::new();
                 for (i, ch) in variant.char_indices() {
@@ -100,11 +100,27 @@ impl RenameRule {
             }
             CamelCase => {
                 let pascal = PascalCase.apply_to_field(field);
-                pascal[..1].to_ascii_lowercase() + &pascal[1..]
+                Self::lowercase_first_char_unicode(&pascal)
             }
             ScreamingSnakeCase => field.to_ascii_uppercase(),
             KebabCase => field.replace('_', "-"),
             ScreamingKebabCase => ScreamingSnakeCase.apply_to_field(field).replace('_', "-"),
+        }
+    }
+
+    /// Lowercase the first Unicode scalar using full Unicode case mapping,
+    /// then append the remainder unchanged. Avoids UTF-8 slicing panics.
+    fn lowercase_first_char_unicode(s: &str) -> String {
+        let mut chars = s.chars();
+        match chars.next() {
+            ::std::option::Option::None => String::new(),
+            ::std::option::Option::Some(first) => {
+                // `to_lowercase()` may expand (e.g., 'İ' -> 'i' + U+0307)
+                let mut out = String::with_capacity(s.len());
+                out.extend(first.to_lowercase());
+                out.extend(chars);
+                out
+            }
         }
     }
 
@@ -196,5 +212,106 @@ fn rename_fields() {
         assert_eq!(ScreamingSnakeCase.apply_to_field(original), screaming);
         assert_eq!(KebabCase.apply_to_field(original), kebab);
         assert_eq!(ScreamingKebabCase.apply_to_field(original), screaming_kebab);
+    }
+}
+
+#[cfg(test)]
+mod unicode_camelcase_tests {
+    use super::RenameRule;
+
+    // --- ASCII regressions: behavior must remain identical ---
+
+    #[test]
+    fn camelcase_variant_ascii_regression() {
+        assert_eq!(
+            RenameRule::CamelCase.apply_to_variant("FieldName"),
+            "fieldName"
+        );
+        assert_eq!(
+            RenameRule::CamelCase.apply_to_variant("URLValue"),
+            "uRLValue" // existing behavior: only first scalar is lowercased
+        );
+    }
+
+    #[test]
+    fn camelcase_field_ascii_regression() {
+        assert_eq!(
+            RenameRule::CamelCase.apply_to_field("field_name"),
+            "fieldName"
+        );
+        assert_eq!(
+            RenameRule::CamelCase.apply_to_field("long_field_name"),
+            "longFieldName"
+        );
+    }
+
+    // --- Unicode behavior: first scalar lowercased using full Unicode mapping ---
+
+    #[test]
+    fn camelcase_variant_non_ascii_basic() {
+        // Greek capital sigma -> small sigma (single-scalar mapping)
+        assert_eq!(
+            RenameRule::CamelCase.apply_to_variant("Σomething"),
+            "σomething"
+        );
+    }
+
+    #[test]
+    fn camelcase_variant_non_ascii_expanding() {
+        // LATIN CAPITAL LETTER I WITH DOT ABOVE (U+0130) lowercases to
+        // 'i' + COMBINING DOT ABOVE (U+0307) in Unicode
+        assert_eq!(
+            RenameRule::CamelCase.apply_to_variant("İstanbul"),
+            "i\u{307}stanbul"
+        );
+    }
+
+    #[test]
+    fn camelcase_field_mixed_identifier_unicode() {
+        // apply_to_field: first makes PascalCase from snake_case,
+        // then CamelCase lowercases the first Unicode scalar only.
+        // Non-ASCII first scalar stays semantically lowercased by Unicode rules;
+        // ASCII segment after '_' still Pascalizes into 'Feature'.
+        assert_eq!(
+            RenameRule::CamelCase.apply_to_field("परिणाम_feature"),
+            "परिणामFeature"
+        );
+    }
+
+    #[test]
+    fn camelcase_field_chinese_identifiers_stable() {
+        // Fields with non-cased Han characters should remain unchanged.
+        assert_eq!(RenameRule::CamelCase.apply_to_field("项目名称"), "项目名称");
+        assert_eq!(RenameRule::CamelCase.apply_to_field("项目地址"), "项目地址");
+    }
+
+    #[test]
+    fn camelcase_variant_chinese_identifiers_stable() {
+        // Same expectation for variant names.
+        assert_eq!(
+            RenameRule::CamelCase.apply_to_variant("项目名称"),
+            "项目名称"
+        );
+        assert_eq!(
+            RenameRule::CamelCase.apply_to_variant("项目地址"),
+            "项目地址"
+        );
+    }
+
+    // Sanity: other rename rules remain unaffected by our change
+    #[test]
+    fn other_rules_unchanged() {
+        assert_eq!(
+            RenameRule::SnakeCase.apply_to_variant("FieldName"),
+            "field_name"
+        );
+        assert_eq!(
+            RenameRule::KebabCase.apply_to_field("field_name"),
+            "field-name"
+        );
+        assert_eq!(
+            RenameRule::ScreamingSnakeCase.apply_to_variant("FieldName"),
+            "FIELD_NAME"
+        );
     }
 }
