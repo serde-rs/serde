@@ -171,7 +171,7 @@ pub(super) fn deserialize(
                 marker: _serde::#private::PhantomData,
                 lifetime: _serde::#private::PhantomData,
             };
-            let __deserializer = _serde::#private::de::ContentDeserializer::<__A::Error>::new(__content);
+            let __deserializer = _serde::#private::de::ContentDeserializer::<__A::Error>::new(__content, self.__is_human_readable);
             let __ret = _serde::de::DeserializeSeed::deserialize(__seed, __deserializer)?;
             // Visit remaining keys, looking for duplicates.
             #visit_remaining_keys
@@ -208,6 +208,7 @@ pub(super) fn deserialize(
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::#private::PhantomData<#this_type #ty_generics>,
             lifetime: _serde::#private::PhantomData<&#delife ()>,
+            __is_human_readable: bool,
         }
 
         #[automatically_derived]
@@ -311,6 +312,7 @@ pub(super) fn deserialize(
 
         #[doc(hidden)]
         const FIELDS: &'static [&'static str] = &[#tag, #content];
+        let __is_human_readable = _serde::Deserializer::is_human_readable(&__deserializer);
         _serde::Deserializer::deserialize_struct(
             __deserializer,
             #type_name,
@@ -318,6 +320,7 @@ pub(super) fn deserialize(
             __Visitor {
                 marker: _serde::#private::PhantomData::<#this_type #ty_generics>,
                 lifetime: _serde::#private::PhantomData,
+                __is_human_readable: __is_human_readable,
             },
         )
     }
