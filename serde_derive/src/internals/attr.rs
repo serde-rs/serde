@@ -159,6 +159,7 @@ pub struct Container {
     default: Default,
     rename_all_rules: RenameAllRules,
     rename_all_fields_rules: RenameAllRules,
+    lifetime: Option<syn::Lifetime>,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     tag: TagType,
@@ -244,6 +245,7 @@ impl Container {
         let mut rename_all_de_rule = Attr::none(cx, RENAME_ALL);
         let mut rename_all_fields_ser_rule = Attr::none(cx, RENAME_ALL_FIELDS);
         let mut rename_all_fields_de_rule = Attr::none(cx, RENAME_ALL_FIELDS);
+        let mut lifetime = Attr::none(cx, LIFETIME);
         let mut ser_bound = Attr::none(cx, BOUND);
         let mut de_bound = Attr::none(cx, BOUND);
         let mut untagged = BoolAttr::none(cx, UNTAGGED);
@@ -390,6 +392,10 @@ impl Container {
                             }
                         }
                     }
+                } else if meta.path == LIFETIME {
+                    // #[serde(lifetime = 'a)]
+                    let a: syn::Lifetime = meta.value()?.parse()?;
+                    lifetime.set(&meta.path, a);
                 } else if meta.path == BOUND {
                     // #[serde(bound = "T: SomeBound")]
                     // #[serde(bound(serialize = "...", deserialize = "..."))]
@@ -529,6 +535,7 @@ impl Container {
                 serialize: rename_all_fields_ser_rule.get().unwrap_or(RenameRule::None),
                 deserialize: rename_all_fields_de_rule.get().unwrap_or(RenameRule::None),
             },
+            lifetime: lifetime.get(),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
             tag: decide_tag(cx, item, untagged, internal_tag, content),
@@ -566,6 +573,10 @@ impl Container {
 
     pub fn default(&self) -> &Default {
         &self.default
+    }
+
+    pub fn lifetime(&self) -> Option<&syn::Lifetime> {
+        self.lifetime.as_ref()
     }
 
     pub fn ser_bound(&self) -> Option<&[syn::WherePredicate]> {
