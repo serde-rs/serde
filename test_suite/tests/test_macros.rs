@@ -864,3 +864,300 @@ fn test_packed_struct_can_derive_serialize() {
         t: f32,
     }
 }
+
+#[test]
+fn test_alias_all_kebab_case() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(alias_all = "kebab-case")]
+    struct TestStruct {
+        field_one: i32,
+        field_two: String,
+        very_long_field_name: bool,
+    }
+
+    // Test deserializing with original snake_case names
+    assert_de_tokens(
+        &TestStruct {
+            field_one: 42,
+            field_two: "hello".to_string(),
+            very_long_field_name: true,
+        },
+        &[
+            Token::Struct {
+                name: "TestStruct",
+                len: 3,
+            },
+            Token::Str("field_one"),
+            Token::I32(42),
+            Token::Str("field_two"),
+            Token::Str("hello"),
+            Token::Str("very_long_field_name"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+
+    // Test deserializing with kebab-case aliases
+    assert_de_tokens(
+        &TestStruct {
+            field_one: 42,
+            field_two: "hello".to_string(),
+            very_long_field_name: true,
+        },
+        &[
+            Token::Struct {
+                name: "TestStruct",
+                len: 3,
+            },
+            Token::Str("field-one"),
+            Token::I32(42),
+            Token::Str("field-two"),
+            Token::Str("hello"),
+            Token::Str("very-long-field-name"),
+            Token::Bool(true),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_alias_all_uppercase() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(alias_all = "UPPERCASE")]
+    struct TestStructUppercase {
+        field_one: i32,
+        field_two: String,
+    }
+
+    // Test deserializing with original snake_case names
+    assert_de_tokens(
+        &TestStructUppercase {
+            field_one: 42,
+            field_two: "hello".to_string(),
+        },
+        &[
+            Token::Struct {
+                name: "TestStructUppercase",
+                len: 2,
+            },
+            Token::Str("field_one"),
+            Token::I32(42),
+            Token::Str("field_two"),
+            Token::Str("hello"),
+            Token::StructEnd,
+        ],
+    );
+
+    // Test deserializing with UPPERCASE aliases
+    assert_de_tokens(
+        &TestStructUppercase {
+            field_one: 42,
+            field_two: "hello".to_string(),
+        },
+        &[
+            Token::Struct {
+                name: "TestStructUppercase",
+                len: 2,
+            },
+            Token::Str("FIELD_ONE"),
+            Token::I32(42),
+            Token::Str("FIELD_TWO"),
+            Token::Str("hello"),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_alias_all_camel_case() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(alias_all = "camelCase")]
+    struct TestStructCamelCase {
+        field_one: i32,
+        field_two: String,
+    }
+
+    // Test deserializing with original snake_case names
+    assert_de_tokens(
+        &TestStructCamelCase {
+            field_one: 42,
+            field_two: "hello".to_string(),
+        },
+        &[
+            Token::Struct {
+                name: "TestStructCamelCase",
+                len: 2,
+            },
+            Token::Str("field_one"),
+            Token::I32(42),
+            Token::Str("field_two"),
+            Token::Str("hello"),
+            Token::StructEnd,
+        ],
+    );
+
+    // Test deserializing with camelCase aliases
+    assert_de_tokens(
+        &TestStructCamelCase {
+            field_one: 42,
+            field_two: "hello".to_string(),
+        },
+        &[
+            Token::Struct {
+                name: "TestStructCamelCase",
+                len: 2,
+            },
+            Token::Str("fieldOne"),
+            Token::I32(42),
+            Token::Str("fieldTwo"),
+            Token::Str("hello"),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_alias_all_enum() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(alias_all = "kebab-case")]
+    enum TestEnum {
+        VariantOne { field_one: i32 },
+        VariantTwo { field_two: String },
+    }
+
+    // Test deserializing with original PascalCase names
+    assert_de_tokens(
+        &TestEnum::VariantOne { field_one: 42 },
+        &[
+            Token::Enum { name: "TestEnum" },
+            Token::Str("VariantOne"),
+            Token::Struct {
+                name: "VariantOne",
+                len: 1,
+            },
+            Token::Str("field_one"),
+            Token::I32(42),
+            Token::StructEnd,
+        ],
+    );
+
+    // Test deserializing with kebab-case aliases
+    assert_de_tokens(
+        &TestEnum::VariantOne { field_one: 42 },
+        &[
+            Token::Enum { name: "TestEnum" },
+            Token::Str("variant-one"),
+            Token::Struct {
+                name: "VariantOne",
+                len: 1,
+            },
+            Token::Str("field-one"),
+            Token::I32(42),
+            Token::StructEnd,
+        ],
+    );
+
+    // Test deserializing with original PascalCase names
+    assert_de_tokens(
+        &TestEnum::VariantTwo {
+            field_two: "hello".to_string(),
+        },
+        &[
+            Token::Enum { name: "TestEnum" },
+            Token::Str("VariantTwo"),
+            Token::Struct {
+                name: "VariantTwo",
+                len: 1,
+            },
+            Token::Str("field_two"),
+            Token::Str("hello"),
+            Token::StructEnd,
+        ],
+    );
+
+    // Test deserializing with kebab-case aliases
+    assert_de_tokens(
+        &TestEnum::VariantTwo {
+            field_two: "hello".to_string(),
+        },
+        &[
+            Token::Enum { name: "TestEnum" },
+            Token::Str("variant-two"),
+            Token::Struct {
+                name: "VariantTwo",
+                len: 1,
+            },
+            Token::Str("field-two"),
+            Token::Str("hello"),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_multiple_alias_all() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(alias_all = "kebab-case")]
+    #[serde(alias_all = "UPPERCASE")]
+    struct TestStruct {
+        field_one: i32,
+        field_two: String,
+    }
+
+    // Test deserializing with original snake_case names
+    assert_de_tokens(
+        &TestStruct {
+            field_one: 42,
+            field_two: "hello".to_string(),
+        },
+        &[
+            Token::Struct {
+                name: "TestStruct",
+                len: 2,
+            },
+            Token::Str("field_one"),
+            Token::I32(42),
+            Token::Str("field_two"),
+            Token::Str("hello"),
+            Token::StructEnd,
+        ],
+    );
+
+    // Test deserializing with kebab-case aliases
+    assert_de_tokens(
+        &TestStruct {
+            field_one: 42,
+            field_two: "hello".to_string(),
+        },
+        &[
+            Token::Struct {
+                name: "TestStruct",
+                len: 2,
+            },
+            Token::Str("field-one"),
+            Token::I32(42),
+            Token::Str("field-two"),
+            Token::Str("hello"),
+            Token::StructEnd,
+        ],
+    );
+
+    // Test deserializing with UPPERCASE aliases
+    assert_de_tokens(
+        &TestStruct {
+            field_one: 42,
+            field_two: "hello".to_string(),
+        },
+        &[
+            Token::Struct {
+                name: "TestStruct",
+                len: 2,
+            },
+            Token::Str("FIELD_ONE"),
+            Token::I32(42),
+            Token::Str("FIELD_TWO"),
+            Token::Str("hello"),
+            Token::StructEnd,
+        ],
+    );
+}
