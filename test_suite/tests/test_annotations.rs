@@ -1942,6 +1942,94 @@ fn test_expecting_message_identifier_enum() {
     );
 }
 
+#[derive(Debug, PartialEq, Deserialize)]
+struct DeserializeDenyDuplicate {
+    value: i32,
+}
+
+#[test]
+fn test_deserialize_deny_duplicate() {
+    assert_de_tokens_error::<DeserializeDenyDuplicate>(
+        &[
+            Token::Struct {
+                name: "DeserializeDenyDuplicate",
+                len: 2,
+            },
+            Token::Str("value"),
+            Token::I32(1),
+            Token::Str("value"),
+            Token::I32(2),
+        ],
+        "duplicate field `value`",
+    );
+}
+
+fn take_last_duplicate<E, T>(parsed: &mut T, another: T) -> Result<(), E>
+where
+    E: serde::de::Error,
+{
+    *parsed = another;
+    Ok(())
+}
+
+fn merge_duplicates<E, T>(parsed: &mut Vec<T>, another: Vec<T>) -> Result<(), E>
+where
+    E: serde::de::Error,
+{
+    parsed.extend(another);
+    Ok(())
+}
+
+fn deserialize_comma_separated<'de, D>(deserializer: D) -> Result<Vec<u32>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    let parse = |s: &str| {
+        s.parse()
+            .map_err(|_| de::Error::invalid_value(de::Unexpected::Str(s), &"u32"))
+    };
+    s.split(',').map(parse).collect()
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+struct DeserializeOnDuplicate {
+    #[serde(on_duplicate = "take_last_duplicate")]
+    name: String,
+    #[serde(
+        deserialize_with = "deserialize_comma_separated",
+        on_duplicate = "merge_duplicates"
+    )]
+    numbers: Vec<u32>,
+}
+
+#[test]
+fn test_deserialize_on_duplicate() {
+    assert_de_tokens::<DeserializeOnDuplicate>(
+        &DeserializeOnDuplicate {
+            name: "bb".to_string(),
+            numbers: vec![1, 90, 91, 11, 28],
+        },
+        &[
+            Token::Struct {
+                name: "DeserializeOnDuplicate",
+                len: 5,
+            },
+            Token::Str("name"),
+            Token::Str("aa"),
+            Token::Str("name"),
+            Token::Str("bb"),
+            Token::Str("numbers"),
+            Token::Str("1"),
+            Token::Str("numbers"),
+            Token::Str("90,91"),
+            Token::Str("numbers"),
+            Token::Str("11,28"),
+            Token::StructEnd,
+        ],
+    );
+}
+
 mod flatten {
     use super::*;
 
