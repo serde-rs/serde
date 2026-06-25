@@ -206,7 +206,7 @@ fn build_generics(cont: &Container, borrowed: &BorrowedLifetimes) -> syn::Generi
                     &generics,
                     &parse_quote!(_serde::#private::Default),
                 ),
-                attr::Default::None | attr::Default::Path(_) => generics,
+                attr::Default::None | attr::Default::Path(_) | attr::Default::Expr(_) => generics,
             };
 
             let delife = borrowed.de_lifetime();
@@ -409,6 +409,7 @@ fn deserialize_transparent(cont: &Container, params: &Parameters) -> Fragment {
                 // on the #[serde(default = "...")]
                 //                          ^^^^^
                 attr::Default::Path(path) => quote_spanned!(path.span()=> #path()),
+                attr::Default::Expr(expr) => quote_spanned!(expr.span()=> #expr),
                 attr::Default::None => quote!(_serde::#private::PhantomData),
             };
             quote!(#member: #value)
@@ -537,7 +538,7 @@ fn deserialize_seq(
         attr::Default::Path(path) => Some(quote_spanned!(path.span()=>
             let __default: Self::Value = #path();
         )),
-        attr::Default::None => {
+        attr::Default::None | attr::Default::Expr(_) => {
             // We don't need the default value, to prevent an unused variable warning
             // we'll leave the line empty.
             None
@@ -626,7 +627,7 @@ fn deserialize_seq_in_place(
         attr::Default::Path(path) => Some(quote_spanned!(path.span()=>
             let __default: #this_type #ty_generics = #path();
         )),
-        attr::Default::None => {
+        attr::Default::None | attr::Default::Expr(_) => {
             // We don't need the default value, to prevent an unused variable warning
             // we'll leave the line empty.
             None
@@ -777,6 +778,9 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
             //                          ^^^^^
             return Fragment::Expr(quote_spanned!(path.span()=> #path()));
         }
+        attr::Default::Expr(expr) => {
+            return Fragment::Expr(quote_spanned!(expr.span()=> #expr));
+        }
         attr::Default::None => { /* below */ }
     }
 
@@ -785,6 +789,7 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
             let member = &field.member;
             return quote_expr!(__default.#member);
         }
+        attr::Default::Expr(_) => unreachable!("default_expr is not supported on containers"),
         attr::Default::None => { /* below */ }
     }
 
@@ -824,6 +829,9 @@ fn expr_is_missing_seq(
             //                          ^^^^^
             return quote_spanned!(path.span()=> #assign_to #path());
         }
+        attr::Default::Expr(expr) => {
+            return quote_spanned!(expr.span()=> #assign_to #expr);
+        }
         attr::Default::None => { /* below */ }
     }
 
@@ -832,6 +840,7 @@ fn expr_is_missing_seq(
             let member = &field.member;
             quote!(#assign_to __default.#member)
         }
+        attr::Default::Expr(_) => unreachable!("default_expr is not supported on containers"),
         attr::Default::None => quote!(
             return _serde::#private::Err(_serde::de::Error::invalid_length(#index, &#expecting))
         ),
