@@ -54,6 +54,10 @@ where
             bytes byte_buf unit unit_struct newtype_struct seq tuple
             tuple_struct map struct enum identifier ignored_any
         }
+        #[cfg(feature = "floats")]
+        serde_core::forward_to_deserialize_any! {
+            f32 f64
+        }
     }
 
     let deserializer = MissingFieldDeserializer(field, PhantomData);
@@ -1437,6 +1441,22 @@ mod content {
             let _ = visitor;
             Ok(self.content)
         }
+        #[cfg(feature = "floats")]
+        fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            self.deserialize_float(visitor)
+        }
+
+        #[cfg(feature = "floats")]
+        fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            self.deserialize_float(visitor)
+        }
+
     }
 
     impl<'de, E> ContentDeserializer<'de, E> {
@@ -1504,6 +1524,10 @@ mod content {
             bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 char str string
             bytes byte_buf option unit unit_struct newtype_struct seq tuple
             tuple_struct map struct enum identifier ignored_any
+        }
+        #[cfg(feature = "floats")]
+        serde_core::forward_to_deserialize_any! {
+            f32 f64
         }
     }
 
@@ -1632,6 +1656,10 @@ mod content {
             bytes byte_buf option unit unit_struct newtype_struct tuple_struct map
             struct enum identifier ignored_any
         }
+        #[cfg(feature = "floats")]
+        serde_core::forward_to_deserialize_any! {
+            f32 f64
+        }
     }
 
     #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
@@ -1727,6 +1755,10 @@ mod content {
             bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 char str string
             bytes byte_buf option unit unit_struct newtype_struct tuple_struct map
             struct enum identifier ignored_any
+        }
+        #[cfg(feature = "floats")]
+        serde_core::forward_to_deserialize_any! {
+            f32 f64
         }
 
         fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -2050,6 +2082,10 @@ mod content {
                 }
                 Content::Seq(ref v) => visit_content_seq_ref(v, visitor),
                 Content::Map(ref v) => visit_content_map_ref(v, visitor),
+                #[cfg(feature = "floats")]
+                Content::F32(v) => visitor.visit_f32(v),
+                #[cfg(feature = "floats")]
+                Content::F64(v) => visitor.visit_f64(v),
             }
         }
 
@@ -2119,6 +2155,21 @@ mod content {
             self.deserialize_integer(visitor)
         }
 
+
+        #[cfg(feature = "floats")]
+        fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            self.deserialize_float(visitor)
+        }
+        #[cfg(feature = "floats")]
+        fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            self.deserialize_float(visitor)
+        }
 
         fn deserialize_char<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
@@ -2446,6 +2497,10 @@ mod content {
             bytes byte_buf option unit unit_struct newtype_struct seq tuple
             tuple_struct map struct enum identifier ignored_any
         }
+        #[cfg(feature = "floats")]
+        serde_core::forward_to_deserialize_any! {
+            f32 f64
+        }
     }
 
     #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
@@ -2561,6 +2616,10 @@ mod content {
             bytes byte_buf option unit unit_struct newtype_struct tuple_struct map
             struct enum identifier ignored_any
         }
+        #[cfg(feature = "floats")]
+        serde_core::forward_to_deserialize_any! {
+            f32 f64
+        }
     }
 
     #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
@@ -2658,6 +2717,10 @@ mod content {
             struct enum identifier ignored_any
         }
 
+        #[cfg(feature = "floats")]
+        serde_core::forward_to_deserialize_any! {
+            f32 f64
+        }
         fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
@@ -3029,6 +3092,11 @@ where
         bytes byte_buf option unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any
     }
+
+    #[cfg(feature = "floats")]
+    serde_core::forward_to_deserialize_any! {
+        f32 f64
+    }
 }
 
 pub struct BorrowedStrDeserializer<'de, E> {
@@ -3054,6 +3122,10 @@ where
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 char str string
         bytes byte_buf option unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any
+    }
+    #[cfg(feature = "floats")]
+    serde_core::forward_to_deserialize_any! {
+        f32 f64
     }
 }
 
@@ -3266,6 +3338,11 @@ where
         deserialize_tuple(usize)
         deserialize_tuple_struct(&'static str, usize)
         deserialize_identifier()
+    }
+    #[cfg(feature = "floats")]
+    forward_to_deserialize_other! {
+        deserialize_f32()
+        deserialize_f64()
     }
 }
 
