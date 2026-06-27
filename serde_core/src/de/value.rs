@@ -337,7 +337,9 @@ primitive_deserializer!(u16, "a `u16`.", U16Deserializer, visit_u16);
 primitive_deserializer!(u64, "a `u64`.", U64Deserializer, visit_u64);
 primitive_deserializer!(u128, "a `u128`.", U128Deserializer, visit_u128);
 primitive_deserializer!(usize, "a `usize`.", UsizeDeserializer, visit_u64 as u64);
+#[cfg(feature = "floats")]
 primitive_deserializer!(f32, "an `f32`.", F32Deserializer, visit_f32);
+#[cfg(feature = "floats")]
 primitive_deserializer!(f64, "an `f64`.", F64Deserializer, visit_f64);
 primitive_deserializer!(char, "a `char`.", CharDeserializer, visit_char);
 
@@ -1060,9 +1062,13 @@ where
     }
 
     forward_to_deserialize_any! {
-        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 char str string
         bytes byte_buf option unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any
+    }
+    #[cfg(feature = "floats")]
+    forward_to_deserialize_any! {
+        f32 f64
     }
 }
 

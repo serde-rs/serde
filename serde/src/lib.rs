@@ -198,6 +198,7 @@ macro_rules! crate_root {
                 pub use std::*;
             }
 
+            #[cfg(feature = "floats")]
             pub use self::core::{f32, f64};
             pub use self::core::{ptr, str};
 

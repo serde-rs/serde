@@ -31,7 +31,9 @@ primitive_impl!(u16, serialize_u16);
 primitive_impl!(u32, serialize_u32);
 primitive_impl!(u64, serialize_u64);
 primitive_impl!(u128, serialize_u128);
+#[cfg(feature = "floats")]
 primitive_impl!(f32, serialize_f32);
+#[cfg(feature = "floats")]
 primitive_impl!(f64, serialize_f64);
 primitive_impl!(char, serialize_char);
 

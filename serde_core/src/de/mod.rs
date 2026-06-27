@@ -349,6 +349,7 @@ pub enum Unexpected<'a> {
 
     /// The input contained a floating point `f32` or `f64` that was not
     /// expected.
+    #[cfg(feature = "floats")]
     Float(f64),
 
     /// The input contained a `char` that was not expected.
@@ -405,6 +406,7 @@ impl<'a> fmt::Display for Unexpected<'a> {
             Bool(b) => write!(formatter, "boolean `{}`", b),
             Unsigned(i) => write!(formatter, "integer `{}`", i),
             Signed(i) => write!(formatter, "integer `{}`", i),
+            #[cfg(feature = "floats")]
             Float(f) => write!(formatter, "floating point `{}`", WithDecimalPoint(f)),
             Char(c) => write!(formatter, "character `{}`", c),
             Str(s) => write!(formatter, "string {:?}", s),
@@ -1028,11 +1030,13 @@ pub trait Deserializer<'de>: Sized {
     }
 
     /// Hint that the `Deserialize` type is expecting a `f32` value.
+    #[cfg(feature = "floats")]
     fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>;
 
     /// Hint that the `Deserialize` type is expecting a `f64` value.
+    #[cfg(feature = "floats")]
     fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>;
@@ -1481,6 +1485,7 @@ pub trait Visitor<'de>: Sized {
     /// The default implementation forwards to [`visit_f64`].
     ///
     /// [`visit_f64`]: #method.visit_f64
+    #[cfg(feature = "floats")]
     fn visit_f32<E>(self, v: f32) -> Result<Self::Value, E>
     where
         E: Error,
@@ -1491,6 +1496,7 @@ pub trait Visitor<'de>: Sized {
     /// The input contains an `f64`.
     ///
     /// The default implementation fails with a type error.
+    #[cfg(feature = "floats")]
     fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
     where
         E: Error,
@@ -2354,8 +2360,10 @@ impl Display for OneOf {
     }
 }
 
+#[cfg(feature = "floats")]
 struct WithDecimalPoint(f64);
 
+#[cfg(feature = "floats")]
 impl Display for WithDecimalPoint {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         struct LookForDecimalPoint<'f, 'a> {

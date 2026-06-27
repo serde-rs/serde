@@ -50,9 +50,13 @@ where
         }
 
         serde_core::forward_to_deserialize_any! {
-            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 char str string
             bytes byte_buf unit unit_struct newtype_struct seq tuple
             tuple_struct map struct enum identifier ignored_any
+        }
+        #[cfg(feature = "floats")]
+        serde_core::forward_to_deserialize_any! {
+            f32 f64
         }
     }
 
@@ -236,12 +240,14 @@ mod content {
             Content::U16(n) => Content::U16(*n),
             Content::U32(n) => Content::U32(*n),
             Content::U64(n) => Content::U64(*n),
+            #[cfg(feature = "floats")]
+            Content::F32(n) => Content::F32(*n),
+            #[cfg(feature = "floats")]
+            Content::F64(n) => Content::F64(*n),
             Content::I8(n) => Content::I8(*n),
             Content::I16(n) => Content::I16(*n),
             Content::I32(n) => Content::I32(*n),
             Content::I64(n) => Content::I64(*n),
-            Content::F32(f) => Content::F32(*f),
-            Content::F64(f) => Content::F64(*f),
             Content::Char(c) => Content::Char(*c),
             Content::String(s) => Content::String(s.clone()),
             Content::Str(s) => Content::Str(*s),
@@ -268,12 +274,14 @@ mod content {
             Content::U16(n) => Unexpected::Unsigned(n as u64),
             Content::U32(n) => Unexpected::Unsigned(n as u64),
             Content::U64(n) => Unexpected::Unsigned(n),
+            #[cfg(feature = "floats")]
+            Content::F32(n) => Unexpected::Float(n as f64),
+            #[cfg(feature = "floats")]
+            Content::F64(n) => Unexpected::Float(n),
             Content::I8(n) => Unexpected::Signed(n as i64),
             Content::I16(n) => Unexpected::Signed(n as i64),
             Content::I32(n) => Unexpected::Signed(n as i64),
             Content::I64(n) => Unexpected::Signed(n),
-            Content::F32(f) => Unexpected::Float(f as f64),
-            Content::F64(f) => Unexpected::Float(f),
             Content::Char(c) => Unexpected::Char(c),
             Content::String(ref s) => Unexpected::Str(s),
             Content::Str(s) => Unexpected::Str(s),
@@ -378,20 +386,6 @@ mod content {
             F: de::Error,
         {
             Ok(Content::U64(value))
-        }
-
-        fn visit_f32<F>(self, value: f32) -> Result<Self::Value, F>
-        where
-            F: de::Error,
-        {
-            Ok(Content::F32(value))
-        }
-
-        fn visit_f64<F>(self, value: f64) -> Result<Self::Value, F>
-        where
-            F: de::Error,
-        {
-            Ok(Content::F64(value))
         }
 
         fn visit_char<F>(self, value: char) -> Result<Self::Value, F>
@@ -638,23 +632,6 @@ mod content {
                 .map(TagOrContent::Content)
         }
 
-        fn visit_f32<F>(self, value: f32) -> Result<Self::Value, F>
-        where
-            F: de::Error,
-        {
-            ContentVisitor::new()
-                .visit_f32(value)
-                .map(TagOrContent::Content)
-        }
-
-        fn visit_f64<F>(self, value: f64) -> Result<Self::Value, F>
-        where
-            F: de::Error,
-        {
-            ContentVisitor::new()
-                .visit_f64(value)
-                .map(TagOrContent::Content)
-        }
 
         fn visit_char<F>(self, value: char) -> Result<Self::Value, F>
         where
@@ -1074,8 +1051,6 @@ mod content {
             V: Visitor<'de>,
         {
             match self.content {
-                Content::F32(v) => visitor.visit_f32(v),
-                Content::F64(v) => visitor.visit_f64(v),
                 Content::U8(v) => visitor.visit_u8(v),
                 Content::U16(v) => visitor.visit_u16(v),
                 Content::U32(v) => visitor.visit_u32(v),
@@ -1133,12 +1108,14 @@ mod content {
                 Content::U16(v) => visitor.visit_u16(v),
                 Content::U32(v) => visitor.visit_u32(v),
                 Content::U64(v) => visitor.visit_u64(v),
+                #[cfg(feature = "floats")]
+                Content::F32(v) => visitor.visit_f32(v),
+                #[cfg(feature = "floats")]
+                Content::F64(v) => visitor.visit_f64(v),
                 Content::I8(v) => visitor.visit_i8(v),
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
-                Content::F32(v) => visitor.visit_f32(v),
-                Content::F64(v) => visitor.visit_f64(v),
                 Content::Char(v) => visitor.visit_char(v),
                 Content::String(v) => visitor.visit_string(v),
                 Content::Str(v) => visitor.visit_borrowed_str(v),
@@ -1219,19 +1196,6 @@ mod content {
             self.deserialize_integer(visitor)
         }
 
-        fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_float(visitor)
-        }
-
-        fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-        where
-            V: Visitor<'de>,
-        {
-            self.deserialize_float(visitor)
-        }
 
         fn deserialize_char<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
@@ -1489,6 +1453,22 @@ mod content {
             let _ = visitor;
             Ok(self.content)
         }
+        #[cfg(feature = "floats")]
+        fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            self.deserialize_float(visitor)
+        }
+
+        #[cfg(feature = "floats")]
+        fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: Visitor<'de>,
+        {
+            self.deserialize_float(visitor)
+        }
+
     }
 
     impl<'de, E> ContentDeserializer<'de, E> {
@@ -1553,9 +1533,13 @@ mod content {
         }
 
         serde_core::forward_to_deserialize_any! {
-            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 char str string
             bytes byte_buf option unit unit_struct newtype_struct seq tuple
             tuple_struct map struct enum identifier ignored_any
+        }
+        #[cfg(feature = "floats")]
+        serde_core::forward_to_deserialize_any! {
+            f32 f64
         }
     }
 
@@ -1680,9 +1664,13 @@ mod content {
         }
 
         serde_core::forward_to_deserialize_any! {
-            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 char str string
             bytes byte_buf option unit unit_struct newtype_struct tuple_struct map
             struct enum identifier ignored_any
+        }
+        #[cfg(feature = "floats")]
+        serde_core::forward_to_deserialize_any! {
+            f32 f64
         }
     }
 
@@ -1776,9 +1764,13 @@ mod content {
         type Error = E;
 
         serde_core::forward_to_deserialize_any! {
-            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 char str string
             bytes byte_buf option unit unit_struct newtype_struct tuple_struct map
             struct enum identifier ignored_any
+        }
+        #[cfg(feature = "floats")]
+        serde_core::forward_to_deserialize_any! {
+            f32 f64
         }
 
         fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -2025,8 +2017,6 @@ mod content {
             V: Visitor<'de>,
         {
             match *self.content {
-                Content::F32(v) => visitor.visit_f32(v),
-                Content::F64(v) => visitor.visit_f64(v),
                 Content::U8(v) => visitor.visit_u8(v),
                 Content::U16(v) => visitor.visit_u16(v),
                 Content::U32(v) => visitor.visit_u32(v),
@@ -2091,8 +2081,6 @@ mod content {
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
-                Content::F32(v) => visitor.visit_f32(v),
-                Content::F64(v) => visitor.visit_f64(v),
                 Content::Char(v) => visitor.visit_char(v),
                 Content::String(ref v) => visitor.visit_str(v),
                 Content::Str(v) => visitor.visit_borrowed_str(v),
@@ -2106,6 +2094,10 @@ mod content {
                 }
                 Content::Seq(ref v) => visit_content_seq_ref(v, visitor),
                 Content::Map(ref v) => visit_content_map_ref(v, visitor),
+                #[cfg(feature = "floats")]
+                Content::F32(v) => visitor.visit_f32(v),
+                #[cfg(feature = "floats")]
+                Content::F64(v) => visitor.visit_f64(v),
             }
         }
 
@@ -2175,13 +2167,15 @@ mod content {
             self.deserialize_integer(visitor)
         }
 
+
+        #[cfg(feature = "floats")]
         fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
         {
             self.deserialize_float(visitor)
         }
-
+        #[cfg(feature = "floats")]
         fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
@@ -2511,9 +2505,13 @@ mod content {
         }
 
         serde_core::forward_to_deserialize_any! {
-            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 char str string
             bytes byte_buf option unit unit_struct newtype_struct seq tuple
             tuple_struct map struct enum identifier ignored_any
+        }
+        #[cfg(feature = "floats")]
+        serde_core::forward_to_deserialize_any! {
+            f32 f64
         }
     }
 
@@ -2626,9 +2624,13 @@ mod content {
         }
 
         serde_core::forward_to_deserialize_any! {
-            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 char str string
             bytes byte_buf option unit unit_struct newtype_struct tuple_struct map
             struct enum identifier ignored_any
+        }
+        #[cfg(feature = "floats")]
+        serde_core::forward_to_deserialize_any! {
+            f32 f64
         }
     }
 
@@ -2722,11 +2724,15 @@ mod content {
         type Error = E;
 
         serde_core::forward_to_deserialize_any! {
-            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 char str string
             bytes byte_buf option unit unit_struct newtype_struct tuple_struct map
             struct enum identifier ignored_any
         }
 
+        #[cfg(feature = "floats")]
+        serde_core::forward_to_deserialize_any! {
+            f32 f64
+        }
         fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
         where
             V: Visitor<'de>,
@@ -3094,9 +3100,14 @@ where
     }
 
     serde_core::forward_to_deserialize_any! {
-        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 char str string
         bytes byte_buf option unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any
+    }
+
+    #[cfg(feature = "floats")]
+    serde_core::forward_to_deserialize_any! {
+        f32 f64
     }
 }
 
@@ -3120,9 +3131,13 @@ where
     }
 
     serde_core::forward_to_deserialize_any! {
-        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 char str string
         bytes byte_buf option unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any
+    }
+    #[cfg(feature = "floats")]
+    serde_core::forward_to_deserialize_any! {
+        f32 f64
     }
 }
 
@@ -3326,8 +3341,6 @@ where
         deserialize_u16()
         deserialize_u32()
         deserialize_u64()
-        deserialize_f32()
-        deserialize_f64()
         deserialize_char()
         deserialize_str()
         deserialize_string()
@@ -3337,6 +3350,11 @@ where
         deserialize_tuple(usize)
         deserialize_tuple_struct(&'static str, usize)
         deserialize_identifier()
+    }
+    #[cfg(feature = "floats")]
+    forward_to_deserialize_other! {
+        deserialize_f32()
+        deserialize_f64()
     }
 }
 

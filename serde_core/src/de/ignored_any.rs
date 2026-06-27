@@ -148,6 +148,7 @@ impl<'de> Visitor<'de> for IgnoredAny {
     }
 
     #[inline]
+    #[cfg(feature = "floats")]
     fn visit_f64<E>(self, x: f64) -> Result<Self::Value, E> {
         let _ = x;
         Ok(IgnoredAny)
