@@ -487,7 +487,9 @@ mod content {
                 Content::I16(i) => serializer.serialize_i16(i),
                 Content::I32(i) => serializer.serialize_i32(i),
                 Content::I64(i) => serializer.serialize_i64(i),
+                #[cfg(feature = "floats")]
                 Content::F32(f) => serializer.serialize_f32(f),
+                #[cfg(feature = "floats")]
                 Content::F64(f) => serializer.serialize_f64(f),
                 Content::Char(c) => serializer.serialize_char(c),
                 Content::String(ref s) => serializer.serialize_str(s),
@@ -1073,11 +1075,12 @@ where
     fn serialize_u64(self, _: u64) -> Result<Self::Ok, Self::Error> {
         Err(Self::bad_type(Unsupported::Integer))
     }
-
+    #[cfg(feature = "floats")]
     fn serialize_f32(self, _: f32) -> Result<Self::Ok, Self::Error> {
         Err(Self::bad_type(Unsupported::Float))
     }
 
+    #[cfg(feature = "floats")]
     fn serialize_f64(self, _: f64) -> Result<Self::Ok, Self::Error> {
         Err(Self::bad_type(Unsupported::Float))
     }
