@@ -614,11 +614,12 @@ mod content {
         fn serialize_u64(self, v: u64) -> Result<Content, E> {
             Ok(Content::U64(v))
         }
-
+        #[cfg(feature = "floats")]
         fn serialize_f32(self, v: f32) -> Result<Content, E> {
             Ok(Content::F32(v))
         }
 
+        #[cfg(feature = "floats")]
         fn serialize_f64(self, v: f64) -> Result<Content, E> {
             Ok(Content::F64(v))
         }
