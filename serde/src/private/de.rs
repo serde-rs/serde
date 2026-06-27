@@ -274,6 +274,10 @@ mod content {
             Content::U16(n) => Unexpected::Unsigned(n as u64),
             Content::U32(n) => Unexpected::Unsigned(n as u64),
             Content::U64(n) => Unexpected::Unsigned(n),
+            #[cfg(feature = "floats")]
+            Content::F32(n) => Unexpected::Float(n as f64),
+            #[cfg(feature = "floats")]
+            Content::F64(n) => Unexpected::Float(n),
             Content::I8(n) => Unexpected::Signed(n as i64),
             Content::I16(n) => Unexpected::Signed(n as i64),
             Content::I32(n) => Unexpected::Signed(n as i64),
