@@ -6,6 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+#![allow(mismatched_lifetime_syntaxes)]
+
 use lib::*;
 
 use de::{DeserializeSeed, Deserializer, IntoDeserializer, Error, Visitor};
@@ -287,7 +289,7 @@ mod content {
     }
 
     impl<'de> Content<'de> {
-        fn unexpected(&self) -> Unexpected {
+        fn unexpected(&self) -> Unexpected<'_> {
             match *self {
                 Content::Bool(b) => Unexpected::Bool(b),
                 Content::U8(n) => Unexpected::Unsigned(n as u64),

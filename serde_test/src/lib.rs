@@ -1,5 +1,6 @@
 //! This crate provides a convenient concise way to write unit tests for
 //! implementations of [`Serialize`] and [`Deserialize`].
+#![allow(unexpected_cfgs)]
 //!
 //! [`Serialize`]: https://docs.serde.rs/serde/ser/trait.Serialize.html
 //! [`Deserialize`]: https://docs.serde.rs/serde/de/trait.Deserialize.html
@@ -145,24 +146,20 @@
 //! ```
 
 #![doc(html_root_url = "https://docs.rs/serde_test/1.0.123")]
-#![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
-#![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
+#![allow(renamed_and_removed_lints)]
 // Ignored clippy lints
-#![cfg_attr(feature = "cargo-clippy", allow(float_cmp, needless_doctest_main))]
+#![allow(clippy::float_cmp, clippy::needless_doctest_main)]
 // Ignored clippy_pedantic lints
-#![cfg_attr(
-    feature = "cargo-clippy",
-    allow(
-        empty_line_after_outer_attr,
-        missing_docs_in_private_items,
-        missing_panics_doc,
-        module_name_repetitions,
-        must_use_candidate,
-        redundant_field_names,
-        too_many_lines,
-        use_debug,
-        use_self
-    )
+#![allow(
+    clippy::empty_line_after_outer_attr,
+    clippy::missing_docs_in_private_items,
+    clippy::missing_panics_doc,
+    clippy::module_name_repetitions,
+    clippy::must_use_candidate,
+    clippy::redundant_field_names,
+    clippy::too_many_lines,
+    clippy::use_debug,
+    clippy::use_self
 )]
 
 #[macro_use]

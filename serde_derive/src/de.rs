@@ -3204,9 +3204,9 @@ fn place_lifetime() -> syn::LifetimeDef {
 fn split_with_de_lifetime(
     params: &Parameters,
 ) -> (
-    DeImplGenerics,
-    DeTypeGenerics,
-    syn::TypeGenerics,
+    DeImplGenerics<'_>,
+    DeTypeGenerics<'_>,
+    syn::TypeGenerics<'_>,
     Option<&syn::WhereClause>,
 ) {
     let de_impl_generics = DeImplGenerics(&params);
@@ -3262,9 +3262,9 @@ impl<'a> ToTokens for DeSeedTypeGenerics<'a> {
 fn split_with_de_and_seed_lifetime(
     params: &Parameters,
 ) -> (
-    DeSeedImplGenerics,
-    DeSeedTypeGenerics,
-    syn::TypeGenerics,
+    DeSeedImplGenerics<'_>,
+    DeSeedTypeGenerics<'_>,
+    syn::TypeGenerics<'_>,
     Option<&syn::WhereClause>,
 ) {
     let de_impl_generics = DeSeedImplGenerics(&params);

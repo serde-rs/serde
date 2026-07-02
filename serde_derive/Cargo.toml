@@ -1,7 +1,10 @@
 [package]
 name = "serde_derive_state"
 version = "0.4.10"
-authors = ["Erick Tryzelaar <erick.tryzelaar@gmail.com>", "David Tolnay <dtolnay@gmail.com>"]
+authors = [
+    "Erick Tryzelaar <erick.tryzelaar@gmail.com>",
+    "David Tolnay <dtolnay@gmail.com>",
+]
 license = "MIT OR Apache-2.0"
 description = "Macros 1.1 implementation of #[derive(Serialize, Deserialize)]"
 homepage = "https://serde.rs"
@@ -9,7 +12,14 @@ repository = "https://github.com/serde-rs/serde"
 documentation = "https://serde.rs/derive.html"
 keywords = ["serde", "serialization", "no_std"]
 readme = "crates-io.md"
-include = ["build.rs", "src/**/*.rs", "crates-io.md", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+include = [
+    "build.rs",
+    "src/**/*.rs",
+    "crates-io.md",
+    "README.md",
+    "LICENSE-APACHE",
+    "LICENSE-MIT",
+]
 
 [features]
 default = []

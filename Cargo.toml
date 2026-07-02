@@ -1,5 +1,2 @@
 [workspace]
 members = ["serde_state", "serde_derive", "serde_test", "test_suite"]
-
-[patch.crates-io]
-serde = { version = "1.0.0", git = "https://github.com/serde-rs/serde" }

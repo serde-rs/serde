@@ -147,9 +147,6 @@ impl ReplaceReceiver<'_> {
 
             Type::Infer(_) | Type::Never(_) | Type::Verbatim(_) => {}
 
-            #[cfg(test)]
-            Type::__TestExhaustive(_) => unimplemented!(),
-            #[cfg(not(test))]
             _ => {}
         }
     }

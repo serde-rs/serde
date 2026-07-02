@@ -6,6 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+#![allow(non_local_definitions)]
+
 use lib::*;
 
 use de::{
@@ -154,6 +156,7 @@ where
     where
         D: Deserializer<'de>,
     {
+        #[allow(non_local_definitions)]
         impl<'de, S, F, T> Visitor<'de> for SeqSeed<S, F, T>
         where
             T: DeserializeSeed<'de> + Clone,
@@ -266,6 +269,7 @@ where
     where
         D: Deserializer<'de>,
     {
+        #[allow(non_local_definitions)]
         impl<'de, S> Visitor<'de> for OptionSeed<S>
         where
             S: DeserializeSeed<'de>,

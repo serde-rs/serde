@@ -1422,8 +1422,8 @@ impl<'a> ToTokens for SerImplGenerics<'a> {
 fn split_for_impl(
     params: &Parameters,
 ) -> (
-    SerImplGenerics,
-    syn::TypeGenerics,
+    SerImplGenerics<'_>,
+    syn::TypeGenerics<'_>,
     Option<&syn::WhereClause>,
 ) {
     let ser_impl_generics = SerImplGenerics(&params);
@@ -1457,8 +1457,8 @@ impl<'a> ToTokens for SerTypeGenerics<'a> {
 fn split_with_lifetime_impl(
     params: &Parameters,
 ) -> (
-    SerLifetimeImplGenerics,
-    SerTypeGenerics,
+    SerLifetimeImplGenerics<'_>,
+    SerTypeGenerics<'_>,
     Option<&syn::WhereClause>,
 ) {
     let ser_impl_generics = SerLifetimeImplGenerics(&params);

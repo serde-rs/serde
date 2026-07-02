@@ -5,6 +5,7 @@
 #![deny(warnings)]
 #![cfg_attr(feature = "unstable", feature(non_ascii_idents))]
 #![allow(
+    unused,
     unknown_lints,
     mixed_script_confusables,
     clippy::ptr_arg,
