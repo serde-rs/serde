@@ -64,14 +64,14 @@ where
 /// ```
 pub fn assert_ser_tokens<T>(value: &T, tokens: &[Token])
 where
-    T: Serialize,
+    T: Serialize + ?Sized,
 {
     assert_ser_seed_tokens(&Unseeded(value), &(), tokens)
 }
 
 pub fn assert_ser_seed_tokens<T, Seed>(value: &T, seed: &Seed, tokens: &[Token])
 where
-    T: SerializeState<Seed>,
+    T: SerializeState<Seed> + ?Sized,
 {
     let mut ser = Serializer::new(tokens);
     match value.serialize_state(&mut ser, seed) {
@@ -123,7 +123,7 @@ where
 /// ```
 pub fn assert_ser_tokens_error<T>(value: &T, tokens: &[Token], error: &str)
 where
-    T: Serialize,
+    T: Serialize + ?Sized,
 {
     let mut ser = Serializer::new(tokens);
     match value.serialize(&mut ser) {

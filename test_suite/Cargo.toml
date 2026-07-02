@@ -19,6 +19,8 @@ serde = "1.0"
 toolchain_find = "0.1"
 
 [dev-dependencies]
+automod = "1"
+foldhash = "0.1"
 fnv = "1.0"
 macrotest = "=1.0.0"
 rustversion = "1.0"
@@ -28,5 +30,5 @@ serde_derive = { version = "1", features = ["deserialize_in_place"] }
 serde_derive_state = { path = "../serde_derive", features = [
     "deserialize_in_place",
 ] }
-serde_test = "1.0"
+serde_test = { path = "../serde_test" }
 trybuild = { version = "1.0.19", features = ["diff"] }
