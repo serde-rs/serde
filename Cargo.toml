@@ -1,9 +1,5 @@
 [workspace]
-members = [
-    "serde_state",
-    "serde_derive",
-    "test_suite",
-]
+members = ["serde_state", "serde_derive", "test_suite"]
 resolver = "2"
 
 [workspace.dependencies]
