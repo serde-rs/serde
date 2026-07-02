@@ -1,5 +1,5 @@
 error: cannot deserialize a dynamically sized struct
- --> $DIR/deserialize_dst.rs:4:1
+ --> tests/ui/precondition/deserialize_dst.rs:4:1
   |
 4 | / struct S {
 5 | |     string: String,

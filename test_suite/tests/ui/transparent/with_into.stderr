@@ -1,5 +1,5 @@
 error: #[serde(transparent)] is not allowed with #[serde(into = "...")]
- --> $DIR/with_into.rs:4:1
+ --> tests/ui/transparent/with_into.rs:4:1
   |
 4 | / #[serde(transparent, into = "u64")]
 5 | | struct S {

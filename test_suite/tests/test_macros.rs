@@ -1,14 +1,13 @@
 #![deny(trivial_numeric_casts)]
-#![allow(clippy::redundant_field_names)]
+#![allow(
+    clippy::derive_partial_eq_without_eq,
+    clippy::enum_variant_names,
+    clippy::redundant_field_names,
+    clippy::too_many_lines
+)]
 
-mod bytes;
-
-use serde::{Deserialize, Serialize};
-use serde_test::{
-    assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_tokens, Token,
-};
-
-use std::collections::BTreeMap;
+use serde_derive::{Deserialize, Serialize};
+use serde_test::{assert_de_tokens, assert_ser_tokens, assert_tokens, Token};
 use std::marker::PhantomData;
 
 // That tests that the derived Serialize implementation doesn't trigger
@@ -430,51 +429,6 @@ fn test_generic_newtype_struct() {
 }
 
 #[test]
-fn test_untagged_newtype_struct() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(untagged)]
-    enum E {
-        Newtype(GenericNewTypeStruct<u32>),
-        Null,
-    }
-
-    assert_tokens(
-        &E::Newtype(GenericNewTypeStruct(5u32)),
-        &[
-            Token::NewtypeStruct {
-                name: "GenericNewTypeStruct",
-            },
-            Token::U32(5),
-        ],
-    );
-}
-
-#[test]
-fn test_adjacently_tagged_newtype_struct() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(tag = "t", content = "c")]
-    enum E {
-        Newtype(GenericNewTypeStruct<u32>),
-        Null,
-    }
-
-    assert_de_tokens(
-        &E::Newtype(GenericNewTypeStruct(5u32)),
-        &[
-            Token::Struct { name: "E", len: 2 },
-            Token::Str("c"),
-            Token::NewtypeStruct {
-                name: "GenericNewTypeStruct",
-            },
-            Token::U32(5),
-            Token::Str("t"),
-            Token::Str("Newtype"),
-            Token::StructEnd,
-        ],
-    );
-}
-
-#[test]
 fn test_generic_tuple_struct() {
     assert_tokens(
         &GenericTupleStruct(5u32, 6u32),
@@ -599,812 +553,6 @@ fn test_enum_state_field() {
 }
 
 #[test]
-fn test_untagged_enum() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(untagged)]
-    enum Untagged {
-        A { a: u8 },
-        B { b: u8 },
-        C,
-        D(u8),
-        E(String),
-        F(u8, u8),
-    }
-
-    assert_tokens(
-        &Untagged::A { a: 1 },
-        &[
-            Token::Struct {
-                name: "Untagged",
-                len: 1,
-            },
-            Token::Str("a"),
-            Token::U8(1),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_tokens(
-        &Untagged::B { b: 2 },
-        &[
-            Token::Struct {
-                name: "Untagged",
-                len: 1,
-            },
-            Token::Str("b"),
-            Token::U8(2),
-            Token::StructEnd,
-        ],
-    );
-
-    // Serializes to unit, deserializes from either depending on format's
-    // preference.
-    assert_tokens(&Untagged::C, &[Token::Unit]);
-    assert_de_tokens(&Untagged::C, &[Token::None]);
-
-    assert_tokens(&Untagged::D(4), &[Token::U8(4)]);
-    assert_tokens(&Untagged::E("e".to_owned()), &[Token::Str("e")]);
-
-    assert_tokens(
-        &Untagged::F(1, 2),
-        &[
-            Token::Tuple { len: 2 },
-            Token::U8(1),
-            Token::U8(2),
-            Token::TupleEnd,
-        ],
-    );
-
-    assert_de_tokens_error::<Untagged>(
-        &[Token::Tuple { len: 1 }, Token::U8(1), Token::TupleEnd],
-        "data did not match any variant of untagged enum Untagged",
-    );
-
-    assert_de_tokens_error::<Untagged>(
-        &[
-            Token::Tuple { len: 3 },
-            Token::U8(1),
-            Token::U8(2),
-            Token::U8(3),
-            Token::TupleEnd,
-        ],
-        "data did not match any variant of untagged enum Untagged",
-    );
-}
-
-#[test]
-fn test_internally_tagged_enum() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    struct Newtype(BTreeMap<String, String>);
-
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    struct Struct {
-        f: u8,
-    }
-
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(tag = "type")]
-    enum InternallyTagged {
-        A { a: u8 },
-        B,
-        C(BTreeMap<String, String>),
-        D(Newtype),
-        E(Struct),
-    }
-
-    assert_tokens(
-        &InternallyTagged::A { a: 1 },
-        &[
-            Token::Struct {
-                name: "InternallyTagged",
-                len: 2,
-            },
-            Token::Str("type"),
-            Token::Str("A"),
-            Token::Str("a"),
-            Token::U8(1),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &InternallyTagged::A { a: 1 },
-        &[
-            Token::Seq { len: Some(2) },
-            Token::Str("A"),
-            Token::U8(1),
-            Token::SeqEnd,
-        ],
-    );
-
-    assert_tokens(
-        &InternallyTagged::B,
-        &[
-            Token::Struct {
-                name: "InternallyTagged",
-                len: 1,
-            },
-            Token::Str("type"),
-            Token::Str("B"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &InternallyTagged::B,
-        &[Token::Seq { len: Some(1) }, Token::Str("B"), Token::SeqEnd],
-    );
-
-    assert_tokens(
-        &InternallyTagged::C(BTreeMap::new()),
-        &[
-            Token::Map { len: Some(1) },
-            Token::Str("type"),
-            Token::Str("C"),
-            Token::MapEnd,
-        ],
-    );
-
-    assert_de_tokens_error::<InternallyTagged>(
-        &[
-            Token::Seq { len: Some(2) },
-            Token::Str("C"),
-            Token::Map { len: Some(0) },
-            Token::MapEnd,
-            Token::SeqEnd,
-        ],
-        "invalid type: sequence, expected a map",
-    );
-
-    assert_tokens(
-        &InternallyTagged::D(Newtype(BTreeMap::new())),
-        &[
-            Token::Map { len: Some(1) },
-            Token::Str("type"),
-            Token::Str("D"),
-            Token::MapEnd,
-        ],
-    );
-
-    assert_tokens(
-        &InternallyTagged::E(Struct { f: 6 }),
-        &[
-            Token::Struct {
-                name: "Struct",
-                len: 2,
-            },
-            Token::Str("type"),
-            Token::Str("E"),
-            Token::Str("f"),
-            Token::U8(6),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &InternallyTagged::E(Struct { f: 6 }),
-        &[
-            Token::Seq { len: Some(2) },
-            Token::Str("E"),
-            Token::U8(6),
-            Token::SeqEnd,
-        ],
-    );
-
-    assert_de_tokens_error::<InternallyTagged>(
-        &[Token::Map { len: Some(0) }, Token::MapEnd],
-        "missing field `type`",
-    );
-
-    assert_de_tokens_error::<InternallyTagged>(
-        &[
-            Token::Map { len: Some(1) },
-            Token::Str("type"),
-            Token::Str("Z"),
-            Token::MapEnd,
-        ],
-        "unknown variant `Z`, expected one of `A`, `B`, `C`, `D`, `E`",
-    );
-}
-
-#[test]
-fn test_internally_tagged_bytes() {
-    #[derive(Debug, PartialEq, Deserialize)]
-    #[serde(tag = "type")]
-    enum InternallyTagged {
-        String {
-            string: String,
-        },
-        Bytes {
-            #[serde(with = "bytes")]
-            bytes: Vec<u8>,
-        },
-    }
-
-    assert_de_tokens(
-        &InternallyTagged::String {
-            string: "\0".to_owned(),
-        },
-        &[
-            Token::Struct {
-                name: "String",
-                len: 2,
-            },
-            Token::Str("type"),
-            Token::Str("String"),
-            Token::Str("string"),
-            Token::Str("\0"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &InternallyTagged::String {
-            string: "\0".to_owned(),
-        },
-        &[
-            Token::Struct {
-                name: "String",
-                len: 2,
-            },
-            Token::Str("type"),
-            Token::Str("String"),
-            Token::Str("string"),
-            Token::String("\0"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &InternallyTagged::String {
-            string: "\0".to_owned(),
-        },
-        &[
-            Token::Struct {
-                name: "String",
-                len: 2,
-            },
-            Token::Str("type"),
-            Token::Str("String"),
-            Token::Str("string"),
-            Token::Bytes(b"\0"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &InternallyTagged::String {
-            string: "\0".to_owned(),
-        },
-        &[
-            Token::Struct {
-                name: "String",
-                len: 2,
-            },
-            Token::Str("type"),
-            Token::Str("String"),
-            Token::Str("string"),
-            Token::ByteBuf(b"\0"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &InternallyTagged::Bytes { bytes: vec![0] },
-        &[
-            Token::Struct {
-                name: "Bytes",
-                len: 2,
-            },
-            Token::Str("type"),
-            Token::Str("Bytes"),
-            Token::Str("bytes"),
-            Token::Str("\0"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &InternallyTagged::Bytes { bytes: vec![0] },
-        &[
-            Token::Struct {
-                name: "Bytes",
-                len: 2,
-            },
-            Token::Str("type"),
-            Token::Str("Bytes"),
-            Token::Str("bytes"),
-            Token::String("\0"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &InternallyTagged::Bytes { bytes: vec![0] },
-        &[
-            Token::Struct {
-                name: "Bytes",
-                len: 2,
-            },
-            Token::Str("type"),
-            Token::Str("Bytes"),
-            Token::Str("bytes"),
-            Token::Bytes(b"\0"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &InternallyTagged::Bytes { bytes: vec![0] },
-        &[
-            Token::Struct {
-                name: "Bytes",
-                len: 2,
-            },
-            Token::Str("type"),
-            Token::Str("Bytes"),
-            Token::Str("bytes"),
-            Token::ByteBuf(b"\0"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &InternallyTagged::Bytes { bytes: vec![0] },
-        &[
-            Token::Struct {
-                name: "Bytes",
-                len: 2,
-            },
-            Token::Str("type"),
-            Token::Str("Bytes"),
-            Token::Str("bytes"),
-            Token::Seq { len: Some(1) },
-            Token::U8(0),
-            Token::SeqEnd,
-            Token::StructEnd,
-        ],
-    );
-}
-
-#[test]
-fn test_internally_tagged_struct_variant_containing_unit_variant() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    pub enum Level {
-        Info,
-    }
-
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(tag = "action")]
-    pub enum Message {
-        Log { level: Level },
-    }
-
-    assert_de_tokens(
-        &Message::Log { level: Level::Info },
-        &[
-            Token::Struct {
-                name: "Message",
-                len: 2,
-            },
-            Token::Str("action"),
-            Token::Str("Log"),
-            Token::Str("level"),
-            Token::BorrowedStr("Info"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &Message::Log { level: Level::Info },
-        &[
-            Token::Map { len: Some(2) },
-            Token::Str("action"),
-            Token::Str("Log"),
-            Token::Str("level"),
-            Token::BorrowedStr("Info"),
-            Token::MapEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &Message::Log { level: Level::Info },
-        &[
-            Token::Seq { len: Some(2) },
-            Token::Str("Log"),
-            Token::BorrowedStr("Info"),
-            Token::SeqEnd,
-        ],
-    );
-}
-
-#[test]
-fn test_internally_tagged_borrow() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(tag = "type")]
-    pub enum Input<'a> {
-        Package { name: &'a str },
-    }
-
-    assert_tokens(
-        &Input::Package { name: "borrowed" },
-        &[
-            Token::Struct {
-                name: "Input",
-                len: 2,
-            },
-            Token::BorrowedStr("type"),
-            Token::BorrowedStr("Package"),
-            Token::BorrowedStr("name"),
-            Token::BorrowedStr("borrowed"),
-            Token::StructEnd,
-        ],
-    );
-}
-
-#[test]
-fn test_adjacently_tagged_enum() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(tag = "t", content = "c")]
-    enum AdjacentlyTagged<T> {
-        Unit,
-        Newtype(T),
-        Tuple(u8, u8),
-        Struct { f: u8 },
-    }
-
-    // unit with no content
-    assert_ser_tokens(
-        &AdjacentlyTagged::Unit::<u8>,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 1,
-            },
-            Token::Str("t"),
-            Token::Str("Unit"),
-            Token::StructEnd,
-        ],
-    );
-
-    // unit with no content
-    assert_de_tokens(
-        &AdjacentlyTagged::Unit::<u8>,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("t"),
-            Token::Str("Unit"),
-            Token::StructEnd,
-        ],
-    );
-
-    // unit with tag first
-    assert_de_tokens(
-        &AdjacentlyTagged::Unit::<u8>,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("t"),
-            Token::Str("Unit"),
-            Token::Str("c"),
-            Token::Unit,
-            Token::StructEnd,
-        ],
-    );
-
-    // unit with content first
-    assert_de_tokens(
-        &AdjacentlyTagged::Unit::<u8>,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("c"),
-            Token::Unit,
-            Token::Str("t"),
-            Token::Str("Unit"),
-            Token::StructEnd,
-        ],
-    );
-
-    // unit with excess content (f, g, h)
-    assert_de_tokens(
-        &AdjacentlyTagged::Unit::<u8>,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("f"),
-            Token::Unit,
-            Token::Str("t"),
-            Token::Str("Unit"),
-            Token::Str("g"),
-            Token::Unit,
-            Token::Str("c"),
-            Token::Unit,
-            Token::Str("h"),
-            Token::Unit,
-            Token::StructEnd,
-        ],
-    );
-
-    // newtype with tag first
-    assert_tokens(
-        &AdjacentlyTagged::Newtype::<u8>(1),
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("t"),
-            Token::Str("Newtype"),
-            Token::Str("c"),
-            Token::U8(1),
-            Token::StructEnd,
-        ],
-    );
-
-    // newtype with content first
-    assert_de_tokens(
-        &AdjacentlyTagged::Newtype::<u8>(1),
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("c"),
-            Token::U8(1),
-            Token::Str("t"),
-            Token::Str("Newtype"),
-            Token::StructEnd,
-        ],
-    );
-
-    // optional newtype with no content field
-    assert_de_tokens(
-        &AdjacentlyTagged::Newtype::<Option<u8>>(None),
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 1,
-            },
-            Token::Str("t"),
-            Token::Str("Newtype"),
-            Token::StructEnd,
-        ],
-    );
-
-    // tuple with tag first
-    assert_tokens(
-        &AdjacentlyTagged::Tuple::<u8>(1, 1),
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("t"),
-            Token::Str("Tuple"),
-            Token::Str("c"),
-            Token::Tuple { len: 2 },
-            Token::U8(1),
-            Token::U8(1),
-            Token::TupleEnd,
-            Token::StructEnd,
-        ],
-    );
-
-    // tuple with content first
-    assert_de_tokens(
-        &AdjacentlyTagged::Tuple::<u8>(1, 1),
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("c"),
-            Token::Tuple { len: 2 },
-            Token::U8(1),
-            Token::U8(1),
-            Token::TupleEnd,
-            Token::Str("t"),
-            Token::Str("Tuple"),
-            Token::StructEnd,
-        ],
-    );
-
-    // struct with tag first
-    assert_tokens(
-        &AdjacentlyTagged::Struct::<u8> { f: 1 },
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("t"),
-            Token::Str("Struct"),
-            Token::Str("c"),
-            Token::Struct {
-                name: "Struct",
-                len: 1,
-            },
-            Token::Str("f"),
-            Token::U8(1),
-            Token::StructEnd,
-            Token::StructEnd,
-        ],
-    );
-
-    // struct with content first
-    assert_de_tokens(
-        &AdjacentlyTagged::Struct::<u8> { f: 1 },
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("c"),
-            Token::Struct {
-                name: "Struct",
-                len: 1,
-            },
-            Token::Str("f"),
-            Token::U8(1),
-            Token::StructEnd,
-            Token::Str("t"),
-            Token::Str("Struct"),
-            Token::StructEnd,
-        ],
-    );
-}
-
-#[test]
-fn test_adjacently_tagged_enum_deny_unknown_fields() {
-    #[derive(Debug, PartialEq, Deserialize)]
-    #[serde(tag = "t", content = "c", deny_unknown_fields)]
-    enum AdjacentlyTagged {
-        Unit,
-    }
-
-    assert_de_tokens(
-        &AdjacentlyTagged::Unit,
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("t"),
-            Token::Str("Unit"),
-            Token::Str("c"),
-            Token::Unit,
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens_error::<AdjacentlyTagged>(
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("t"),
-            Token::Str("Unit"),
-            Token::Str("c"),
-            Token::Unit,
-            Token::Str("h"),
-        ],
-        r#"invalid value: string "h", expected "t" or "c""#,
-    );
-
-    assert_de_tokens_error::<AdjacentlyTagged>(
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("h"),
-        ],
-        r#"invalid value: string "h", expected "t" or "c""#,
-    );
-
-    assert_de_tokens_error::<AdjacentlyTagged>(
-        &[
-            Token::Struct {
-                name: "AdjacentlyTagged",
-                len: 2,
-            },
-            Token::Str("c"),
-            Token::Unit,
-            Token::Str("h"),
-        ],
-        r#"invalid value: string "h", expected "t" or "c""#,
-    );
-}
-
-#[test]
-fn test_enum_in_internally_tagged_enum() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(tag = "type")]
-    enum Outer {
-        Inner(Inner),
-    }
-
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    enum Inner {
-        Unit,
-        Newtype(u8),
-        Tuple(u8, u8),
-        Struct { f: u8 },
-    }
-
-    assert_tokens(
-        &Outer::Inner(Inner::Unit),
-        &[
-            Token::Map { len: Some(2) },
-            Token::Str("type"),
-            Token::Str("Inner"),
-            Token::Str("Unit"),
-            Token::Unit,
-            Token::MapEnd,
-        ],
-    );
-
-    assert_tokens(
-        &Outer::Inner(Inner::Newtype(1)),
-        &[
-            Token::Map { len: Some(2) },
-            Token::Str("type"),
-            Token::Str("Inner"),
-            Token::Str("Newtype"),
-            Token::U8(1),
-            Token::MapEnd,
-        ],
-    );
-
-    assert_tokens(
-        &Outer::Inner(Inner::Tuple(1, 1)),
-        &[
-            Token::Map { len: Some(2) },
-            Token::Str("type"),
-            Token::Str("Inner"),
-            Token::Str("Tuple"),
-            Token::TupleStruct {
-                name: "Tuple",
-                len: 2,
-            },
-            Token::U8(1),
-            Token::U8(1),
-            Token::TupleStructEnd,
-            Token::MapEnd,
-        ],
-    );
-
-    assert_tokens(
-        &Outer::Inner(Inner::Struct { f: 1 }),
-        &[
-            Token::Map { len: Some(2) },
-            Token::Str("type"),
-            Token::Str("Inner"),
-            Token::Str("Struct"),
-            Token::Struct {
-                name: "Struct",
-                len: 1,
-            },
-            Token::Str("f"),
-            Token::U8(1),
-            Token::StructEnd,
-            Token::MapEnd,
-        ],
-    );
-}
-
-#[test]
 fn test_internally_tagged_struct() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
     #[serde(tag = "type")]
@@ -1480,7 +628,10 @@ fn test_internally_tagged_struct_with_flattened_field() {
             Token::Str("tag_struct"),
             Token::Str("Struct"),
             Token::Str("tag_enum"),
-            Token::Str("A"),
+            Token::UnitVariant {
+                name: "Enum",
+                variant: "A",
+            },
             Token::Str("content"),
             Token::U64(0),
             Token::MapEnd,
@@ -1496,240 +647,6 @@ fn test_internally_tagged_struct_with_flattened_field() {
             Token::Str("content"),
             Token::U64(0),
             Token::MapEnd,
-        ],
-    );
-}
-
-#[test]
-fn test_untagged_enum_with_flattened_integer_key() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(untagged)]
-    pub enum Untagged {
-        Variant {
-            #[serde(flatten)]
-            map: BTreeMap<u64, String>,
-        },
-    }
-
-    assert_tokens(
-        &Untagged::Variant {
-            map: {
-                let mut map = BTreeMap::new();
-                map.insert(100, "BTreeMap".to_owned());
-                map
-            },
-        },
-        &[
-            Token::Map { len: None },
-            Token::U64(100),
-            Token::Str("BTreeMap"),
-            Token::MapEnd,
-        ],
-    );
-}
-
-#[test]
-fn test_enum_in_untagged_enum() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(untagged)]
-    enum Outer {
-        Inner(Inner),
-    }
-
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    enum Inner {
-        Unit,
-        Newtype(u8),
-        Tuple(u8, u8),
-        Struct { f: u8 },
-    }
-
-    assert_tokens(
-        &Outer::Inner(Inner::Unit),
-        &[Token::UnitVariant {
-            name: "Inner",
-            variant: "Unit",
-        }],
-    );
-
-    assert_tokens(
-        &Outer::Inner(Inner::Newtype(1)),
-        &[
-            Token::NewtypeVariant {
-                name: "Inner",
-                variant: "Newtype",
-            },
-            Token::U8(1),
-        ],
-    );
-
-    assert_tokens(
-        &Outer::Inner(Inner::Tuple(1, 1)),
-        &[
-            Token::TupleVariant {
-                name: "Inner",
-                variant: "Tuple",
-                len: 2,
-            },
-            Token::U8(1),
-            Token::U8(1),
-            Token::TupleVariantEnd,
-        ],
-    );
-
-    assert_tokens(
-        &Outer::Inner(Inner::Struct { f: 1 }),
-        &[
-            Token::StructVariant {
-                name: "Inner",
-                variant: "Struct",
-                len: 1,
-            },
-            Token::Str("f"),
-            Token::U8(1),
-            Token::StructVariantEnd,
-        ],
-    );
-}
-
-#[test]
-fn test_untagged_bytes() {
-    #[derive(Debug, PartialEq, Deserialize)]
-    #[serde(untagged)]
-    enum Untagged {
-        String {
-            string: String,
-        },
-        Bytes {
-            #[serde(with = "bytes")]
-            bytes: Vec<u8>,
-        },
-    }
-
-    assert_de_tokens(
-        &Untagged::String {
-            string: "\0".to_owned(),
-        },
-        &[
-            Token::Struct {
-                name: "Untagged",
-                len: 1,
-            },
-            Token::Str("string"),
-            Token::Str("\0"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &Untagged::String {
-            string: "\0".to_owned(),
-        },
-        &[
-            Token::Struct {
-                name: "Untagged",
-                len: 1,
-            },
-            Token::Str("string"),
-            Token::String("\0"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &Untagged::String {
-            string: "\0".to_owned(),
-        },
-        &[
-            Token::Struct {
-                name: "Untagged",
-                len: 1,
-            },
-            Token::Str("string"),
-            Token::Bytes(b"\0"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &Untagged::String {
-            string: "\0".to_owned(),
-        },
-        &[
-            Token::Struct {
-                name: "Untagged",
-                len: 1,
-            },
-            Token::Str("string"),
-            Token::ByteBuf(b"\0"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &Untagged::Bytes { bytes: vec![0] },
-        &[
-            Token::Struct {
-                name: "Untagged",
-                len: 1,
-            },
-            Token::Str("bytes"),
-            Token::Str("\0"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &Untagged::Bytes { bytes: vec![0] },
-        &[
-            Token::Struct {
-                name: "Untagged",
-                len: 1,
-            },
-            Token::Str("bytes"),
-            Token::String("\0"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &Untagged::Bytes { bytes: vec![0] },
-        &[
-            Token::Struct {
-                name: "Untagged",
-                len: 1,
-            },
-            Token::Str("bytes"),
-            Token::Bytes(b"\0"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &Untagged::Bytes { bytes: vec![0] },
-        &[
-            Token::Struct {
-                name: "Untagged",
-                len: 1,
-            },
-            Token::Str("bytes"),
-            Token::ByteBuf(b"\0"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &Untagged::Bytes { bytes: vec![0] },
-        &[
-            Token::Struct {
-                name: "Untagged",
-                len: 1,
-            },
-            Token::Str("bytes"),
-            Token::Seq { len: Some(1) },
-            Token::U8(0),
-            Token::SeqEnd,
-            Token::StructEnd,
         ],
     );
 }
@@ -1862,87 +779,87 @@ fn test_rename_all() {
 }
 
 #[test]
-fn test_untagged_newtype_variant_containing_unit_struct_not_map() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    struct Unit;
-
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(untagged)]
-    enum Message {
-        Unit(Unit),
-        Map(BTreeMap<String, String>),
+fn test_rename_all_fields() {
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(rename_all_fields = "kebab-case")]
+    enum E {
+        V1,
+        V2(bool),
+        V3 {
+            a_field: bool,
+            another_field: bool,
+            #[serde(rename = "last-field")]
+            yet_another_field: bool,
+        },
+        #[serde(rename_all = "snake_case")]
+        V4 {
+            a_field: bool,
+        },
     }
 
     assert_tokens(
-        &Message::Map(BTreeMap::new()),
-        &[Token::Map { len: Some(0) }, Token::MapEnd],
+        &E::V3 {
+            a_field: true,
+            another_field: true,
+            yet_another_field: true,
+        },
+        &[
+            Token::StructVariant {
+                name: "E",
+                variant: "V3",
+                len: 3,
+            },
+            Token::Str("a-field"),
+            Token::Bool(true),
+            Token::Str("another-field"),
+            Token::Bool(true),
+            Token::Str("last-field"),
+            Token::Bool(true),
+            Token::StructVariantEnd,
+        ],
     );
-}
-
-#[test]
-fn test_internally_tagged_newtype_variant_containing_unit_struct() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    struct Info;
-
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    #[serde(tag = "topic")]
-    enum Message {
-        Info(Info),
-    }
 
     assert_tokens(
-        &Message::Info(Info),
+        &E::V4 { a_field: true },
         &[
-            Token::Map { len: Some(1) },
-            Token::Str("topic"),
-            Token::Str("Info"),
-            Token::MapEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &Message::Info(Info),
-        &[
-            Token::Struct { name: "Message", len: 1 },
-            Token::Str("topic"),
-            Token::Str("Info"),
-            Token::StructEnd,
-        ],
-    );
-
-    assert_de_tokens(
-        &Message::Info(Info),
-        &[
-            Token::Seq { len: Some(1) },
-            Token::Str("Info"),
-            Token::SeqEnd,
+            Token::StructVariant {
+                name: "E",
+                variant: "V4",
+                len: 1,
+            },
+            Token::Str("a_field"),
+            Token::Bool(true),
+            Token::StructVariantEnd,
         ],
     );
 }
 
-#[deny(safe_packed_borrows)]
 #[test]
 fn test_packed_struct_can_derive_serialize() {
     #[derive(Copy, Clone, Serialize)]
     #[repr(packed, C)]
+    #[allow(dead_code)]
     struct PackedC {
         t: f32,
     }
 
     #[derive(Copy, Clone, Serialize)]
     #[repr(C, packed)]
+    #[allow(dead_code)]
     struct CPacked {
         t: f32,
     }
 
     #[derive(Copy, Clone, Serialize)]
     #[repr(C, packed(2))]
+    #[allow(dead_code)]
     struct CPacked2 {
         t: f32,
     }
 
     #[derive(Copy, Clone, Serialize)]
     #[repr(packed(2), C)]
+    #[allow(dead_code)]
     struct Packed2C {
         t: f32,
     }

@@ -1,0 +1,5 @@
+error: expected `=`
+ --> tests/ui/malformed/trailing_expr.rs:5:32
+  |
+5 |     #[serde(skip_serializing_if, x.is_empty())]
+  |                                ^

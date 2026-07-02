@@ -1,5 +1,5 @@
 error: unknown serde container attribute `abc`
- --> $DIR/container.rs:4:9
+ --> tests/ui/unknown-attribute/container.rs:4:9
   |
 4 | #[serde(abc = "xyz")]
   |         ^^^

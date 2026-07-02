@@ -1,8 +1,12 @@
+#![allow(clippy::derive_partial_eq_without_eq)]
+
 use serde::de::value::{Error, MapDeserializer, SeqDeserializer};
 use serde::de::{
-    DeserializeSeed, EnumAccess, IgnoredAny, IntoDeserializer, VariantAccess, Visitor,
+    Deserialize, DeserializeSeed, Deserializer, EnumAccess, IgnoredAny, IntoDeserializer,
+    VariantAccess, Visitor,
 };
-use serde::{forward_to_deserialize_any, Deserialize, Deserializer};
+use serde::forward_to_deserialize_any;
+use serde_derive::Deserialize;
 
 #[derive(PartialEq, Debug, Deserialize)]
 enum Target {

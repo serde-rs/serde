@@ -1,2 +1,19 @@
 [workspace]
-members = ["serde_state", "serde_derive", "serde_test", "test_suite"]
+members = [
+    "serde",
+    "serde_core",
+    "serde_derive",
+    "serde_derive_internals",
+    "test_suite",
+]
+resolver = "2"
+
+[patch.crates-io]
+serde = { path = "serde" }
+serde_core = { path = "serde_core" }
+serde_derive = { path = "serde_derive" }
+
+[workspace.dependencies]
+proc-macro2 = { version = "1.0.74", default-features = false }
+quote = { version = "1.0.35", default-features = false }
+syn = { version = "2.0.81", default-features = false }

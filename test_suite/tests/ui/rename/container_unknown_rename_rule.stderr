@@ -1,5 +1,5 @@
 error: unknown rename rule `rename_all = "abc"`, expected one of "lowercase", "UPPERCASE", "PascalCase", "camelCase", "snake_case", "SCREAMING_SNAKE_CASE", "kebab-case", "SCREAMING-KEBAB-CASE"
- --> $DIR/container_unknown_rename_rule.rs:4:22
+ --> tests/ui/rename/container_unknown_rename_rule.rs:4:22
   |
 4 | #[serde(rename_all = "abc")]
   |                      ^^^^^

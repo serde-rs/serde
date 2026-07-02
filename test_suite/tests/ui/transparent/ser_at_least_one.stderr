@@ -1,5 +1,5 @@
 error: #[serde(transparent)] requires at least one field that is not skipped
- --> $DIR/ser_at_least_one.rs:4:1
+ --> tests/ui/transparent/ser_at_least_one.rs:4:1
   |
 4 | / #[serde(transparent)]
 5 | | struct S {

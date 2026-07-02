@@ -1,0 +1,11 @@
+error: unexpected suffix `huh` on string literal
+ --> tests/ui/malformed/str_suffix.rs:4:17
+  |
+4 | #[serde(bound = ""huh)]
+  |                 ^^^^^
+
+error: unexpected suffix `what` on string literal
+ --> tests/ui/malformed/str_suffix.rs:6:22
+  |
+6 |     #[serde(rename = ""what)]
+  |                      ^^^^^^
