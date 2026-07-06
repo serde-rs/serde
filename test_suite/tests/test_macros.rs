@@ -835,6 +835,54 @@ fn test_rename_all_fields() {
 }
 
 #[test]
+fn test_independent_number() {
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(rename_all = "snake_case", independent_number)]
+    enum E {
+        Have1Apple,
+        Get2Bananas,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[serde(rename_all = "kebab-case", independent_number)]
+    struct S {
+        have1_apple: bool,
+        get2_bananas: bool,
+    }
+
+    assert_tokens(
+        &E::Have1Apple,
+        &[Token::UnitVariant {
+            name: "E",
+            variant: "have_1_apple",
+        }],
+    );
+
+    assert_tokens(
+        &E::Get2Bananas,
+        &[Token::UnitVariant {
+            name: "E",
+            variant: "get_2_bananas",
+        }],
+    );
+
+    assert_tokens(
+        &S {
+            have1_apple: true,
+            get2_bananas: false,
+        },
+        &[
+            Token::Struct { name: "S", len: 2 },
+            Token::Str("have-1-apple"),
+            Token::Bool(true),
+            Token::Str("get-2-bananas"),
+            Token::Bool(false),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_packed_struct_can_derive_serialize() {
     #[derive(Copy, Clone, Serialize)]
     #[repr(packed, C)]

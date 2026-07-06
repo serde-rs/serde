@@ -138,6 +138,7 @@ fn unraw(ident: &Ident) -> Ident {
 pub struct RenameAllRules {
     pub serialize: RenameRule,
     pub deserialize: RenameRule,
+    pub independent_number: Option<bool>,
 }
 
 impl RenameAllRules {
@@ -147,6 +148,7 @@ impl RenameAllRules {
         Self {
             serialize: self.serialize.or(other_rules.serialize),
             deserialize: self.deserialize.or(other_rules.deserialize),
+            independent_number: self.independent_number.or(other_rules.independent_number),
         }
     }
 }
@@ -244,6 +246,7 @@ impl Container {
         let mut rename_all_de_rule = Attr::none(cx, RENAME_ALL);
         let mut rename_all_fields_ser_rule = Attr::none(cx, RENAME_ALL_FIELDS);
         let mut rename_all_fields_de_rule = Attr::none(cx, RENAME_ALL_FIELDS);
+        let mut independent_number = Attr::none(cx, INDEPENDENT_NUMBER);
         let mut ser_bound = Attr::none(cx, BOUND);
         let mut de_bound = Attr::none(cx, BOUND);
         let mut untagged = BoolAttr::none(cx, UNTAGGED);
@@ -490,6 +493,13 @@ impl Container {
                     if let Some(s) = get_lit_str(cx, EXPECTING, &meta)? {
                         expecting.set(&meta.path, s.value());
                     }
+                } else if meta.path == INDEPENDENT_NUMBER {
+                    if meta.input.peek(Token![=]) {
+                        let lit: syn::LitBool = meta.value()?.parse()?;
+                        independent_number.set(&meta.path, lit.value);
+                    } else {
+                        independent_number.set(&meta.path, true);
+                    }
                 } else {
                     let path = meta.path.to_token_stream().to_string().replace(' ', "");
                     return Err(
@@ -516,6 +526,7 @@ impl Container {
             }
         }
 
+        let independent_number = independent_number.get();
         Container {
             name: MultiName::from_attrs(Name::from(&unraw(&item.ident)), ser_name, de_name, None),
             transparent: transparent.get(),
@@ -524,10 +535,12 @@ impl Container {
             rename_all_rules: RenameAllRules {
                 serialize: rename_all_ser_rule.get().unwrap_or(RenameRule::None),
                 deserialize: rename_all_de_rule.get().unwrap_or(RenameRule::None),
+                independent_number,
             },
             rename_all_fields_rules: RenameAllRules {
                 serialize: rename_all_fields_ser_rule.get().unwrap_or(RenameRule::None),
                 deserialize: rename_all_fields_de_rule.get().unwrap_or(RenameRule::None),
+                independent_number,
             },
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
@@ -753,6 +766,7 @@ impl Variant {
         let mut skip_serializing = BoolAttr::none(cx, SKIP_SERIALIZING);
         let mut rename_all_ser_rule = Attr::none(cx, RENAME_ALL);
         let mut rename_all_de_rule = Attr::none(cx, RENAME_ALL);
+        let mut variant_independent_number = Attr::none(cx, INDEPENDENT_NUMBER);
         let mut ser_bound = Attr::none(cx, BOUND);
         let mut de_bound = Attr::none(cx, BOUND);
         let mut other = BoolAttr::none(cx, OTHER);
@@ -879,6 +893,13 @@ impl Variant {
                     }
                 } else if meta.path == UNTAGGED {
                     untagged.set_true(&meta.path);
+                } else if meta.path == INDEPENDENT_NUMBER {
+                    if meta.input.peek(Token![=]) {
+                        let lit: syn::LitBool = meta.value()?.parse()?;
+                        variant_independent_number.set(&meta.path, lit.value);
+                    } else {
+                        variant_independent_number.set(&meta.path, true);
+                    }
                 } else {
                     let path = meta.path.to_token_stream().to_string().replace(' ', "");
                     return Err(
@@ -901,6 +922,7 @@ impl Variant {
             rename_all_rules: RenameAllRules {
                 serialize: rename_all_ser_rule.get().unwrap_or(RenameRule::None),
                 deserialize: rename_all_de_rule.get().unwrap_or(RenameRule::None),
+                independent_number: variant_independent_number.get(),
             },
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
@@ -923,14 +945,16 @@ impl Variant {
     }
 
     pub fn rename_by_rules(&mut self, rules: RenameAllRules) {
+        let ind = rules.independent_number.unwrap_or(false);
         if !self.name.serialize_renamed {
-            self.name.serialize.value =
-                rules.serialize.apply_to_variant(&self.name.serialize.value);
+            self.name.serialize.value = rules
+                .serialize
+                .apply_to_variant(&self.name.serialize.value, ind);
         }
         if !self.name.deserialize_renamed {
             self.name.deserialize.value = rules
                 .deserialize
-                .apply_to_variant(&self.name.deserialize.value);
+                .apply_to_variant(&self.name.deserialize.value, ind);
         }
         self.name
             .deserialize_aliases
@@ -1270,13 +1294,16 @@ impl Field {
     }
 
     pub fn rename_by_rules(&mut self, rules: RenameAllRules) {
+        let ind = rules.independent_number.unwrap_or(false);
         if !self.name.serialize_renamed {
-            self.name.serialize.value = rules.serialize.apply_to_field(&self.name.serialize.value);
+            self.name.serialize.value = rules
+                .serialize
+                .apply_to_field(&self.name.serialize.value, ind);
         }
         if !self.name.deserialize_renamed {
             self.name.deserialize.value = rules
                 .deserialize
-                .apply_to_field(&self.name.deserialize.value);
+                .apply_to_field(&self.name.deserialize.value, ind);
         }
         self.name
             .deserialize_aliases
