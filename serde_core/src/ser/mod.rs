@@ -1272,7 +1272,7 @@ pub trait Serializer: Sized {
     /// Collect an iterator as a sequence.
     ///
     /// The default implementation serializes each item yielded by the iterator
-    /// using [`serialize_seq`]. Implementors should not need to override this
+    /// using [`serialize_seq`]. Implementers should not need to override this
     /// method.
     ///
     /// ```edition2021
@@ -1307,7 +1307,7 @@ pub trait Serializer: Sized {
     /// Collect an iterator as a map.
     ///
     /// The default implementation serializes each pair yielded by the iterator
-    /// using [`serialize_map`]. Implementors should not need to override this
+    /// using [`serialize_map`]. Implementers should not need to override this
     /// method.
     ///
     /// ```edition2021
