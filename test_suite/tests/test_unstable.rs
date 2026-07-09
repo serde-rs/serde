@@ -1,5 +1,6 @@
 #![deny(warnings)]
 #![allow(clippy::derive_partial_eq_without_eq)]
+#![cfg_attr(feature = "unstable", feature(unique_rc_arc))]
 
 // This test target is convoluted with the actual #[test] in a separate file to
 // get it so that the stable compiler does not need to parse the code of the

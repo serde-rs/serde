@@ -46,6 +46,7 @@
 //
 //    https://github.com/serde-rs/serde/issues/812
 #![cfg_attr(feature = "unstable", feature(never_type))]
+#![cfg_attr(feature = "unstable", feature(unique_rc_arc))]
 #![allow(unknown_lints, bare_trait_objects, deprecated)]
 // Ignored clippy and clippy_pedantic lints
 #![allow(

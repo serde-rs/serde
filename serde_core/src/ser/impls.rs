@@ -523,6 +523,18 @@ deref_impl! {
     <'a, T> Serialize for Cow<'a, T> where T: ?Sized + Serialize + ToOwned
 }
 
+deref_impl! {
+    /// This impl requires the [`"rc"`] and `"unstable"` Cargo features of Serde.
+    ///
+    /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
+    #[cfg(all(feature = "unstable", feature = "rc", any(feature = "std", feature = "alloc")))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(feature = "unstable", feature = "rc", any(feature = "std", feature = "alloc"))))
+    )]
+    <T> Serialize for UniqueRc<T> where T: ?Sized + Serialize
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /// This impl requires the [`"rc"`] Cargo feature of Serde.

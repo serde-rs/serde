@@ -56,6 +56,16 @@ macro_rules! crate_root {
             #[cfg(all(feature = "rc", feature = "std"))]
             pub use std::sync::{Arc, Weak as ArcWeak};
 
+            #[cfg(all(
+                feature = "unstable",
+                feature = "rc",
+                feature = "alloc",
+                not(feature = "std")
+            ))]
+            pub use alloc::rc::UniqueRc;
+            #[cfg(all(feature = "unstable", feature = "rc", feature = "std"))]
+            pub use std::rc::UniqueRc;
+
             #[cfg(all(feature = "alloc", not(feature = "std")))]
             pub use alloc::collections::{BTreeMap, BTreeSet, BinaryHeap, LinkedList, VecDeque};
             #[cfg(feature = "std")]

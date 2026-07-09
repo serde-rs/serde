@@ -1,5 +1,6 @@
 use serde_derive::{Deserialize, Serialize};
-use serde_test::{assert_tokens, Token};
+use serde_test::{assert_de_tokens, assert_ser_tokens, assert_tokens, Token};
+use std::rc::UniqueRc;
 
 #[test]
 fn test_raw_identifiers() {
@@ -22,4 +23,14 @@ fn test_raw_identifiers() {
             Token::StructVariantEnd,
         ],
     );
+}
+
+#[test]
+fn test_unique_rc_ser() {
+    assert_ser_tokens(&UniqueRc::new(true), &[Token::Bool(true)]);
+}
+
+#[test]
+fn test_unique_rc_de() {
+    assert_de_tokens(&UniqueRc::new(true), &[Token::Bool(true)]);
 }
