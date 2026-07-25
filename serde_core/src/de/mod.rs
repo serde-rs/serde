@@ -909,11 +909,17 @@ where
 /// 2. The various `deserialize_*` methods. Non-self-describing formats like
 ///    Postcard need to be told what is in the input in order to deserialize it.
 ///    The `deserialize_*` methods are hints to the deserializer for how to
-///    interpret the next piece of input. A data format may ignore these hints,
-///    but the hint must not be wrong. For example, a `Deserialize`
-///    implementation expecting string input must not request `deserialize_i64`,
-///    even if a particular format would happen to accept a string through that
-///    method.
+///    interpret the next piece of input. They allow formats to distinguish
+///    types that share the same representation in the input. For example, XML
+///    represents the string `"123"` and the integer `123` identically, so its
+///    deserializer may use a numeric hint to parse the input as a number. JSON
+///    represents strings and numbers differently and does not need a hint to
+///    distinguish them.
+///    A data format may ignore the hint and present whatever type is in the
+///    input to the `Visitor`, which is responsible for deciding whether to
+///    accept it. A `Deserialize` implementation should request a method
+///    compatible with the types that its `Visitor` accepts; a `Visitor` that
+///    only accepts strings should not request `deserialize_i64`.
 ///    Non-self-describing formats are not able to deserialize something like
 ///    `serde_json::Value` which relies on `Deserializer::deserialize_any`.
 ///
