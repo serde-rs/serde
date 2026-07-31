@@ -531,6 +531,84 @@ fn test_range_to() {
     );
 }
 
+#[rustversion::since(1.96)]
+#[test]
+fn test_new_range() {
+    assert_ser_tokens(
+        &std::range::Range {
+            start: 1u32,
+            end: 2u32,
+        },
+        &[
+            Token::Struct {
+                name: "Range",
+                len: 2,
+            },
+            Token::Str("start"),
+            Token::U32(1),
+            Token::Str("end"),
+            Token::U32(2),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[rustversion::since(1.96)]
+#[test]
+fn test_new_range_inclusive() {
+    assert_ser_tokens(
+        &std::range::RangeInclusive {
+            start: 1u32,
+            last: 2u32,
+        },
+        &[
+            Token::Struct {
+                name: "RangeInclusive",
+                len: 2,
+            },
+            Token::Str("start"),
+            Token::U32(1),
+            Token::Str("last"),
+            Token::U32(2),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[rustversion::since(1.96)]
+#[test]
+fn test_new_range_from() {
+    assert_ser_tokens(
+        &std::range::RangeFrom { start: 1u32 },
+        &[
+            Token::Struct {
+                name: "RangeFrom",
+                len: 1,
+            },
+            Token::Str("start"),
+            Token::U32(1),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[rustversion::since(1.96)]
+#[test]
+fn test_new_range_to_inclusive() {
+    assert_ser_tokens(
+        &std::range::RangeToInclusive { last: 2u32 },
+        &[
+            Token::Struct {
+                name: "RangeToInclusive",
+                len: 1,
+            },
+            Token::Str("last"),
+            Token::U32(2),
+            Token::StructEnd,
+        ],
+    );
+}
+
 #[test]
 fn test_bound() {
     assert_ser_tokens(
