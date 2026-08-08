@@ -274,6 +274,10 @@ mod integer128;
 extern crate serde_derive;
 
 /// Derive macro available if serde is built with `features = ["derive"]`.
+///
+/// For an introduction see <https://serde.rs/derive.html>. For accepted
+/// attributes on the container and member fields see
+/// <https://serde.rs/attributes.html>.
 #[cfg(feature = "serde_derive")]
 #[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
 pub use serde_derive::{Deserialize, Serialize};
