@@ -71,7 +71,13 @@ fn complex() {
 
     assert_de_tokens_error::<Untagged>(
         &[Token::Tuple { len: 1 }, Token::U8(1), Token::TupleEnd],
-        "data did not match any variant of untagged enum Untagged",
+        "data did not match any variant of untagged enum Untagged:\n\
+            \x20 - A: invalid type: sequence, expected struct variant Untagged::A\n\
+            \x20 - B: invalid type: sequence, expected struct variant Untagged::B\n\
+            \x20 - C: invalid type: sequence, expected unit variant Untagged::C\n\
+            \x20 - D: invalid type: sequence, expected u8\n\
+            \x20 - E: invalid type: sequence, expected a string\n\
+            \x20 - F: invalid length 1, expected tuple variant Untagged::F with 2 elements",
     );
 
     assert_de_tokens_error::<Untagged>(
@@ -82,7 +88,13 @@ fn complex() {
             Token::U8(3),
             Token::TupleEnd,
         ],
-        "data did not match any variant of untagged enum Untagged",
+        "data did not match any variant of untagged enum Untagged:\n\
+            \x20 - A: invalid type: sequence, expected struct variant Untagged::A\n\
+            \x20 - B: invalid type: sequence, expected struct variant Untagged::B\n\
+            \x20 - C: invalid type: sequence, expected unit variant Untagged::C\n\
+            \x20 - D: invalid type: sequence, expected u8\n\
+            \x20 - E: invalid type: sequence, expected a string\n\
+            \x20 - F: invalid length 3, expected 2 elements in sequence",
     );
 }
 
@@ -579,5 +591,9 @@ fn expecting_message() {
         Untagged,
     }
 
-    assert_de_tokens_error::<Enum>(&[Token::Str("Untagged")], "something strange...");
+    assert_de_tokens_error::<Enum>(
+        &[Token::Str("Untagged")],
+        "something strange...:\n\
+        \x20 - Untagged: invalid type: string \"Untagged\", expected unit variant Enum::Untagged",
+    );
 }
