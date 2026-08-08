@@ -10,8 +10,11 @@
 //! ```
 //!
 //! Please refer to [https://serde.rs/derive.html] for how to set this up.
+//! For accepted attributes on the container and member fields see
+//! [https://serde.rs/attributes.html].
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
+//! [https://serde.rs/attributes.html]: https://serde.rs/attributes.html
 
 #![doc(html_root_url = "https://docs.rs/serde_derive/1.0.229")]
 #![cfg_attr(not(check_cfg), allow(unexpected_cfgs))]
