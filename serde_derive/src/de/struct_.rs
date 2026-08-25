@@ -383,7 +383,7 @@ fn deserialize_map(
         attr::Default::Path(path) => Some(quote_spanned!(path.span()=>
             let __default: Self::Value = #path();
         )),
-        attr::Default::None => {
+        attr::Default::None | attr::Default::Expr(_) => {
             // We don't need the default value, to prevent an unused variable warning
             // we'll leave the line empty.
             None
@@ -648,7 +648,7 @@ fn deserialize_map_in_place(
         attr::Default::Path(path) => Some(quote_spanned!(path.span()=>
             let __default: #this_type #ty_generics = #path();
         )),
-        attr::Default::None => {
+        attr::Default::None | attr::Default::Expr(_) => {
             // We don't need the default value, to prevent an unused variable warning
             // we'll leave the line empty.
             None

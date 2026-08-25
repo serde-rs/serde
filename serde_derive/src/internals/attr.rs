@@ -999,13 +999,15 @@ pub enum Default {
     Default,
     /// The default is given by this function.
     Path(syn::ExprPath),
+    /// The default is given by this expression.
+    Expr(syn::Expr),
 }
 
 impl Default {
     pub fn is_none(&self) -> bool {
         match self {
             Default::None => true,
-            Default::Default | Default::Path(_) => false,
+            Default::Default | Default::Path(_) | Default::Expr(_) => false,
         }
     }
 }
@@ -1027,6 +1029,7 @@ impl Field {
         let mut skip_deserializing = BoolAttr::none(cx, SKIP_DESERIALIZING);
         let mut skip_serializing_if = Attr::none(cx, SKIP_SERIALIZING_IF);
         let mut default = Attr::none(cx, DEFAULT);
+        let mut default_expr = Attr::none(cx, DEFAULT_EXPR);
         let mut serialize_with = Attr::none(cx, SERIALIZE_WITH);
         let mut deserialize_with = Attr::none(cx, DESERIALIZE_WITH);
         let mut ser_bound = Attr::none(cx, BOUND);
@@ -1096,6 +1099,10 @@ impl Field {
                         // #[serde(default)]
                         default.set(&meta.path, Default::Default);
                     }
+                } else if meta.path == DEFAULT_EXPR {
+                    // #[serde(default_expr = ...)]
+                    let expr = parse_lit_into_expr(cx, DEFAULT_EXPR, &meta)?;
+                    default_expr.set_opt(&meta.path, expr.map(Default::Expr));
                 } else if meta.path == SKIP_SERIALIZING {
                     // #[serde(skip_serializing)]
                     skip_serializing.set_true(&meta.path);
@@ -1188,9 +1195,24 @@ impl Field {
         // If skip_deserializing, initialize the field to Default::default() unless a
         // different default is specified by `#[serde(default = "...")]` on
         // ourselves or our container (e.g. the struct we are in).
-        if container_default.is_none() && skip_deserializing.0.value.is_some() {
+        if container_default.is_none()
+            && skip_deserializing.0.value.is_some()
+            && default_expr.value.is_none()
+        {
             default.set_if_none(Default::Default);
         }
+
+        let default = match (default.get_with_tokens(), default_expr.get_with_tokens()) {
+            (Some((default_tokens, default)), Some((default_expr_tokens, _))) => {
+                let msg = "a field may have only one of: #[serde(default)], \
+                           #[serde(default = \"...\")], or #[serde(default_expr = ...)]";
+                cx.error_spanned_by(default_tokens, msg);
+                cx.error_spanned_by(default_expr_tokens, msg);
+                default
+            }
+            (Some((_, default)), None) | (None, Some((_, default))) => default,
+            (None, None) => Default::None,
+        };
 
         let mut borrowed_lifetimes = borrowed_lifetimes.get().unwrap_or_default();
         if !borrowed_lifetimes.is_empty() {
@@ -1249,7 +1271,7 @@ impl Field {
             skip_serializing: skip_serializing.get(),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing_if: skip_serializing_if.get(),
-            default: default.get().unwrap_or(Default::None),
+            default,
             serialize_with: serialize_with.get(),
             deserialize_with: deserialize_with.get(),
             ser_bound: ser_bound.get(),
@@ -1492,6 +1514,24 @@ fn parse_lit_into_expr_path(
             None
         }
     })
+}
+
+fn parse_lit_into_expr(
+    cx: &Ctxt,
+    attr_name: Symbol,
+    meta: &ParseNestedMeta,
+) -> syn::Result<Option<syn::Expr>> {
+    let input = meta.value()?;
+    match input.parse::<syn::Expr>() {
+        Ok(expr) => Ok(Some(expr)),
+        Err(err) => {
+            cx.error_spanned_by(
+                meta.path.clone(),
+                format!("failed to parse expression for `{}`: {}", attr_name, err),
+            );
+            Ok(None)
+        }
+    }
 }
 
 fn parse_lit_into_where(
