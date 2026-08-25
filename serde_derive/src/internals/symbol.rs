@@ -5,6 +5,7 @@ use syn::{Ident, Path};
 pub struct Symbol(&'static str);
 
 pub const ALIAS: Symbol = Symbol("alias");
+pub const ALIAS_ALL: Symbol = Symbol("alias_all");
 pub const BORROW: Symbol = Symbol("borrow");
 pub const BOUND: Symbol = Symbol("bound");
 pub const CONTENT: Symbol = Symbol("content");

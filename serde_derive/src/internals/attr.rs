@@ -159,6 +159,7 @@ pub struct Container {
     default: Default,
     rename_all_rules: RenameAllRules,
     rename_all_fields_rules: RenameAllRules,
+    alias_all_rules: Vec<RenameRule>,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     tag: TagType,
@@ -244,6 +245,7 @@ impl Container {
         let mut rename_all_de_rule = Attr::none(cx, RENAME_ALL);
         let mut rename_all_fields_ser_rule = Attr::none(cx, RENAME_ALL_FIELDS);
         let mut rename_all_fields_de_rule = Attr::none(cx, RENAME_ALL_FIELDS);
+        let mut alias_all_rules = VecAttr::none(cx, ALIAS_ALL);
         let mut ser_bound = Attr::none(cx, BOUND);
         let mut de_bound = Attr::none(cx, BOUND);
         let mut untagged = BoolAttr::none(cx, UNTAGGED);
@@ -490,6 +492,14 @@ impl Container {
                     if let Some(s) = get_lit_str(cx, EXPECTING, &meta)? {
                         expecting.set(&meta.path, s.value());
                     }
+                } else if meta.path == ALIAS_ALL {
+                    // #[serde(alias_all = "...")]
+                    if let Some(s) = get_lit_str(cx, ALIAS_ALL, &meta)? {
+                        match RenameRule::from_str(&s.value()) {
+                            Ok(rename_rule) => alias_all_rules.insert(&meta.path, rename_rule),
+                            Err(err) => cx.error_spanned_by(s, err),
+                        }
+                    }
                 } else {
                     let path = meta.path.to_token_stream().to_string().replace(' ', "");
                     return Err(
@@ -529,6 +539,7 @@ impl Container {
                 serialize: rename_all_fields_ser_rule.get().unwrap_or(RenameRule::None),
                 deserialize: rename_all_fields_de_rule.get().unwrap_or(RenameRule::None),
             },
+            alias_all_rules: alias_all_rules.get(),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
             tag: decide_tag(cx, item, untagged, internal_tag, content),
@@ -566,6 +577,10 @@ impl Container {
 
     pub fn default(&self) -> &Default {
         &self.default
+    }
+
+    pub fn alias_all_rules(&self) -> &[RenameRule] {
+        &self.alias_all_rules
     }
 
     pub fn ser_bound(&self) -> Option<&[syn::WherePredicate]> {
@@ -935,6 +950,15 @@ impl Variant {
         self.name
             .deserialize_aliases
             .insert(self.name.deserialize.clone());
+    }
+
+    pub fn alias_by_rule(&mut self, rule: RenameRule) {
+        let alias_name = rule.apply_to_variant(&self.name.deserialize.value);
+        let alias = Name {
+            value: alias_name,
+            span: self.name.deserialize.span,
+        };
+        self.name.deserialize_aliases.insert(alias);
     }
 
     pub fn rename_all_rules(&self) -> RenameAllRules {
@@ -1333,6 +1357,16 @@ impl Field {
 
     pub fn mark_transparent(&mut self) {
         self.transparent = true;
+    }
+
+    pub fn alias_by_rule(&mut self, rule: RenameRule) {
+        // Apply the rename rule to the original field name to create an alias
+        let alias_name = rule.apply_to_field(&self.name.deserialize.value);
+        let alias = Name {
+            value: alias_name,
+            span: self.name.deserialize.span,
+        };
+        self.name.deserialize_aliases.insert(alias);
     }
 }
 
