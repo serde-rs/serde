@@ -233,6 +233,11 @@ fn serialize_newtype_struct(
     field: &Field,
     cattrs: &attr::Container,
 ) -> Fragment {
+    // For `struct Tuple1as0(#[serde(skip)] u8);` cases
+    if field.attrs.skip_serializing() {
+        return serialize_tuple_struct(params, &[], cattrs);
+    }
+
     let type_name = cattrs.name().serialize_name();
 
     let mut field_expr = get_member(
