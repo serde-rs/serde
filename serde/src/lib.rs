@@ -101,11 +101,6 @@
 // Show which crate feature enables conditionally compiled APIs in documentation.
 #![cfg_attr(docsrs, feature(doc_cfg, rustdoc_internals))]
 #![cfg_attr(docsrs, allow(internal_features))]
-// Unstable functionality only if the user asks for it. For tracking and
-// discussion of these features please refer to this issue:
-//
-//    https://github.com/serde-rs/serde/issues/812
-#![cfg_attr(all(feature = "unstable", docsrs), feature(never_type))]
 #![allow(
     unknown_lints,
     bare_trait_objects,
