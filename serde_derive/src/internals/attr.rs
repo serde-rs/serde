@@ -980,6 +980,7 @@ pub struct Field {
     skip_serializing: bool,
     skip_deserializing: bool,
     skip_serializing_if: Option<syn::ExprPath>,
+    skip_serializing_if_default: bool,
     default: Default,
     serialize_with: Option<syn::ExprPath>,
     deserialize_with: Option<syn::ExprPath>,
@@ -1026,6 +1027,7 @@ impl Field {
         let mut skip_serializing = BoolAttr::none(cx, SKIP_SERIALIZING);
         let mut skip_deserializing = BoolAttr::none(cx, SKIP_DESERIALIZING);
         let mut skip_serializing_if = Attr::none(cx, SKIP_SERIALIZING_IF);
+        let mut skip_serializing_if_default = BoolAttr::none(cx, SKIP_SERIALIZING_IF_DEFAULT);
         let mut default = Attr::none(cx, DEFAULT);
         let mut serialize_with = Attr::none(cx, SERIALIZE_WITH);
         let mut deserialize_with = Attr::none(cx, DESERIALIZE_WITH);
@@ -1111,6 +1113,9 @@ impl Field {
                     if let Some(path) = parse_lit_into_expr_path(cx, SKIP_SERIALIZING_IF, &meta)? {
                         skip_serializing_if.set(&meta.path, path);
                     }
+                } else if meta.path == SKIP_SERIALIZING_IF_DEFAULT {
+                    // #[serde(skip_serializing_if_default)]
+                    skip_serializing_if_default.set_true(&meta.path);
                 } else if meta.path == SERIALIZE_WITH {
                     // #[serde(serialize_with = "...")]
                     if let Some(path) = parse_lit_into_expr_path(cx, SERIALIZE_WITH, &meta)? {
@@ -1249,6 +1254,7 @@ impl Field {
             skip_serializing: skip_serializing.get(),
             skip_deserializing: skip_deserializing.get(),
             skip_serializing_if: skip_serializing_if.get(),
+            skip_serializing_if_default: skip_serializing_if_default.get(),
             default: default.get().unwrap_or(Default::None),
             serialize_with: serialize_with.get(),
             deserialize_with: deserialize_with.get(),
@@ -1293,6 +1299,10 @@ impl Field {
 
     pub fn skip_serializing_if(&self) -> Option<&syn::ExprPath> {
         self.skip_serializing_if.as_ref()
+    }
+
+    pub fn skip_serializing_if_default(&self) -> bool {
+        self.skip_serializing_if_default
     }
 
     pub fn default(&self) -> &Default {
