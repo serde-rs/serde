@@ -112,9 +112,10 @@ use crate::lib::*;
 mod fmt;
 mod impls;
 mod impossible;
+mod remote;
 
 pub use self::impossible::Impossible;
-
+pub use self::remote::RemoteSerialize;
 #[cfg(all(not(feature = "std"), no_core_error))]
 #[doc(no_inline)]
 pub use crate::std_error::Error as StdError;

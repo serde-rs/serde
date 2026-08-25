@@ -120,8 +120,11 @@ pub mod value;
 
 mod ignored_any;
 mod impls;
+mod remote;
 
 pub use self::ignored_any::IgnoredAny;
+pub use self::remote::RemoteDeserialize;
+
 #[cfg(all(not(feature = "std"), no_core_error))]
 #[doc(no_inline)]
 pub use crate::std_error::Error as StdError;
@@ -131,7 +134,6 @@ pub use core::error::Error as StdError;
 #[cfg(feature = "std")]
 #[doc(no_inline)]
 pub use std::error::Error as StdError;
-
 ////////////////////////////////////////////////////////////////////////////////
 
 macro_rules! declare_error_trait {
