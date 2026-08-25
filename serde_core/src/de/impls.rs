@@ -913,6 +913,62 @@ where
     }
 }
 
+struct OptionInPlaceVisitor<'a, T>(&'a mut Option<T>);
+
+impl<'a, 'de, T> Visitor<'de> for OptionInPlaceVisitor<'a, T>
+where
+    T: Deserialize<'de>,
+{
+    type Value = ();
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("option")
+    }
+
+    #[inline]
+    fn visit_unit<E>(self) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        *self.0 = None;
+        Ok(())
+    }
+
+    #[inline]
+    fn visit_none<E>(self) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        *self.0 = None;
+        Ok(())
+    }
+
+    #[inline]
+    fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        match self.0 {
+            Some(place) => tri!(T::deserialize_in_place(deserializer, place)),
+            None => *self.0 = Some(tri!(T::deserialize(deserializer))),
+        };
+        Ok(())
+    }
+
+    fn __private_visit_untagged_option<D>(self, deserializer: D) -> Result<Self::Value, ()>
+    where
+        D: Deserializer<'de>,
+    {
+        match self.0 {
+            Some(place) => if T::deserialize_in_place(deserializer, place).is_err() {
+                *self.0 = None;
+            },
+            None => *self.0 = T::deserialize(deserializer).ok(),
+        };
+        Ok(())
+    }
+}
+
 impl<'de, T> Deserialize<'de> for Option<T>
 where
     T: Deserialize<'de>,
@@ -926,11 +982,21 @@ where
         })
     }
 
-    // The Some variant's repr is opaque, so we can't play cute tricks with its
-    // tag to have deserialize_in_place build the content in place unconditionally.
-    //
-    // FIXME: investigate whether branching on the old value being Some to
-    // deserialize_in_place the value is profitable (probably data-dependent?)
+    fn deserialize_in_place<D>(deserializer: D, place: &mut Self) -> Result<(), D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // The Some variant's repr is opaque, so we can't play cute tricks with its
+        // tag to have deserialize_in_place build the content in place unconditionally.
+
+        if needs_drop::<T>() {
+            tri!(deserializer.deserialize_option(OptionInPlaceVisitor(place)));
+            Ok(())
+        } else {
+            *place = tri!(Deserialize::deserialize(deserializer));
+            Ok(())
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
