@@ -737,6 +737,7 @@ pub struct Variant {
     deserialize_with: Option<syn::ExprPath>,
     borrow: Option<BorrowAttribute>,
     untagged: bool,
+    default: bool,
 }
 
 struct BorrowAttribute {
@@ -760,6 +761,7 @@ impl Variant {
         let mut deserialize_with = Attr::none(cx, DESERIALIZE_WITH);
         let mut borrow = Attr::none(cx, BORROW);
         let mut untagged = BoolAttr::none(cx, UNTAGGED);
+        let mut default = BoolAttr::none(cx, DEFAULT);
 
         for attr in &variant.attrs {
             if attr.path() != SERDE {
@@ -878,7 +880,11 @@ impl Variant {
                         }
                     }
                 } else if meta.path == UNTAGGED {
+                    // #[serde(untagged)]
                     untagged.set_true(&meta.path);
+                } else if meta.path == DEFAULT {
+                    // #[serde(default)]
+                    default.set_true(&meta.path);
                 } else {
                     let path = meta.path.to_token_stream().to_string().replace(' ', "");
                     return Err(
@@ -911,6 +917,7 @@ impl Variant {
             deserialize_with: deserialize_with.get(),
             borrow: borrow.get(),
             untagged: untagged.get(),
+            default: default.get(),
         }
     }
 
@@ -971,6 +978,12 @@ impl Variant {
 
     pub fn untagged(&self) -> bool {
         self.untagged
+    }
+
+    /// This variant marked as default for internally tagged enums. If tag field
+    /// will not be found, that variant will be assumed
+    pub fn default(&self) -> bool {
+        self.default
     }
 }
 
