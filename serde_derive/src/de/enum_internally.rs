@@ -8,10 +8,8 @@
 use crate::de::enum_;
 use crate::de::enum_untagged;
 use crate::de::struct_;
-use crate::de::{
-    effective_style, expr_is_missing, field_i, unwrap_to_variant_closure, Parameters, StructForm,
-};
-use crate::fragment::{Expr, Fragment, Match};
+use crate::de::{field_i, unwrap_to_variant_closure, Parameters, StructForm};
+use crate::fragment::{Fragment, Match};
 use crate::internals::ast::{Style, Variant};
 use crate::internals::attr;
 use crate::private;
@@ -69,8 +67,9 @@ fn deserialize_internally_tagged_variant(
     variant: &Variant,
     cattrs: &attr::Container,
 ) -> Fragment {
+    // Feature https://github.com/serde-rs/serde/issues/1013
     if let Some(path) = variant.attrs.deserialize_with() {
-        let unwrap_fn = unwrap_to_variant_closure(params, variant, false);
+        let unwrap_fn = unwrap_to_variant_closure(params, variant, cattrs, false);
         return quote_block! {
             _serde::#private::Result::map(#path(__deserializer), #unwrap_fn)
         };
@@ -78,23 +77,18 @@ fn deserialize_internally_tagged_variant(
 
     let variant_ident = &variant.ident;
 
-    match effective_style(variant) {
+    match variant.de_style() {
         Style::Unit => {
             let this_value = &params.this_value;
             let type_name = params.type_name();
             let variant_name = variant.ident.to_string();
-            let default = variant.fields.first().map(|field| {
-                let default = Expr(expr_is_missing(field, cattrs));
-                quote!((#default))
-            });
+            let default = enum_::construct_default_tuple(variant, cattrs);
             quote_block! {
                 _serde::Deserializer::deserialize_any(__deserializer, _serde::#private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name))?;
                 _serde::#private::Ok(#this_value::#variant_ident #default)
             }
         }
-        Style::Newtype => {
-            enum_untagged::deserialize_newtype_variant(variant_ident, params, &variant.fields[0])
-        }
+        Style::Newtype => enum_untagged::deserialize_newtype_variant(params, variant, cattrs),
         Style::Struct => struct_::deserialize(
             params,
             &variant.fields,
