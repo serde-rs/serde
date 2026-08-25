@@ -1,5 +1,4 @@
 #![allow(clippy::derive_partial_eq_without_eq, clippy::unreadable_literal)]
-#![cfg_attr(feature = "unstable", feature(never_type))]
 
 use serde_derive::Serialize;
 use serde_test::{assert_ser_tokens, assert_ser_tokens_error, Configure, Token};

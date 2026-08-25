@@ -8,7 +8,6 @@
     clippy::uninlined_format_args,
     clippy::unreadable_literal
 )]
-#![cfg_attr(feature = "unstable", feature(never_type))]
 
 use serde::de::value::{F32Deserializer, F64Deserializer};
 use serde::de::{Deserialize, DeserializeOwned, Deserializer, IntoDeserializer};

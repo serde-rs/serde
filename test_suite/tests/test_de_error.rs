@@ -3,7 +3,6 @@
     clippy::empty_enums,
     clippy::unreadable_literal
 )]
-#![cfg_attr(feature = "unstable", feature(never_type))]
 
 use serde::de::{Deserialize, IntoDeserializer};
 use serde_derive::Deserialize;
