@@ -7,9 +7,11 @@
 )]
 
 use serde_derive::{Deserialize, Serialize};
-use serde_test::{assert_de_tokens, assert_de_tokens_error, assert_tokens, Token};
+use serde_test::{
+    assert_de_tokens, assert_de_tokens_error, assert_tokens, Configure, Readable, Token,
+};
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "t", content = "c")]
 enum AdjacentlyTagged<T> {
     Unit,
@@ -25,7 +27,7 @@ mod unit {
     fn map_str_tag_only() {
         // Map: tag only
         assert_tokens(
-            &AdjacentlyTagged::Unit::<u8>,
+            &AdjacentlyTagged::Unit::<u8>.readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -42,7 +44,7 @@ mod unit {
 
         // Map: tag only and incorrect hint for number of elements
         assert_de_tokens(
-            &AdjacentlyTagged::Unit::<u8>,
+            &AdjacentlyTagged::Unit::<u8>.readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -62,7 +64,7 @@ mod unit {
     fn map_int_tag_only() {
         // Map: tag (as number) only
         assert_de_tokens(
-            &AdjacentlyTagged::Unit::<u8>,
+            &AdjacentlyTagged::Unit::<u8>.readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -82,7 +84,7 @@ mod unit {
     fn map_bytes_tag_only() {
         // Map: tag only
         assert_de_tokens(
-            &AdjacentlyTagged::Unit::<u8>,
+            &AdjacentlyTagged::Unit::<u8>.readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -99,7 +101,7 @@ mod unit {
 
         // Map: tag only
         assert_de_tokens(
-            &AdjacentlyTagged::Unit::<u8>,
+            &AdjacentlyTagged::Unit::<u8>.readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -119,7 +121,7 @@ mod unit {
     fn map_str_tag_content() {
         // Map: tag + content
         assert_de_tokens(
-            &AdjacentlyTagged::Unit::<u8>,
+            &AdjacentlyTagged::Unit::<u8>.readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -137,7 +139,7 @@ mod unit {
         );
         // Map: content + tag
         assert_de_tokens(
-            &AdjacentlyTagged::Unit::<u8>,
+            &AdjacentlyTagged::Unit::<u8>.readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -156,7 +158,7 @@ mod unit {
 
         // Map: tag + content + excess fields (f, g, h)
         assert_de_tokens(
-            &AdjacentlyTagged::Unit::<u8>,
+            &AdjacentlyTagged::Unit::<u8>.readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -184,7 +186,7 @@ mod unit {
     fn map_int_tag_content() {
         // Map: tag (as number) + content (as number)
         assert_de_tokens(
-            &AdjacentlyTagged::Unit::<u8>,
+            &AdjacentlyTagged::Unit::<u8>.readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -203,7 +205,7 @@ mod unit {
 
         // Map: content (as number) + tag (as number)
         assert_de_tokens(
-            &AdjacentlyTagged::Unit::<u8>,
+            &AdjacentlyTagged::Unit::<u8>.readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -225,7 +227,7 @@ mod unit {
     fn map_bytes_tag_content() {
         // Map: tag + content
         assert_de_tokens(
-            &AdjacentlyTagged::Unit::<u8>,
+            &AdjacentlyTagged::Unit::<u8>.readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -244,7 +246,7 @@ mod unit {
 
         // Map: content + tag
         assert_de_tokens(
-            &AdjacentlyTagged::Unit::<u8>,
+            &AdjacentlyTagged::Unit::<u8>.readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -266,7 +268,7 @@ mod unit {
     fn seq_tag_content() {
         // Seq: tag and content
         assert_de_tokens(
-            &AdjacentlyTagged::Unit::<u8>,
+            &AdjacentlyTagged::Unit::<u8>.readable(),
             &[
                 Token::Seq { len: Some(2) },
                 Token::UnitVariant {
@@ -280,7 +282,7 @@ mod unit {
 
         // Seq: tag (as string) and content
         assert_de_tokens(
-            &AdjacentlyTagged::Unit::<u8>,
+            &AdjacentlyTagged::Unit::<u8>.readable(),
             &[
                 Token::Seq { len: None },
                 Token::Str("Unit"), // tag
@@ -291,7 +293,7 @@ mod unit {
 
         // Seq: tag (as borrowed string) and content
         assert_de_tokens(
-            &AdjacentlyTagged::Unit::<u8>,
+            &AdjacentlyTagged::Unit::<u8>.readable(),
             &[
                 Token::Seq { len: None },
                 Token::BorrowedStr("Unit"), // tag
@@ -309,7 +311,7 @@ mod newtype {
     fn map_tag_only() {
         // optional newtype with no content field
         assert_de_tokens(
-            &AdjacentlyTagged::Newtype::<Option<u8>>(None),
+            &AdjacentlyTagged::Newtype::<Option<u8>>(None).readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -331,7 +333,7 @@ mod newtype {
 
         // Map: tag + content
         assert_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -350,7 +352,7 @@ mod newtype {
 
         // Map: content + tag
         assert_de_tokens(
-            &value,
+            &value.readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -374,7 +376,7 @@ mod newtype {
 
         // Seq: tag and content
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Seq { len: Some(2) },
                 Token::UnitVariant {
@@ -388,7 +390,7 @@ mod newtype {
 
         // Seq: tag (as string) and content
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Seq { len: None },
                 Token::Str("Newtype"), // tag
@@ -399,7 +401,7 @@ mod newtype {
 
         // Seq: tag (as borrowed string) and content
         assert_de_tokens(
-            &value,
+            &value.readable(),
             &[
                 Token::Seq { len: None },
                 Token::BorrowedStr("Newtype"), // tag
@@ -416,7 +418,7 @@ fn newtype_with_newtype() {
     struct NewtypeStruct(u32);
 
     assert_de_tokens(
-        &AdjacentlyTagged::Newtype(NewtypeStruct(5)),
+        &AdjacentlyTagged::Newtype(NewtypeStruct(5)).readable(),
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -446,7 +448,7 @@ mod tuple {
 
         // Map: tag + content
         assert_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -468,7 +470,7 @@ mod tuple {
 
         // Map: content + tag
         assert_de_tokens(
-            &value,
+            &value.readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -495,7 +497,7 @@ mod tuple {
 
         // Seq: tag + content
         assert_de_tokens(
-            &value,
+            &value.readable(),
             &[
                 Token::Seq { len: Some(2) },
                 Token::UnitVariant {
@@ -521,7 +523,7 @@ mod struct_ {
 
         // Map: tag + content
         assert_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -546,7 +548,7 @@ mod struct_ {
 
         // Map: content + tag
         assert_de_tokens(
-            &value,
+            &value.readable(),
             &[
                 Token::Struct {
                     name: "AdjacentlyTagged",
@@ -576,7 +578,7 @@ mod struct_ {
 
         // Seq: tag + content
         assert_de_tokens(
-            &value,
+            &value.readable(),
             &[
                 Token::Seq { len: Some(2) },
                 Token::UnitVariant {
@@ -619,7 +621,7 @@ fn struct_with_flatten() {
     };
 
     assert_tokens(
-        &data,
+        &data.readable(),
         &[
             Token::Struct {
                 name: "Data",
@@ -651,18 +653,18 @@ fn expecting_message() {
         AdjacentlyTagged,
     }
 
-    assert_de_tokens_error::<Enum>(
+    assert_de_tokens_error::<Readable<Enum>>(
         &[Token::Str("AdjacentlyTagged")],
         r#"invalid type: string "AdjacentlyTagged", expected something strange..."#,
     );
 
-    assert_de_tokens_error::<Enum>(
+    assert_de_tokens_error::<Readable<Enum>>(
         &[Token::Map { len: None }, Token::Unit],
         r#"invalid type: unit value, expected "tag", "content", or other ignored fields"#,
     );
 
     // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
-    assert_de_tokens_error::<Enum>(
+    assert_de_tokens_error::<Readable<Enum>>(
         &[Token::Map { len: None }, Token::Str("tag"), Token::Unit],
         "invalid type: unit value, expected variant of enum Enum",
     );
@@ -682,7 +684,7 @@ fn partially_untagged() {
     let data = Data::A(7);
 
     assert_de_tokens(
-        &data,
+        &data.readable(),
         &[
             Token::Map { len: None },
             Token::Str("t"),
@@ -695,7 +697,7 @@ fn partially_untagged() {
 
     let data = Data::Var(42);
 
-    assert_de_tokens(&data, &[Token::U32(42)]);
+    assert_de_tokens(&data.readable(), &[Token::U32(42)]);
 
     // TODO test error output
 }
@@ -709,7 +711,7 @@ fn deny_unknown_fields() {
     }
 
     assert_de_tokens(
-        &AdjacentlyTagged::Unit,
+        &AdjacentlyTagged::Unit.readable(),
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -726,7 +728,7 @@ fn deny_unknown_fields() {
         ],
     );
 
-    assert_de_tokens_error::<AdjacentlyTagged>(
+    assert_de_tokens_error::<Readable<AdjacentlyTagged>>(
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -744,7 +746,7 @@ fn deny_unknown_fields() {
         r#"invalid value: string "h", expected "t" or "c""#,
     );
 
-    assert_de_tokens_error::<AdjacentlyTagged>(
+    assert_de_tokens_error::<Readable<AdjacentlyTagged>>(
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -755,7 +757,7 @@ fn deny_unknown_fields() {
         r#"invalid value: string "h", expected "t" or "c""#,
     );
 
-    assert_de_tokens_error::<AdjacentlyTagged>(
+    assert_de_tokens_error::<Readable<AdjacentlyTagged>>(
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -768,7 +770,7 @@ fn deny_unknown_fields() {
         r#"invalid value: string "h", expected "t" or "c""#,
     );
 
-    assert_de_tokens_error::<AdjacentlyTagged>(
+    assert_de_tokens_error::<Readable<AdjacentlyTagged>>(
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
@@ -784,7 +786,7 @@ fn deny_unknown_fields() {
         r#"invalid value: integer `3`, expected "t" or "c""#,
     );
 
-    assert_de_tokens_error::<AdjacentlyTagged>(
+    assert_de_tokens_error::<Readable<AdjacentlyTagged>>(
         &[
             Token::Struct {
                 name: "AdjacentlyTagged",
