@@ -42,6 +42,27 @@ trait DeserializeWith: Sized {
         D: Deserializer<'de>;
 }
 
+mod with {
+    use super::{DeserializeWith, SerializeWith};
+    use serde::{Deserializer, Serializer};
+
+    pub fn serialize<T, S>(value: &T, ser: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+        T: SerializeWith,
+    {
+        T::serialize_with(value, ser)
+    }
+
+    pub fn deserialize<'de, D, T>(de: D) -> Result<T, D::Error>
+    where
+        D: Deserializer<'de>,
+        T: DeserializeWith,
+    {
+        T::deserialize_with(de)
+    }
+}
+
 impl MyDefault for i32 {
     fn my_default() -> Self {
         123
@@ -1156,6 +1177,119 @@ fn test_serialize_with_enum() {
             Token::StructVariantEnd,
         ],
     );
+}
+
+macro_rules! bool_container {
+    ($name:ident, $container:meta) => {
+        #[derive(Debug, PartialEq, Serialize, Deserialize)]
+        #[$container]
+        enum $name {
+            True,
+            False,
+        }
+
+        impl SerializeWith for $name {
+            fn serialize_with<S>(&self, ser: S) -> Result<S::Ok, S::Error>
+            where
+                S: Serializer,
+            {
+                let boolean = match self {
+                    $name::True => true,
+                    $name::False => false,
+                };
+                boolean.serialize(ser)
+            }
+        }
+
+        impl DeserializeWith for $name {
+            fn deserialize_with<'de, D>(de: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                let b = bool::deserialize(de)?;
+                match b {
+                    true => Ok($name::True),
+                    false => Ok($name::False),
+                }
+            }
+        }
+    };
+}
+
+macro_rules! int_container {
+    ($name:ident, $container:meta) => {
+        #[derive(Debug, PartialEq, Serialize, Deserialize)]
+        #[$container]
+        struct $name {
+            field: i32,
+        }
+
+        impl SerializeWith for $name {
+            fn serialize_with<S>(&self, ser: S) -> Result<S::Ok, S::Error>
+            where
+                S: Serializer,
+            {
+                self.field.to_string().serialize(ser)
+            }
+        }
+
+        impl DeserializeWith for $name {
+            fn deserialize_with<'de, D>(de: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                let s = String::deserialize(de)?;
+                let field = s.parse().unwrap();
+                Ok(Self { field })
+            }
+        }
+    };
+}
+
+#[test]
+fn test_container_with_enum() {
+    bool_container!(
+        BoolSerializeWith,
+        serde(serialize_with = "SerializeWith::serialize_with")
+    );
+    assert_ser_tokens(&BoolSerializeWith::True, &[Token::Bool(true)]);
+    assert_ser_tokens(&BoolSerializeWith::False, &[Token::Bool(false)]);
+
+    bool_container!(
+        BoolDeserializeWith,
+        serde(deserialize_with = "DeserializeWith::deserialize_with")
+    );
+    assert_de_tokens(&BoolDeserializeWith::True, &[Token::Bool(true)]);
+    assert_de_tokens(&BoolDeserializeWith::False, &[Token::Bool(false)]);
+
+    bool_container!(BoolWith, serde(with = "with"));
+    assert_ser_tokens(&BoolWith::True, &[Token::Bool(true)]);
+    assert_ser_tokens(&BoolWith::False, &[Token::Bool(false)]);
+    assert_de_tokens(&BoolWith::True, &[Token::Bool(true)]);
+    assert_de_tokens(&BoolWith::False, &[Token::Bool(false)]);
+}
+
+#[test]
+fn test_container_with_struct() {
+    int_container!(
+        IntS,
+        serde(serialize_with = "SerializeWith::serialize_with")
+    );
+    assert_ser_tokens(&IntS { field: 42 }, &[Token::Str("42")]);
+    assert_ser_tokens(&IntS { field: 123 }, &[Token::Str("123")]);
+
+    int_container!(
+        IntD,
+        serde(deserialize_with = "DeserializeWith::deserialize_with")
+    );
+    assert_de_tokens(&IntD { field: 42 }, &[Token::Str("42")]);
+    assert_de_tokens(&IntD { field: 123 }, &[Token::Str("123")]);
+
+    int_container!(IntW, serde(with = "with"));
+    assert_ser_tokens(&IntW { field: 42 }, &[Token::Str("42")]);
+    assert_ser_tokens(&IntW { field: 123 }, &[Token::Str("123")]);
+    assert_de_tokens(&IntW { field: 42 }, &[Token::Str("42")]);
+    assert_de_tokens(&IntW { field: 123 }, &[Token::Str("123")]);
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
