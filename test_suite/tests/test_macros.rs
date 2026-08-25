@@ -658,8 +658,7 @@ fn test_rename_all() {
     enum E {
         #[serde(rename_all = "camelCase")]
         Serialize {
-            serialize: bool,
-            serialize_seq: bool,
+            serialize: bool, etwas_ändern: bool
         },
         #[serde(rename_all = "kebab-case")]
         SerializeSeq {
@@ -676,21 +675,21 @@ fn test_rename_all() {
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
     #[serde(rename_all = "PascalCase")]
     struct S {
-        serialize: bool,
+        ändern: bool,
         serialize_seq: bool,
     }
 
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
     #[serde(rename_all = "SCREAMING-KEBAB-CASE")]
     struct ScreamingKebab {
-        serialize: bool,
+        grüße: bool,
         serialize_seq: bool,
     }
 
     assert_tokens(
         &E::Serialize {
             serialize: true,
-            serialize_seq: true,
+            etwas_ändern: true,
         },
         &[
             Token::StructVariant {
@@ -700,7 +699,7 @@ fn test_rename_all() {
             },
             Token::Str("serialize"),
             Token::Bool(true),
-            Token::Str("serializeSeq"),
+            Token::Str("etwasÄndern"),
             Token::Bool(true),
             Token::StructVariantEnd,
         ],
@@ -746,12 +745,12 @@ fn test_rename_all() {
 
     assert_tokens(
         &S {
-            serialize: true,
+            ändern: true,
             serialize_seq: true,
         },
         &[
             Token::Struct { name: "S", len: 2 },
-            Token::Str("Serialize"),
+            Token::Str("Ändern"),
             Token::Bool(true),
             Token::Str("SerializeSeq"),
             Token::Bool(true),
@@ -761,7 +760,7 @@ fn test_rename_all() {
 
     assert_tokens(
         &ScreamingKebab {
-            serialize: true,
+            grüße: true,
             serialize_seq: true,
         },
         &[
@@ -769,7 +768,7 @@ fn test_rename_all() {
                 name: "ScreamingKebab",
                 len: 2,
             },
-            Token::Str("SERIALIZE"),
+            Token::Str("GRÜSSE"),
             Token::Bool(true),
             Token::Str("SERIALIZE-SEQ"),
             Token::Bool(true),
