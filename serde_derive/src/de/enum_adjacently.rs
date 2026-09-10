@@ -7,7 +7,7 @@
 
 use crate::de::enum_;
 use crate::de::enum_untagged;
-use crate::de::{field_i, Parameters};
+use crate::de::{field_i, Parameters, VariantForm};
 use crate::fragment::{Fragment, Match};
 use crate::internals::ast::{Style, Variant};
 use crate::internals::attr;
@@ -38,7 +38,12 @@ pub(super) fn deserialize(
         }
         let variant_index = field_i(i);
 
-        let block = Match(enum_untagged::deserialize_variant(params, variant, cattrs));
+        let block = Match(enum_untagged::deserialize_variant(
+            params,
+            variant,
+            cattrs,
+            VariantForm::AdjacentlyTagged,
+        ));
 
         variant_arms.push(quote! {
             __Field::#variant_index => #block
