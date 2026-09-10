@@ -461,6 +461,32 @@ mod unit {
             "invalid type: integer `1`, expected unit variant AdjacentlyTagged::Unit",
         );
     }
+
+    #[test]
+    fn seq_tag_only() {
+        // Seq: tag only. Formats like msgpack encode a unit variant as a 1-element array.
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Seq { len: Some(1) },
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
+                Token::SeqEnd,
+            ],
+        );
+
+        // Seq: tag (as string) only
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Seq { len: None },
+                Token::Str("Unit"), // tag
+                Token::SeqEnd,
+            ],
+        );
+    }
 }
 
 mod newtype {
@@ -569,6 +595,35 @@ mod newtype {
             ],
         );
     }
+
+    #[test]
+    fn seq_tag_only() {
+        // optional newtype with no content element
+        assert_de_tokens(
+            &AdjacentlyTagged::Newtype::<Option<u8>>(None),
+            &[
+                Token::Seq { len: Some(1) },
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Newtype",
+                },
+                Token::SeqEnd,
+            ],
+        );
+
+        // non-optional newtype with no content element
+        assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+            &[
+                Token::Seq { len: Some(1) },
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Newtype",
+                },
+                Token::SeqEnd,
+            ],
+            "missing field `c`",
+        );
+    }
 }
 
 #[test]
@@ -669,6 +724,22 @@ mod tuple {
                 Token::TupleEnd,
                 Token::SeqEnd,
             ],
+        );
+    }
+
+    #[test]
+    fn seq_tag_only() {
+        // Unlike a unit or newtype variant, a missing content element is an error.
+        assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+            &[
+                Token::Seq { len: Some(1) },
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Tuple",
+                },
+                Token::SeqEnd,
+            ],
+            "invalid length 1, expected adjacently tagged enum AdjacentlyTagged",
         );
     }
 }

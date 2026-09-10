@@ -64,10 +64,10 @@ pub(super) fn deserialize(
         quote! { _serde::#private::de::TagContentOtherFieldVisitor }
     };
 
-    let mut missing_content = quote! {
-        _serde::#private::Err(<__A::Error as _serde::de::Error>::missing_field(#content))
-    };
-    let mut missing_content_fallthrough = quote!();
+    // What to do when the content is missing, per variant: nothing for a unit variant, the
+    // "missing field" fallback (e.g. `None` for `Option<T>`) for a newtype variant without
+    // `deserialize_with`, and an error for any other variant.
+    let mut has_fallthrough = false;
     let mut missing_content_arms = Vec::new();
     for (i, variant) in variants.iter().enumerate() {
         if variant.attrs.skip_deserializing() {
@@ -88,7 +88,7 @@ pub(super) fn deserialize(
                 }
             }
             _ => {
-                missing_content_fallthrough = quote!(_ => #missing_content);
+                has_fallthrough = true;
                 continue;
             }
         };
@@ -97,14 +97,28 @@ pub(super) fn deserialize(
         });
     }
 
-    if !missing_content_arms.is_empty() {
-        missing_content = quote! {
-            match __field {
-                #(#missing_content_arms)*
-                #missing_content_fallthrough
+    // The error differs between the map form (missing field) and the seq form (invalid length).
+    // A wildcard arm is only added when some variant needs it, so the match stays exhaustive
+    // without an unreachable pattern.
+    let build_missing_content = |fallthrough| {
+        if missing_content_arms.is_empty() {
+            fallthrough
+        } else {
+            let fallthrough = has_fallthrough.then(|| quote!(_ => #fallthrough));
+            quote! {
+                match __field {
+                    #(#missing_content_arms)*
+                    #fallthrough
+                }
             }
-        };
-    }
+        }
+    };
+    let missing_content_map = build_missing_content(quote! {
+        _serde::#private::Err(<__A::Error as _serde::de::Error>::missing_field(#content))
+    });
+    let missing_content_seq = build_missing_content(quote! {
+        _serde::#private::Err(_serde::de::Error::invalid_length(1, &self))
+    });
 
     // Advance the map by one key, returning early in case of error.
     let next_key = quote! {
@@ -186,6 +200,19 @@ pub(super) fn deserialize(
     quote_block! {
         #variant_visitor
 
+        // `visit_seq` below needs the parsed tag both for the content seed and, if there is no
+        // content element, for `missing_content_seq`. The identifier enum is fieldless, so it can
+        // simply be `Copy`.
+        #[automatically_derived]
+        impl _serde::#private::Clone for __Field {
+            fn clone(&self) -> Self {
+                *self
+            }
+        }
+
+        #[automatically_derived]
+        impl _serde::#private::Copy for __Field {}
+
         #variants_stmt
 
         #[doc(hidden)]
@@ -251,7 +278,7 @@ pub(super) fn deserialize(
                                 #visit_remaining_keys
                             }
                             // There is no second key; might be okay if the we have a unit variant.
-                            _serde::#private::None => #missing_content
+                            _serde::#private::None => #missing_content_map
                         }
                     }
                     // First key is the content.
@@ -287,21 +314,20 @@ pub(super) fn deserialize(
             {
                 // Visit the first element - the tag.
                 match _serde::de::SeqAccess::next_element(&mut __seq) {
-                    _serde::#private::Ok(_serde::#private::Some(__variant)) => {
-                        // Visit the second element - the content.
+                    _serde::#private::Ok(_serde::#private::Some(__field)) => {
+                        // Visit the second element - the content. `__field` is `Copy`, so it can
+                        // still be used below in case there turns out to be no second element.
                         match _serde::de::SeqAccess::next_element_seed(
                             &mut __seq,
                             __Seed {
-                                variant: __variant,
+                                variant: __field,
                                 marker: _serde::#private::PhantomData,
                                 lifetime: _serde::#private::PhantomData,
                             },
                         ) {
                             _serde::#private::Ok(_serde::#private::Some(__ret)) => _serde::#private::Ok(__ret),
-                            // There is no second element.
-                            _serde::#private::Ok(_serde::#private::None) => {
-                                _serde::#private::Err(_serde::de::Error::invalid_length(1, &self))
-                            }
+                            // There is no second element; fine if the variant needs no content.
+                            _serde::#private::Ok(_serde::#private::None) => #missing_content_seq,
                             _serde::#private::Err(__err) => _serde::#private::Err(__err),
                         }
                     }
