@@ -3039,6 +3039,17 @@ mod content {
         {
             Ok(())
         }
+
+        fn visit_map<M>(self, mut map: M) -> Result<(), M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            if tri!(map.next_key::<IgnoredAny>()).is_some() {
+                Err(de::Error::invalid_type(Unexpected::Map, &self))
+            } else {
+                Ok(())
+            }
+        }
     }
 }
 
