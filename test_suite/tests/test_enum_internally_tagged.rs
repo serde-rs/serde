@@ -9,22 +9,24 @@
 mod bytes;
 
 use serde_derive::{Deserialize, Serialize};
-use serde_test::{assert_de_tokens, assert_de_tokens_error, assert_tokens, Token};
+use serde_test::{
+    assert_de_tokens, assert_de_tokens_error, assert_tokens, Configure, Readable, Token,
+};
 use std::collections::BTreeMap;
 use std::iter::FromIterator;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 struct Unit;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 struct Newtype(BTreeMap<String, String>);
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 struct Struct {
     f: u8,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 enum Enum {
     Unit,
     Newtype(u8),
@@ -32,7 +34,7 @@ enum Enum {
     Struct { f: u8 },
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "tag")]
 enum InternallyTagged {
     Unit,
@@ -49,7 +51,7 @@ enum InternallyTagged {
 #[test]
 fn unit() {
     assert_tokens(
-        &InternallyTagged::Unit,
+        &InternallyTagged::Unit.readable(),
         &[
             Token::Struct {
                 name: "InternallyTagged",
@@ -61,7 +63,7 @@ fn unit() {
         ],
     );
     assert_de_tokens(
-        &InternallyTagged::Unit,
+        &InternallyTagged::Unit.readable(),
         &[
             Token::Struct {
                 name: "InternallyTagged",
@@ -74,7 +76,7 @@ fn unit() {
     );
 
     assert_de_tokens(
-        &InternallyTagged::Unit,
+        &InternallyTagged::Unit.readable(),
         &[
             Token::Map { len: Some(1) },
             Token::Str("tag"),
@@ -83,7 +85,7 @@ fn unit() {
         ],
     );
     assert_de_tokens(
-        &InternallyTagged::Unit,
+        &InternallyTagged::Unit.readable(),
         &[
             Token::Map { len: Some(1) },
             Token::BorrowedStr("tag"),
@@ -93,7 +95,7 @@ fn unit() {
     );
 
     assert_de_tokens(
-        &InternallyTagged::Unit,
+        &InternallyTagged::Unit.readable(),
         &[
             Token::Seq { len: Some(1) },
             Token::Str("Unit"), // tag
@@ -101,7 +103,7 @@ fn unit() {
         ],
     );
     assert_de_tokens(
-        &InternallyTagged::Unit,
+        &InternallyTagged::Unit.readable(),
         &[
             Token::Seq { len: Some(1) },
             Token::BorrowedStr("Unit"), // tag
@@ -115,7 +117,7 @@ fn newtype_unit() {
     let value = InternallyTagged::NewtypeUnit(());
 
     assert_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Map { len: Some(1) },
             Token::Str("tag"),
@@ -124,7 +126,7 @@ fn newtype_unit() {
         ],
     );
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Map { len: Some(1) },
             Token::BorrowedStr("tag"),
@@ -134,7 +136,7 @@ fn newtype_unit() {
     );
 
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Struct {
                 name: "InternallyTagged",
@@ -146,7 +148,7 @@ fn newtype_unit() {
         ],
     );
     assert_de_tokens(
-        &value,
+        &value.readable(),
         &[
             Token::Struct {
                 name: "InternallyTagged",
@@ -164,7 +166,7 @@ fn newtype_unit_struct() {
     let value = InternallyTagged::NewtypeUnitStruct(Unit);
 
     assert_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Map { len: Some(1) },
             Token::Str("tag"),
@@ -173,7 +175,7 @@ fn newtype_unit_struct() {
         ],
     );
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Map { len: Some(1) },
             Token::BorrowedStr("tag"),
@@ -183,7 +185,7 @@ fn newtype_unit_struct() {
     );
 
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Struct {
                 name: "InternallyTagged",
@@ -195,7 +197,7 @@ fn newtype_unit_struct() {
         ],
     );
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Struct {
                 name: "InternallyTagged",
@@ -208,7 +210,7 @@ fn newtype_unit_struct() {
     );
 
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Seq { len: Some(1) },
             Token::Str("NewtypeUnitStruct"), // tag
@@ -216,7 +218,7 @@ fn newtype_unit_struct() {
         ],
     );
     assert_de_tokens(
-        &value,
+        &value.readable(),
         &[
             Token::Seq { len: Some(1) },
             Token::BorrowedStr("NewtypeUnitStruct"), // tag
@@ -228,7 +230,7 @@ fn newtype_unit_struct() {
 #[test]
 fn newtype_newtype() {
     assert_tokens(
-        &InternallyTagged::NewtypeNewtype(Newtype(BTreeMap::new())),
+        &InternallyTagged::NewtypeNewtype(Newtype(BTreeMap::new())).readable(),
         &[
             Token::Map { len: Some(1) },
             Token::Str("tag"),
@@ -244,7 +246,7 @@ fn newtype_map() {
 
     // Special case: empty map
     assert_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Map { len: Some(1) },
             Token::Str("tag"),
@@ -253,7 +255,7 @@ fn newtype_map() {
         ],
     );
     assert_de_tokens(
-        &value,
+        &value.readable(),
         &[
             Token::Map { len: Some(1) },
             Token::BorrowedStr("tag"),
@@ -269,7 +271,7 @@ fn newtype_map() {
 
     // Special case: tag field ("tag") is the first field
     assert_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Map { len: Some(2) },
             Token::Str("tag"),
@@ -280,7 +282,7 @@ fn newtype_map() {
         ],
     );
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Map { len: Some(2) },
             Token::BorrowedStr("tag"),
@@ -293,7 +295,7 @@ fn newtype_map() {
 
     // General case: tag field ("tag") is not the first field
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Map { len: Some(2) },
             Token::Str("field"),
@@ -304,7 +306,7 @@ fn newtype_map() {
         ],
     );
     assert_de_tokens(
-        &value,
+        &value.readable(),
         &[
             Token::Map { len: Some(2) },
             Token::BorrowedStr("field"),
@@ -315,7 +317,7 @@ fn newtype_map() {
         ],
     );
 
-    assert_de_tokens_error::<InternallyTagged>(
+    assert_de_tokens_error::<Readable<InternallyTagged>>(
         &[
             Token::Seq { len: Some(2) },
             Token::Str("NewtypeMap"), // tag
@@ -333,7 +335,7 @@ fn newtype_struct() {
 
     // Special case: tag field ("tag") is the first field
     assert_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Struct {
                 name: "Struct",
@@ -347,7 +349,7 @@ fn newtype_struct() {
         ],
     );
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Struct {
                 name: "Struct",
@@ -363,7 +365,7 @@ fn newtype_struct() {
 
     // General case: tag field ("tag") is not the first field
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Struct {
                 name: "Struct",
@@ -377,7 +379,7 @@ fn newtype_struct() {
         ],
     );
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Struct {
                 name: "Struct",
@@ -392,7 +394,7 @@ fn newtype_struct() {
     );
 
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Seq { len: Some(2) },
             Token::Str("NewtypeStruct"), // tag
@@ -401,7 +403,7 @@ fn newtype_struct() {
         ],
     );
     assert_de_tokens(
-        &value,
+        &value.readable(),
         &[
             Token::Seq { len: Some(2) },
             Token::BorrowedStr("NewtypeStruct"), // tag
@@ -420,7 +422,7 @@ mod newtype_enum {
 
         // Special case: tag field ("tag") is the first field
         assert_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::Str("tag"),
@@ -431,7 +433,7 @@ mod newtype_enum {
             ],
         );
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::BorrowedStr("tag"),
@@ -444,7 +446,7 @@ mod newtype_enum {
 
         // General case: tag field ("tag") is not the first field
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::Str("Unit"),
@@ -455,7 +457,7 @@ mod newtype_enum {
             ],
         );
         assert_de_tokens(
-            &value,
+            &value.readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::BorrowedStr("Unit"),
@@ -473,7 +475,7 @@ mod newtype_enum {
 
         // Special case: tag field ("tag") is the first field
         assert_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::Str("tag"),
@@ -484,7 +486,7 @@ mod newtype_enum {
             ],
         );
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::BorrowedStr("tag"),
@@ -497,7 +499,7 @@ mod newtype_enum {
 
         // General case: tag field ("tag") is not the first field
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::Str("Newtype"),
@@ -508,7 +510,7 @@ mod newtype_enum {
             ],
         );
         assert_de_tokens(
-            &value,
+            &value.readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::BorrowedStr("Newtype"),
@@ -526,7 +528,7 @@ mod newtype_enum {
 
         // Special case: tag field ("tag") is the first field
         assert_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::Str("tag"),
@@ -543,7 +545,7 @@ mod newtype_enum {
             ],
         );
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::BorrowedStr("tag"),
@@ -565,7 +567,7 @@ mod newtype_enum {
         // Content::Seq case
         // via ContentDeserializer::deserialize_enum
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::Str("Tuple"),
@@ -582,7 +584,7 @@ mod newtype_enum {
             ],
         );
         assert_de_tokens(
-            &value,
+            &value.readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::BorrowedStr("Tuple"),
@@ -606,7 +608,7 @@ mod newtype_enum {
 
         // Special case: tag field ("tag") is the first field
         assert_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::Str("tag"),
@@ -623,7 +625,7 @@ mod newtype_enum {
             ],
         );
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::BorrowedStr("tag"),
@@ -645,7 +647,7 @@ mod newtype_enum {
         // Content::Map case
         // via ContentDeserializer::deserialize_enum
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::Str("Struct"),
@@ -662,7 +664,7 @@ mod newtype_enum {
             ],
         );
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::BorrowedStr("Struct"),
@@ -681,7 +683,7 @@ mod newtype_enum {
 
         // Special case: tag field ("tag") is the first field
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::Str("tag"),
@@ -694,7 +696,7 @@ mod newtype_enum {
             ],
         );
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::BorrowedStr("tag"),
@@ -712,7 +714,7 @@ mod newtype_enum {
         // Content::Seq case
         // via ContentDeserializer::deserialize_enum
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::Str("Struct"),
@@ -725,7 +727,7 @@ mod newtype_enum {
             ],
         );
         assert_de_tokens(
-            &value,
+            &value.readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::BorrowedStr("Struct"),
@@ -746,7 +748,7 @@ fn struct_() {
 
     // Special case: tag field ("tag") is the first field
     assert_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Struct {
                 name: "InternallyTagged",
@@ -760,7 +762,7 @@ fn struct_() {
         ],
     );
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Struct {
                 name: "InternallyTagged",
@@ -776,7 +778,7 @@ fn struct_() {
 
     // General case: tag field ("tag") is not the first field
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Struct {
                 name: "InternallyTagged",
@@ -790,7 +792,7 @@ fn struct_() {
         ],
     );
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Struct {
                 name: "InternallyTagged",
@@ -806,7 +808,7 @@ fn struct_() {
 
     // Special case: tag field ("tag") is the first field
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Map { len: Some(2) },
             Token::Str("tag"),
@@ -817,7 +819,7 @@ fn struct_() {
         ],
     );
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Map { len: Some(2) },
             Token::BorrowedStr("tag"),
@@ -830,7 +832,7 @@ fn struct_() {
 
     // General case: tag field ("tag") is not the first field
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Map { len: Some(2) },
             Token::Str("a"),
@@ -841,7 +843,7 @@ fn struct_() {
         ],
     );
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Map { len: Some(2) },
             Token::BorrowedStr("a"),
@@ -853,7 +855,7 @@ fn struct_() {
     );
 
     assert_de_tokens(
-        &value,
+        &value.clone().readable(),
         &[
             Token::Seq { len: Some(2) },
             Token::Str("Struct"), // tag
@@ -862,7 +864,7 @@ fn struct_() {
         ],
     );
     assert_de_tokens(
-        &value,
+        &value.readable(),
         &[
             Token::Seq { len: Some(2) },
             Token::BorrowedStr("Struct"), // tag
@@ -878,7 +880,7 @@ mod struct_enum {
     #[test]
     fn unit() {
         assert_de_tokens(
-            &Enum::Unit,
+            &Enum::Unit.readable(),
             &[
                 Token::Enum { name: "Enum" },
                 Token::BorrowedStr("Unit"),
@@ -890,7 +892,7 @@ mod struct_enum {
 
         // Special case: tag field ("tag") is the first field
         assert_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Struct {
                     name: "InternallyTagged",
@@ -906,7 +908,7 @@ mod struct_enum {
             ],
         );
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Struct {
                     name: "InternallyTagged",
@@ -924,7 +926,7 @@ mod struct_enum {
 
         // General case: tag field ("tag") is not the first field
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Struct {
                     name: "InternallyTagged",
@@ -940,7 +942,7 @@ mod struct_enum {
             ],
         );
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Struct {
                     name: "InternallyTagged",
@@ -958,7 +960,7 @@ mod struct_enum {
 
         // Special case: tag field ("tag") is the first field
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::Str("tag"),
@@ -971,7 +973,7 @@ mod struct_enum {
             ],
         );
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::BorrowedStr("tag"),
@@ -986,7 +988,7 @@ mod struct_enum {
 
         // General case: tag field ("tag") is not the first field
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::Str("enum_"),
@@ -999,7 +1001,7 @@ mod struct_enum {
             ],
         );
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Map { len: Some(2) },
                 Token::BorrowedStr("enum_"),
@@ -1013,7 +1015,7 @@ mod struct_enum {
         );
 
         assert_de_tokens(
-            &value,
+            &value.clone().readable(),
             &[
                 Token::Seq { len: Some(2) },
                 Token::Str("StructEnum"),     // tag
@@ -1024,7 +1026,7 @@ mod struct_enum {
             ],
         );
         assert_de_tokens(
-            &value,
+            &value.readable(),
             &[
                 Token::Seq { len: Some(2) },
                 Token::BorrowedStr("StructEnum"), // tag
@@ -1039,12 +1041,12 @@ mod struct_enum {
 
 #[test]
 fn wrong_tag() {
-    assert_de_tokens_error::<InternallyTagged>(
+    assert_de_tokens_error::<Readable<InternallyTagged>>(
         &[Token::Map { len: Some(0) }, Token::MapEnd],
         "missing field `tag`",
     );
 
-    assert_de_tokens_error::<InternallyTagged>(
+    assert_de_tokens_error::<Readable<InternallyTagged>>(
         &[
             Token::Map { len: Some(1) },
             Token::Str("tag"),
@@ -1080,7 +1082,7 @@ fn untagged_variant() {
     }
 
     assert_de_tokens(
-        &InternallyTagged::Tagged { a: 1 },
+        &InternallyTagged::Tagged { a: 1 }.readable(),
         &[
             Token::Map { len: Some(2) },
             Token::Str("tag"),
@@ -1092,7 +1094,7 @@ fn untagged_variant() {
     );
 
     assert_tokens(
-        &InternallyTagged::Tagged { a: 1 },
+        &InternallyTagged::Tagged { a: 1 }.readable(),
         &[
             Token::Struct {
                 name: "InternallyTagged",
@@ -1110,7 +1112,8 @@ fn untagged_variant() {
         &InternallyTagged::Untagged {
             tag: "Foo".to_owned(),
             b: 2,
-        },
+        }
+        .readable(),
         &[
             Token::Map { len: Some(2) },
             Token::Str("tag"),
@@ -1125,7 +1128,8 @@ fn untagged_variant() {
         &InternallyTagged::Untagged {
             tag: "Foo".to_owned(),
             b: 2,
-        },
+        }
+        .readable(),
         &[
             Token::Struct {
                 name: "InternallyTagged",
@@ -1143,7 +1147,8 @@ fn untagged_variant() {
         &InternallyTagged::Untagged {
             tag: "Tagged".to_owned(),
             b: 2,
-        },
+        }
+        .readable(),
         &[
             Token::Struct {
                 name: "InternallyTagged",
@@ -1178,7 +1183,8 @@ mod string_and_bytes {
         assert_de_tokens(
             &InternallyTagged::String {
                 string: "\0".to_owned(),
-            },
+            }
+            .readable(),
             &[
                 Token::Struct {
                     name: "String",
@@ -1195,7 +1201,8 @@ mod string_and_bytes {
         assert_de_tokens(
             &InternallyTagged::String {
                 string: "\0".to_owned(),
-            },
+            }
+            .readable(),
             &[
                 Token::Struct {
                     name: "String",
@@ -1215,7 +1222,8 @@ mod string_and_bytes {
         assert_de_tokens(
             &InternallyTagged::String {
                 string: "\0".to_owned(),
-            },
+            }
+            .readable(),
             &[
                 Token::Struct {
                     name: "String",
@@ -1232,7 +1240,8 @@ mod string_and_bytes {
         assert_de_tokens(
             &InternallyTagged::String {
                 string: "\0".to_owned(),
-            },
+            }
+            .readable(),
             &[
                 Token::Struct {
                     name: "String",
@@ -1250,7 +1259,7 @@ mod string_and_bytes {
     #[test]
     fn bytes_from_string() {
         assert_de_tokens(
-            &InternallyTagged::Bytes { bytes: vec![0] },
+            &InternallyTagged::Bytes { bytes: vec![0] }.readable(),
             &[
                 Token::Struct {
                     name: "Bytes",
@@ -1265,7 +1274,7 @@ mod string_and_bytes {
         );
 
         assert_de_tokens(
-            &InternallyTagged::Bytes { bytes: vec![0] },
+            &InternallyTagged::Bytes { bytes: vec![0] }.readable(),
             &[
                 Token::Struct {
                     name: "Bytes",
@@ -1283,7 +1292,7 @@ mod string_and_bytes {
     #[test]
     fn bytes_from_bytes() {
         assert_de_tokens(
-            &InternallyTagged::Bytes { bytes: vec![0] },
+            &InternallyTagged::Bytes { bytes: vec![0] }.readable(),
             &[
                 Token::Struct {
                     name: "Bytes",
@@ -1298,7 +1307,7 @@ mod string_and_bytes {
         );
 
         assert_de_tokens(
-            &InternallyTagged::Bytes { bytes: vec![0] },
+            &InternallyTagged::Bytes { bytes: vec![0] }.readable(),
             &[
                 Token::Struct {
                     name: "Bytes",
@@ -1316,7 +1325,7 @@ mod string_and_bytes {
     #[test]
     fn bytes_from_seq() {
         assert_de_tokens(
-            &InternallyTagged::Bytes { bytes: vec![0] },
+            &InternallyTagged::Bytes { bytes: vec![0] }.readable(),
             &[
                 Token::Struct {
                     name: "Bytes",
@@ -1343,7 +1352,7 @@ fn borrow() {
     }
 
     assert_tokens(
-        &Input::Package { name: "borrowed" },
+        &Input::Package { name: "borrowed" }.readable(),
         &[
             Token::Struct {
                 name: "Input",
@@ -1378,7 +1387,7 @@ fn with_skipped_conflict() {
     let data = Data::C { t: String::new() };
 
     assert_tokens(
-        &data,
+        &data.readable(),
         &[
             Token::Struct {
                 name: "Data",
@@ -1414,7 +1423,7 @@ fn containing_flatten() {
     };
 
     assert_tokens(
-        &data,
+        &data.readable(),
         &[
             Token::Map { len: None },
             Token::Str("tag"),
@@ -1433,7 +1442,7 @@ fn unit_variant_with_unknown_fields() {
     let value = InternallyTagged::Unit;
 
     assert_de_tokens(
-        &value,
+        &value.readable(),
         &[
             Token::Map { len: None },
             Token::Str("tag"),
@@ -1445,7 +1454,7 @@ fn unit_variant_with_unknown_fields() {
     );
 
     // Unknown elements are not allowed in sequences
-    assert_de_tokens_error::<InternallyTagged>(
+    assert_de_tokens_error::<Readable<InternallyTagged>>(
         &[
             Token::Seq { len: None },
             Token::Str("Unit"), // tag
@@ -1465,13 +1474,13 @@ fn expecting_message() {
         InternallyTagged,
     }
 
-    assert_de_tokens_error::<Enum>(
+    assert_de_tokens_error::<Readable<Enum>>(
         &[Token::Str("InternallyTagged")],
         r#"invalid type: string "InternallyTagged", expected something strange..."#,
     );
 
     // Check that #[serde(expecting = "...")] doesn't affect variant identifier error message
-    assert_de_tokens_error::<Enum>(
+    assert_de_tokens_error::<Readable<Enum>>(
         &[Token::Map { len: None }, Token::Str("tag"), Token::Unit],
         "invalid type: unit value, expected variant identifier",
     );

@@ -1,5 +1,5 @@
 use serde_derive::{Deserialize, Serialize};
-use serde_test::{assert_tokens, Token};
+use serde_test::{assert_tokens, Configure, Token};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 enum Enum {
@@ -33,7 +33,7 @@ fn simple_variant() {
 #[test]
 fn flatten_variant() {
     assert_tokens(
-        &Enum::Flatten { flatten: (), a: 42 },
+        &Enum::Flatten { flatten: (), a: 42 }.readable(),
         &[
             Token::NewtypeVariant {
                 name: "Enum",

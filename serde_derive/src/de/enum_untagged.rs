@@ -43,8 +43,9 @@ pub(super) fn deserialize(
 
     let private2 = private;
     quote_block! {
+        let __is_human_readable = _serde::Deserializer::is_human_readable(&__deserializer);
         let __content = _serde::de::DeserializeSeed::deserialize(_serde::#private::de::ContentVisitor::new(), __deserializer)?;
-        let __deserializer = _serde::#private::de::ContentRefDeserializer::<__D::Error>::new(&__content);
+        let __deserializer = _serde::#private::de::ContentRefDeserializer::<__D::Error>::new(&__content, __is_human_readable);
 
         #first_attempt
 

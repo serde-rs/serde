@@ -7,7 +7,7 @@
 )]
 
 use serde_derive::{Deserialize, Serialize};
-use serde_test::{assert_de_tokens, assert_ser_tokens, assert_tokens, Token};
+use serde_test::{assert_de_tokens, assert_ser_tokens, assert_tokens, Configure, Token};
 use std::marker::PhantomData;
 
 // That tests that the derived Serialize implementation doesn't trigger
@@ -622,7 +622,7 @@ fn test_internally_tagged_struct_with_flattened_field() {
     }
 
     assert_tokens(
-        &Struct { flat: Enum::A(0) },
+        &Struct { flat: Enum::A(0) }.readable(),
         &[
             Token::Map { len: None },
             Token::Str("tag_struct"),
@@ -639,7 +639,7 @@ fn test_internally_tagged_struct_with_flattened_field() {
     );
 
     assert_de_tokens(
-        &Struct { flat: Enum::A(0) },
+        &Struct { flat: Enum::A(0) }.readable(),
         &[
             Token::Map { len: None },
             Token::Str("tag_enum"),
