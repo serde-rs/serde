@@ -1728,6 +1728,292 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/// A visitor and a seed which is able to return borrowed `Cow<str>`.
+///
+/// Serde implementation is generic for any `Cow<T>` and because visitor has no
+/// hint methods for arbitrary borrowing types, [`Cow`] is always deserialized as
+/// [`Cow::Owned`] variant. This visitor and seed allows to deserialize borrowed
+/// variant of a [`Cow`] for a string.
+///
+/// This is useful when you want to read `Cow` from a [`MapAccess`] or a [`SeqAccess`].
+///
+/// # Example
+///
+/// This example implements a simple XML DOM node:
+/// ```
+/// # use serde_core::de::{DeserializeSeed, Deserializer, MapAccess, Visitor};
+/// # use serde_core::de::value::CowStrVisitor;
+/// # use std::borrow::Cow;
+/// #
+/// struct Element<'a> {
+///     name: Cow<'a, str>,
+///     children: Vec<Node<'a>>,
+/// }
+/// enum Node<'a> {
+///     Text(Cow<'a, str>),
+///     Element(Element<'a>),
+/// }
+///
+/// impl<'de> Visitor<'de> for Element<'de> {
+///     type Value = Self;
+///
+///     fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+///         f.write_str("a map")
+///     }
+///
+///     fn visit_map<A>(mut self, mut map: A) -> Result<Self::Value, A::Error>
+///     where
+///         A: MapAccess<'de>,
+///     {
+///         while let Some(key) = map.next_key_seed(CowStrVisitor)? {
+///             if "$text" == key {
+///                 let text = map.next_value_seed(CowStrVisitor)?;
+///                 self.children.push(Node::Text(text));
+///             } else {
+///                 let elem = Element { name: key, children: Vec::new() };
+///                 let elem = map.next_value_seed(elem)?;
+///                 self.children.push(Node::Element(elem));
+///             }
+///         }
+///         Ok(self)
+///     }
+/// }
+///
+/// impl<'de> DeserializeSeed<'de> for Element<'de> {
+///     type Value = Self;
+///
+///     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+///     where
+///         D: Deserializer<'de>,
+///     {
+///         deserializer.deserialize_map(self)
+///     }
+/// }
+/// ```
+///
+/// [`MapAccess`]: crate::de::MapAccess
+#[cfg(any(feature = "std", feature = "alloc"))]
+#[doc(alias = "CowStrSeed")]
+#[derive(Debug, Copy, Clone)]
+pub struct CowStrVisitor;
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'de> Visitor<'de> for CowStrVisitor {
+    type Value = Cow<'de, str>;
+
+    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("a string")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Cow::Owned(v.to_owned()))
+    }
+
+    #[inline]
+    fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Cow::Borrowed(v))
+    }
+
+    #[inline]
+    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Cow::Owned(v))
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        match str::from_utf8(v) {
+            Ok(s) => Ok(Cow::Owned(s.to_owned())),
+            Err(_) => Err(de::Error::invalid_value(de::Unexpected::Bytes(v), &self)),
+        }
+    }
+
+    fn visit_borrowed_bytes<E>(self, v: &'de [u8]) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        match str::from_utf8(v) {
+            Ok(s) => Ok(Cow::Borrowed(s)),
+            Err(_) => Err(de::Error::invalid_value(de::Unexpected::Bytes(v), &self)),
+        }
+    }
+
+    fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        match String::from_utf8(v) {
+            Ok(s) => Ok(Cow::Owned(s)),
+            Err(e) => Err(de::Error::invalid_value(
+                de::Unexpected::Bytes(&e.into_bytes()),
+                &self,
+            )),
+        }
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'de> de::DeserializeSeed<'de> for CowStrVisitor {
+    type Value = Cow<'de, str>;
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_string(self)
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+/// A visitor and a seed which is able to return borrowed `Cow<[u8]>`.
+///
+/// Serde implementation is generic for any `Cow<T>` and because visitor has no
+/// hint methods for arbitrary borrowing types, [`Cow`] is always deserialized as
+/// [`Cow::Owned`] variant. This visitor and seed allows to deserialize borrowed
+/// variant of a [`Cow`] for a byte slice.
+///
+/// This is useful when you want to read `Cow` from a [`MapAccess`] or a [`SeqAccess`].
+///
+/// # Example
+///
+/// This example implements a simple XML DOM node:
+/// ```
+/// # use serde_core::de::{DeserializeSeed, Deserializer, MapAccess, Visitor};
+/// # use serde_core::de::value::CowBytesVisitor;
+/// # use std::borrow::Cow;
+/// #
+/// struct Element<'a> {
+///     name: Cow<'a, [u8]>,
+///     children: Vec<Node<'a>>,
+/// }
+/// enum Node<'a> {
+///     Text(Cow<'a, [u8]>),
+///     Element(Element<'a>),
+/// }
+///
+/// impl<'de> Visitor<'de> for Element<'de> {
+///     type Value = Self;
+///
+///     fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+///         f.write_str("a map")
+///     }
+///
+///     fn visit_map<A>(mut self, mut map: A) -> Result<Self::Value, A::Error>
+///     where
+///         A: MapAccess<'de>,
+///     {
+///         while let Some(key) = map.next_key_seed(CowBytesVisitor)? {
+///             if *b"$text" == *key {
+///                 let text = map.next_value_seed(CowBytesVisitor)?;
+///                 self.children.push(Node::Text(text));
+///             } else {
+///                 let elem = Element { name: key, children: Vec::new() };
+///                 let elem = map.next_value_seed(elem)?;
+///                 self.children.push(Node::Element(elem));
+///             }
+///         }
+///         Ok(self)
+///     }
+/// }
+///
+/// impl<'de> DeserializeSeed<'de> for Element<'de> {
+///     type Value = Self;
+///
+///     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+///     where
+///         D: Deserializer<'de>,
+///     {
+///         deserializer.deserialize_map(self)
+///     }
+/// }
+/// ```
+///
+/// [`MapAccess`]: crate::de::MapAccess
+#[cfg(any(feature = "std", feature = "alloc"))]
+#[doc(alias = "CowBytesSeed")]
+#[derive(Debug, Copy, Clone)]
+pub struct CowBytesVisitor;
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'de> Visitor<'de> for CowBytesVisitor {
+    type Value = Cow<'de, [u8]>;
+
+    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("a byte array")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Cow::Owned(v.as_bytes().to_vec()))
+    }
+
+    #[inline]
+    fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Cow::Borrowed(v.as_bytes()))
+    }
+
+    #[inline]
+    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Cow::Owned(v.into_bytes()))
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Cow::Owned(v.to_vec()))
+    }
+
+    #[inline]
+    fn visit_borrowed_bytes<E>(self, v: &'de [u8]) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Cow::Borrowed(v))
+    }
+
+    #[inline]
+    fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Cow::Owned(v))
+    }
+}
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+impl<'de> de::DeserializeSeed<'de> for CowBytesVisitor {
+    type Value = Cow<'de, [u8]>;
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_byte_buf(self)
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 mod private {
     use crate::lib::*;
 
