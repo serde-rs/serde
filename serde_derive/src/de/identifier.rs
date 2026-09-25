@@ -223,14 +223,6 @@ fn deserialize_identifier(
         "field identifier"
     });
 
-    let bytes_to_str = if fallthrough.is_some() || collect_other_fields {
-        None
-    } else {
-        Some(quote! {
-            let __value = &_serde::#private::from_utf8_lossy(__value);
-        })
-    };
-
     let (
         value_as_str_content,
         value_as_borrowed_str_content,
@@ -400,6 +392,14 @@ fn deserialize_identifier(
                 }
             }
         }
+    };
+
+    let bytes_to_str = if fallthrough.is_some() || collect_other_fields {
+        None
+    } else {
+        Some(quote! {
+            let __value = &_serde::#private::from_utf8_lossy(__value);
+        })
     };
 
     let visit_borrowed = if fallthrough_borrowed.is_some() || collect_other_fields {
