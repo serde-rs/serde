@@ -1,13 +1,16 @@
-use crate::de::{deserialize_seq, has_flatten, Parameters, TupleForm};
 #[cfg(feature = "deserialize_in_place")]
-use crate::de::{deserialize_seq_in_place, place_lifetime};
+use crate::de::{expr_is_missing, place_lifetime, read_fields_in_order_in_place};
+use crate::de::{has_flatten, read_fields_in_order, read_from_seq_access, Parameters, TupleForm};
+#[cfg(feature = "deserialize_in_place")]
+use crate::fragment::Expr;
 use crate::fragment::{Fragment, Stmts};
 use crate::internals::ast::Field;
 use crate::internals::attr;
 use crate::private;
-use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
+#[cfg(feature = "deserialize_in_place")]
+use syn::Index;
 
 /// Generates `Deserialize::deserialize` body for a `struct Tuple(...);` including `struct Newtype(T);`
 pub(super) fn deserialize(
@@ -59,14 +62,56 @@ pub(super) fn deserialize(
     let nfields = fields.len();
 
     let visit_newtype_struct = match form {
-        TupleForm::Tuple if nfields == 1 => {
-            Some(deserialize_newtype_struct(&type_path, params, &fields[0]))
+        TupleForm::Tuple if field_count == 1 => {
+            let visit_newtype_struct = Stmts(read_fields_in_order(
+                &type_path,
+                params,
+                fields,
+                false,
+                cattrs,
+                expecting,
+                |_, _, field, _, _| {
+                    let deserialize = match field.attrs.deserialize_with() {
+                        None => {
+                            let field_ty = field.ty;
+
+                            let span = field.original.span();
+                            quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize)
+                        }
+                        Some(path) => {
+                            // If #path returns wrong type, error will be reported here (^^^^^).
+                            // We attach span of the path to the function so it will be reported
+                            // on the #[serde(with = "...")]
+                            //                       ^^^^^
+                            quote_spanned!(path.span()=> #path)
+                        }
+                    };
+                    // __e cannot be in quote_spanned! because of macro hygiene
+                    quote!(#deserialize(__e)?)
+                },
+            ));
+
+            Some(quote! {
+                #[inline]
+                fn visit_newtype_struct<__E>(self, __e: __E) -> _serde::#private::Result<Self::Value, __E::Error>
+                where
+                    __E: _serde::Deserializer<#delife>,
+                {
+                    #visit_newtype_struct
+                }
+            })
         }
         _ => None,
     };
 
-    let visit_seq = Stmts(deserialize_seq(
-        &type_path, params, fields, false, cattrs, expecting,
+    let visit_seq = Stmts(read_fields_in_order(
+        &type_path,
+        params,
+        fields,
+        false,
+        cattrs,
+        expecting,
+        read_from_seq_access,
     ));
 
     let visitor_expr = quote! {
@@ -76,7 +121,7 @@ pub(super) fn deserialize(
         }
     };
     let dispatch = match form {
-        TupleForm::Tuple if nfields == 1 => {
+        TupleForm::Tuple if field_count != 0 && nfields == 1 => {
             let type_name = cattrs.name().deserialize_name();
             quote! {
                 _serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr)
@@ -132,55 +177,6 @@ pub(super) fn deserialize(
     }
 }
 
-fn deserialize_newtype_struct(
-    type_path: &TokenStream,
-    params: &Parameters,
-    field: &Field,
-) -> TokenStream {
-    let delife = params.borrowed.de_lifetime();
-    let field_ty = field.ty;
-    let deserializer_var = quote!(__e);
-
-    let value = match field.attrs.deserialize_with() {
-        None => {
-            let span = field.original.span();
-            let func = quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize);
-            quote! {
-                #func(#deserializer_var)?
-            }
-        }
-        Some(path) => {
-            // If #path returns wrong type, error will be reported here (^^^^^).
-            // We attach span of the path to the function so it will be reported
-            // on the #[serde(with = "...")]
-            //                       ^^^^^
-            quote_spanned! {path.span()=>
-                #path(#deserializer_var)?
-            }
-        }
-    };
-
-    let mut result = quote!(#type_path(__field0));
-    if params.has_getter {
-        let this_type = &params.this_type;
-        let (_, ty_generics, _) = params.generics.split_for_impl();
-        result = quote! {
-            _serde::#private::Into::<#this_type #ty_generics>::into(#result)
-        };
-    }
-
-    quote! {
-        #[inline]
-        fn visit_newtype_struct<__E>(self, #deserializer_var: __E) -> _serde::#private::Result<Self::Value, __E::Error>
-        where
-            __E: _serde::Deserializer<#delife>,
-        {
-            let __field0: #field_ty = #value;
-            _serde::#private::Ok(#result)
-        }
-    }
-}
-
 /// Generates `Deserialize::deserialize_in_place` body for a `struct Tuple(...);` including `struct Newtype(T);`
 #[cfg(feature = "deserialize_in_place")]
 pub(super) fn deserialize_in_place(
@@ -208,10 +204,38 @@ pub(super) fn deserialize_in_place(
 
     let nfields = fields.len();
 
-    let visit_newtype_struct = if nfields == 1 {
-        // We do not generate deserialize_in_place if every field has a
-        // deserialize_with.
-        assert!(fields[0].attrs.deserialize_with().is_none());
+    let visit_newtype_struct = if field_count == 1 {
+        // We deserialize newtype, so only one field is not skipped
+
+        let index = fields
+            .iter()
+            .position(|field| !field.attrs.skip_deserializing())
+            .map(Index::from)
+            .unwrap();
+        let mut deserialize = quote! {
+            _serde::Deserialize::deserialize_in_place(__e, &mut self.place.#index)
+        };
+        // Deserialize and write defaults if at least one field is skipped,
+        // otherwise only deserialize
+        if nfields > 1 {
+            let write_defaults = fields.iter().enumerate().filter_map(|(index, field)| {
+                if field.attrs.skip_deserializing() {
+                    let index = Index::from(index);
+                    let default = Expr(expr_is_missing(field, cattrs));
+                    return Some(quote!(self.place.#index = #default;));
+                }
+                None
+            });
+            deserialize = quote! {
+                match #deserialize {
+                    _serde::#private::Ok(_) => {
+                        #(#write_defaults)*
+                        _serde::#private::Ok(())
+                    }
+                    _serde::#private::Err(__err) => _serde::#private::Err(__err),
+                }
+            }
+        }
 
         Some(quote! {
             #[inline]
@@ -219,14 +243,16 @@ pub(super) fn deserialize_in_place(
             where
                 __E: _serde::Deserializer<#delife>,
             {
-                _serde::Deserialize::deserialize_in_place(__e, &mut self.place.0)
+                #deserialize
             }
         })
     } else {
         None
     };
 
-    let visit_seq = Stmts(deserialize_seq_in_place(params, fields, cattrs, expecting));
+    let visit_seq = Stmts(read_fields_in_order_in_place(
+        params, fields, cattrs, expecting,
+    ));
 
     let visitor_expr = quote! {
         __Visitor {
@@ -236,7 +262,7 @@ pub(super) fn deserialize_in_place(
     };
 
     let type_name = cattrs.name().deserialize_name();
-    let dispatch = if nfields == 1 {
+    let dispatch = if field_count != 0 && nfields == 1 {
         quote!(_serde::Deserializer::deserialize_newtype_struct(__deserializer, #type_name, #visitor_expr))
     } else {
         quote!(_serde::Deserializer::deserialize_tuple_struct(__deserializer, #type_name, #field_count, #visitor_expr))

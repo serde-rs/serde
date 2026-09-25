@@ -1,5 +1,94 @@
 error: #[serde(tag = "...")] cannot be used with tuple variants
- --> tests/ui/enum-representation/internal-tuple-variant.rs:6:5
-  |
-6 |     Tuple(u8, u8),
-  |     ^^^^^^^^^^^^^
+  --> tests/ui/enum-representation/internal-tuple-variant.rs:10:5
+   |
+10 | /     /// Error should be reported
+11 | |     Tuple2(u8, u8),
+   | |__________________^
+
+error: #[serde(tag = "...")] cannot be used with tuple variants
+  --> tests/ui/enum-representation/internal-tuple-variant.rs:20:5
+   |
+20 | /     /// Error should be reported, equivalent to Tuple2 representation
+21 | |     Tuple2as1D(#[serde(skip_deserializing)] u8, u8),
+   | |___________________________________________________^
+
+error: #[serde(tag = "...")] cannot be used with tuple variants
+  --> tests/ui/enum-representation/internal-tuple-variant.rs:23:5
+   |
+23 | /     /// Error should be reported, equivalent to Tuple2 representation
+24 | |     Tuple3as2S(#[serde(skip_serializing)] u8, u8, u8),
+   | |_____________________________________________________^
+
+error: #[serde(tag = "...")] cannot be used with tuple variants
+  --> tests/ui/enum-representation/internal-tuple-variant.rs:25:5
+   |
+25 | /     /// Error should be reported, equivalent to Tuple3 representation
+26 | |     Tuple3as2D(#[serde(skip_deserializing)] u8, u8, u8),
+   | |_______________________________________________________^
+
+error: #[serde(tag = "...")] cannot be used with tuple variants
+  --> tests/ui/enum-representation/internal-tuple-variant.rs:36:5
+   |
+36 | /     /// Error should be reported
+37 | |     Tuple2(u8, u8),
+   | |__________________^
+
+error: #[serde(tag = "...")] cannot be used with tuple variants
+  --> tests/ui/enum-representation/internal-tuple-variant.rs:44:5
+   |
+44 | /     /// Error should be reported, equivalent to Tuple2 representation
+45 | |     Tuple2as1S(#[serde(skip_serializing)] u8, u8),
+   | |_________________________________________________^
+
+error: #[serde(tag = "...")] cannot be used with tuple variants
+  --> tests/ui/enum-representation/internal-tuple-variant.rs:49:5
+   |
+49 | /     /// Error should be reported, equivalent to Tuple3 representation
+50 | |     Tuple3as2S(#[serde(skip_serializing)] u8, u8, u8),
+   | |_____________________________________________________^
+
+error: #[serde(tag = "...")] cannot be used with tuple variants
+  --> tests/ui/enum-representation/internal-tuple-variant.rs:51:5
+   |
+51 | /     /// Error should be reported, equivalent to Tuple2 representation
+52 | |     Tuple3as2D(#[serde(skip_deserializing)] u8, u8, u8),
+   | |_______________________________________________________^
+
+error: #[serde(tag = "...")] cannot be used with tuple variants
+  --> tests/ui/enum-representation/internal-tuple-variant.rs:62:5
+   |
+62 | /     /// Error should be reported
+63 | |     Tuple2(u8, u8),
+   | |__________________^
+
+error: #[serde(tag = "...")] cannot be used with tuple variants
+  --> tests/ui/enum-representation/internal-tuple-variant.rs:75:5
+   |
+75 | /     /// Serialize: Error should be reported, equivalent to Tuple2 representation
+76 | |     /// Deserialize: No errors should be reported, equivalent to Tuple1 representation
+77 | |     Tuple2as1D(#[serde(skip_deserializing)] u8, u8),
+   | |___________________________________________________^
+
+error: #[serde(tag = "...")] cannot be used with tuple variants
+  --> tests/ui/enum-representation/internal-tuple-variant.rs:79:5
+   |
+79 | /     /// Serialize: Error should be reported, equivalent to Tuple2
+80 | |     /// Deserialize: Error should be reported, equivalent to Tuple3
+81 | |     Tuple3as2S(#[serde(skip_serializing)] u8, u8, u8),
+   | |_____________________________________________________^
+
+error: #[serde(tag = "...")] cannot be used with tuple variants
+  --> tests/ui/enum-representation/internal-tuple-variant.rs:82:5
+   |
+82 | /     /// Serialize: Error should be reported, equivalent to Tuple3
+83 | |     /// Deserialize: Error should be reported, equivalent to Tuple2
+84 | |     Tuple3as2D(#[serde(skip_deserializing)] u8, u8, u8),
+   | |_______________________________________________________^
+
+error: #[serde(tag = "...")] cannot be used with tuple variants
+  --> tests/ui/enum-representation/internal-tuple-variant.rs:72:5
+   |
+72 | /     /// Serialize: No errors should be reported, equivalent to Tuple1 representation
+73 | |     /// Deserialize: Error should be reported, equivalent to Tuple2 representation
+74 | |     Tuple2as1S(#[serde(skip_serializing)] u8, u8),
+   | |_________________________________________________^

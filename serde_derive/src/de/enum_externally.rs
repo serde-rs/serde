@@ -15,7 +15,6 @@ use crate::fragment::{Expr, Fragment, Match};
 use crate::internals::ast::{Field, Style, Variant};
 use crate::internals::attr;
 use crate::private;
-use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 
@@ -120,8 +119,19 @@ fn deserialize_externally_tagged_variant(
     variant: &Variant,
     cattrs: &attr::Container,
 ) -> Fragment {
+    // Feature https://github.com/serde-rs/serde/issues/1013
     if let Some(path) = variant.attrs.deserialize_with() {
-        let (wrapper, wrapper_ty, unwrap_fn) = wrap_deserialize_variant_with(params, variant, path);
+        let field_tys = variant.fields.iter().filter_map(|field| {
+            if field.attrs.skip_deserializing() {
+                None
+            } else {
+                Some(field.ty)
+            }
+        });
+        let (wrapper, wrapper_ty) = wrap_deserialize_with(params, &quote!((#(#field_tys),*)), path);
+
+        let unwrap_fn = unwrap_to_variant_closure(params, variant, cattrs, true);
+
         return quote_block! {
             #wrapper
             _serde::#private::Result::map(
@@ -158,20 +168,6 @@ fn deserialize_externally_tagged_variant(
             StructForm::ExternallyTagged(variant_ident),
         ),
     }
-}
-
-fn wrap_deserialize_variant_with(
-    params: &Parameters,
-    variant: &Variant,
-    deserialize_with: &syn::ExprPath,
-) -> (TokenStream, TokenStream, TokenStream) {
-    let field_tys = variant.fields.iter().map(|field| field.ty);
-    let (wrapper, wrapper_ty) =
-        wrap_deserialize_with(params, &quote!((#(#field_tys),*)), deserialize_with);
-
-    let unwrap_fn = unwrap_to_variant_closure(params, variant, true);
-
-    (wrapper, wrapper_ty, unwrap_fn)
 }
 
 fn deserialize_externally_tagged_newtype_variant(

@@ -3,9 +3,9 @@ use crate::de::enum_externally;
 use crate::de::enum_internally;
 use crate::de::enum_untagged;
 use crate::de::identifier;
-use crate::de::{field_i, FieldWithAliases, Parameters};
+use crate::de::{expr_is_missing, field_i, FieldWithAliases, Parameters};
 use crate::fragment::{Expr, Fragment, Stmts};
-use crate::internals::ast::Variant;
+use crate::internals::ast::{Style, Variant};
 use crate::internals::attr;
 use crate::private;
 use proc_macro2::TokenStream;
@@ -93,4 +93,25 @@ pub fn prepare_enum_variant_enum(variants: &[Variant]) -> (TokenStream, Stmts) {
     ));
 
     (variants_stmt, variant_visitor)
+}
+
+/// Constructs a tuple variant with default values of all fields
+pub fn construct_default_tuple(variant: &Variant, cattrs: &attr::Container) -> Option<TokenStream> {
+    // Tuple variant with some fields, including newtype variant
+    if variant.fields.len() > 0 {
+        // If we have some fields, them all of them are skipped, because this
+        // function is called only when serialized form is Unit
+        let default = variant
+            .fields
+            .iter()
+            .map(|field| Expr(expr_is_missing(field, cattrs)));
+        Some(quote! { (#(#default,)*) })
+    } else
+    // Tuple variant with zero fields
+    if variant.style == Style::Tuple {
+        Some(quote! { () })
+    } else {
+        // Unit variant
+        None
+    }
 }
