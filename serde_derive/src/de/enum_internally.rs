@@ -27,24 +27,33 @@ pub(super) fn deserialize(
     let (variants_stmt, variant_visitor) = enum_::prepare_enum_variant_enum(variants);
 
     // Match arms to extract a variant from a string
-    let variant_arms = variants
+    let mut variants = variants
         .iter()
         .enumerate()
-        .filter(|&(_, variant)| !variant.attrs.skip_deserializing())
-        .map(|(i, variant)| {
-            let variant_name = field_i(i);
+        .filter(|&(_, variant)| !variant.attrs.skip_deserializing());
+    let variant_arms = variants.clone().map(|(i, variant)| {
+        let variant_name = field_i(i);
 
-            let block = Match(deserialize_internally_tagged_variant(
-                params, variant, cattrs,
-            ));
+        let block = Match(deserialize_internally_tagged_variant(
+            params, variant, cattrs,
+        ));
 
-            quote! {
-                __Field::#variant_name => #block
-            }
-        });
+        quote! {
+            __Field::#variant_name => #block
+        }
+    });
 
     let expecting = format!("internally tagged enum {}", params.type_name());
     let expecting = cattrs.expecting().unwrap_or(&expecting);
+
+    // We checked that only one variant is marked with #[serde(default)]
+    let default = match variants.find(|(_, variant)| variant.attrs.default()) {
+        Some((i, _)) => {
+            let default = field_i(i);
+            quote! { _serde::#private::Some(__Field::#default) }
+        }
+        None => quote! { _serde::#private::None },
+    };
 
     quote_block! {
         #variant_visitor
@@ -53,7 +62,7 @@ pub(super) fn deserialize(
 
         let (__tag, __content) = _serde::Deserializer::deserialize_any(
             __deserializer,
-            _serde::#private::de::TaggedContentVisitor::<__Field>::new(#tag, #expecting))?;
+            _serde::#private::de::TaggedContentVisitor::<__Field>::new(#tag, #expecting, #default))?;
         let __deserializer = _serde::#private::de::ContentDeserializer::<__D::Error>::new(__content);
 
         match __tag {
