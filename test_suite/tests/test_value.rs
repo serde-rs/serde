@@ -1,6 +1,6 @@
 #![allow(clippy::derive_partial_eq_without_eq, clippy::similar_names)]
 
-use serde::de::value::{self, MapAccessDeserializer};
+use serde::de::value::{self, Error, MapAccessDeserializer, MapDeserializer};
 use serde::de::{Deserialize, Deserializer, IntoDeserializer, MapAccess, Visitor};
 use serde_derive::Deserialize;
 use serde_test::{assert_de_tokens, Token};
@@ -92,4 +92,59 @@ fn test_map_access_to_enum() {
             Token::MapEnd,
         ],
     );
+}
+
+#[test]
+fn test_map_deserializer_optional_string_field() {
+    #[derive(Debug, Deserialize, PartialEq)]
+    struct Map {
+        optional: Option<String>,
+    }
+
+    let deserializer = MapDeserializer::<_, Error>::new([("optional", "value")].into_iter());
+    let got = Map::deserialize(deserializer).unwrap();
+    assert_eq!(
+        got,
+        Map {
+            optional: Some("value".to_owned()),
+        }
+    );
+}
+
+#[test]
+fn test_map_deserializer_missing_optional_field() {
+    #[derive(Debug, Deserialize, PartialEq)]
+    struct Map {
+        optional: Option<String>,
+    }
+
+    let deserializer = MapDeserializer::<_, Error>::new(std::iter::empty::<(&str, &str)>());
+    let got = Map::deserialize(deserializer).unwrap();
+    assert_eq!(got, Map { optional: None });
+}
+
+#[test]
+fn test_map_deserializer_optional_integer_field() {
+    #[derive(Debug, Deserialize, PartialEq)]
+    struct Map {
+        optional: Option<i32>,
+    }
+
+    let deserializer = MapDeserializer::<_, Error>::new([("optional", 7i32)].into_iter());
+    let got = Map::deserialize(deserializer).unwrap();
+    assert_eq!(got, Map { optional: Some(7) });
+}
+
+#[test]
+fn test_str_into_deserializer_option() {
+    let deserializer = IntoDeserializer::<Error>::into_deserializer("value");
+    let got = Option::<String>::deserialize(deserializer).unwrap();
+    assert_eq!(got, Some("value".to_owned()));
+}
+
+#[test]
+fn test_unit_into_deserializer_option() {
+    let deserializer = IntoDeserializer::<Error>::into_deserializer(());
+    let got = Option::<String>::deserialize(deserializer).unwrap();
+    assert_eq!(got, None);
 }
