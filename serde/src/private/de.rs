@@ -3211,6 +3211,11 @@ macro_rules! forward_to_deserialize_other {
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
+mod flat_map;
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub use self::flat_map::{FlatMapAccessAdapter, FlatMapAccessDeserializer};
+
+#[cfg(any(feature = "std", feature = "alloc"))]
 #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
 impl<'a, 'de, E> Deserializer<'de> for FlatMapDeserializer<'a, 'de, E>
 where
