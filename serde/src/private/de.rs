@@ -26,38 +26,56 @@ where
     V: Deserialize<'de>,
     E: Error,
 {
-    struct MissingFieldDeserializer<E>(&'static str, PhantomData<E>);
+    Deserialize::deserialize(MissingFieldDeserializer::new(field))
+}
 
-    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
-    impl<'de, E> Deserializer<'de> for MissingFieldDeserializer<E>
-    where
-        E: Error,
-    {
-        type Error = E;
+/// A deserializer that represents a field that was absent from the input.
+///
+/// Deserializing an `Option<T>` from it yields `None`; deserializing any
+/// other type fails with a `missing_field` error. The derive generated for
+/// a field with `#[serde(deserialize_with = "...")]` passes this to the
+/// custom function when the field is missing, so `Option` fields behave
+/// the same with or without `deserialize_with`.
+pub struct MissingFieldDeserializer<E> {
+    field: &'static str,
+    phantom: PhantomData<E>,
+}
 
-        fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value, E>
-        where
-            V: Visitor<'de>,
-        {
-            Err(Error::missing_field(self.0))
-        }
-
-        fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, E>
-        where
-            V: Visitor<'de>,
-        {
-            visitor.visit_none()
-        }
-
-        serde_core::forward_to_deserialize_any! {
-            bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-            bytes byte_buf unit unit_struct newtype_struct seq tuple
-            tuple_struct map struct enum identifier ignored_any
+impl<E> MissingFieldDeserializer<E> {
+    pub fn new(field: &'static str) -> Self {
+        MissingFieldDeserializer {
+            field,
+            phantom: PhantomData,
         }
     }
+}
 
-    let deserializer = MissingFieldDeserializer(field, PhantomData);
-    Deserialize::deserialize(deserializer)
+#[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
+impl<'de, E> Deserializer<'de> for MissingFieldDeserializer<E>
+where
+    E: Error,
+{
+    type Error = E;
+
+    fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value, E>
+    where
+        V: Visitor<'de>,
+    {
+        Err(Error::missing_field(self.field))
+    }
+
+    fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, E>
+    where
+        V: Visitor<'de>,
+    {
+        visitor.visit_none()
+    }
+
+    serde_core::forward_to_deserialize_any! {
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
+        tuple_struct map struct enum identifier ignored_any
+    }
 }
 
 #[cfg(any(feature = "std", feature = "alloc"))]
