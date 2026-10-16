@@ -2420,7 +2420,7 @@ impl<'de> Deserialize<'de> for SystemTime {
 //         start: Idx,
 //         end: Idx,
 //     }
-impl<'de, Idx> Deserialize<'de> for Range<Idx>
+impl<'de, Idx> Deserialize<'de> for ops::Range<Idx>
 where
     Idx: Deserialize<'de>,
 {
@@ -2430,8 +2430,8 @@ where
     {
         let (start, end) = tri!(deserializer.deserialize_struct(
             "Range",
-            range::FIELDS,
-            range::RangeVisitor {
+            ops_range::FIELDS,
+            ops_range::RangeVisitor {
                 expecting: "struct Range",
                 phantom: PhantomData,
             },
@@ -2440,7 +2440,7 @@ where
     }
 }
 
-impl<'de, Idx> Deserialize<'de> for RangeInclusive<Idx>
+impl<'de, Idx> Deserialize<'de> for ops::RangeInclusive<Idx>
 where
     Idx: Deserialize<'de>,
 {
@@ -2450,17 +2450,17 @@ where
     {
         let (start, end) = tri!(deserializer.deserialize_struct(
             "RangeInclusive",
-            range::FIELDS,
-            range::RangeVisitor {
+            ops_range::FIELDS,
+            ops_range::RangeVisitor {
                 expecting: "struct RangeInclusive",
                 phantom: PhantomData,
             },
         ));
-        Ok(RangeInclusive::new(start, end))
+        Ok(ops::RangeInclusive::new(start, end))
     }
 }
 
-mod range {
+mod ops_range {
     use crate::lib::*;
 
     use crate::de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
@@ -2599,7 +2599,7 @@ mod range {
 //     struct RangeFrom<Idx> {
 //         start: Idx,
 //     }
-impl<'de, Idx> Deserialize<'de> for RangeFrom<Idx>
+impl<'de, Idx> Deserialize<'de> for ops::RangeFrom<Idx>
 where
     Idx: Deserialize<'de>,
 {
@@ -2609,8 +2609,8 @@ where
     {
         let start = tri!(deserializer.deserialize_struct(
             "RangeFrom",
-            range_from::FIELDS,
-            range_from::RangeFromVisitor {
+            ops_range_from::FIELDS,
+            ops_range_from::RangeFromVisitor {
                 expecting: "struct RangeFrom",
                 phantom: PhantomData,
             },
@@ -2619,7 +2619,7 @@ where
     }
 }
 
-mod range_from {
+mod ops_range_from {
     use crate::lib::*;
 
     use crate::de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
@@ -2738,7 +2738,7 @@ mod range_from {
 //     struct RangeTo<Idx> {
 //         end: Idx,
 //     }
-impl<'de, Idx> Deserialize<'de> for RangeTo<Idx>
+impl<'de, Idx> Deserialize<'de> for ops::RangeTo<Idx>
 where
     Idx: Deserialize<'de>,
 {
@@ -2748,8 +2748,8 @@ where
     {
         let end = tri!(deserializer.deserialize_struct(
             "RangeTo",
-            range_to::FIELDS,
-            range_to::RangeToVisitor {
+            ops_range_to::FIELDS,
+            ops_range_to::RangeToVisitor {
                 expecting: "struct RangeTo",
                 phantom: PhantomData,
             },
@@ -2758,7 +2758,7 @@ where
     }
 }
 
-mod range_to {
+mod ops_range_to {
     use crate::lib::*;
 
     use crate::de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
@@ -2864,6 +2864,370 @@ mod range_to {
                 None => return Err(<A::Error as Error>::missing_field("end")),
             };
             Ok(end)
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+// Similar to:
+//
+//     #[derive(Deserialize)]
+//     #[serde(deny_unknown_fields)]
+//     struct Range<Idx> {
+//         start: Idx,
+//         end: Idx,
+//     }
+#[cfg(not(no_core_range))]
+impl<'de, Idx> Deserialize<'de> for range::Range<Idx>
+where
+    Idx: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let (start, end) = tri!(deserializer.deserialize_struct(
+            "Range",
+            ops_range::FIELDS,
+            ops_range::RangeVisitor {
+                expecting: "struct Range",
+                phantom: PhantomData,
+            },
+        ));
+        Ok(range::Range { start, end })
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+// Similar to:
+//
+//     #[derive(Deserialize)]
+//     #[serde(deny_unknown_fields)]
+//     struct RangeFrom<Idx> {
+//         start: Idx,
+//     }
+#[cfg(not(no_core_range))]
+impl<'de, Idx> Deserialize<'de> for range::RangeFrom<Idx>
+where
+    Idx: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let start = tri!(deserializer.deserialize_struct(
+            "RangeFrom",
+            ops_range_from::FIELDS,
+            ops_range_from::RangeFromVisitor {
+                expecting: "struct RangeFrom",
+                phantom: PhantomData,
+            },
+        ));
+        Ok(range::RangeFrom { start })
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+// Similar to:
+//
+//     #[derive(Deserialize)]
+//     #[serde(deny_unknown_fields)]
+//     struct RangeInclusive<Idx> {
+//         start: Idx,
+//         last: Idx,
+//     }
+#[cfg(not(no_core_range))]
+impl<'de, Idx> Deserialize<'de> for range::RangeInclusive<Idx>
+where
+    Idx: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let (start, last) = tri!(deserializer.deserialize_struct(
+            "RangeInclusive",
+            range_inclusive::FIELDS,
+            range_inclusive::RangeInclusiveVisitor {
+                expecting: "struct RangeInclusive",
+                phantom: PhantomData,
+            },
+        ));
+        Ok(range::RangeInclusive { start, last })
+    }
+}
+
+#[cfg(not(no_core_range))]
+mod range_inclusive {
+    use crate::lib::*;
+
+    use crate::de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
+    use crate::private;
+
+    pub const FIELDS: &[&str] = &["start", "last"];
+
+    // If this were outside of the serde crate, it would just use:
+    //
+    //    #[derive(Deserialize)]
+    //    #[serde(field_identifier, rename_all = "lowercase")]
+    enum Field {
+        Start,
+        Last,
+    }
+
+    impl<'de> Deserialize<'de> for Field {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            struct FieldVisitor;
+
+            impl<'de> Visitor<'de> for FieldVisitor {
+                type Value = Field;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                    formatter.write_str("`start` or `last`")
+                }
+
+                fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+                where
+                    E: Error,
+                {
+                    match value {
+                        "start" => Ok(Field::Start),
+                        "last" => Ok(Field::Last),
+                        _ => Err(Error::unknown_field(value, FIELDS)),
+                    }
+                }
+
+                fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
+                where
+                    E: Error,
+                {
+                    match value {
+                        b"start" => Ok(Field::Start),
+                        b"last" => Ok(Field::Last),
+                        _ => {
+                            let value = private::string::from_utf8_lossy(value);
+                            Err(Error::unknown_field(&*value, FIELDS))
+                        }
+                    }
+                }
+            }
+
+            deserializer.deserialize_identifier(FieldVisitor)
+        }
+    }
+
+    pub struct RangeInclusiveVisitor<Idx> {
+        pub expecting: &'static str,
+        pub phantom: PhantomData<Idx>,
+    }
+
+    impl<'de, Idx> Visitor<'de> for RangeInclusiveVisitor<Idx>
+    where
+        Idx: Deserialize<'de>,
+    {
+        type Value = (Idx, Idx);
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str(self.expecting)
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let start: Idx = match tri!(seq.next_element()) {
+                Some(value) => value,
+                None => {
+                    return Err(Error::invalid_length(0, &self));
+                }
+            };
+            let last: Idx = match tri!(seq.next_element()) {
+                Some(value) => value,
+                None => {
+                    return Err(Error::invalid_length(1, &self));
+                }
+            };
+            Ok((start, last))
+        }
+
+        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+        where
+            A: MapAccess<'de>,
+        {
+            let mut start: Option<Idx> = None;
+            let mut last: Option<Idx> = None;
+            while let Some(key) = tri!(map.next_key()) {
+                match key {
+                    Field::Start => {
+                        if start.is_some() {
+                            return Err(<A::Error as Error>::duplicate_field("start"));
+                        }
+                        start = Some(tri!(map.next_value()));
+                    }
+                    Field::Last => {
+                        if last.is_some() {
+                            return Err(<A::Error as Error>::duplicate_field("last"));
+                        }
+                        last = Some(tri!(map.next_value()));
+                    }
+                }
+            }
+            let start = match start {
+                Some(start) => start,
+                None => return Err(<A::Error as Error>::missing_field("start")),
+            };
+            let last = match last {
+                Some(last) => last,
+                None => return Err(<A::Error as Error>::missing_field("last")),
+            };
+            Ok((start, last))
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+// Similar to:
+//
+//     #[derive(Deserialize)]
+//     #[serde(deny_unknown_fields)]
+//     struct RangeToInclusive<Idx> {
+//         last: Idx,
+//     }
+#[cfg(not(no_core_range))]
+impl<'de, Idx> Deserialize<'de> for range::RangeToInclusive<Idx>
+where
+    Idx: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let last = tri!(deserializer.deserialize_struct(
+            "RangeToInclusive",
+            range_to_inclusive::FIELDS,
+            range_to_inclusive::RangeToInclusiveVisitor {
+                expecting: "struct RangeToInclusive",
+                phantom: PhantomData,
+            },
+        ));
+        Ok(range::RangeToInclusive { last })
+    }
+}
+
+#[cfg(not(no_core_range))]
+mod range_to_inclusive {
+    use crate::lib::*;
+
+    use crate::de::{Deserialize, Deserializer, Error, MapAccess, SeqAccess, Visitor};
+    use crate::private;
+
+    pub const FIELDS: &[&str] = &["last"];
+
+    // If this were outside of the serde crate, it would just use:
+    //
+    //    #[derive(Deserialize)]
+    //    #[serde(field_identifier, rename_all = "lowercase")]
+    enum Field {
+        Last,
+    }
+
+    impl<'de> Deserialize<'de> for Field {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            struct FieldVisitor;
+
+            impl<'de> Visitor<'de> for FieldVisitor {
+                type Value = Field;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                    formatter.write_str("`last`")
+                }
+
+                fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+                where
+                    E: Error,
+                {
+                    match value {
+                        "last" => Ok(Field::Last),
+                        _ => Err(Error::unknown_field(value, FIELDS)),
+                    }
+                }
+
+                fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
+                where
+                    E: Error,
+                {
+                    match value {
+                        b"last" => Ok(Field::Last),
+                        _ => {
+                            let value = private::string::from_utf8_lossy(value);
+                            Err(Error::unknown_field(&*value, FIELDS))
+                        }
+                    }
+                }
+            }
+
+            deserializer.deserialize_identifier(FieldVisitor)
+        }
+    }
+
+    pub struct RangeToInclusiveVisitor<Idx> {
+        pub expecting: &'static str,
+        pub phantom: PhantomData<Idx>,
+    }
+
+    impl<'de, Idx> Visitor<'de> for RangeToInclusiveVisitor<Idx>
+    where
+        Idx: Deserialize<'de>,
+    {
+        type Value = Idx;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str(self.expecting)
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let last: Idx = match tri!(seq.next_element()) {
+                Some(value) => value,
+                None => {
+                    return Err(Error::invalid_length(0, &self));
+                }
+            };
+            Ok(last)
+        }
+
+        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+        where
+            A: MapAccess<'de>,
+        {
+            let mut last: Option<Idx> = None;
+            while let Some(key) = tri!(map.next_key()) {
+                match key {
+                    Field::Last => {
+                        if last.is_some() {
+                            return Err(<A::Error as Error>::duplicate_field("last"));
+                        }
+                        last = Some(tri!(map.next_value()));
+                    }
+                }
+            }
+            let last = match last {
+                Some(last) => last,
+                None => return Err(<A::Error as Error>::missing_field("last")),
+            };
+            Ok(last)
         }
     }
 }
