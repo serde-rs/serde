@@ -1192,8 +1192,10 @@ pub trait Serializer: Sized {
     /// then a call to `end`.
     ///
     /// The `name` is the name of the struct and the `len` is the number of
-    /// data fields that will be serialized. `len` does not include fields
-    /// which are skipped with [`SerializeStruct::skip_field`].
+    /// data fields that will be serialized. `len` must be exact (not a hint);
+    /// it must match the number of [`SerializeStruct::serialize_field`] calls
+    /// that follow. `len` does not include fields which are skipped with
+    /// [`SerializeStruct::skip_field`].
     ///
     /// ```edition2021
     /// use serde::ser::{Serialize, SerializeStruct, Serializer};
@@ -1230,7 +1232,9 @@ pub trait Serializer: Sized {
     /// The `name` is the name of the enum, the `variant_index` is the index of
     /// this variant within the enum, the `variant` is the name of the variant,
     /// and the `len` is the number of data fields that will be serialized.
-    /// `len` does not include fields which are skipped with
+    /// `len` must be exact (not a hint); it must match the number of
+    /// [`SerializeStructVariant::serialize_field`] calls that follow. `len`
+    /// does not include fields which are skipped with
     /// [`SerializeStructVariant::skip_field`].
     ///
     /// ```edition2021
