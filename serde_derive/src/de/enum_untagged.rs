@@ -9,6 +9,7 @@ use crate::de::struct_;
 use crate::de::tuple;
 use crate::de::{
     effective_style, expr_is_missing, unwrap_to_variant_closure, Parameters, StructForm, TupleForm,
+    VariantForm,
 };
 use crate::fragment::{Expr, Fragment};
 use crate::internals::ast::{Field, Style, Variant};
@@ -28,7 +29,14 @@ pub(super) fn deserialize(
     let attempts = variants
         .iter()
         .filter(|variant| !variant.attrs.skip_deserializing())
-        .map(|variant| Expr(deserialize_variant(params, variant, cattrs)));
+        .map(|variant| {
+            Expr(deserialize_variant(
+                params,
+                variant,
+                cattrs,
+                VariantForm::Untagged,
+            ))
+        });
     // TODO this message could be better by saving the errors from the failed
     // attempts. The heuristic used by TOML was to count the number of fields
     // processed before an error, and use the error that happened after the
@@ -63,6 +71,7 @@ pub(super) fn deserialize_variant(
     params: &Parameters,
     variant: &Variant,
     cattrs: &attr::Container,
+    form: VariantForm,
 ) -> Fragment {
     if let Some(path) = variant.attrs.deserialize_with() {
         let unwrap_fn = unwrap_to_variant_closure(params, variant, false);
@@ -82,10 +91,21 @@ pub(super) fn deserialize_variant(
                 let default = Expr(expr_is_missing(field, cattrs));
                 quote!((#default))
             });
+            let unit_visitor = match form {
+                VariantForm::Untagged => quote! {
+                    _serde::#private::de::UntaggedUnitVisitor::new(#type_name, #variant_name)
+                },
+                VariantForm::AdjacentlyTagged => quote! {
+                    _serde::#private::de::AdjacentlyTaggedUnitVisitor::new(
+                        #type_name,
+                        #variant_name,
+                    )
+                },
+            };
             quote_expr! {
                 match _serde::Deserializer::deserialize_any(
                     __deserializer,
-                    _serde::#private::de::UntaggedUnitVisitor::new(#type_name, #variant_name)
+                    #unit_visitor
                 ) {
                     _serde::#private::Ok(()) => _serde::#private::Ok(#this_value::#variant_ident #default),
                     _serde::#private::Err(__err) => _serde::#private::Err(__err),
