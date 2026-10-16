@@ -111,6 +111,96 @@ fn unit() {
 }
 
 #[test]
+fn unit_deny_unknown_fields() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    #[serde(tag = "tag", deny_unknown_fields)]
+    enum Strict {
+        Unit,
+        Skipped(#[serde(skip)] u8),
+        #[serde(other)]
+        Other,
+    }
+
+    for (name, value) in [
+        ("Unit", Strict::Unit),
+        ("Skipped", Strict::Skipped(0)),
+        ("Other", Strict::Other),
+    ] {
+        assert_de_tokens(
+            &value,
+            &[
+                Token::Map { len: Some(1) },
+                Token::Str("tag"),
+                Token::Str(name),
+                Token::MapEnd,
+            ],
+        );
+        assert_de_tokens(
+            &value,
+            &[Token::Seq { len: Some(1) }, Token::Str(name), Token::SeqEnd],
+        );
+        for fields in [
+            [
+                Token::Str("tag"),
+                Token::Str(name),
+                Token::Str("extra"),
+                Token::U8(1),
+            ],
+            [
+                Token::Str("extra"),
+                Token::U8(1),
+                Token::Str("tag"),
+                Token::Str(name),
+            ],
+        ] {
+            assert_de_tokens_error::<Strict>(
+                &[
+                    Token::Map { len: Some(2) },
+                    fields[0],
+                    fields[1],
+                    fields[2],
+                    fields[3],
+                    Token::MapEnd,
+                ],
+                "unknown field `extra`, there are no fields",
+            );
+        }
+    }
+    assert_de_tokens(
+        &Strict::Other,
+        &[
+            Token::Map { len: Some(1) },
+            Token::Str("tag"),
+            Token::Str("Unknown"),
+            Token::MapEnd,
+        ],
+    );
+    assert_de_tokens_error::<Strict>(
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("tag"),
+            Token::Str("Unknown"),
+            Token::Str("extra"),
+            Token::U8(1),
+            Token::MapEnd,
+        ],
+        "unknown field `extra`, there are no fields",
+    );
+    // Without deny_unknown_fields, the original permissive behavior remains.
+    assert_de_tokens(
+        &InternallyTagged::Unit,
+        &[
+            Token::Map { len: Some(2) },
+            Token::Str("tag"),
+            Token::Str("Unit"),
+            Token::Str("extra"),
+            Token::U8(1),
+            Token::MapEnd,
+        ],
+    );
+}
+
+#[test]
 fn newtype_unit() {
     let value = InternallyTagged::NewtypeUnit(());
 
