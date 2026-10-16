@@ -1,0 +1,9 @@
+error: field name `conflict` conflicts with internal tag
+ --> tests/ui/conflict/internal-tag-struct-alias.rs:4:1
+  |
+4 | / #[serde(tag = "conflict")]
+5 | | struct S {
+6 | |     #[serde(alias = "conflict")]
+7 | |     x: (),
+8 | | }
+  | |_^
