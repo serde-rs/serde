@@ -797,9 +797,13 @@ fn expr_is_missing(field: &Field, cattrs: &attr::Container) -> Fragment {
                 #func(#name)?
             }
         }
-        Some(_) => {
+        Some(path) => {
+            // Pass a deserializer representing the absent field to the custom
+            // function, so that `Option` fields deserialize to `None` instead
+            // of erroring, exactly as they do without `deserialize_with`.
+            // Any other type fails with a `missing_field` error, as before.
             quote_expr! {
-                return _serde::#private::Err(<__A::Error as _serde::de::Error>::missing_field(#name))
+                #path(_serde::#private::de::MissingFieldDeserializer::new(#name))?
             }
         }
     }
