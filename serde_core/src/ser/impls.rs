@@ -499,7 +499,14 @@ deref_impl! {
     ///
     /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
     #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "rc",
+            any(feature = "std", feature = "alloc"),
+            target_has_atomic = "ptr"
+        )))
+    )]
     <T> Serialize for Rc<T> where T: ?Sized + Serialize
 }
 
@@ -512,7 +519,11 @@ deref_impl! {
     /// repeated data.
     ///
     /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
-    #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
+    #[cfg(all(
+        feature = "rc",
+        any(feature = "std", feature = "alloc"),
+        any(no_target_has_atomic, target_has_atomic = "ptr")
+    ))]
     #[cfg_attr(docsrs, doc(cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))))]
     <T> Serialize for Arc<T> where T: ?Sized + Serialize
 }
@@ -531,7 +542,11 @@ deref_impl! {
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
 #[cfg_attr(
     docsrs,
-    doc(cfg(all(feature = "rc", any(feature = "std", feature = "alloc"))))
+    doc(cfg(all(
+        feature = "rc",
+        any(feature = "std", feature = "alloc"),
+        target_has_atomic = "ptr"
+    )))
 )]
 impl<T> Serialize for RcWeak<T>
 where
@@ -548,7 +563,11 @@ where
 /// This impl requires the [`"rc"`] Cargo feature of Serde.
 ///
 /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
-#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
+#[cfg(all(
+    feature = "rc",
+    any(feature = "std", feature = "alloc"),
+    any(no_target_has_atomic, target_has_atomic = "ptr")
+))]
 #[cfg_attr(
     docsrs,
     doc(cfg(all(feature = "rc", any(feature = "std", feature = "alloc"))))
