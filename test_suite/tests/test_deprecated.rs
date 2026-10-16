@@ -1,5 +1,6 @@
 #![deny(deprecated)]
 #![allow(dead_code)]
+#![allow(clippy::deprecated_attributes_without_since)]
 
 use serde_derive::{Deserialize, Serialize};
 
