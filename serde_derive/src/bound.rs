@@ -1,5 +1,5 @@
 use crate::internals::ast::{Container, Data};
-use crate::internals::{attr, ungroup};
+use crate::internals::attr;
 use proc_macro2::Span;
 use std::collections::HashSet;
 use syn::punctuated::{Pair, Punctuated};
@@ -117,13 +117,6 @@ pub fn with_bound(
 
     impl<'ast> FindTyParams<'ast> {
         fn visit_field(&mut self, field: &'ast syn::Field) {
-            if let syn::Type::Path(ty) = ungroup(&field.ty) {
-                if let Some(Pair::Punctuated(t, _)) = ty.path.segments.pairs().next() {
-                    if self.all_type_params.contains(&t.ident) {
-                        self.associated_type_usage.push(ty);
-                    }
-                }
-            }
             self.visit_type(&field.ty);
         }
 
@@ -167,6 +160,17 @@ pub fn with_bound(
                 syn::Type::Macro(ty) => self.visit_macro(&ty.mac),
                 syn::Type::Paren(ty) => self.visit_type(&ty.elem),
                 syn::Type::Path(ty) => {
+                    // A path whose first segment is one of this container's type
+                    // parameters is a projection like `T::Assoc`, which needs a
+                    // where-predicate of its own. This has to be detected here
+                    // rather than in `visit_field` so that projections nested
+                    // inside other types, such as `Option<T::Assoc>`, are found
+                    // too.
+                    if let Some(Pair::Punctuated(t, _)) = ty.path.segments.pairs().next() {
+                        if self.all_type_params.contains(&t.ident) {
+                            self.associated_type_usage.push(ty);
+                        }
+                    }
                     if let Some(qself) = &ty.qself {
                         self.visit_type(&qself.ty);
                     }
