@@ -44,6 +44,20 @@ macro_rules! impl_copy_clone {
     };
 }
 
+// Present values deserialize as `Some(value)` so that `Option<T>` fields work
+// with `MapDeserializer` and other `IntoDeserializer` impls. Absent / null is
+// handled separately by `UnitDeserializer` (`visit_none`).
+macro_rules! deserialize_present_option {
+    () => {
+        fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+        where
+            V: de::Visitor<'de>,
+        {
+            visitor.visit_some(self)
+        }
+    };
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A minimal representation of all possible errors that can occur using the
@@ -289,9 +303,11 @@ macro_rules! primitive_deserializer {
         {
             type Error = E;
 
+            deserialize_present_option!();
+
             forward_to_deserialize_any! {
                 bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str
-                string bytes byte_buf option unit unit_struct newtype_struct seq
+                string bytes byte_buf unit unit_struct newtype_struct seq
                 tuple tuple_struct map struct enum identifier ignored_any
             }
 
@@ -376,9 +392,11 @@ where
 {
     type Error = E;
 
+    deserialize_present_option!();
+
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct identifier ignored_any
     }
 
@@ -483,6 +501,8 @@ where
         visitor.visit_str(self.value)
     }
 
+    deserialize_present_option!();
+
     fn deserialize_enum<V>(
         self,
         name: &str,
@@ -499,7 +519,7 @@ where
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct identifier ignored_any
     }
 }
@@ -573,6 +593,8 @@ where
         visitor.visit_borrowed_str(self.value)
     }
 
+    deserialize_present_option!();
+
     fn deserialize_enum<V>(
         self,
         name: &str,
@@ -589,7 +611,7 @@ where
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct identifier ignored_any
     }
 }
@@ -687,6 +709,8 @@ where
         visitor.visit_string(self.value)
     }
 
+    deserialize_present_option!();
+
     fn deserialize_enum<V>(
         self,
         name: &str,
@@ -703,7 +727,7 @@ where
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct identifier ignored_any
     }
 }
@@ -807,6 +831,8 @@ where
         }
     }
 
+    deserialize_present_option!();
+
     fn deserialize_enum<V>(
         self,
         name: &str,
@@ -823,7 +849,7 @@ where
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct identifier ignored_any
     }
 }
@@ -910,9 +936,11 @@ where
         visitor.visit_bytes(self.value)
     }
 
+    deserialize_present_option!();
+
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any
     }
 }
@@ -969,9 +997,11 @@ where
         visitor.visit_borrowed_bytes(self.value)
     }
 
+    deserialize_present_option!();
+
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any
     }
 }
@@ -1059,9 +1089,11 @@ where
         Ok(v)
     }
 
+    deserialize_present_option!();
+
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any
     }
 }
@@ -1203,9 +1235,11 @@ where
         visitor.visit_seq(self.seq)
     }
 
+    deserialize_present_option!();
+
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any
     }
 }
@@ -1328,9 +1362,11 @@ where
         self.deserialize_seq(visitor)
     }
 
+    deserialize_present_option!();
+
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct tuple_struct map
+        bytes byte_buf unit unit_struct newtype_struct tuple_struct map
         struct enum identifier ignored_any
     }
 }
@@ -1482,9 +1518,11 @@ where
 {
     type Error = E;
 
+    deserialize_present_option!();
+
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct tuple_struct map
+        bytes byte_buf unit unit_struct newtype_struct tuple_struct map
         struct enum identifier ignored_any
     }
 
@@ -1632,6 +1670,8 @@ where
         visitor.visit_map(self.map)
     }
 
+    deserialize_present_option!();
+
     fn deserialize_enum<V>(
         self,
         _name: &str,
@@ -1646,7 +1686,7 @@ where
 
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct identifier ignored_any
     }
 }
@@ -1708,9 +1748,11 @@ where
         visitor.visit_enum(self.access)
     }
 
+    deserialize_present_option!();
+
     forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf unit unit_struct newtype_struct seq tuple
         tuple_struct map struct enum identifier ignored_any
     }
 }
