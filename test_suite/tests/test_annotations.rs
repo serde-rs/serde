@@ -106,6 +106,35 @@ struct DefaultTupleStruct<A, B, C>(
 where
     C: MyDefault;
 
+#[derive(Debug, PartialEq, Deserialize)]
+struct DefaultExprStruct {
+    #[serde(default_expr = 0)]
+    int: u32,
+    #[serde(default_expr = 0.1)]
+    rate: f32,
+    #[serde(default_expr = true)]
+    enabled: bool,
+    #[serde(default_expr = Some(5))]
+    limit: Option<u32>,
+    #[serde(default_expr = Vec::new())]
+    items: Vec<String>,
+    #[serde(default_expr = "localhost".to_string())]
+    host: String,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+struct DefaultExprTupleStruct(
+    #[serde(default_expr = 7)] u32,
+    #[serde(default_expr = String::new())] String,
+);
+
+#[derive(Debug, PartialEq, Deserialize)]
+struct SkipWithExpr {
+    present: u32,
+    #[serde(skip_deserializing, default_expr = 99u32)]
+    skipped: u32,
+}
+
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct CollectOther {
     a: u32,
@@ -188,6 +217,60 @@ fn test_default_tuple() {
             },
             Token::I32(1),
             Token::TupleStructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_default_expr_struct() {
+    assert_de_tokens(
+        &DefaultExprStruct {
+            int: 0,
+            rate: 0.1,
+            enabled: true,
+            limit: Some(5),
+            items: Vec::new(),
+            host: "localhost".to_string(),
+        },
+        &[
+            Token::Struct {
+                name: "DefaultExprStruct",
+                len: 6,
+            },
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_default_expr_tuple() {
+    assert_de_tokens(
+        &DefaultExprTupleStruct(7, String::new()),
+        &[
+            Token::TupleStruct {
+                name: "DefaultExprTupleStruct",
+                len: 2,
+            },
+            Token::TupleStructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_skip_with_expr() {
+    assert_de_tokens(
+        &SkipWithExpr {
+            present: 1,
+            skipped: 99,
+        },
+        &[
+            Token::Struct {
+                name: "SkipWithExpr",
+                len: 1,
+            },
+            Token::Str("present"),
+            Token::U32(1),
+            Token::StructEnd,
         ],
     );
 }

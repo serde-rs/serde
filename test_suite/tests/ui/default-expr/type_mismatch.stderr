@@ -1,0 +1,30 @@
+error[E0308]: `match` arms have incompatible types
+ --> tests/ui/default-expr/type_mismatch.rs:8:28
+  |
+6 | #[derive(Deserialize)]
+  |          -----------
+  |          |
+  |          this is found to be of type `String`
+  |          `match` arms have incompatible types
+7 | struct TypeMismatch {
+8 |     #[serde(default_expr = "abc")]
+  |                            ^^^^^ expected `String`, found `&str`
+  |
+help: try using a conversion method
+  |
+8 |     #[serde(default_expr = "abc".to_string())]
+  |                                 ++++++++++++
+
+error[E0308]: mismatched types
+ --> tests/ui/default-expr/type_mismatch.rs:8:28
+  |
+6 | #[derive(Deserialize)]
+  |          ----------- expected due to the type of this binding
+7 | struct TypeMismatch {
+8 |     #[serde(default_expr = "abc")]
+  |                            ^^^^^ expected `String`, found `&str`
+  |
+help: try using a conversion method
+  |
+8 |     #[serde(default_expr = "abc".to_string())]
+  |                                 ++++++++++++

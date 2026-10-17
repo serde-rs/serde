@@ -1,0 +1,11 @@
+error: a field may have only one of: #[serde(default)], #[serde(default = "...")], or #[serde(default_expr = ...)]
+ --> tests/ui/default-expr/conflict_path.rs:5:13
+  |
+5 |     #[serde(default = "u32::default", default_expr = 1)]
+  |             ^^^^^^^
+
+error: a field may have only one of: #[serde(default)], #[serde(default = "...")], or #[serde(default_expr = ...)]
+ --> tests/ui/default-expr/conflict_path.rs:5:39
+  |
+5 |     #[serde(default = "u32::default", default_expr = 1)]
+  |                                       ^^^^^^^^^^^^
