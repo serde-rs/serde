@@ -164,6 +164,40 @@ fn test_default_struct() {
 }
 
 #[test]
+fn test_container_default_not_built_if_all_fields_present() {
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(default)]
+    struct ContainerDefault {
+        a: i32,
+        b: String,
+    }
+
+    impl Default for ContainerDefault {
+        fn default() -> Self {
+            panic!("container default was built although no field is missing");
+        }
+    }
+
+    assert_de_tokens(
+        &ContainerDefault {
+            a: 1,
+            b: "b".to_owned(),
+        },
+        &[
+            Token::Struct {
+                name: "ContainerDefault",
+                len: 2,
+            },
+            Token::Str("a"),
+            Token::I32(1),
+            Token::Str("b"),
+            Token::Str("b"),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
 fn test_default_tuple() {
     assert_de_tokens(
         &DefaultTupleStruct(1, 2, 3),
