@@ -581,3 +581,35 @@ fn expecting_message() {
 
     assert_de_tokens_error::<Enum>(&[Token::Str("Untagged")], "something strange...");
 }
+
+#[test]
+fn failed_attempt_error_is_not_formatted() {
+    struct Unformattable;
+
+    impl std::fmt::Display for Unformattable {
+        fn fmt(&self, _: &mut std::fmt::Formatter) -> std::fmt::Result {
+            panic!("error of a failed untagged variant was formatted");
+        }
+    }
+
+    #[derive(Debug, PartialEq)]
+    struct AlwaysFails;
+
+    impl<'de> serde::Deserialize<'de> for AlwaysFails {
+        fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            Err(serde::de::Error::custom(Unformattable))
+        }
+    }
+
+    #[derive(Debug, PartialEq, Deserialize)]
+    #[serde(untagged)]
+    enum Untagged {
+        A(AlwaysFails),
+        B(u8),
+    }
+
+    assert_de_tokens(&Untagged::B(1), &[Token::U8(1)]);
+}

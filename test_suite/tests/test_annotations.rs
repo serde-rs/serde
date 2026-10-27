@@ -2399,6 +2399,40 @@ mod flatten {
     }
 
     #[test]
+    fn option_error_is_not_formatted() {
+        struct Unformattable;
+
+        impl std::fmt::Display for Unformattable {
+            fn fmt(&self, _: &mut std::fmt::Formatter) -> std::fmt::Result {
+                panic!("error of a flattened None was formatted");
+            }
+        }
+
+        #[derive(PartialEq, Debug)]
+        struct AlwaysFails;
+
+        impl<'de> Deserialize<'de> for AlwaysFails {
+            fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                Err(serde::de::Error::custom(Unformattable))
+            }
+        }
+
+        #[derive(Deserialize, PartialEq, Debug)]
+        struct Outer {
+            #[serde(flatten)]
+            inner: Option<AlwaysFails>,
+        }
+
+        assert_de_tokens(
+            &Outer { inner: None },
+            &[Token::Map { len: None }, Token::MapEnd],
+        );
+    }
+
+    #[test]
     fn ignored_any() {
         #[derive(Deserialize, PartialEq, Debug)]
         struct Outer {

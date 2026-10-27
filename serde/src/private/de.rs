@@ -14,7 +14,7 @@ pub use self::content::{
     content_as_str, Content, ContentDeserializer, ContentRefDeserializer, ContentVisitor,
     EnumDeserializer, InternallyTaggedUnitVisitor, TagContentOtherField,
     TagContentOtherFieldVisitor, TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor,
-    UntaggedUnitVisitor,
+    UntaggedAttemptError, UntaggedUnitVisitor,
 };
 
 pub use crate::serde_core_private::InPlaceSeed;
@@ -3040,6 +3040,31 @@ mod content {
             Ok(())
         }
     }
+
+    /// Error type used while trying the variants of an untagged enum. Errors
+    /// of failed attempts are thrown away, so building a message for each of
+    /// them in the caller's error type is wasted work.
+    ///
+    /// Not public API.
+    #[derive(Debug)]
+    pub struct UntaggedAttemptError;
+
+    impl Display for UntaggedAttemptError {
+        fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("data did not match untagged variant")
+        }
+    }
+
+    impl de::StdError for UntaggedAttemptError {}
+
+    impl de::Error for UntaggedAttemptError {
+        fn custom<T>(_msg: T) -> Self
+        where
+            T: Display,
+        {
+            UntaggedAttemptError
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3285,7 +3310,9 @@ where
     where
         V: Visitor<'de>,
     {
-        match visitor.__private_visit_untagged_option(self) {
+        // A failed attempt becomes `None`, so its error is never looked at.
+        let attempt = FlatMapDeserializer::<UntaggedAttemptError>(self.0, PhantomData);
+        match visitor.__private_visit_untagged_option(attempt) {
             Ok(value) => Ok(value),
             Err(()) => Self::deserialize_other(),
         }
