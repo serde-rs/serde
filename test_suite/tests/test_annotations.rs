@@ -21,6 +21,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
 use std::fmt;
 use std::marker::PhantomData;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 trait MyDefault: Sized {
     fn my_default() -> Self;
@@ -859,6 +860,422 @@ struct SkipSerializingTupleStruct<'a, B, C>(
 )
 where
     C: ShouldSkip;
+
+static SKIP_SERIALIZING_STRUCT_CALLS: AtomicUsize = AtomicUsize::new(0);
+static SKIP_SERIALIZING_STRUCT_SKIP_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+fn skip_serializing_struct(value: &i32) -> bool {
+    SKIP_SERIALIZING_STRUCT_CALLS.fetch_add(1, Ordering::SeqCst);
+    *value == 1
+}
+
+fn skip_serializing_struct_skip(value: &i32) -> bool {
+    SKIP_SERIALIZING_STRUCT_SKIP_CALLS.fetch_add(1, Ordering::SeqCst);
+    *value == 1
+}
+
+#[derive(Serialize)]
+struct SkipSerializingIfOnce {
+    #[serde(skip_serializing_if = "skip_serializing_struct")]
+    serialize: i32,
+    #[serde(skip_serializing_if = "skip_serializing_struct_skip")]
+    skip: i32,
+}
+
+#[test]
+fn test_skip_serializing_if_once_struct() {
+    SKIP_SERIALIZING_STRUCT_CALLS.store(0, Ordering::SeqCst);
+    SKIP_SERIALIZING_STRUCT_SKIP_CALLS.store(0, Ordering::SeqCst);
+
+    assert_ser_tokens(
+        &SkipSerializingIfOnce {
+            serialize: 0,
+            skip: 1,
+        },
+        &[
+            Token::Struct {
+                name: "SkipSerializingIfOnce",
+                len: 1,
+            },
+            Token::Str("serialize"),
+            Token::I32(0),
+            Token::StructEnd,
+        ],
+    );
+    assert_eq!(SKIP_SERIALIZING_STRUCT_CALLS.load(Ordering::SeqCst), 1);
+    assert_eq!(SKIP_SERIALIZING_STRUCT_SKIP_CALLS.load(Ordering::SeqCst), 1);
+}
+
+static SKIP_SERIALIZING_ALTERNATING_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+fn skip_serializing_alternating(_value: &i32) -> bool {
+    SKIP_SERIALIZING_ALTERNATING_CALLS.fetch_add(1, Ordering::SeqCst) % 2 == 1
+}
+
+#[derive(Serialize)]
+struct SkipSerializingIfAlternating {
+    #[serde(skip_serializing_if = "skip_serializing_alternating")]
+    value: i32,
+}
+
+#[test]
+fn test_skip_serializing_if_reuses_stable_decision() {
+    SKIP_SERIALIZING_ALTERNATING_CALLS.store(0, Ordering::SeqCst);
+
+    assert_ser_tokens(
+        &SkipSerializingIfAlternating { value: 0 },
+        &[
+            Token::Struct {
+                name: "SkipSerializingIfAlternating",
+                len: 1,
+            },
+            Token::Str("value"),
+            Token::I32(0),
+            Token::StructEnd,
+        ],
+    );
+    assert_eq!(SKIP_SERIALIZING_ALTERNATING_CALLS.load(Ordering::SeqCst), 1);
+
+    assert_ser_tokens(
+        &SkipSerializingIfAlternating { value: 1 },
+        &[
+            Token::Struct {
+                name: "SkipSerializingIfAlternating",
+                len: 0,
+            },
+            Token::StructEnd,
+        ],
+    );
+    assert_eq!(SKIP_SERIALIZING_ALTERNATING_CALLS.load(Ordering::SeqCst), 2);
+}
+
+static SKIP_SERIALIZING_SERIALIZE_WITH_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+fn skip_serializing_serialize_with(value: &i32) -> bool {
+    SKIP_SERIALIZING_SERIALIZE_WITH_CALLS.fetch_add(1, Ordering::SeqCst);
+    *value == 0
+}
+
+fn serialize_plus_one<S>(value: &i32, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_i32(*value + 1)
+}
+
+#[derive(Serialize)]
+struct SkipSerializingIfSerializeWith {
+    #[serde(
+        skip_serializing_if = "skip_serializing_serialize_with",
+        serialize_with = "serialize_plus_one"
+    )]
+    value: i32,
+}
+
+#[test]
+fn test_skip_serializing_if_once_serialize_with() {
+    SKIP_SERIALIZING_SERIALIZE_WITH_CALLS.store(0, Ordering::SeqCst);
+
+    assert_ser_tokens(
+        &SkipSerializingIfSerializeWith { value: 1 },
+        &[
+            Token::Struct {
+                name: "SkipSerializingIfSerializeWith",
+                len: 1,
+            },
+            Token::Str("value"),
+            Token::I32(2),
+            Token::StructEnd,
+        ],
+    );
+    assert_eq!(
+        SKIP_SERIALIZING_SERIALIZE_WITH_CALLS.load(Ordering::SeqCst),
+        1
+    );
+}
+
+static SKIP_SERIALIZING_TUPLE_CALLS: AtomicUsize = AtomicUsize::new(0);
+static SKIP_SERIALIZING_TUPLE_SKIP_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+fn skip_serializing_tuple(value: &i32) -> bool {
+    SKIP_SERIALIZING_TUPLE_CALLS.fetch_add(1, Ordering::SeqCst);
+    *value == 1
+}
+
+fn skip_serializing_tuple_skip(value: &i32) -> bool {
+    SKIP_SERIALIZING_TUPLE_SKIP_CALLS.fetch_add(1, Ordering::SeqCst);
+    *value == 1
+}
+
+#[derive(Serialize)]
+struct SkipSerializingIfOnceTuple(
+    #[serde(skip_serializing_if = "skip_serializing_tuple")] i32,
+    #[serde(skip_serializing_if = "skip_serializing_tuple_skip")] i32,
+);
+
+#[test]
+fn test_skip_serializing_if_once_tuple_struct() {
+    SKIP_SERIALIZING_TUPLE_CALLS.store(0, Ordering::SeqCst);
+    SKIP_SERIALIZING_TUPLE_SKIP_CALLS.store(0, Ordering::SeqCst);
+
+    assert_ser_tokens(
+        &SkipSerializingIfOnceTuple(0, 1),
+        &[
+            Token::TupleStruct {
+                name: "SkipSerializingIfOnceTuple",
+                len: 1,
+            },
+            Token::I32(0),
+            Token::TupleStructEnd,
+        ],
+    );
+    assert_eq!(SKIP_SERIALIZING_TUPLE_CALLS.load(Ordering::SeqCst), 1);
+    assert_eq!(SKIP_SERIALIZING_TUPLE_SKIP_CALLS.load(Ordering::SeqCst), 1);
+}
+
+static SKIP_SERIALIZING_STRUCT_VARIANT_CALLS: AtomicUsize = AtomicUsize::new(0);
+static SKIP_SERIALIZING_STRUCT_VARIANT_SKIP_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+fn skip_serializing_struct_variant(value: &i32) -> bool {
+    SKIP_SERIALIZING_STRUCT_VARIANT_CALLS.fetch_add(1, Ordering::SeqCst);
+    *value == 1
+}
+
+fn skip_serializing_struct_variant_skip(value: &i32) -> bool {
+    SKIP_SERIALIZING_STRUCT_VARIANT_SKIP_CALLS.fetch_add(1, Ordering::SeqCst);
+    *value == 1
+}
+
+#[derive(Serialize)]
+enum SkipSerializingIfOnceEnum {
+    Struct {
+        #[serde(skip_serializing_if = "skip_serializing_struct_variant")]
+        serialize: i32,
+        #[serde(skip_serializing_if = "skip_serializing_struct_variant_skip")]
+        skip: i32,
+    },
+}
+
+#[test]
+fn test_skip_serializing_if_once_struct_variant() {
+    SKIP_SERIALIZING_STRUCT_VARIANT_CALLS.store(0, Ordering::SeqCst);
+    SKIP_SERIALIZING_STRUCT_VARIANT_SKIP_CALLS.store(0, Ordering::SeqCst);
+
+    assert_ser_tokens(
+        &SkipSerializingIfOnceEnum::Struct {
+            serialize: 0,
+            skip: 1,
+        },
+        &[
+            Token::StructVariant {
+                name: "SkipSerializingIfOnceEnum",
+                variant: "Struct",
+                len: 1,
+            },
+            Token::Str("serialize"),
+            Token::I32(0),
+            Token::StructVariantEnd,
+        ],
+    );
+    assert_eq!(
+        SKIP_SERIALIZING_STRUCT_VARIANT_CALLS.load(Ordering::SeqCst),
+        1
+    );
+    assert_eq!(
+        SKIP_SERIALIZING_STRUCT_VARIANT_SKIP_CALLS.load(Ordering::SeqCst),
+        1
+    );
+}
+
+static SKIP_SERIALIZING_TUPLE_VARIANT_CALLS: AtomicUsize = AtomicUsize::new(0);
+static SKIP_SERIALIZING_TUPLE_VARIANT_SKIP_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+fn skip_serializing_tuple_variant(value: &i32) -> bool {
+    SKIP_SERIALIZING_TUPLE_VARIANT_CALLS.fetch_add(1, Ordering::SeqCst);
+    *value == 1
+}
+
+fn skip_serializing_tuple_variant_skip(value: &i32) -> bool {
+    SKIP_SERIALIZING_TUPLE_VARIANT_SKIP_CALLS.fetch_add(1, Ordering::SeqCst);
+    *value == 1
+}
+
+#[derive(Serialize)]
+enum SkipSerializingIfOnceTupleEnum {
+    Tuple(
+        #[serde(skip_serializing_if = "skip_serializing_tuple_variant")] i32,
+        #[serde(skip_serializing_if = "skip_serializing_tuple_variant_skip")] i32,
+    ),
+}
+
+#[test]
+fn test_skip_serializing_if_once_tuple_variant() {
+    SKIP_SERIALIZING_TUPLE_VARIANT_CALLS.store(0, Ordering::SeqCst);
+    SKIP_SERIALIZING_TUPLE_VARIANT_SKIP_CALLS.store(0, Ordering::SeqCst);
+
+    assert_ser_tokens(
+        &SkipSerializingIfOnceTupleEnum::Tuple(0, 1),
+        &[
+            Token::TupleVariant {
+                name: "SkipSerializingIfOnceTupleEnum",
+                variant: "Tuple",
+                len: 1,
+            },
+            Token::I32(0),
+            Token::TupleVariantEnd,
+        ],
+    );
+    assert_eq!(
+        SKIP_SERIALIZING_TUPLE_VARIANT_CALLS.load(Ordering::SeqCst),
+        1
+    );
+    assert_eq!(
+        SKIP_SERIALIZING_TUPLE_VARIANT_SKIP_CALLS.load(Ordering::SeqCst),
+        1
+    );
+}
+
+static SKIP_SERIALIZING_TAGGED_VARIANT_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+fn skip_serializing_tagged_variant(value: &i32) -> bool {
+    SKIP_SERIALIZING_TAGGED_VARIANT_CALLS.fetch_add(1, Ordering::SeqCst);
+    *value == 1
+}
+
+#[derive(Serialize)]
+#[serde(tag = "type")]
+enum SkipSerializingIfOnceTaggedEnum {
+    Struct {
+        #[serde(skip_serializing_if = "skip_serializing_tagged_variant")]
+        value: i32,
+    },
+}
+
+#[test]
+fn test_skip_serializing_if_once_internally_tagged_variant() {
+    SKIP_SERIALIZING_TAGGED_VARIANT_CALLS.store(0, Ordering::SeqCst);
+
+    assert_ser_tokens(
+        &SkipSerializingIfOnceTaggedEnum::Struct { value: 0 },
+        &[
+            Token::Struct {
+                name: "SkipSerializingIfOnceTaggedEnum",
+                len: 2,
+            },
+            Token::Str("type"),
+            Token::Str("Struct"),
+            Token::Str("value"),
+            Token::I32(0),
+            Token::StructEnd,
+        ],
+    );
+    assert_eq!(
+        SKIP_SERIALIZING_TAGGED_VARIANT_CALLS.load(Ordering::SeqCst),
+        1
+    );
+}
+
+static SKIP_SERIALIZING_UNTAGGED_STRUCT_VARIANT_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+fn skip_serializing_untagged_struct_variant(value: &i32) -> bool {
+    SKIP_SERIALIZING_UNTAGGED_STRUCT_VARIANT_CALLS.fetch_add(1, Ordering::SeqCst);
+    *value == 1
+}
+
+static SKIP_SERIALIZING_UNTAGGED_TUPLE_VARIANT_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+fn skip_serializing_untagged_tuple_variant(value: &i32) -> bool {
+    SKIP_SERIALIZING_UNTAGGED_TUPLE_VARIANT_CALLS.fetch_add(1, Ordering::SeqCst);
+    *value == 1
+}
+
+#[derive(Serialize)]
+#[serde(untagged)]
+enum SkipSerializingIfOnceUntaggedEnum {
+    Struct {
+        #[serde(skip_serializing_if = "skip_serializing_untagged_struct_variant")]
+        value: i32,
+    },
+    Tuple(
+        #[serde(skip_serializing_if = "skip_serializing_untagged_tuple_variant")] i32,
+        i32,
+    ),
+}
+
+#[test]
+fn test_skip_serializing_if_once_untagged_struct_variant() {
+    SKIP_SERIALIZING_UNTAGGED_STRUCT_VARIANT_CALLS.store(0, Ordering::SeqCst);
+
+    assert_ser_tokens(
+        &SkipSerializingIfOnceUntaggedEnum::Struct { value: 0 },
+        &[
+            Token::Struct {
+                name: "SkipSerializingIfOnceUntaggedEnum",
+                len: 1,
+            },
+            Token::Str("value"),
+            Token::I32(0),
+            Token::StructEnd,
+        ],
+    );
+    assert_eq!(
+        SKIP_SERIALIZING_UNTAGGED_STRUCT_VARIANT_CALLS.load(Ordering::SeqCst),
+        1
+    );
+}
+
+#[test]
+fn test_skip_serializing_if_once_untagged_tuple_variant() {
+    SKIP_SERIALIZING_UNTAGGED_TUPLE_VARIANT_CALLS.store(0, Ordering::SeqCst);
+
+    assert_ser_tokens(
+        &SkipSerializingIfOnceUntaggedEnum::Tuple(1, 0),
+        &[Token::Tuple { len: 1 }, Token::I32(0), Token::TupleEnd],
+    );
+    assert_eq!(
+        SKIP_SERIALIZING_UNTAGGED_TUPLE_VARIANT_CALLS.load(Ordering::SeqCst),
+        1
+    );
+}
+
+static SKIP_SERIALIZING_HOSTILE_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+fn skip_serializing_hostile(value: &i32) -> bool {
+    SKIP_SERIALIZING_HOSTILE_CALLS.fetch_add(1, Ordering::SeqCst);
+    *value == 1
+}
+
+#[derive(Serialize)]
+enum SkipSerializingIfOnceHostile {
+    Struct {
+        #[serde(skip_serializing_if = "skip_serializing_hostile")]
+        __serde_skip_0: i32,
+        value: i32,
+    },
+}
+
+#[test]
+fn test_skip_serializing_if_once_hygienic_variant_field_name() {
+    SKIP_SERIALIZING_HOSTILE_CALLS.store(0, Ordering::SeqCst);
+
+    assert_ser_tokens(
+        &SkipSerializingIfOnceHostile::Struct {
+            __serde_skip_0: 1,
+            value: 0,
+        },
+        &[
+            Token::StructVariant {
+                name: "SkipSerializingIfOnceHostile",
+                variant: "Struct",
+                len: 1,
+            },
+            Token::Str("value"),
+            Token::I32(0),
+            Token::StructVariantEnd,
+        ],
+    );
+    assert_eq!(SKIP_SERIALIZING_HOSTILE_CALLS.load(Ordering::SeqCst), 1);
+}
 
 #[test]
 fn test_skip_serializing_tuple_struct() {

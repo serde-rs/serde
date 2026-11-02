@@ -259,34 +259,26 @@ fn serialize_tuple_struct(
     fields: &[Field],
     cattrs: &attr::Container,
 ) -> Fragment {
-    let serialize_stmts =
-        serialize_tuple_struct_visitor(fields, params, false, &TupleTrait::SerializeTupleStruct);
+    let serialize_stmts = serialize_tuple_struct_visitor(
+        fields,
+        params,
+        false,
+        &TupleTrait::SerializeTupleStruct,
+        true,
+    );
 
     let type_name = cattrs.name().serialize_name();
 
-    let mut serialized_fields = fields
+    let let_mut = mut_if(!serialize_stmts.fields.is_empty());
+    let len = serialize_stmts
+        .len_terms
         .iter()
-        .enumerate()
-        .filter(|(_, field)| !field.attrs.skip_serializing())
-        .peekable();
-
-    let let_mut = mut_if(serialized_fields.peek().is_some());
-
-    let len = serialized_fields
-        .map(|(i, field)| match field.attrs.skip_serializing_if() {
-            None => quote!(1),
-            Some(path) => {
-                let index = syn::Index {
-                    index: i as u32,
-                    span: Span::call_site(),
-                };
-                let field_expr = get_member(params, field, &Member::Unnamed(index));
-                quote!(if #path(#field_expr) { 0 } else { 1 })
-            }
-        })
         .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
+    let skip_bindings = &serialize_stmts.skip_bindings;
+    let serialize_stmts = &serialize_stmts.fields;
 
     quote_block! {
+        #(#skip_bindings)*
         let #let_mut __serde_state = _serde::Serializer::serialize_tuple_struct(__serializer, #type_name, #len)?;
         #(#serialize_stmts)*
         _serde::ser::SerializeTupleStruct::end(__serde_state)
@@ -331,34 +323,23 @@ fn serialize_struct_as_struct(
     cattrs: &attr::Container,
 ) -> Fragment {
     let serialize_fields =
-        serialize_struct_visitor(fields, params, false, &StructTrait::SerializeStruct);
+        serialize_struct_visitor(fields, params, false, &StructTrait::SerializeStruct, true);
 
     let type_name = cattrs.name().serialize_name();
 
     let tag_field = serialize_struct_tag_field(cattrs, &StructTrait::SerializeStruct);
     let tag_field_exists = !tag_field.is_empty();
 
-    let mut serialized_fields = fields
-        .iter()
-        .filter(|&field| !field.attrs.skip_serializing())
-        .peekable();
-
-    let let_mut = mut_if(serialized_fields.peek().is_some() || tag_field_exists);
-
-    let len = serialized_fields
-        .map(|field| match field.attrs.skip_serializing_if() {
-            None => quote!(1),
-            Some(path) => {
-                let field_expr = get_member(params, field, &field.member);
-                quote!(if #path(#field_expr) { 0 } else { 1 })
-            }
-        })
-        .fold(
-            quote!(#tag_field_exists as usize),
-            |sum, expr| quote!(#sum + #expr),
-        );
+    let let_mut = mut_if(!serialize_fields.fields.is_empty() || tag_field_exists);
+    let len = serialize_fields.len_terms.iter().fold(
+        quote!(#tag_field_exists as usize),
+        |sum, expr| quote!(#sum + #expr),
+    );
+    let skip_bindings = &serialize_fields.skip_bindings;
+    let serialize_fields = &serialize_fields.fields;
 
     quote_block! {
+        #(#skip_bindings)*
         let #let_mut __serde_state = _serde::Serializer::serialize_struct(__serializer, #type_name, #len)?;
         #tag_field
         #(#serialize_fields)*
@@ -372,7 +353,8 @@ fn serialize_struct_as_map(
     cattrs: &attr::Container,
 ) -> Fragment {
     let serialize_fields =
-        serialize_struct_visitor(fields, params, false, &StructTrait::SerializeMap);
+        serialize_struct_visitor(fields, params, false, &StructTrait::SerializeMap, false);
+    let serialize_fields = &serialize_fields.fields;
 
     let tag_field = serialize_struct_tag_field(cattrs, &StructTrait::SerializeMap);
     let tag_field_exists = !tag_field.is_empty();
@@ -820,25 +802,15 @@ fn serialize_tuple_variant(
         TupleVariant::Untagged => TupleTrait::SerializeTuple,
     };
 
-    let serialize_stmts = serialize_tuple_struct_visitor(fields, params, true, &tuple_trait);
+    let serialize_stmts = serialize_tuple_struct_visitor(fields, params, true, &tuple_trait, true);
 
-    let mut serialized_fields = fields
+    let let_mut = mut_if(!serialize_stmts.fields.is_empty());
+    let len = serialize_stmts
+        .len_terms
         .iter()
-        .enumerate()
-        .filter(|(_, field)| !field.attrs.skip_serializing())
-        .peekable();
-
-    let let_mut = mut_if(serialized_fields.peek().is_some());
-
-    let len = serialized_fields
-        .map(|(i, field)| match field.attrs.skip_serializing_if() {
-            None => quote!(1),
-            Some(path) => {
-                let field_expr = field_i(i);
-                quote!(if #path(#field_expr) { 0 } else { 1 })
-            }
-        })
         .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
+    let skip_bindings = &serialize_stmts.skip_bindings;
+    let serialize_stmts = &serialize_stmts.fields;
 
     match context {
         TupleVariant::ExternallyTagged {
@@ -847,6 +819,7 @@ fn serialize_tuple_variant(
             variant_name,
         } => {
             quote_block! {
+                #(#skip_bindings)*
                 let #let_mut __serde_state = _serde::Serializer::serialize_tuple_variant(
                     __serializer,
                     #type_name,
@@ -859,6 +832,7 @@ fn serialize_tuple_variant(
         }
         TupleVariant::Untagged => {
             quote_block! {
+                #(#skip_bindings)*
                 let #let_mut __serde_state = _serde::Serializer::serialize_tuple(
                     __serializer,
                     #len)?;
@@ -898,25 +872,15 @@ fn serialize_struct_variant(
         }
     };
 
-    let serialize_fields = serialize_struct_visitor(fields, params, true, &struct_trait);
+    let serialize_fields = serialize_struct_visitor(fields, params, true, &struct_trait, true);
 
-    let mut serialized_fields = fields
+    let let_mut = mut_if(!serialize_fields.fields.is_empty());
+    let len = serialize_fields
+        .len_terms
         .iter()
-        .filter(|&field| !field.attrs.skip_serializing())
-        .peekable();
-
-    let let_mut = mut_if(serialized_fields.peek().is_some());
-
-    let len = serialized_fields
-        .map(|field| {
-            let member = &field.member;
-
-            match field.attrs.skip_serializing_if() {
-                Some(path) => quote!(if #path(#member) { 0 } else { 1 }),
-                None => quote!(1),
-            }
-        })
         .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
+    let skip_bindings = &serialize_fields.skip_bindings;
+    let serialize_fields = &serialize_fields.fields;
 
     match context {
         StructVariant::ExternallyTagged {
@@ -924,6 +888,7 @@ fn serialize_struct_variant(
             variant_name,
         } => {
             quote_block! {
+                #(#skip_bindings)*
                 let #let_mut __serde_state = _serde::Serializer::serialize_struct_variant(
                     __serializer,
                     #name,
@@ -937,6 +902,7 @@ fn serialize_struct_variant(
         }
         StructVariant::InternallyTagged { tag, variant_name } => {
             quote_block! {
+                #(#skip_bindings)*
                 let mut __serde_state = _serde::Serializer::serialize_struct(
                     __serializer,
                     #name,
@@ -953,6 +919,7 @@ fn serialize_struct_variant(
         }
         StructVariant::Untagged => {
             quote_block! {
+                #(#skip_bindings)*
                 let #let_mut __serde_state = _serde::Serializer::serialize_struct(
                     __serializer,
                     #name,
@@ -972,7 +939,8 @@ fn serialize_struct_variant_with_flatten(
     name: &Name,
 ) -> Fragment {
     let struct_trait = StructTrait::SerializeMap;
-    let serialize_fields = serialize_struct_visitor(fields, params, true, &struct_trait);
+    let serialize_fields = serialize_struct_visitor(fields, params, true, &struct_trait, false);
+    let serialize_fields = &serialize_fields.fields;
 
     let mut serialized_fields = fields
         .iter()
@@ -1053,13 +1021,24 @@ fn serialize_struct_variant_with_flatten(
     }
 }
 
+struct SerializedFields {
+    skip_bindings: Vec<TokenStream>,
+    len_terms: Vec<TokenStream>,
+    fields: Vec<TokenStream>,
+}
+
 fn serialize_tuple_struct_visitor(
     fields: &[Field],
     params: &Parameters,
     is_enum: bool,
     tuple_trait: &TupleTrait,
-) -> Vec<TokenStream> {
-    let mut dst_fields = Vec::new();
+    precompute_skips: bool,
+) -> SerializedFields {
+    let mut dst_fields = SerializedFields {
+        skip_bindings: Vec::new(),
+        len_terms: Vec::new(),
+        fields: Vec::new(),
+    };
 
     for (i, field) in fields.iter().enumerate() {
         if field.attrs.skip_serializing() {
@@ -1079,10 +1058,21 @@ fn serialize_tuple_struct_visitor(
             )
         };
 
-        let skip = field
-            .attrs
-            .skip_serializing_if()
-            .map(|path| quote!(#path(#field_expr)));
+        let skip = field.attrs.skip_serializing_if().map(|path| {
+            if precompute_skips {
+                let skip_var = Ident::new(&format!("__serde_skip_{}", i), Span::mixed_site());
+                dst_fields.skip_bindings.push(quote! {
+                    let #skip_var = #path(#field_expr);
+                });
+                quote!(#skip_var)
+            } else {
+                quote!(#path(#field_expr))
+            }
+        });
+        dst_fields.len_terms.push(match &skip {
+            None => quote!(1),
+            Some(skip) => quote!(if #skip { 0 } else { 1 }),
+        });
 
         if let Some(path) = field.attrs.serialize_with() {
             field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
@@ -1094,7 +1084,7 @@ fn serialize_tuple_struct_visitor(
             #func(&mut __serde_state, #field_expr)?;
         };
 
-        dst_fields.push(match skip {
+        dst_fields.fields.push(match skip {
             None => ser,
             Some(skip) => quote!(if !#skip { #ser }),
         });
@@ -1107,10 +1097,15 @@ fn serialize_struct_visitor(
     params: &Parameters,
     is_enum: bool,
     struct_trait: &StructTrait,
-) -> Vec<TokenStream> {
-    let mut dst_fields = Vec::new();
+    precompute_skips: bool,
+) -> SerializedFields {
+    let mut dst_fields = SerializedFields {
+        skip_bindings: Vec::new(),
+        len_terms: Vec::new(),
+        fields: Vec::new(),
+    };
 
-    for field in fields {
+    for (i, field) in fields.iter().enumerate() {
         if field.attrs.skip_serializing() {
             continue;
         }
@@ -1124,10 +1119,21 @@ fn serialize_struct_visitor(
 
         let key_expr = field.attrs.name().serialize_name();
 
-        let skip = field
-            .attrs
-            .skip_serializing_if()
-            .map(|path| quote!(#path(#field_expr)));
+        let skip = field.attrs.skip_serializing_if().map(|path| {
+            if precompute_skips {
+                let skip_var = Ident::new(&format!("__serde_skip_{}", i), Span::mixed_site());
+                dst_fields.skip_bindings.push(quote! {
+                    let #skip_var = #path(#field_expr);
+                });
+                quote!(#skip_var)
+            } else {
+                quote!(#path(#field_expr))
+            }
+        });
+        dst_fields.len_terms.push(match &skip {
+            None => quote!(1),
+            Some(skip) => quote!(if #skip { 0 } else { 1 }),
+        });
 
         if let Some(path) = field.attrs.serialize_with() {
             field_expr = wrap_serialize_field_with(params, field.ty, path, &field_expr);
@@ -1146,7 +1152,7 @@ fn serialize_struct_visitor(
             }
         };
 
-        dst_fields.push(match skip {
+        dst_fields.fields.push(match skip {
             None => ser,
             Some(skip) => {
                 if let Some(skip_func) = struct_trait.skip_field(span) {
