@@ -415,8 +415,12 @@ fn type_of_item(cont: &Container) -> syn::Type {
                                 syn::GenericParam::Lifetime(param) => {
                                     syn::GenericArgument::Lifetime(param.lifetime.clone())
                                 }
-                                syn::GenericParam::Const(_) => {
-                                    panic!("Serde does not support const generics yet");
+                                syn::GenericParam::Const(param) => {
+                                    syn::GenericArgument::Const(syn::Expr::Path(syn::ExprPath {
+                                        attrs: Vec::new(),
+                                        qself: None,
+                                        path: param.ident.clone().into(),
+                                    }))
                                 }
                             })
                             .collect(),
