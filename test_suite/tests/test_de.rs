@@ -77,6 +77,18 @@ impl Default for StructDefault<String> {
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
+#[serde(default)]
+struct StructDefaultConstGeneric<const N: usize> {
+    a: u8,
+}
+
+impl<const N: usize> Default for StructDefaultConstGeneric<N> {
+    fn default() -> Self {
+        StructDefaultConstGeneric { a: 0 }
+    }
+}
+
+#[derive(PartialEq, Debug, Deserialize)]
 struct StructSkipAll {
     #[serde(skip_deserializing)]
     a: i32,
@@ -1585,6 +1597,32 @@ fn test_struct_default() {
                 name: "StructDefault",
                 len: 2,
             },
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_struct_default_const_generic() {
+    test(
+        StructDefaultConstGeneric::<3> { a: 0 },
+        &[
+            Token::Struct {
+                name: "StructDefaultConstGeneric",
+                len: 1,
+            },
+            Token::StructEnd,
+        ],
+    );
+    test(
+        StructDefaultConstGeneric::<3> { a: 7 },
+        &[
+            Token::Struct {
+                name: "StructDefaultConstGeneric",
+                len: 1,
+            },
+            Token::Str("a"),
+            Token::U8(7),
             Token::StructEnd,
         ],
     );
