@@ -221,8 +221,19 @@ fn deserialize_map(
             }
         });
 
+    // With one flatten field, let a map deserialize directly from the input.
+    // Multiple flatten fields still need replayable content, as does checking
+    // for entries that were not consumed by a flattened field.
+    let stream_flatten = has_flatten
+        && !cattrs.deny_unknown_fields()
+        && fields
+            .iter()
+            .filter(|field| field.attrs.flatten() && !field.attrs.skip_deserializing())
+            .count()
+            == 1;
+
     // Collect contents for flatten fields into a buffer
-    let let_collect = if has_flatten {
+    let let_collect = if has_flatten && !stream_flatten {
         Some(quote! {
             let mut __collect = _serde::#private::Vec::<_serde::#private::Option<(
                 _serde::#private::de::Content,
@@ -274,7 +285,13 @@ fn deserialize_map(
         });
 
     // Visit ignored values to consume them
-    let ignored_arm = if has_flatten {
+    let ignored_arm = if stream_flatten {
+        Some(quote! {
+            __Field::__other(__name) => {
+                return _serde::#private::Ok(_serde::#private::Some(__name));
+            }
+        })
+    } else if has_flatten {
         Some(quote! {
             __Field::__other(__name) => {
                 __collect.push(_serde::#private::Some((
@@ -336,13 +353,36 @@ fn deserialize_map(
                 }
                 Some(path) => quote!(#path),
             };
-            quote! {
-                let #name: #field_ty = #func(
-                    _serde::#private::de::FlatMapDeserializer(
-                        &mut __collect,
-                        _serde::#private::PhantomData))?;
+            if stream_flatten {
+                quote! {
+                    let #name: #field_ty = {
+                        let mut __flat_map = _serde::#private::de::FlatMapAccessAdapter::new(
+                            __map,
+                            |mut __map: &mut __A| {
+                                #match_keys
+                                _serde::#private::Ok(_serde::#private::None)
+                            });
+                        let __value = #func(
+                            _serde::#private::de::FlatMapAccessDeserializer(&mut __flat_map))?;
+                        __flat_map.finish()?;
+                        __value
+                    };
+                }
+            } else {
+                quote! {
+                    let #name: #field_ty = #func(
+                        _serde::#private::de::FlatMapDeserializer(
+                            &mut __collect,
+                            _serde::#private::PhantomData))?;
+                }
             }
         });
+
+    let (read_fields, read_flatten) = if stream_flatten {
+        (quote!(#(#extract_collected)*), None)
+    } else {
+        (quote!(#match_keys), Some(quote!(#(#extract_collected)*)))
+    };
 
     let collected_deny_unknown_fields = if has_flatten && cattrs.deny_unknown_fields() {
         Some(quote! {
@@ -404,13 +444,13 @@ fn deserialize_map(
 
         #let_collect
 
-        #match_keys
+        #read_fields
 
         #let_default
 
         #(#extract_values)*
 
-        #(#extract_collected)*
+        #read_flatten
 
         #collected_deny_unknown_fields
 
