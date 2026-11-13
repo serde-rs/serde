@@ -11,10 +11,10 @@ use crate::de::{MapAccess, Unexpected};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{
-    content_as_str, Content, ContentDeserializer, ContentRefDeserializer, ContentVisitor,
-    EnumDeserializer, InternallyTaggedUnitVisitor, TagContentOtherField,
-    TagContentOtherFieldVisitor, TagOrContentField, TagOrContentFieldVisitor, TaggedContentVisitor,
-    UntaggedUnitVisitor,
+    content_as_str, AdjacentlyTaggedUnitVisitor, Content, ContentDeserializer,
+    ContentRefDeserializer, ContentVisitor, EnumDeserializer, InternallyTaggedUnitVisitor,
+    TagContentOtherField, TagContentOtherFieldVisitor, TagOrContentField, TagOrContentFieldVisitor,
+    TaggedContentVisitor, UntaggedUnitVisitor,
 };
 
 pub use crate::serde_core_private::InPlaceSeed;
@@ -3038,6 +3038,84 @@ mod content {
             E: de::Error,
         {
             Ok(())
+        }
+    }
+
+    /// Visitor for deserializing an adjacently tagged unit variant.
+    ///
+    /// Accepts a unit, none, or an empty sequence or map as the content, since some formats and
+    /// protocols always emit a content value even when the variant carries no data. Non-empty
+    /// content is rejected.
+    ///
+    /// Not public API.
+    pub struct AdjacentlyTaggedUnitVisitor<'a> {
+        type_name: &'a str,
+        variant_name: &'a str,
+    }
+
+    impl<'a> AdjacentlyTaggedUnitVisitor<'a> {
+        pub fn new(type_name: &'a str, variant_name: &'a str) -> Self {
+            AdjacentlyTaggedUnitVisitor {
+                type_name,
+                variant_name,
+            }
+        }
+    }
+
+    #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
+    impl<'de, 'a> Visitor<'de> for AdjacentlyTaggedUnitVisitor<'a> {
+        type Value = ();
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            write!(
+                formatter,
+                "unit variant {}::{}",
+                self.type_name, self.variant_name
+            )
+        }
+
+        fn visit_unit<E>(self) -> Result<(), E>
+        where
+            E: de::Error,
+        {
+            Ok(())
+        }
+
+        fn visit_none<E>(self) -> Result<(), E>
+        where
+            E: de::Error,
+        {
+            Ok(())
+        }
+
+        fn visit_seq<S>(self, mut seq: S) -> Result<(), S::Error>
+        where
+            S: SeqAccess<'de>,
+        {
+            let mut count = 0;
+            while tri!(seq.next_element::<IgnoredAny>()).is_some() {
+                count += 1;
+            }
+            if count == 0 {
+                Ok(())
+            } else {
+                Err(de::Error::invalid_length(count, &self))
+            }
+        }
+
+        fn visit_map<M>(self, mut map: M) -> Result<(), M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            let mut count = 0;
+            while tri!(map.next_entry::<IgnoredAny, IgnoredAny>()).is_some() {
+                count += 1;
+            }
+            if count == 0 {
+                Ok(())
+            } else {
+                Err(de::Error::invalid_length(count, &self))
+            }
         }
     }
 }

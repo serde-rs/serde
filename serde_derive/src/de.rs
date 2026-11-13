@@ -650,6 +650,15 @@ enum StructForm<'a> {
     Untagged(&'a syn::Ident),
 }
 
+/// Which kind of enum is being deserialized, for the parts of variant deserialization that
+/// differ between the two.
+enum VariantForm {
+    /// `#[serde(untagged)]` enum.
+    Untagged,
+    /// `#[serde(tag = "...", content = "...")]` enum.
+    AdjacentlyTagged,
+}
+
 struct FieldWithAliases<'a> {
     ident: Ident,
     aliases: &'a BTreeSet<Name>,

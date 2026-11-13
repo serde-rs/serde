@@ -300,6 +300,193 @@ mod unit {
             ],
         );
     }
+
+    #[test]
+    fn map_empty_content() {
+        // Map: tag + empty map as content. Some formats always emit a content value, even for
+        // unit variants.
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 2,
+                },
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
+                Token::Str("c"),
+                Token::Map { len: Some(0) },
+                Token::MapEnd,
+                Token::StructEnd,
+            ],
+        );
+
+        // Map: empty map as content + tag
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 2,
+                },
+                Token::Str("c"),
+                Token::Map { len: Some(0) },
+                Token::MapEnd,
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
+                Token::StructEnd,
+            ],
+        );
+
+        // Map: tag + empty seq as content
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 2,
+                },
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
+                Token::Str("c"),
+                Token::Seq { len: Some(0) },
+                Token::SeqEnd,
+                Token::StructEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn seq_empty_content() {
+        // Seq: tag + empty map as content
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Seq { len: Some(2) },
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
+                Token::Map { len: Some(0) },
+                Token::MapEnd,
+                Token::SeqEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn non_empty_content_error() {
+        // Map: tag + non-empty map as content
+        assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 2,
+                },
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
+                Token::Str("c"),
+                Token::Map { len: Some(1) },
+                Token::Str("a"),
+                Token::U8(1),
+                Token::MapEnd,
+            ],
+            "invalid length 1, expected unit variant AdjacentlyTagged::Unit",
+        );
+
+        // Map: tag + non-empty seq as content
+        assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 2,
+                },
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
+                Token::Str("c"),
+                Token::Seq { len: Some(2) },
+                Token::U8(1),
+                Token::U8(2),
+                Token::SeqEnd,
+            ],
+            "invalid length 2, expected unit variant AdjacentlyTagged::Unit",
+        );
+
+        // Seq: tag + non-empty map as content
+        assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+            &[
+                Token::Seq { len: Some(2) },
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
+                Token::Map { len: Some(1) },
+                Token::Str("a"),
+                Token::U8(1),
+                Token::MapEnd,
+            ],
+            "invalid length 1, expected unit variant AdjacentlyTagged::Unit",
+        );
+
+        // Map: tag + scalar as content
+        assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+            &[
+                Token::Struct {
+                    name: "AdjacentlyTagged",
+                    len: 2,
+                },
+                Token::Str("t"),
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
+                Token::Str("c"),
+                Token::U8(1),
+            ],
+            "invalid type: integer `1`, expected unit variant AdjacentlyTagged::Unit",
+        );
+    }
+
+    #[test]
+    fn seq_tag_only() {
+        // Seq: tag only. Formats like msgpack encode a unit variant as a 1-element array.
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Seq { len: Some(1) },
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Unit",
+                },
+                Token::SeqEnd,
+            ],
+        );
+
+        // Seq: tag (as string) only
+        assert_de_tokens(
+            &AdjacentlyTagged::Unit::<u8>,
+            &[
+                Token::Seq { len: None },
+                Token::Str("Unit"), // tag
+                Token::SeqEnd,
+            ],
+        );
+    }
 }
 
 mod newtype {
@@ -408,6 +595,35 @@ mod newtype {
             ],
         );
     }
+
+    #[test]
+    fn seq_tag_only() {
+        // optional newtype with no content element
+        assert_de_tokens(
+            &AdjacentlyTagged::Newtype::<Option<u8>>(None),
+            &[
+                Token::Seq { len: Some(1) },
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Newtype",
+                },
+                Token::SeqEnd,
+            ],
+        );
+
+        // non-optional newtype with no content element
+        assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+            &[
+                Token::Seq { len: Some(1) },
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Newtype",
+                },
+                Token::SeqEnd,
+            ],
+            "missing field `c`",
+        );
+    }
 }
 
 #[test]
@@ -508,6 +724,22 @@ mod tuple {
                 Token::TupleEnd,
                 Token::SeqEnd,
             ],
+        );
+    }
+
+    #[test]
+    fn seq_tag_only() {
+        // Unlike a unit or newtype variant, a missing content element is an error.
+        assert_de_tokens_error::<AdjacentlyTagged<u8>>(
+            &[
+                Token::Seq { len: Some(1) },
+                Token::UnitVariant {
+                    name: "AdjacentlyTagged",
+                    variant: "Tuple",
+                },
+                Token::SeqEnd,
+            ],
+            "invalid length 1, expected adjacently tagged enum AdjacentlyTagged",
         );
     }
 }
