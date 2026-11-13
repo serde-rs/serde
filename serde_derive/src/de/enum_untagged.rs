@@ -41,12 +41,22 @@ pub(super) fn deserialize(
     );
     let fallthrough_msg = cattrs.expecting().unwrap_or(&fallthrough_msg);
 
+    // The tagged variants of a partially untagged enum are generated for the
+    // caller's error type, so only the untagged attempts use the cheap one.
+    let first_attempt = first_attempt.map(|first_attempt| {
+        quote! {
+            let __deserializer = _serde::#private::de::ContentRefDeserializer::<__D::Error>::new(&__content);
+            #first_attempt
+        }
+    });
+
     let private2 = private;
     quote_block! {
         let __content = _serde::de::DeserializeSeed::deserialize(_serde::#private::de::ContentVisitor::new(), __deserializer)?;
-        let __deserializer = _serde::#private::de::ContentRefDeserializer::<__D::Error>::new(&__content);
 
         #first_attempt
+
+        let __deserializer = _serde::#private::de::ContentRefDeserializer::<_serde::#private::de::UntaggedAttemptError>::new(&__content);
 
         #(
             if let _serde::#private2::Ok(__ok) = #attempts {
