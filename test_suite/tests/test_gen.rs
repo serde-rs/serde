@@ -647,6 +647,42 @@ fn test_gen() {
 
     assert::<AssocDeriveMulti<i32, NoSerdeImpl>>();
 
+    #[derive(Serialize, Deserialize)]
+    struct AssocDeriveNested<T: AssocSerde> {
+        assoc: StdOption<T::Assoc>,
+    }
+
+    assert::<AssocDeriveNested<NoSerdeImpl>>();
+
+    #[derive(Serialize, Deserialize)]
+    struct AssocDeriveNested2<T: AssocSerde> {
+        vec: Vec<T::Assoc>,
+        tuple: (T::Assoc, u8),
+        deep: StdOption<Vec<StdOption<T::Assoc>>>,
+        array: [T::Assoc; 2],
+    }
+
+    assert::<AssocDeriveNested2<NoSerdeImpl>>();
+
+    trait AssocSerdeLifetime<'a> {
+        type Assoc;
+        fn marker(&self) -> &'a ();
+    }
+
+    impl<'a> AssocSerdeLifetime<'a> for NoSerdeImpl {
+        type Assoc = u32;
+        fn marker(&self) -> &'a () {
+            &()
+        }
+    }
+
+    #[derive(Serialize, Deserialize)]
+    struct AssocDeriveNestedLifetime<'a, T: AssocSerdeLifetime<'a>> {
+        assoc: StdOption<T::Assoc>,
+    }
+
+    assert::<AssocDeriveNestedLifetime<'static, NoSerdeImpl>>();
+
     #[derive(Serialize)]
     #[serde(tag = "t", content = "c")]
     enum EmptyAdjacentlyTagged {
