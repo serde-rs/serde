@@ -983,6 +983,7 @@ pub struct Field {
     default: Default,
     serialize_with: Option<syn::ExprPath>,
     deserialize_with: Option<syn::ExprPath>,
+    on_duplicate: Option<syn::ExprPath>,
     ser_bound: Option<Vec<syn::WherePredicate>>,
     de_bound: Option<Vec<syn::WherePredicate>>,
     borrowed_lifetimes: BTreeSet<syn::Lifetime>,
@@ -1029,6 +1030,7 @@ impl Field {
         let mut default = Attr::none(cx, DEFAULT);
         let mut serialize_with = Attr::none(cx, SERIALIZE_WITH);
         let mut deserialize_with = Attr::none(cx, DESERIALIZE_WITH);
+        let mut on_duplicate = Attr::none(cx, ON_DUPLICATE);
         let mut ser_bound = Attr::none(cx, BOUND);
         let mut de_bound = Attr::none(cx, BOUND);
         let mut borrowed_lifetimes = Attr::none(cx, BORROW);
@@ -1120,6 +1122,11 @@ impl Field {
                     // #[serde(deserialize_with = "...")]
                     if let Some(path) = parse_lit_into_expr_path(cx, DESERIALIZE_WITH, &meta)? {
                         deserialize_with.set(&meta.path, path);
+                    }
+                } else if meta.path == ON_DUPLICATE {
+                    // #[serde(on_duplicate = "...")]
+                    if let Some(path) = parse_lit_into_expr_path(cx, ON_DUPLICATE, &meta)? {
+                        on_duplicate.set(&meta.path, path);
                     }
                 } else if meta.path == WITH {
                     // #[serde(with = "...")]
@@ -1252,6 +1259,7 @@ impl Field {
             default: default.get().unwrap_or(Default::None),
             serialize_with: serialize_with.get(),
             deserialize_with: deserialize_with.get(),
+            on_duplicate: on_duplicate.get(),
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
             borrowed_lifetimes,
@@ -1305,6 +1313,10 @@ impl Field {
 
     pub fn deserialize_with(&self) -> Option<&syn::ExprPath> {
         self.deserialize_with.as_ref()
+    }
+
+    pub fn on_duplicate(&self) -> Option<&syn::ExprPath> {
+        self.on_duplicate.as_ref()
     }
 
     pub fn ser_bound(&self) -> Option<&[syn::WherePredicate]> {
