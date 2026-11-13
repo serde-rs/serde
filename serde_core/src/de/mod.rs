@@ -1405,13 +1405,14 @@ pub trait Visitor<'de>: Sized {
     where
         E: Error,
     {
-        let mut buf = [0u8; 58];
-        let mut writer = crate::format::Buf::new(&mut buf);
-        fmt::Write::write_fmt(&mut writer, format_args!("integer `{}` as i128", v)).unwrap();
-        Err(Error::invalid_type(
-            Unexpected::Other(writer.as_str()),
-            &self,
-        ))
+        // Avoid monomorphization bloat
+        fn error<E: Error>(v: i128, exp: &dyn Expected) -> E {
+            let mut buf = [0u8; 58];
+            let mut writer = crate::format::Buf::new(&mut buf);
+            fmt::Write::write_fmt(&mut writer, format_args!("integer `{}` as i128", v)).unwrap();
+            Error::invalid_type(Unexpected::Other(writer.as_str()), exp)
+        }
+        Err(error(v, &self))
     }
 
     /// The input contains a `u8`.
@@ -1467,13 +1468,14 @@ pub trait Visitor<'de>: Sized {
     where
         E: Error,
     {
-        let mut buf = [0u8; 57];
-        let mut writer = crate::format::Buf::new(&mut buf);
-        fmt::Write::write_fmt(&mut writer, format_args!("integer `{}` as u128", v)).unwrap();
-        Err(Error::invalid_type(
-            Unexpected::Other(writer.as_str()),
-            &self,
-        ))
+        // Avoid monomorphization bloat
+        fn error<E: Error>(v: u128, exp: &dyn Expected) -> E {
+            let mut buf = [0u8; 57];
+            let mut writer = crate::format::Buf::new(&mut buf);
+            fmt::Write::write_fmt(&mut writer, format_args!("integer `{}` as u128", v)).unwrap();
+            Error::invalid_type(Unexpected::Other(writer.as_str()), exp)
+        }
+        Err(error(v, &self))
     }
 
     /// The input contains an `f32`.
