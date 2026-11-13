@@ -410,6 +410,8 @@ mod newtype {
     }
 }
 
+// Reaches crate::private::de::content::ContentDeserializer::deserialize_newtype_struct
+// in Content::Newtype case
 #[test]
 fn newtype_with_newtype() {
     #[derive(Debug, PartialEq, Serialize, Deserialize)]
