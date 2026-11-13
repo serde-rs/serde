@@ -200,6 +200,12 @@ fn build_generics(cont: &Container, borrowed: &BorrowedLifetimes) -> syn::Generi
     match cont.attrs.de_bound() {
         Some(predicates) => bound::with_where_predicates(&generics, predicates),
         None => {
+            // Don't add `Self: Default`, `T: Default` or `T: Deserialize` if it's deserialized by
+            // converting from other type.
+            if cont.attrs.type_from().is_some() || cont.attrs.type_try_from().is_some() {
+                return generics;
+            }
+
             let generics = match *cont.attrs.default() {
                 attr::Default::Default => bound::with_self_bound(
                     cont,
