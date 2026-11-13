@@ -2956,6 +2956,7 @@ mod content {
     pub struct InternallyTaggedUnitVisitor<'a> {
         type_name: &'a str,
         variant_name: &'a str,
+        deny_unknown_fields: bool,
     }
 
     impl<'a> InternallyTaggedUnitVisitor<'a> {
@@ -2964,7 +2965,14 @@ mod content {
             InternallyTaggedUnitVisitor {
                 type_name,
                 variant_name,
+                deny_unknown_fields: false,
             }
+        }
+
+        /// Not public API.
+        pub fn deny_unknown_fields(mut self, deny: bool) -> Self {
+            self.deny_unknown_fields = deny;
+            self
         }
     }
 
@@ -2991,6 +2999,12 @@ mod content {
         where
             M: MapAccess<'de>,
         {
+            if self.deny_unknown_fields {
+                if let Some(field) = tri!(access.next_key::<String>()) {
+                    return Err(de::Error::unknown_field(&field, &[]));
+                }
+                return Ok(());
+            }
             while tri!(access.next_entry::<IgnoredAny, IgnoredAny>()).is_some() {}
             Ok(())
         }

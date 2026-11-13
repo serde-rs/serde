@@ -83,12 +83,13 @@ fn deserialize_internally_tagged_variant(
             let this_value = &params.this_value;
             let type_name = params.type_name();
             let variant_name = variant.ident.to_string();
+            let deny_unknown_fields = cattrs.deny_unknown_fields();
             let default = variant.fields.first().map(|field| {
                 let default = Expr(expr_is_missing(field, cattrs));
                 quote!((#default))
             });
             quote_block! {
-                _serde::Deserializer::deserialize_any(__deserializer, _serde::#private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name))?;
+                _serde::Deserializer::deserialize_any(__deserializer, _serde::#private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name).deny_unknown_fields(#deny_unknown_fields))?;
                 _serde::#private::Ok(#this_value::#variant_ident #default)
             }
         }
