@@ -304,7 +304,9 @@ fn borrowed_lifetimes(cont: &Container) -> BorrowedLifetimes {
 }
 
 fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
-    if cont.attrs.transparent() {
+    if let Some(path) = cont.attrs.deserialize_with() {
+        deserialize_with(path)
+    } else if cont.attrs.transparent() {
         deserialize_transparent(cont, params)
     } else if let Some(type_from) = cont.attrs.type_from() {
         deserialize_from(type_from)
@@ -336,6 +338,7 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
     assert!(!params.has_getter);
 
     if cont.attrs.transparent()
+        || cont.attrs.deserialize_with().is_some()
         || cont.attrs.type_from().is_some()
         || cont.attrs.type_try_from().is_some()
         || cont.attrs.identifier().is_some()
@@ -437,6 +440,17 @@ fn deserialize_try_from(type_try_from: &syn::Type) -> Fragment {
         _serde::#private::Result::and_then(
             <#type_try_from as _serde::Deserialize>::deserialize(__deserializer),
             |v| _serde::#private::TryFrom::try_from(v).map_err(_serde::de::Error::custom))
+    }
+}
+
+fn deserialize_with(deserialize_with: &syn::ExprPath) -> Fragment {
+    // Attach type errors to the path in #[serialize(deserialize_with = "path")]
+    let deserializer_arg = quote!(__deserializer);
+    let wrapper_deserialize = quote_spanned! {deserialize_with.span()=>
+        #deserialize_with(#deserializer_arg)
+    };
+    quote_block! {
+        #wrapper_deserialize
     }
 }
 

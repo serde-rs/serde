@@ -172,6 +172,8 @@ pub struct Container {
     /// Error message generated when type can't be deserialized
     expecting: Option<String>,
     non_exhaustive: bool,
+    serialize_with: Option<syn::ExprPath>,
+    deserialize_with: Option<syn::ExprPath>,
 }
 
 /// Styles of representing an enum.
@@ -258,6 +260,8 @@ impl Container {
         let mut serde_path = Attr::none(cx, CRATE);
         let mut expecting = Attr::none(cx, EXPECTING);
         let mut non_exhaustive = false;
+        let mut serialize_with = Attr::none(cx, SERIALIZE_WITH);
+        let mut deserialize_with = Attr::none(cx, DESERIALIZE_WITH);
 
         for attr in &item.attrs {
             if attr.path() != SERDE {
@@ -490,6 +494,32 @@ impl Container {
                     if let Some(s) = get_lit_str(cx, EXPECTING, &meta)? {
                         expecting.set(&meta.path, s.value());
                     }
+                } else if meta.path == WITH {
+                    // #[serde(with = "...")]
+                    if let Some(path) = parse_lit_into_expr_path(cx, WITH, &meta)? {
+                        let mut ser_path = path.clone();
+                        ser_path
+                            .path
+                            .segments
+                            .push(Ident::new("serialize", ser_path.span()).into());
+                        serialize_with.set(&meta.path, ser_path);
+                        let mut de_path = path;
+                        de_path
+                            .path
+                            .segments
+                            .push(Ident::new("deserialize", de_path.span()).into());
+                        deserialize_with.set(&meta.path, de_path);
+                    }
+                } else if meta.path == SERIALIZE_WITH {
+                    // #[serde(serialize_with = "...")]
+                    if let Some(path) = parse_lit_into_expr_path(cx, SERIALIZE_WITH, &meta)? {
+                        serialize_with.set(&meta.path, path);
+                    }
+                } else if meta.path == DESERIALIZE_WITH {
+                    // #[serde(deserialize_with = "...")]
+                    if let Some(path) = parse_lit_into_expr_path(cx, DESERIALIZE_WITH, &meta)? {
+                        deserialize_with.set(&meta.path, path);
+                    }
                 } else {
                     let path = meta.path.to_token_stream().to_string().replace(' ', "");
                     return Err(
@@ -541,6 +571,8 @@ impl Container {
             is_packed,
             expecting: expecting.get(),
             non_exhaustive,
+            serialize_with: serialize_with.get(),
+            deserialize_with: deserialize_with.get(),
         }
     }
 
@@ -616,6 +648,14 @@ impl Container {
 
     pub fn non_exhaustive(&self) -> bool {
         self.non_exhaustive
+    }
+
+    pub fn serialize_with(&self) -> Option<&syn::ExprPath> {
+        self.serialize_with.as_ref()
+    }
+
+    pub fn deserialize_with(&self) -> Option<&syn::ExprPath> {
+        self.deserialize_with.as_ref()
     }
 }
 
