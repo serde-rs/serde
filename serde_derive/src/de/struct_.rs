@@ -310,19 +310,26 @@ fn deserialize_map(
         }
     };
 
-    let extract_values = fields_names
+    let extracted_names: Vec<_> = fields_names
         .iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
+        .collect();
+
+    let extract_values: Vec<_> = extracted_names
+        .iter()
         .map(|(field, name)| {
             let missing_expr = Match(expr_is_missing(field, cattrs));
 
             quote! {
-                let #name = match #name {
+                match #name {
                     _serde::#private::Some(#name) => #name,
                     _serde::#private::None => #missing_expr
-                };
+                }
             }
-        });
+        })
+        .collect();
+
+    let extracted_names: Vec<_> = extracted_names.iter().map(|(_, name)| name).collect();
 
     let extract_collected = fields_names
         .iter()
@@ -390,6 +397,31 @@ fn deserialize_map(
         }
     };
 
+    // The container default is only built if a field is missing, unless a
+    // skipped field takes its value from it.
+    let lazy_default = let_default.is_some()
+        && !extracted_names.is_empty()
+        && !fields
+            .iter()
+            .any(|field| field.attrs.skip_deserializing() && field.attrs.default().is_none());
+    let extract_values = if lazy_default {
+        let private2 = private;
+        quote! {
+            let (#(#extracted_names,)*) = match (#(#extracted_names,)*) {
+                (#(_serde::#private2::Some(#extracted_names),)*) => (#(#extracted_names,)*),
+                (#(#extracted_names,)*) => {
+                    #let_default
+                    (#(#extract_values,)*)
+                }
+            };
+        }
+    } else {
+        quote! {
+            #let_default
+            #(let #extracted_names = #extract_values;)*
+        }
+    };
+
     let mut result = quote!(#struct_path { #(#result),* });
     if params.has_getter {
         let this_type = &params.this_type;
@@ -406,9 +438,7 @@ fn deserialize_map(
 
         #match_keys
 
-        #let_default
-
-        #(#extract_values)*
+        #extract_values
 
         #(#extract_collected)*
 
@@ -632,7 +662,13 @@ fn deserialize_map_in_place(
                     };
                 }
             }
-        });
+        })
+        .collect::<Vec<_>>();
+
+    let flag_names = fields_names
+        .iter()
+        .filter(|&&(field, _)| !field.attrs.skip_deserializing())
+        .map(|(_, name)| name);
 
     let this_type = &params.this_type;
     let (_, ty_generics, _) = params.generics.split_for_impl();
@@ -655,14 +691,27 @@ fn deserialize_map_in_place(
         }
     };
 
+    // The container default is only built if a field is missing.
+    let check_flags = if let_default.is_some() && !check_flags.is_empty() {
+        quote! {
+            if #(!#flag_names)||* {
+                #let_default
+                #(#check_flags)*
+            }
+        }
+    } else {
+        quote! {
+            #let_default
+            #(#check_flags)*
+        }
+    };
+
     quote_block! {
         #(#let_flags)*
 
         #match_keys
 
-        #let_default
-
-        #(#check_flags)*
+        #check_flags
 
         _serde::#private::Ok(())
     }
