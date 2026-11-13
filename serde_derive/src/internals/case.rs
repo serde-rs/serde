@@ -100,6 +100,9 @@ impl RenameRule {
             }
             CamelCase => {
                 let pascal = PascalCase.apply_to_field(field);
+                if pascal.is_empty() {
+                    return field.to_owned();
+                }
                 pascal[..1].to_ascii_lowercase() + &pascal[1..]
             }
             ScreamingSnakeCase => field.to_ascii_uppercase(),
@@ -187,6 +190,7 @@ fn rename_fields() {
         ),
         ("a", "A", "A", "a", "A", "a", "A"),
         ("z42", "Z42", "Z42", "z42", "Z42", "z42", "Z42"),
+        ("", "", "", "", "", "", ""),
     ] {
         assert_eq!(None.apply_to_field(original), original);
         assert_eq!(UpperCase.apply_to_field(original), upper);
