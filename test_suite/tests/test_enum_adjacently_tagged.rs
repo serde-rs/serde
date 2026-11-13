@@ -701,6 +701,32 @@ fn partially_untagged() {
 }
 
 #[test]
+fn invalid_content_error_mentions_variant() {
+    #[derive(Deserialize)]
+    #[serde(tag = "t", content = "c")]
+    #[allow(dead_code)]
+    enum Data {
+        Para(Vec<String>),
+    }
+
+    assert_de_tokens_error::<Data>(
+        &[
+            Token::Map { len: None },
+            Token::Str("t"),
+            Token::UnitVariant {
+                name: "Data",
+                variant: "Para",
+            },
+            Token::Str("c"),
+            Token::Seq { len: Some(2) },
+            Token::Str("hi"),
+            Token::I32(15),
+        ],
+        "invalid value for variant `Para`: invalid type: integer `15`, expected a string",
+    );
+}
+
+#[test]
 fn deny_unknown_fields() {
     #[derive(Debug, PartialEq, Deserialize)]
     #[serde(tag = "t", content = "c", deny_unknown_fields)]
