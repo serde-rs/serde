@@ -19,6 +19,13 @@ pub use self::content::{
 
 pub use crate::serde_core_private::InPlaceSeed;
 
+mod identifier;
+pub use self::identifier::{
+    Field, FieldSeed, FieldStrong, FieldStrongSeed, VariantOtherSeed, VariantSeed,
+};
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub use self::identifier::{FieldFlatten, FieldFlattenSeed};
+
 /// If the missing field is of type `Option<T>` then treat is as `None`,
 /// otherwise it is an error.
 pub fn missing_field<'de, V, E>(field: &'static str) -> Result<V, E>
