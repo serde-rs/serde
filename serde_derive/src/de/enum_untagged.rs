@@ -25,16 +25,18 @@ pub(super) fn deserialize(
     cattrs: &attr::Container,
     first_attempt: Option<TokenStream>,
 ) -> Fragment {
-    let attempts = variants
+    let active_variants = variants
         .iter()
         .filter(|variant| !variant.attrs.skip_deserializing())
+        .collect::<Vec<_>>();
+    let attempts = active_variants
+        .iter()
         .map(|variant| Expr(deserialize_variant(params, variant, cattrs)));
-    // TODO this message could be better by saving the errors from the failed
-    // attempts. The heuristic used by TOML was to count the number of fields
-    // processed before an error, and use the error that happened after the
-    // largest number of fields. I'm not sure I like that. Maybe it would be
-    // better to save all the errors and combine them into one message that
-    // explains why none of the variants matched.
+    let variant_names = active_variants
+        .iter()
+        .map(|variant| variant.ident.to_string())
+        .collect::<Vec<_>>();
+
     let fallthrough_msg = format!(
         "data did not match any variant of untagged enum {}",
         params.type_name()
@@ -48,13 +50,22 @@ pub(super) fn deserialize(
 
         #first_attempt
 
+        let mut __errors = std::vec::Vec::new();
+
         #(
-            if let _serde::#private2::Ok(__ok) = #attempts {
-                return _serde::#private2::Ok(__ok);
+            match #attempts {
+                _serde::#private2::Ok(__ok) => return _serde::#private2::Ok(__ok),
+                _serde::#private2::Err(__err) => {__errors.push((#variant_names, __err));}
             }
         )*
 
-        _serde::#private::Err(_serde::de::Error::custom(#fallthrough_msg))
+        let mut __error_msg = std::string::String::from(#fallthrough_msg);
+        __error_msg.push_str(":");
+        for (__name, __e) in __errors {
+            use _serde::#private::fmt::Write;
+            let _ = core::write!(&mut __error_msg, "\n  - {__name}: {__e}");
+        }
+        _serde::#private::Err(_serde::de::Error::custom(__error_msg))
     }
 }
 
