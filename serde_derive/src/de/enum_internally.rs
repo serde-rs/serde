@@ -46,19 +46,55 @@ pub(super) fn deserialize(
     let expecting = format!("internally tagged enum {}", params.type_name());
     let expecting = cattrs.expecting().unwrap_or(&expecting);
 
+    let this_type = &params.this_type;
+    let (de_impl_generics, de_ty_generics, ty_generics, where_clause) =
+        params.generics_with_de_lifetime();
+    let delife = params.borrowed.de_lifetime();
+
     quote_block! {
         #variant_visitor
 
         #variants_stmt
 
-        let (__tag, __content) = _serde::Deserializer::deserialize_any(
-            __deserializer,
-            _serde::#private::de::TaggedContentVisitor::<__Field>::new(#tag, #expecting))?;
-        let __deserializer = _serde::#private::de::ContentDeserializer::<__D::Error>::new(__content);
-
-        match __tag {
-            #(#variant_arms)*
+        struct __Seed #de_impl_generics #where_clause {
+            tag: __Field,
+            marker: _serde::#private::PhantomData<#this_type #ty_generics>,
+            lifetime: _serde::#private::PhantomData<&#delife ()>,
         }
+
+        impl #de_impl_generics _serde::de::Deserialize<#delife> for __Seed #de_ty_generics #where_clause {
+            fn deserialize<__D>(__deserializer: __D) -> _serde::#private::Result<Self, __D::Error>
+            where
+                __D: _serde::de::Deserializer<#delife>,
+            {
+                _serde::#private::Result::map(
+                    __Field::deserialize(__deserializer),
+                    |__tag| __Seed {
+                        tag: __tag,
+                        marker: _serde::#private::PhantomData,
+                        lifetime: _serde::#private::PhantomData,
+                    }
+                )
+            }
+        }
+
+        impl #de_impl_generics _serde::de::DeserializeSeed<#delife> for __Seed #de_ty_generics #where_clause {
+            type Value = #this_type #ty_generics;
+
+            fn deserialize<__D>(self, __deserializer: __D) -> _serde::#private::Result<Self::Value, __D::Error>
+            where
+                __D: _serde::de::Deserializer<#delife>,
+            {
+                match self.tag {
+                    #(#variant_arms)*
+                }
+            }
+        }
+
+        _serde::Deserializer::deserialize_map(
+            __deserializer,
+            _serde::#private::de::TaggedContentVisitor::<__Seed>::new(#tag, #expecting)
+        )
     }
 }
 
@@ -88,7 +124,7 @@ fn deserialize_internally_tagged_variant(
                 quote!((#default))
             });
             quote_block! {
-                _serde::Deserializer::deserialize_any(__deserializer, _serde::#private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name))?;
+                _serde::Deserializer::deserialize_map(__deserializer, _serde::#private::de::InternallyTaggedUnitVisitor::new(#type_name, #variant_name))?;
                 _serde::#private::Ok(#this_value::#variant_ident #default)
             }
         }
