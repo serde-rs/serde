@@ -29,6 +29,7 @@ pub(super) fn deserialize(
         .iter()
         .filter(|variant| !variant.attrs.skip_deserializing())
         .map(|variant| Expr(deserialize_variant(params, variant, cattrs)));
+
     // TODO this message could be better by saving the errors from the failed
     // attempts. The heuristic used by TOML was to count the number of fields
     // processed before an error, and use the error that happened after the
@@ -40,21 +41,72 @@ pub(super) fn deserialize(
         params.type_name()
     );
     let fallthrough_msg = cattrs.expecting().unwrap_or(&fallthrough_msg);
+    let has_custom_expecting = cattrs.expecting().is_some();
 
     let private2 = private;
-    quote_block! {
-        let __content = _serde::de::DeserializeSeed::deserialize(_serde::#private::de::ContentVisitor::new(), __deserializer)?;
-        let __deserializer = _serde::#private::de::ContentRefDeserializer::<__D::Error>::new(&__content);
 
-        #first_attempt
+    if first_attempt.is_some() {
+        // In the "partially untagged" case (tagged variants first, untagged
+        // variants last), collect errors from all attempts and include them in
+        // the final message. This is especially useful when the tag is present
+        // but wrong: we can report both the tag mismatch and why the untagged
+        // fallthrough did not apply.
+        quote_block! {
+            let __content = _serde::de::DeserializeSeed::deserialize(
+                _serde::#private::de::ContentVisitor::new(),
+                __deserializer
+            )?;
+            let __deserializer = _serde::#private::de::ContentRefDeserializer::<__D::Error>::new(&__content);
 
-        #(
-            if let _serde::#private2::Ok(__ok) = #attempts {
-                return _serde::#private2::Ok(__ok);
-            }
-        )*
+            let mut __errors = _serde::#private::Vec::<_serde::#private::String>::new();
 
-        _serde::#private::Err(_serde::de::Error::custom(#fallthrough_msg))
+            #first_attempt
+
+            #(
+                match #attempts {
+                    _serde::#private2::Ok(__ok) => return _serde::#private2::Ok(__ok),
+                    _serde::#private2::Err(__err) => {
+                        __errors.push(_serde::#private2::ToString::to_string(&__err));
+                    }
+                }
+            )*
+
+            let __msg = if #has_custom_expecting || __errors.is_empty() {
+                _serde::#private2::ToString::to_string(#fallthrough_msg)
+            } else {
+                let mut __msg = _serde::#private2::String::from(#fallthrough_msg);
+                __msg.push_str(": ");
+                let mut __first = true;
+                for __err in __errors {
+                    if !__first {
+                        __msg.push_str(" | ");
+                    }
+                    __first = false;
+                    __msg.push_str(&__err);
+                }
+                __msg
+            };
+
+            _serde::#private::Err(_serde::de::Error::custom(__msg))
+        }
+    } else {
+        quote_block! {
+            let __content = _serde::de::DeserializeSeed::deserialize(
+                _serde::#private::de::ContentVisitor::new(),
+                __deserializer
+            )?;
+            let __deserializer = _serde::#private::de::ContentRefDeserializer::<__D::Error>::new(&__content);
+
+            #first_attempt
+
+            #(
+                if let _serde::#private2::Ok(__ok) = #attempts {
+                    return _serde::#private2::Ok(__ok);
+                }
+            )*
+
+            _serde::#private::Err(_serde::de::Error::custom(#fallthrough_msg))
+        }
     }
 }
 

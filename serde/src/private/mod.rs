@@ -15,4 +15,4 @@ pub use crate::lib::result::Result::{self, Err, Ok};
 pub use crate::serde_core_private::string::from_utf8_lossy;
 
 #[cfg(any(feature = "alloc", feature = "std"))]
-pub use crate::lib::{ToString, Vec};
+pub use crate::lib::{String, ToString, Vec};
