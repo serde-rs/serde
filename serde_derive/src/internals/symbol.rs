@@ -19,6 +19,7 @@ pub const FLATTEN: Symbol = Symbol("flatten");
 pub const FROM: Symbol = Symbol("from");
 pub const GETTER: Symbol = Symbol("getter");
 pub const INTO: Symbol = Symbol("into");
+pub const LIFETIME: Symbol = Symbol("lifetime");
 pub const NON_EXHAUSTIVE: Symbol = Symbol("non_exhaustive");
 pub const OTHER: Symbol = Symbol("other");
 pub const REMOTE: Symbol = Symbol("remote");
