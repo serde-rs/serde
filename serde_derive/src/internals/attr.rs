@@ -531,7 +531,7 @@ impl Container {
             },
             ser_bound: ser_bound.get(),
             de_bound: de_bound.get(),
-            tag: decide_tag(cx, item, untagged, internal_tag, content),
+            tag: decide_tag(cx, untagged, internal_tag, content),
             type_from: type_from.get(),
             type_try_from: type_try_from.get(),
             type_into: type_into.get(),
@@ -621,7 +621,6 @@ impl Container {
 
 fn decide_tag(
     cx: &Ctxt,
-    item: &syn::DeriveInput,
     untagged: BoolAttr,
     internal_tag: Attr<String>,
     content: Attr<String>,
@@ -633,25 +632,7 @@ fn decide_tag(
     ) {
         (None, None, None) => TagType::External,
         (Some(_), None, None) => TagType::None,
-        (None, Some((_, tag)), None) => {
-            // Check that there are no tuple variants.
-            if let syn::Data::Enum(data) = &item.data {
-                for variant in &data.variants {
-                    match &variant.fields {
-                        syn::Fields::Named(_) | syn::Fields::Unit => {}
-                        syn::Fields::Unnamed(fields) => {
-                            if fields.unnamed.len() != 1 {
-                                let msg =
-                                    "#[serde(tag = \"...\")] cannot be used with tuple variants";
-                                cx.error_spanned_by(variant, msg);
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            TagType::Internal { tag }
-        }
+        (None, Some((_, tag)), None) => TagType::Internal { tag },
         (Some((untagged_tokens, ())), Some((tag_tokens, _)), None) => {
             let msg = "enum cannot be both untagged and internally tagged";
             cx.error_spanned_by(untagged_tokens, msg);

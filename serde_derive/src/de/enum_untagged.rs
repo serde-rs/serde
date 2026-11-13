@@ -5,13 +5,14 @@
 //! enum Enum {}
 //! ```
 
+use crate::de::enum_;
 use crate::de::struct_;
 use crate::de::tuple;
 use crate::de::{
-    effective_style, expr_is_missing, unwrap_to_variant_closure, Parameters, StructForm, TupleForm,
+    expr_is_missing, field_i, unwrap_to_variant_closure, Parameters, StructForm, TupleForm,
 };
 use crate::fragment::{Expr, Fragment};
-use crate::internals::ast::{Field, Style, Variant};
+use crate::internals::ast::{Style, Variant};
 use crate::internals::attr;
 use crate::private;
 use proc_macro2::TokenStream;
@@ -64,8 +65,9 @@ pub(super) fn deserialize_variant(
     variant: &Variant,
     cattrs: &attr::Container,
 ) -> Fragment {
+    // Feature https://github.com/serde-rs/serde/issues/1013
     if let Some(path) = variant.attrs.deserialize_with() {
-        let unwrap_fn = unwrap_to_variant_closure(params, variant, false);
+        let unwrap_fn = unwrap_to_variant_closure(params, variant, cattrs, false);
         return quote_block! {
             _serde::#private::Result::map(#path(__deserializer), #unwrap_fn)
         };
@@ -73,15 +75,12 @@ pub(super) fn deserialize_variant(
 
     let variant_ident = &variant.ident;
 
-    match effective_style(variant) {
+    match variant.de_style() {
         Style::Unit => {
             let this_value = &params.this_value;
             let type_name = params.type_name();
             let variant_name = variant.ident.to_string();
-            let default = variant.fields.first().map(|field| {
-                let default = Expr(expr_is_missing(field, cattrs));
-                quote!((#default))
-            });
+            let default = enum_::construct_default_tuple(variant, cattrs);
             quote_expr! {
                 match _serde::Deserializer::deserialize_any(
                     __deserializer,
@@ -92,7 +91,7 @@ pub(super) fn deserialize_variant(
                 }
             }
         }
-        Style::Newtype => deserialize_newtype_variant(variant_ident, params, &variant.fields[0]),
+        Style::Newtype => deserialize_newtype_variant(params, variant, cattrs),
         Style::Tuple => tuple::deserialize(
             params,
             &variant.fields,
@@ -111,25 +110,51 @@ pub(super) fn deserialize_variant(
 // Also used by internally tagged enums
 // Implicitly (via `generate_variant`) used by adjacently tagged enums
 pub(super) fn deserialize_newtype_variant(
-    variant_ident: &syn::Ident,
     params: &Parameters,
-    field: &Field,
+    variant: &Variant,
+    cattrs: &attr::Container,
 ) -> Fragment {
     let this_value = &params.this_value;
-    let field_ty = field.ty;
-    match field.attrs.deserialize_with() {
+    let variant_ident = &variant.ident;
+
+    let fields = variant.fields.iter().enumerate().map(|(i, _)| field_i(i));
+    let define = variant.fields.iter().enumerate().filter_map(|(i, field)| {
+        if field.attrs.skip_deserializing() {
+            let name = field_i(i);
+            let field_ty = field.ty;
+            // This expression always will generate access to default implementation --
+            // see comments on `expr_is_missing`
+            let expr = Expr(expr_is_missing(field, cattrs));
+            return Some(quote!(let #name: #field_ty = #expr;));
+        }
+        None
+    });
+    // We deserialize newtype struct, so only one field is not skipped
+    let (i, field) = variant
+        .fields
+        .iter()
+        .enumerate()
+        .find(|(_, field)| !field.attrs.skip_deserializing())
+        .expect("checked in Variant::de_style()");
+
+    let name = field_i(i);
+    let expr = match field.attrs.deserialize_with() {
         None => {
             let span = field.original.span();
-            let func = quote_spanned!(span=> <#field_ty as _serde::Deserialize>::deserialize);
-            quote_expr! {
-                _serde::#private::Result::map(#func(__deserializer), #this_value::#variant_ident)
-            }
+            quote_spanned!(span=> _serde::Deserialize::deserialize)
         }
-        Some(path) => {
-            quote_block! {
-                let __value: _serde::#private::Result<#field_ty, _> = #path(__deserializer);
-                _serde::#private::Result::map(__value, #this_value::#variant_ident)
+        Some(path) => quote!(#path),
+    };
+
+    quote_expr! {
+        match #expr(__deserializer) {
+            _serde::#private::Ok(#name) => {
+                #(#define)*
+                _serde::#private::Ok(#this_value::#variant_ident(
+                    #(#fields,)*
+                ))
             }
+            _serde::#private::Err(__err) => _serde::#private::Err(__err),
         }
     }
 }
