@@ -1,0 +1,10 @@
+[package]
+name = "serde_no_atomic_test"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+serde = { path = "../../serde", default-features = false, features = ["alloc", "rc"] }
+
+[workspace]
