@@ -336,6 +336,7 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
     assert!(!params.has_getter);
 
     if cont.attrs.transparent()
+        || cont.attrs.is_packed()
         || cont.attrs.type_from().is_some()
         || cont.attrs.type_try_from().is_some()
         || cont.attrs.identifier().is_some()
@@ -344,6 +345,11 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
             .all_fields()
             .all(|f| f.attrs.deserialize_with().is_some())
     {
+        // In-place deserialization takes `&mut` references to individual
+        // fields, which is E0793 (unaligned reference) for packed structs.
+        // Returning None falls back to the trait's default
+        // `deserialize_in_place`, which deserializes a temporary value and
+        // assigns the whole struct at once.
         return None;
     }
 
