@@ -82,8 +82,14 @@
 //!    - SystemTime
 //!    - Path
 //!    - PathBuf
-//!    - Range\<T\>
-//!    - RangeInclusive\<T\>
+//!    - ops::Range\<T\>
+//!    - ops::RangeFrom\<T\>
+//!    - ops::RangeInclusive\<T\>
+//!    - ops::RangeTo\<T\>
+//!    - range::Range\<T\>&emsp;*(if Rust \>= 1.96)*
+//!    - range::RangeFrom\<T\>&emsp;*(if Rust \>= 1.96)*
+//!    - range::RangeInclusive\<T\>&emsp;*(if Rust \>= 1.96)*
+//!    - range::RangeToInclusive\<T\>&emsp;*(if Rust \>= 1.96)*
 //!    - Bound\<T\>
 //!    - num::NonZero*
 //!    - `!` *(unstable)*
