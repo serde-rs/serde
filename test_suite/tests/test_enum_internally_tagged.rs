@@ -320,8 +320,9 @@ fn newtype_map() {
             Token::Seq { len: Some(2) },
             Token::Str("NewtypeMap"), // tag
             Token::Map { len: Some(0) },
-            Token::MapEnd,
-            Token::SeqEnd,
+            // Tokens that could follow, but assert_de_tokens_error does not want them
+            // Token::MapEnd,
+            // Token::SeqEnd,
         ],
         "invalid type: sequence, expected a map",
     );

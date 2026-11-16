@@ -153,7 +153,7 @@ pub(super) fn deserialize(
             _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
         },
         StructForm::InternallyTagged(_) => quote! {
-            _serde::Deserializer::deserialize_any(__deserializer, #visitor_expr)
+            _serde::Deserializer::deserialize_map(__deserializer, #visitor_expr)
         },
         StructForm::Untagged(_) => quote! {
             _serde::Deserializer::deserialize_any(__deserializer, #visitor_expr)
