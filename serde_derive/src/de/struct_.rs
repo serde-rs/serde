@@ -610,27 +610,12 @@ fn deserialize_map_in_place(
         .iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing())
         .map(|(field, name)| {
-            let missing_expr = expr_is_missing(field, cattrs);
-            // If missing_expr unconditionally returns an error, don't try
-            // to assign its value to self.place.
-            if field.attrs.default().is_none()
-                && cattrs.default().is_none()
-                && field.attrs.deserialize_with().is_some()
-            {
-                let missing_expr = Stmts(missing_expr);
-                quote! {
-                    if !#name {
-                        #missing_expr;
-                    }
-                }
-            } else {
-                let member = &field.member;
-                let missing_expr = Expr(missing_expr);
-                quote! {
-                    if !#name {
-                        self.place.#member = #missing_expr;
-                    };
-                }
+            let member = &field.member;
+            let missing_expr = Expr(expr_is_missing(field, cattrs));
+            quote! {
+                if !#name {
+                    self.place.#member = #missing_expr;
+                };
             }
         });
 
