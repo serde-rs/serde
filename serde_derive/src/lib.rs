@@ -9,9 +9,11 @@
 //! # fn main() {}
 //! ```
 //!
-//! Please refer to [https://serde.rs/derive.html] for how to set this up.
+//! Please refer to [https://serde.rs/derive.html] for how to set this up. For
+//! attributes on containers and fields, see [https://serde.rs/attributes.html].
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
+//! [https://serde.rs/attributes.html]: https://serde.rs/attributes.html
 
 #![doc(html_root_url = "https://docs.rs/serde_derive/1.0.229")]
 #![cfg_attr(not(check_cfg), allow(unexpected_cfgs))]
@@ -110,6 +112,11 @@ impl ToTokens for private {
     }
 }
 
+/// Derive macro generating an implementation of `Serialize`.
+///
+/// For an introduction, see <https://serde.rs/derive.html>.
+///
+/// For attributes on containers and fields, see <https://serde.rs/attributes.html>.
 #[proc_macro_derive(Serialize, attributes(serde))]
 pub fn derive_serialize(input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as DeriveInput);
@@ -118,6 +125,11 @@ pub fn derive_serialize(input: TokenStream) -> TokenStream {
         .into()
 }
 
+/// Derive macro generating an implementation of `Deserialize`.
+///
+/// For an introduction, see <https://serde.rs/derive.html>.
+///
+/// For attributes on containers and fields, see <https://serde.rs/attributes.html>.
 #[proc_macro_derive(Deserialize, attributes(serde))]
 pub fn derive_deserialize(input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as DeriveInput);
