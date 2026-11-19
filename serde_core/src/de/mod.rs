@@ -400,6 +400,8 @@ pub enum Unexpected<'a> {
 
 impl<'a> fmt::Display for Unexpected<'a> {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        const MAX_STR_DEBUG_LEN: usize = 256;
+
         use self::Unexpected::*;
         match *self {
             Bool(b) => write!(formatter, "boolean `{}`", b),
@@ -407,6 +409,18 @@ impl<'a> fmt::Display for Unexpected<'a> {
             Signed(i) => write!(formatter, "integer `{}`", i),
             Float(f) => write!(formatter, "floating point `{}`", WithDecimalPoint(f)),
             Char(c) => write!(formatter, "character `{}`", c),
+            Str(s) if s.len() > MAX_STR_DEBUG_LEN => {
+                let mut end = MAX_STR_DEBUG_LEN;
+                while !s.is_char_boundary(end) {
+                    end -= 1;
+                }
+                write!(
+                    formatter,
+                    "string {:?}... and {} more bytes",
+                    &s[..end],
+                    s.len() - end
+                )
+            }
             Str(s) => write!(formatter, "string {:?}", s),
             Bytes(_) => formatter.write_str("byte array"),
             Unit => formatter.write_str("unit value"),
