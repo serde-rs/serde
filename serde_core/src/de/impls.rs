@@ -385,7 +385,8 @@ impl_deserialize_num! {
     num_self!(i16:visit_i16);
     num_as_self!(i8:visit_i8);
     int_to_int!(i32:visit_i32 i64:visit_i64);
-    uint_to_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32 u64:visit_u64);
+    num_as_self!(u8:visit_u8);
+    uint_to_self!(u16:visit_u16 u32:visit_u32 u64:visit_u64);
 }
 
 impl_deserialize_num! {
@@ -393,21 +394,24 @@ impl_deserialize_num! {
     num_self!(i32:visit_i32);
     num_as_self!(i8:visit_i8 i16:visit_i16);
     int_to_int!(i64:visit_i64);
-    uint_to_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32 u64:visit_u64);
+    num_as_self!(u8:visit_u8 u16:visit_u16);
+    uint_to_self!(u32:visit_u32 u64:visit_u64);
 }
 
 impl_deserialize_num! {
     i64, NonZeroI64, deserialize_i64
     num_self!(i64:visit_i64);
     num_as_self!(i8:visit_i8 i16:visit_i16 i32:visit_i32);
-    uint_to_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32 u64:visit_u64);
+    num_as_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32);
+    uint_to_self!(u64:visit_u64);
 }
 
 impl_deserialize_num! {
     isize, NonZeroIsize, deserialize_i64
     num_as_self!(i8:visit_i8 i16:visit_i16);
     int_to_int!(i32:visit_i32 i64:visit_i64);
-    uint_to_self!(u8:visit_u8 u16:visit_u16 u32:visit_u32 u64:visit_u64);
+    num_as_self!(u8:visit_u8);
+    uint_to_self!(u16:visit_u16 u32:visit_u32 u64:visit_u64);
 }
 
 impl_deserialize_num! {
