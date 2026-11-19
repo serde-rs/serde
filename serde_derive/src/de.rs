@@ -46,13 +46,24 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
         quote! {
             #[automatically_derived]
             #allow_deprecated
-            impl #de_impl_generics #ident #ty_generics #where_clause {
-                #vis fn deserialize<__D>(__deserializer: __D) -> _serde::#private::Result<#remote #ty_generics, __D::Error>
+            impl #de_impl_generics _serde::de::RemoteDeserialize<#delife, #remote #ty_generics> for #ident #ty_generics #where_clause {
+                fn deserialize<__D>(__deserializer: __D) -> _serde::#private::Result<#remote #ty_generics, __D::Error>
                 where
                     __D: _serde::Deserializer<#delife>,
                 {
                     #used
                     #body
+                }
+            }
+
+            #[automatically_derived]
+            #allow_deprecated
+            impl #de_impl_generics #ident #ty_generics #where_clause {
+                #vis fn deserialize<__D>(__deserializer: __D) -> _serde::#private::Result<#remote #ty_generics, __D::Error>
+                where
+                    __D: _serde::Deserializer<#delife>,
+                {
+                    <#ident #ty_generics as _serde::de::RemoteDeserialize::<#delife, #remote #ty_generics>>::deserialize(__deserializer)
                 }
             }
         }
