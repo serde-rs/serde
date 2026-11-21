@@ -16,12 +16,12 @@ help: the trait `serde_core::ser::Serialize` is not implemented for `MyStruct`
   = help: the following other types implement trait `serde_core::ser::Serialize`:
             &'a T
             &'a mut T
-            ()
-            (T,)
-            (T0, T1)
-            (T0, T1, T2)
-            (T0, T1, T2, T3)
-            (T0, T1, T2, T3, T4)
+            `(T₁, T₂, …, Tₙ)` up to tuples of arity 16
+            Arc<T>
+            Arguments<'a>
+            Atomic<bool>
+            Atomic<i16>
+            Atomic<i32>
           and $N others
 note: required by a bound in `assert_ser_tokens`
  --> $CARGO/serde_test-$VERSION/src/assert.rs
@@ -50,11 +50,11 @@ help: the trait `serde_core::de::Deserialize<'_>` is not implemented for `MyStru
             &'a Path
             &'a [u8]
             &'a str
-            ()
-            (T,)
-            (T0, T1)
-            (T0, T1, T2)
-            (T0, T1, T2, T3)
+            `(T₁, T₂, …, Tₙ)` up to tuples of arity 16
+            Arc<T>
+            Atomic<bool>
+            Atomic<i16>
+            Atomic<i32>
           and $N others
 note: required by a bound in `assert_de_tokens`
  --> $CARGO/serde_test-$VERSION/src/assert.rs
