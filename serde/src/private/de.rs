@@ -287,6 +287,64 @@ mod content {
         }
     }
 
+    // Self-describing formats commonly accept numbers written as strings in
+    // places where serde's data model sees a string: serde_json map keys such
+    // as "1" deserialize into u32, and serde_yaml / serde_urlencoded coerce
+    // scalar values like "1.5" into f64. Once a value has been buffered into
+    // `Content` for an internally tagged enum, untagged enum or
+    // #[serde(flatten)] field, that format-specific knowledge is lost and the
+    // replaying deserializer used to reject such strings outright
+    // (https://github.com/serde-rs/serde/issues/1183). Recover it by parsing
+    // string-like buffered content as a number when a numeric type is
+    // requested.
+    fn str_as_integer<'de, V, E>(s: &str, visitor: V) -> Result<V::Value, E>
+    where
+        V: Visitor<'de>,
+        E: de::Error,
+    {
+        if let Ok(v) = s.parse::<i64>() {
+            visitor.visit_i64(v)
+        } else if let Ok(v) = s.parse::<u64>() {
+            visitor.visit_u64(v)
+        } else {
+            Err(de::Error::invalid_type(Unexpected::Str(s), &visitor))
+        }
+    }
+
+    fn str_as_float<'de, V, E>(s: &str, visitor: V) -> Result<V::Value, E>
+    where
+        V: Visitor<'de>,
+        E: de::Error,
+    {
+        if let Ok(v) = s.parse::<f64>() {
+            visitor.visit_f64(v)
+        } else {
+            Err(de::Error::invalid_type(Unexpected::Str(s), &visitor))
+        }
+    }
+
+    fn bytes_as_integer<'de, V, E>(b: &[u8], visitor: V) -> Result<V::Value, E>
+    where
+        V: Visitor<'de>,
+        E: de::Error,
+    {
+        match str::from_utf8(b) {
+            Ok(s) => str_as_integer(s, visitor),
+            Err(_) => Err(de::Error::invalid_type(Unexpected::Bytes(b), &visitor)),
+        }
+    }
+
+    fn bytes_as_float<'de, V, E>(b: &[u8], visitor: V) -> Result<V::Value, E>
+    where
+        V: Visitor<'de>,
+        E: de::Error,
+    {
+        match str::from_utf8(b) {
+            Ok(s) => str_as_float(s, visitor),
+            Err(_) => Err(de::Error::invalid_type(Unexpected::Bytes(b), &visitor)),
+        }
+    }
+
     pub struct ContentVisitor<'de> {
         value: PhantomData<Content<'de>>,
     }
@@ -1065,6 +1123,10 @@ mod content {
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
+                Content::String(ref v) => str_as_integer(v, visitor),
+                Content::Str(v) => str_as_integer(v, visitor),
+                Content::ByteBuf(ref v) => bytes_as_integer(v, visitor),
+                Content::Bytes(v) => bytes_as_integer(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1084,6 +1146,10 @@ mod content {
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
+                Content::String(ref v) => str_as_float(v, visitor),
+                Content::Str(v) => str_as_float(v, visitor),
+                Content::ByteBuf(ref v) => bytes_as_float(v, visitor),
+                Content::Bytes(v) => bytes_as_float(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2016,6 +2082,10 @@ mod content {
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
+                Content::String(ref v) => str_as_integer(v, visitor),
+                Content::Str(v) => str_as_integer(v, visitor),
+                Content::ByteBuf(ref v) => bytes_as_integer(v, visitor),
+                Content::Bytes(v) => bytes_as_integer(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2035,6 +2105,10 @@ mod content {
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
+                Content::String(ref v) => str_as_float(v, visitor),
+                Content::Str(v) => str_as_float(v, visitor),
+                Content::ByteBuf(ref v) => bytes_as_float(v, visitor),
+                Content::Bytes(v) => bytes_as_float(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
