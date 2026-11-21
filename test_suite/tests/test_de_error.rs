@@ -1430,6 +1430,30 @@ fn test_number_from_string() {
 }
 
 #[test]
+fn test_long_string_error_is_truncated() {
+    use serde::de::{Error as _, Unexpected};
+
+    let input = "\u{7f}".repeat(1024);
+    let error = serde::de::value::Error::invalid_type(Unexpected::Str(&input), &"u32");
+    let message = error.to_string();
+
+    assert!(message.len() < 2048);
+    assert!(message.ends_with("... and 768 more bytes, expected u32"));
+}
+
+#[test]
+fn test_long_string_error_truncates_on_char_boundary() {
+    use serde::de::{Error as _, Unexpected};
+
+    let input = format!("{}é{}", "x".repeat(255), "y".repeat(10));
+    let error = serde::de::value::Error::invalid_type(Unexpected::Str(&input), &"u32");
+    let message = error.to_string();
+
+    assert!(message.starts_with(&format!("invalid type: string \"{}\"", "x".repeat(255))));
+    assert!(message.ends_with("... and 12 more bytes, expected u32"));
+}
+
+#[test]
 fn test_integer_from_float() {
     assert_de_tokens_error::<isize>(
         &[Token::F32(0.0)],
