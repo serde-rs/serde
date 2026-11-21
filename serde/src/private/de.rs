@@ -7,7 +7,7 @@ use crate::de::{
 };
 
 #[cfg(any(feature = "std", feature = "alloc"))]
-use crate::de::{MapAccess, Unexpected};
+use crate::de::{MapAccess, SeqAccess, Unexpected};
 
 #[cfg(any(feature = "std", feature = "alloc"))]
 pub use self::content::{
@@ -190,6 +190,19 @@ where
             E: Error,
         {
             Ok(Cow::Owned(v))
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'a>,
+        {
+            let mut bytes = Vec::with_capacity(
+                crate::serde_core_private::size_hint::cautious::<u8>(seq.size_hint()),
+            );
+            while let Some(byte) = tri!(seq.next_element()) {
+                bytes.push(byte);
+            }
+            Ok(Cow::Owned(bytes))
         }
     }
 

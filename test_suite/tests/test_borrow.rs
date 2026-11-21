@@ -9,8 +9,8 @@
 
 use serde::de::value::{BorrowedStrDeserializer, MapDeserializer};
 use serde::de::{Deserialize, Deserializer, IntoDeserializer};
-use serde_derive::Deserialize;
-use serde_test::{assert_de_tokens, assert_de_tokens_error, Token};
+use serde_derive::{Deserialize, Serialize};
+use serde_test::{assert_de_tokens, assert_de_tokens_error, assert_tokens, Token};
 use std::borrow::Cow;
 
 #[test]
@@ -160,6 +160,27 @@ fn test_cow() {
         Cow::Borrowed("borrowed") => {}
         _ => panic!("expected a borrowed string"),
     }
+}
+
+#[test]
+fn test_borrow_cow_bytes_from_seq() {
+    #[derive(Deserialize, Serialize, Debug, PartialEq)]
+    struct CowBytes<'a>(#[serde(borrow)] Cow<'a, [u8]>);
+
+    // `Serialize for [u8]` emits a sequence; JSON renders it as an array,
+    // so the borrowed bytes visitor must accept seq.
+    assert_tokens(
+        &CowBytes(Cow::Owned(vec![0, 159, 146, 150])),
+        &[
+            Token::NewtypeStruct { name: "CowBytes" },
+            Token::Seq { len: Some(4) },
+            Token::U8(0),
+            Token::U8(159),
+            Token::U8(146),
+            Token::U8(150),
+            Token::SeqEnd,
+        ],
+    );
 }
 
 #[test]
