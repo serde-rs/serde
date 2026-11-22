@@ -287,16 +287,20 @@ mod content {
         }
     }
 
-    // Self-describing formats commonly accept numbers written as strings for
-    // map keys: serde_json deserializes the map key "1" into a u32. Once a map
-    // has been buffered into `Content` for an internally tagged enum, untagged
-    // enum or #[serde(flatten)] field, that format-specific knowledge is lost
-    // and the replaying deserializer used to reject such keys outright
+    // Self-describing formats commonly accept scalars written as strings for
+    // map keys: serde_json deserializes the map key "1" into a u32, "true"
+    // into a bool, and "a" into a char. Once a map has been buffered into
+    // `Content` for an internally tagged enum, untagged enum or
+    // #[serde(flatten)] field, that format-specific knowledge is lost and the
+    // replaying deserializer used to reject such keys outright
     // (https://github.com/serde-rs/serde/issues/1183). Recover it by parsing
-    // string-like buffered content as a number, but only when the content is
-    // being replayed as a map key (`ContentDeserializer::new_key`), so that
-    // ordinary buffered values keep the strict string/number distinction of
-    // serde's data model.
+    // string-like buffered content as the requested scalar, but only when the
+    // content is being replayed as a map key (`ContentDeserializer::new_key`),
+    // so that ordinary buffered values keep the strict distinction of serde's
+    // data model. As in #2811, these helpers never error on a value that does
+    // not match the hint: they delegate the decision to the visitor by
+    // falling back to `visit_str` / `visit_bytes`, exactly like the original
+    // format-specific deserializers do.
     fn str_as_integer<'de, V, E>(s: &str, visitor: V) -> Result<V::Value, E>
     where
         V: Visitor<'de>,
@@ -307,7 +311,7 @@ mod content {
         } else if let Ok(v) = s.parse::<u64>() {
             visitor.visit_u64(v)
         } else {
-            Err(de::Error::invalid_type(Unexpected::Str(s), &visitor))
+            visitor.visit_str(s)
         }
     }
 
@@ -319,7 +323,19 @@ mod content {
         if let Ok(v) = s.parse::<f64>() {
             visitor.visit_f64(v)
         } else {
-            Err(de::Error::invalid_type(Unexpected::Str(s), &visitor))
+            visitor.visit_str(s)
+        }
+    }
+
+    fn str_as_bool<'de, V, E>(s: &str, visitor: V) -> Result<V::Value, E>
+    where
+        V: Visitor<'de>,
+        E: de::Error,
+    {
+        match s {
+            "true" => visitor.visit_bool(true),
+            "false" => visitor.visit_bool(false),
+            _ => visitor.visit_str(s),
         }
     }
 
@@ -330,7 +346,7 @@ mod content {
     {
         match str::from_utf8(b) {
             Ok(s) => str_as_integer(s, visitor),
-            Err(_) => Err(de::Error::invalid_type(Unexpected::Bytes(b), &visitor)),
+            Err(_) => visitor.visit_bytes(b),
         }
     }
 
@@ -341,7 +357,18 @@ mod content {
     {
         match str::from_utf8(b) {
             Ok(s) => str_as_float(s, visitor),
-            Err(_) => Err(de::Error::invalid_type(Unexpected::Bytes(b), &visitor)),
+            Err(_) => visitor.visit_bytes(b),
+        }
+    }
+
+    fn bytes_as_bool<'de, V, E>(b: &[u8], visitor: V) -> Result<V::Value, E>
+    where
+        V: Visitor<'de>,
+        E: de::Error,
+    {
+        match str::from_utf8(b) {
+            Ok(s) => str_as_bool(s, visitor),
+            Err(_) => visitor.visit_bytes(b),
         }
     }
 
@@ -1229,8 +1256,13 @@ mod content {
         where
             V: Visitor<'de>,
         {
+            let key = self.key;
             match self.content {
                 Content::Bool(v) => visitor.visit_bool(v),
+                Content::String(ref v) if key => str_as_bool(v, visitor),
+                Content::Str(v) if key => str_as_bool(v, visitor),
+                Content::ByteBuf(ref v) if key => bytes_as_bool(v, visitor),
+                Content::Bytes(v) if key => bytes_as_bool(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2209,8 +2241,13 @@ mod content {
         where
             V: Visitor<'de>,
         {
+            let key = self.key;
             match *self.content {
                 Content::Bool(v) => visitor.visit_bool(v),
+                Content::String(ref v) if key => str_as_bool(v, visitor),
+                Content::Str(v) if key => str_as_bool(v, visitor),
+                Content::ByteBuf(ref v) if key => bytes_as_bool(v, visitor),
+                Content::Bytes(v) if key => bytes_as_bool(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
