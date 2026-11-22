@@ -2,17 +2,19 @@
 
 use std::collections::HashMap;
 
-use serde_derive::Deserialize;
+use serde::Deserialize;
+use serde_derive::Deserialize as DeriveDeserialize;
 
 // https://github.com/serde-rs/serde/issues/1183
 //
 // Buffering by serde derive (internally tagged enums, untagged enums,
-// #[serde(flatten)]) must not lose format-specific deserialization features.
+// #[serde(flatten)]) must not lose format-specific map-key deserialization.
 // serde_json deserializes the string map key "1" into a u32, both when
 // deserializing a HashMap<u32, _> directly and when the key goes through
-// serde's internal Content buffering.
+// serde's internal Content buffering. The coercion is limited to the map-key
+// replay path: buffered values keep serde's strict string/number distinction.
 
-#[derive(Deserialize, PartialEq, Debug)]
+#[derive(DeriveDeserialize, PartialEq, Debug)]
 #[serde(tag = "type")]
 enum InternallyTagged {
     Map(HashMap<u32, ()>),
@@ -29,7 +31,7 @@ fn test_internally_tagged_enum_non_string_map_key() {
     assert_eq!(serde_json::from_str::<InternallyTagged>(j).unwrap(), expected);
 }
 
-#[derive(Deserialize, PartialEq, Debug)]
+#[derive(DeriveDeserialize, PartialEq, Debug)]
 struct Flat {
     #[serde(flatten)]
     extra: HashMap<u32, String>,
@@ -49,7 +51,7 @@ fn test_flatten_non_string_map_key() {
     assert_eq!(serde_json::from_str::<Flat>(j).unwrap(), expected);
 }
 
-#[derive(Deserialize, PartialEq, Eq, Hash, Debug)]
+#[derive(DeriveDeserialize, PartialEq, Eq, Hash, Debug)]
 #[serde(untagged)]
 enum Untagged {
     Number(u32),
@@ -57,10 +59,11 @@ enum Untagged {
 }
 
 #[test]
-fn test_untagged_enum_numeric_map_key() {
-    // Map keys are buffered while trying untagged variants, so the key "3"
-    // must still be usable as a u32.
-    #[derive(Deserialize, PartialEq, Debug)]
+fn test_untagged_enum_string_key_stays_string() {
+    // Values keep serde's strict data model: a buffered JSON string is not
+    // coerced to a number outside the map-key path, so an untagged enum key
+    // still matches its text variant.
+    #[derive(DeriveDeserialize, PartialEq, Debug)]
     struct Wrapper {
         #[serde(flatten)]
         map: HashMap<Untagged, ()>,
@@ -68,30 +71,55 @@ fn test_untagged_enum_numeric_map_key() {
 
     let j = r#"{"3": null}"#;
     let expected = Wrapper {
-        map: [(Untagged::Number(3), ())].into_iter().collect(),
+        map: [(Untagged::Text("3".to_owned()), ())].into_iter().collect(),
     };
     assert_eq!(serde_json::from_str::<Wrapper>(j).unwrap(), expected);
 }
 
+#[derive(Debug)]
+struct OrderedFloat(f64);
+
+impl<'de> Deserialize<'de> for OrderedFloat {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(OrderedFloat(f64::deserialize(deserializer)?))
+    }
+}
+
+impl PartialEq for OrderedFloat {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.to_bits() == other.0.to_bits()
+    }
+}
+impl Eq for OrderedFloat {}
+impl std::hash::Hash for OrderedFloat {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.to_bits().hash(state);
+    }
+}
+
 #[test]
-fn test_buffered_float_from_numeric_string() {
-    // Self-describing formats like serde_yaml or serde_urlencoded natively
-    // deserialize the scalar "1.5" into f64. Buffering through Content must not
-    // lose that, so an untagged enum still matches the numeric variant.
-    #[derive(Deserialize, PartialEq, Debug)]
-    #[serde(untagged)]
-    enum UntaggedFloat {
-        Float(f64),
-        Text(String),
+fn test_buffered_float_map_key_from_numeric_string() {
+    // Map keys are the one place where serde_json accepts numbers written as
+    // strings, so the buffered key "2.5" still deserializes into f64.
+    #[derive(DeriveDeserialize, PartialEq, Debug)]
+    struct Flat {
+        #[serde(flatten)]
+        extra: HashMap<OrderedFloat, String>,
     }
 
-    let v: UntaggedFloat = serde_json::from_str(r#""1.5""#).unwrap();
-    assert_eq!(v, UntaggedFloat::Float(1.5));
+    let j = r#"{"2.5": "x"}"#;
+    let expected = Flat {
+        extra: [(OrderedFloat(2.5), "x".to_owned())].into_iter().collect(),
+    };
+    assert_eq!(serde_json::from_str::<Flat>(j).unwrap(), expected);
 }
 
 #[test]
 fn test_buffered_negative_integer_map_key() {
-    #[derive(Deserialize, PartialEq, Debug)]
+    #[derive(DeriveDeserialize, PartialEq, Debug)]
     #[serde(tag = "type")]
     enum E {
         Map(HashMap<i32, ()>),
@@ -104,7 +132,7 @@ fn test_buffered_negative_integer_map_key() {
 
 #[test]
 fn test_buffered_integer_out_of_range_still_errors() {
-    #[derive(Deserialize, PartialEq, Debug)]
+    #[derive(DeriveDeserialize, PartialEq, Debug)]
     #[serde(tag = "type")]
     enum E {
         Small(HashMap<u8, ()>),
@@ -121,7 +149,7 @@ fn test_buffered_integer_out_of_range_still_errors() {
 
 #[test]
 fn test_buffered_non_numeric_string_still_errors() {
-    #[derive(Deserialize, PartialEq, Debug)]
+    #[derive(DeriveDeserialize, PartialEq, Debug)]
     #[serde(tag = "type")]
     enum E {
         Map(HashMap<u32, ()>),
@@ -134,4 +162,19 @@ fn test_buffered_non_numeric_string_still_errors() {
         "unexpected error: {}",
         err
     );
+}
+
+#[test]
+fn test_buffered_string_value_is_not_coerced_to_number() {
+    // Outside the map-key path a buffered string stays a string, matching
+    // serde_json's own behavior for values.
+    #[derive(DeriveDeserialize, PartialEq, Debug)]
+    #[serde(untagged)]
+    enum UntaggedFloat {
+        Float(f64),
+        Text(String),
+    }
+
+    let v: UntaggedFloat = serde_json::from_str(r#""1.5""#).unwrap();
+    assert_eq!(v, UntaggedFloat::Text("1.5".to_owned()));
 }

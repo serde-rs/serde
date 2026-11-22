@@ -287,16 +287,16 @@ mod content {
         }
     }
 
-    // Self-describing formats commonly accept numbers written as strings in
-    // places where serde's data model sees a string: serde_json map keys such
-    // as "1" deserialize into u32, and serde_yaml / serde_urlencoded coerce
-    // scalar values like "1.5" into f64. Once a value has been buffered into
-    // `Content` for an internally tagged enum, untagged enum or
-    // #[serde(flatten)] field, that format-specific knowledge is lost and the
-    // replaying deserializer used to reject such strings outright
+    // Self-describing formats commonly accept numbers written as strings for
+    // map keys: serde_json deserializes the map key "1" into a u32. Once a map
+    // has been buffered into `Content` for an internally tagged enum, untagged
+    // enum or #[serde(flatten)] field, that format-specific knowledge is lost
+    // and the replaying deserializer used to reject such keys outright
     // (https://github.com/serde-rs/serde/issues/1183). Recover it by parsing
-    // string-like buffered content as a number when a numeric type is
-    // requested.
+    // string-like buffered content as a number, but only when the content is
+    // being replayed as a map key (`ContentDeserializer::new_key`), so that
+    // ordinary buffered values keep the strict string/number distinction of
+    // serde's data model.
     fn str_as_integer<'de, V, E>(s: &str, visitor: V) -> Result<V::Value, E>
     where
         V: Visitor<'de>,
@@ -1099,6 +1099,10 @@ mod content {
     pub struct ContentDeserializer<'de, E> {
         content: Content<'de>,
         err: PhantomData<E>,
+        /// True when this deserializer replays a buffered map key, where
+        /// self-describing formats such as serde_json accept numbers written
+        /// as strings (e.g. the map key "1" deserializing into u32).
+        key: bool,
     }
 
     impl<'de, E> ContentDeserializer<'de, E>
@@ -1114,6 +1118,7 @@ mod content {
         where
             V: Visitor<'de>,
         {
+            let key = self.key;
             match self.content {
                 Content::U8(v) => visitor.visit_u8(v),
                 Content::U16(v) => visitor.visit_u16(v),
@@ -1123,10 +1128,10 @@ mod content {
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
-                Content::String(ref v) => str_as_integer(v, visitor),
-                Content::Str(v) => str_as_integer(v, visitor),
-                Content::ByteBuf(ref v) => bytes_as_integer(v, visitor),
-                Content::Bytes(v) => bytes_as_integer(v, visitor),
+                Content::String(ref v) if key => str_as_integer(v, visitor),
+                Content::Str(v) if key => str_as_integer(v, visitor),
+                Content::ByteBuf(ref v) if key => bytes_as_integer(v, visitor),
+                Content::Bytes(v) if key => bytes_as_integer(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1135,6 +1140,7 @@ mod content {
         where
             V: Visitor<'de>,
         {
+            let key = self.key;
             match self.content {
                 Content::F32(v) => visitor.visit_f32(v),
                 Content::F64(v) => visitor.visit_f64(v),
@@ -1146,10 +1152,10 @@ mod content {
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
-                Content::String(ref v) => str_as_float(v, visitor),
-                Content::Str(v) => str_as_float(v, visitor),
-                Content::ByteBuf(ref v) => bytes_as_float(v, visitor),
-                Content::Bytes(v) => bytes_as_float(v, visitor),
+                Content::String(ref v) if key => str_as_float(v, visitor),
+                Content::Str(v) if key => str_as_float(v, visitor),
+                Content::ByteBuf(ref v) if key => bytes_as_float(v, visitor),
+                Content::Bytes(v) if key => bytes_as_float(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1563,6 +1569,18 @@ mod content {
             ContentDeserializer {
                 content,
                 err: PhantomData,
+                key: false,
+            }
+        }
+
+        /// Construct a deserializer that replays a buffered map key. Numeric
+        /// hints parse string-like content, mirroring the key handling of
+        /// self-describing formats like serde_json (issue #1183).
+        pub fn new_key(content: Content<'de>) -> Self {
+            ContentDeserializer {
+                content,
+                err: PhantomData,
+                key: true,
             }
         }
     }
@@ -1766,7 +1784,7 @@ mod content {
             match self.next_pair() {
                 Some((key, value)) => {
                     self.value = Some(value);
-                    seed.deserialize(ContentDeserializer::new(key)).map(Some)
+                    seed.deserialize(ContentDeserializer::new_key(key)).map(Some)
                 }
                 None => Ok(None),
             }
@@ -1794,7 +1812,7 @@ mod content {
         {
             match self.next_pair() {
                 Some((key, value)) => {
-                    let key = tri!(kseed.deserialize(ContentDeserializer::new(key)));
+                    let key = tri!(kseed.deserialize(ContentDeserializer::new_key(key)));
                     let value = tri!(vseed.deserialize(ContentDeserializer::new(value)));
                     Ok(Some((key, value)))
                 }
@@ -2058,6 +2076,8 @@ mod content {
     pub struct ContentRefDeserializer<'a, 'de: 'a, E> {
         content: &'a Content<'de>,
         err: PhantomData<E>,
+        /// See [`ContentDeserializer::key`].
+        key: bool,
     }
 
     impl<'a, 'de, E> ContentRefDeserializer<'a, 'de, E>
@@ -2073,6 +2093,7 @@ mod content {
         where
             V: Visitor<'de>,
         {
+            let key = self.key;
             match *self.content {
                 Content::U8(v) => visitor.visit_u8(v),
                 Content::U16(v) => visitor.visit_u16(v),
@@ -2082,10 +2103,10 @@ mod content {
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
-                Content::String(ref v) => str_as_integer(v, visitor),
-                Content::Str(v) => str_as_integer(v, visitor),
-                Content::ByteBuf(ref v) => bytes_as_integer(v, visitor),
-                Content::Bytes(v) => bytes_as_integer(v, visitor),
+                Content::String(ref v) if key => str_as_integer(v, visitor),
+                Content::Str(v) if key => str_as_integer(v, visitor),
+                Content::ByteBuf(ref v) if key => bytes_as_integer(v, visitor),
+                Content::Bytes(v) if key => bytes_as_integer(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2094,6 +2115,7 @@ mod content {
         where
             V: Visitor<'de>,
         {
+            let key = self.key;
             match *self.content {
                 Content::F32(v) => visitor.visit_f32(v),
                 Content::F64(v) => visitor.visit_f64(v),
@@ -2105,10 +2127,10 @@ mod content {
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
-                Content::String(ref v) => str_as_float(v, visitor),
-                Content::Str(v) => str_as_float(v, visitor),
-                Content::ByteBuf(ref v) => bytes_as_float(v, visitor),
-                Content::Bytes(v) => bytes_as_float(v, visitor),
+                Content::String(ref v) if key => str_as_float(v, visitor),
+                Content::Str(v) if key => str_as_float(v, visitor),
+                Content::ByteBuf(ref v) if key => bytes_as_float(v, visitor),
+                Content::Bytes(v) if key => bytes_as_float(v, visitor),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2519,6 +2541,16 @@ mod content {
             ContentRefDeserializer {
                 content,
                 err: PhantomData,
+                key: false,
+            }
+        }
+
+        /// See [`ContentDeserializer::new_key`].
+        pub fn new_key(content: &'a Content<'de>) -> Self {
+            ContentRefDeserializer {
+                content,
+                err: PhantomData,
+                key: true,
             }
         }
     }
@@ -2720,7 +2752,7 @@ mod content {
             match self.next_pair() {
                 Some((key, value)) => {
                     self.value = Some(value);
-                    seed.deserialize(ContentRefDeserializer::new(key)).map(Some)
+                    seed.deserialize(ContentRefDeserializer::new_key(key)).map(Some)
                 }
                 None => Ok(None),
             }
@@ -2748,7 +2780,7 @@ mod content {
         {
             match self.next_pair() {
                 Some((key, value)) => {
-                    let key = tri!(kseed.deserialize(ContentRefDeserializer::new(key)));
+                    let key = tri!(kseed.deserialize(ContentRefDeserializer::new_key(key)));
                     let value = tri!(vseed.deserialize(ContentRefDeserializer::new(value)));
                     Ok(Some((key, value)))
                 }
@@ -3441,7 +3473,7 @@ where
                 // is going to be consumed. Borrowing here leaves the entry
                 // available for later flattened fields.
                 self.pending_content = Some(content);
-                return seed.deserialize(ContentRefDeserializer::new(key)).map(Some);
+                return seed.deserialize(ContentRefDeserializer::new_key(key)).map(Some);
             }
         }
         Ok(None)
@@ -3481,7 +3513,7 @@ where
         for entry in self.iter.by_ref() {
             if let Some((key, content)) = flat_map_take_entry(entry, self.fields) {
                 self.pending_content = Some(content);
-                return seed.deserialize(ContentDeserializer::new(key)).map(Some);
+                return seed.deserialize(ContentDeserializer::new_key(key)).map(Some);
             }
         }
         Ok(None)
