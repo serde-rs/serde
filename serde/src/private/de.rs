@@ -298,77 +298,86 @@ mod content {
     // content is being replayed as a map key (`ContentDeserializer::new_key`),
     // so that ordinary buffered values keep the strict distinction of serde's
     // data model. As in #2811, these helpers never error on a value that does
-    // not match the hint: they delegate the decision to the visitor by
-    // falling back to `visit_str` / `visit_bytes`, exactly like the original
+    // not match the hint: they delegate the decision to the visitor through a
+    // per-call `fallback` that replays the buffered content with the matching
+    // ownership — `visit_string` for owned `Content::String`, `visit_str` for
+    // `Content::String` behind a reference, `visit_borrowed_str` for
+    // `Content::Str`, and the byte equivalents — exactly like the original
     // format-specific deserializers do.
-    fn str_as_integer<'de, V, E>(s: &str, visitor: V) -> Result<V::Value, E>
+    fn str_as_integer<'de, 's, V, E, F>(s: &'s str, visitor: V, fallback: F) -> Result<V::Value, E>
     where
         V: Visitor<'de>,
         E: de::Error,
+        F: FnOnce(&'s str, V) -> Result<V::Value, E>,
     {
         if let Ok(v) = s.parse::<i64>() {
             visitor.visit_i64(v)
         } else if let Ok(v) = s.parse::<u64>() {
             visitor.visit_u64(v)
         } else {
-            visitor.visit_str(s)
+            fallback(s, visitor)
         }
     }
 
-    fn str_as_float<'de, V, E>(s: &str, visitor: V) -> Result<V::Value, E>
+    fn str_as_float<'de, 's, V, E, F>(s: &'s str, visitor: V, fallback: F) -> Result<V::Value, E>
     where
         V: Visitor<'de>,
         E: de::Error,
+        F: FnOnce(&'s str, V) -> Result<V::Value, E>,
     {
         if let Ok(v) = s.parse::<f64>() {
             visitor.visit_f64(v)
         } else {
-            visitor.visit_str(s)
+            fallback(s, visitor)
         }
     }
 
-    fn str_as_bool<'de, V, E>(s: &str, visitor: V) -> Result<V::Value, E>
+    fn str_as_bool<'de, 's, V, E, F>(s: &'s str, visitor: V, fallback: F) -> Result<V::Value, E>
     where
         V: Visitor<'de>,
         E: de::Error,
+        F: FnOnce(&'s str, V) -> Result<V::Value, E>,
     {
         match s {
             "true" => visitor.visit_bool(true),
             "false" => visitor.visit_bool(false),
-            _ => visitor.visit_str(s),
+            _ => fallback(s, visitor),
         }
     }
 
-    fn bytes_as_integer<'de, V, E>(b: &[u8], visitor: V) -> Result<V::Value, E>
+    fn bytes_as_integer<'de, 'b, V, E, F>(b: &'b [u8], visitor: V, fallback: F) -> Result<V::Value, E>
     where
         V: Visitor<'de>,
         E: de::Error,
+        F: FnOnce(&'b [u8], V) -> Result<V::Value, E>,
     {
         match str::from_utf8(b) {
-            Ok(s) => str_as_integer(s, visitor),
-            Err(_) => visitor.visit_bytes(b),
+            Ok(s) => str_as_integer(s, visitor, |_s, vis| fallback(b, vis)),
+            Err(_) => fallback(b, visitor),
         }
     }
 
-    fn bytes_as_float<'de, V, E>(b: &[u8], visitor: V) -> Result<V::Value, E>
+    fn bytes_as_float<'de, 'b, V, E, F>(b: &'b [u8], visitor: V, fallback: F) -> Result<V::Value, E>
     where
         V: Visitor<'de>,
         E: de::Error,
+        F: FnOnce(&'b [u8], V) -> Result<V::Value, E>,
     {
         match str::from_utf8(b) {
-            Ok(s) => str_as_float(s, visitor),
-            Err(_) => visitor.visit_bytes(b),
+            Ok(s) => str_as_float(s, visitor, |_s, vis| fallback(b, vis)),
+            Err(_) => fallback(b, visitor),
         }
     }
 
-    fn bytes_as_bool<'de, V, E>(b: &[u8], visitor: V) -> Result<V::Value, E>
+    fn bytes_as_bool<'de, 'b, V, E, F>(b: &'b [u8], visitor: V, fallback: F) -> Result<V::Value, E>
     where
         V: Visitor<'de>,
         E: de::Error,
+        F: FnOnce(&'b [u8], V) -> Result<V::Value, E>,
     {
         match str::from_utf8(b) {
-            Ok(s) => str_as_bool(s, visitor),
-            Err(_) => visitor.visit_bytes(b),
+            Ok(s) => str_as_bool(s, visitor, |_s, vis| fallback(b, vis)),
+            Err(_) => fallback(b, visitor),
         }
     }
 
@@ -1155,10 +1164,10 @@ mod content {
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
-                Content::String(ref v) if key => str_as_integer(v, visitor),
-                Content::Str(v) if key => str_as_integer(v, visitor),
-                Content::ByteBuf(ref v) if key => bytes_as_integer(v, visitor),
-                Content::Bytes(v) if key => bytes_as_integer(v, visitor),
+                Content::String(v) if key => str_as_integer(&v, visitor, |s, vis| vis.visit_string(s.to_owned())),
+                Content::Str(v) if key => str_as_integer(v, visitor, |s, vis| vis.visit_borrowed_str(s)),
+                Content::ByteBuf(v) if key => bytes_as_integer(&v, visitor, |b, vis| vis.visit_byte_buf(b.to_vec())),
+                Content::Bytes(v) if key => bytes_as_integer(v, visitor, |b, vis| vis.visit_borrowed_bytes(b)),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1179,10 +1188,10 @@ mod content {
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
-                Content::String(ref v) if key => str_as_float(v, visitor),
-                Content::Str(v) if key => str_as_float(v, visitor),
-                Content::ByteBuf(ref v) if key => bytes_as_float(v, visitor),
-                Content::Bytes(v) if key => bytes_as_float(v, visitor),
+                Content::String(v) if key => str_as_float(&v, visitor, |s, vis| vis.visit_string(s.to_owned())),
+                Content::Str(v) if key => str_as_float(v, visitor, |s, vis| vis.visit_borrowed_str(s)),
+                Content::ByteBuf(v) if key => bytes_as_float(&v, visitor, |b, vis| vis.visit_byte_buf(b.to_vec())),
+                Content::Bytes(v) if key => bytes_as_float(v, visitor, |b, vis| vis.visit_borrowed_bytes(b)),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -1259,10 +1268,10 @@ mod content {
             let key = self.key;
             match self.content {
                 Content::Bool(v) => visitor.visit_bool(v),
-                Content::String(ref v) if key => str_as_bool(v, visitor),
-                Content::Str(v) if key => str_as_bool(v, visitor),
-                Content::ByteBuf(ref v) if key => bytes_as_bool(v, visitor),
-                Content::Bytes(v) if key => bytes_as_bool(v, visitor),
+                Content::String(v) if key => str_as_bool(&v, visitor, |s, vis| vis.visit_string(s.to_owned())),
+                Content::Str(v) if key => str_as_bool(v, visitor, |s, vis| vis.visit_borrowed_str(s)),
+                Content::ByteBuf(v) if key => bytes_as_bool(&v, visitor, |b, vis| vis.visit_byte_buf(b.to_vec())),
+                Content::Bytes(v) if key => bytes_as_bool(v, visitor, |b, vis| vis.visit_borrowed_bytes(b)),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2135,10 +2144,10 @@ mod content {
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
-                Content::String(ref v) if key => str_as_integer(v, visitor),
-                Content::Str(v) if key => str_as_integer(v, visitor),
-                Content::ByteBuf(ref v) if key => bytes_as_integer(v, visitor),
-                Content::Bytes(v) if key => bytes_as_integer(v, visitor),
+                Content::String(ref v) if key => str_as_integer(v, visitor, |s, vis| vis.visit_str(s)),
+                Content::Str(v) if key => str_as_integer(v, visitor, |s, vis| vis.visit_borrowed_str(s)),
+                Content::ByteBuf(ref v) if key => bytes_as_integer(v, visitor, |b, vis| vis.visit_bytes(b)),
+                Content::Bytes(v) if key => bytes_as_integer(v, visitor, |b, vis| vis.visit_borrowed_bytes(b)),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2159,10 +2168,10 @@ mod content {
                 Content::I16(v) => visitor.visit_i16(v),
                 Content::I32(v) => visitor.visit_i32(v),
                 Content::I64(v) => visitor.visit_i64(v),
-                Content::String(ref v) if key => str_as_float(v, visitor),
-                Content::Str(v) if key => str_as_float(v, visitor),
-                Content::ByteBuf(ref v) if key => bytes_as_float(v, visitor),
-                Content::Bytes(v) if key => bytes_as_float(v, visitor),
+                Content::String(ref v) if key => str_as_float(v, visitor, |s, vis| vis.visit_str(s)),
+                Content::Str(v) if key => str_as_float(v, visitor, |s, vis| vis.visit_borrowed_str(s)),
+                Content::ByteBuf(ref v) if key => bytes_as_float(v, visitor, |b, vis| vis.visit_bytes(b)),
+                Content::Bytes(v) if key => bytes_as_float(v, visitor, |b, vis| vis.visit_borrowed_bytes(b)),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
@@ -2244,10 +2253,10 @@ mod content {
             let key = self.key;
             match *self.content {
                 Content::Bool(v) => visitor.visit_bool(v),
-                Content::String(ref v) if key => str_as_bool(v, visitor),
-                Content::Str(v) if key => str_as_bool(v, visitor),
-                Content::ByteBuf(ref v) if key => bytes_as_bool(v, visitor),
-                Content::Bytes(v) if key => bytes_as_bool(v, visitor),
+                Content::String(ref v) if key => str_as_bool(v, visitor, |s, vis| vis.visit_str(s)),
+                Content::Str(v) if key => str_as_bool(v, visitor, |s, vis| vis.visit_borrowed_str(s)),
+                Content::ByteBuf(ref v) if key => bytes_as_bool(v, visitor, |b, vis| vis.visit_bytes(b)),
+                Content::Bytes(v) if key => bytes_as_bool(v, visitor, |b, vis| vis.visit_borrowed_bytes(b)),
                 _ => Err(self.invalid_type(&visitor)),
             }
         }
