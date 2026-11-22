@@ -15,7 +15,8 @@ serde = { path = "../serde" }
 automod = "1.0.1"
 foldhash = "0.2"
 rustversion = "1.0"
-serde = { path = "../serde", features = ["rc"] }
+serde = { path = "../serde", features = ["derive", "rc"] }
 serde_derive = { path = "../serde_derive", features = ["deserialize_in_place"] }
+serde_json = "1.0.100"
 serde_test = "1.0.176"
 trybuild = { version = "1.0.125", features = ["diff"] }
