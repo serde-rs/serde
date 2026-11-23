@@ -273,15 +273,19 @@ fn serialize_tuple_struct(
     let let_mut = mut_if(serialized_fields.peek().is_some());
 
     let len = serialized_fields
-        .map(|(i, field)| match field.attrs.skip_serializing_if() {
-            None => quote!(1),
-            Some(path) => {
-                let index = syn::Index {
-                    index: i as u32,
-                    span: Span::call_site(),
-                };
-                let field_expr = get_member(params, field, &Member::Unnamed(index));
-                quote!(if #path(#field_expr) { 0 } else { 1 })
+        .map(|(i, field)| {
+            if field.attrs.skip_serializing_if_default() {
+                let field_expr = get_member(params, field, &Member::Unnamed(syn::Index { index: i as u32, span: Span::call_site() }));
+                quote!(if #field_expr == _serde::#private::Default::default() { 0 } else { 1 })
+            } else {
+                match field.attrs.skip_serializing_if() {
+                    None => quote!(1),
+                    Some(path) => {
+                        let index = syn::Index { index: i as u32, span: Span::call_site() };
+                        let field_expr = get_member(params, field, &Member::Unnamed(index));
+                        quote!(if #path(#field_expr) { 0 } else { 1 })
+                    }
+                }
             }
         })
         .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
@@ -346,11 +350,18 @@ fn serialize_struct_as_struct(
     let let_mut = mut_if(serialized_fields.peek().is_some() || tag_field_exists);
 
     let len = serialized_fields
-        .map(|field| match field.attrs.skip_serializing_if() {
-            None => quote!(1),
-            Some(path) => {
+        .map(|field| {
+            if field.attrs.skip_serializing_if_default() {
                 let field_expr = get_member(params, field, &field.member);
-                quote!(if #path(#field_expr) { 0 } else { 1 })
+                quote!(if #field_expr == _serde::#private::Default::default() { 0 } else { 1 })
+            } else {
+                match field.attrs.skip_serializing_if() {
+                    None => quote!(1),
+                    Some(path) => {
+                        let field_expr = get_member(params, field, &field.member);
+                        quote!(if #path(#field_expr) { 0 } else { 1 })
+                    }
+                }
             }
         })
         .fold(
@@ -831,11 +842,18 @@ fn serialize_tuple_variant(
     let let_mut = mut_if(serialized_fields.peek().is_some());
 
     let len = serialized_fields
-        .map(|(i, field)| match field.attrs.skip_serializing_if() {
-            None => quote!(1),
-            Some(path) => {
+        .map(|(i, field)| {
+            if field.attrs.skip_serializing_if_default() {
                 let field_expr = field_i(i);
-                quote!(if #path(#field_expr) { 0 } else { 1 })
+                quote!(if #field_expr == _serde::#private::Default::default() { 0 } else { 1 })
+            } else {
+                match field.attrs.skip_serializing_if() {
+                    None => quote!(1),
+                    Some(path) => {
+                        let field_expr = field_i(i);
+                        quote!(if #path(#field_expr) { 0 } else { 1 })
+                    }
+                }
             }
         })
         .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
@@ -909,11 +927,17 @@ fn serialize_struct_variant(
 
     let len = serialized_fields
         .map(|field| {
-            let member = &field.member;
-
-            match field.attrs.skip_serializing_if() {
-                Some(path) => quote!(if #path(#member) { 0 } else { 1 }),
-                None => quote!(1),
+            if field.attrs.skip_serializing_if_default() {
+                let member = &field.member;
+                quote!(if #member == _serde::#private::Default::default() { 0 } else { 1 })
+            } else {
+                match field.attrs.skip_serializing_if() {
+                    Some(path) => {
+                        let member = &field.member;
+                        quote!(if #path(#member) { 0 } else { 1 })
+                    }
+                    None => quote!(1),
+                }
             }
         })
         .fold(quote!(0), |sum, expr| quote!(#sum + #expr));
