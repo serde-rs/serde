@@ -340,6 +340,7 @@ mod content {
     use crate::lib::*;
 
     use crate::ser::{self, Serialize, Serializer};
+    use crate::serde_core_private::size_hint;
 
     pub struct SerializeTupleVariantAsMapValue<M> {
         map: M,
@@ -352,7 +353,7 @@ mod content {
             SerializeTupleVariantAsMapValue {
                 map,
                 name,
-                fields: Vec::with_capacity(len),
+                fields: Vec::with_capacity(size_hint::cautious::<Content>(Some(len))),
             }
         }
     }
@@ -393,7 +394,9 @@ mod content {
             SerializeStructVariantAsMapValue {
                 map,
                 name,
-                fields: Vec::with_capacity(len),
+                fields: Vec::with_capacity(
+                    size_hint::cautious::<(&'static str, Content)>(Some(len)),
+                ),
             }
         }
     }
@@ -689,14 +692,14 @@ mod content {
 
         fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, E> {
             Ok(SerializeSeq {
-                elements: Vec::with_capacity(len.unwrap_or(0)),
+                elements: Vec::with_capacity(size_hint::cautious::<Content>(len)),
                 error: PhantomData,
             })
         }
 
         fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple, E> {
             Ok(SerializeTuple {
-                elements: Vec::with_capacity(len),
+                elements: Vec::with_capacity(size_hint::cautious::<Content>(Some(len))),
                 error: PhantomData,
             })
         }
@@ -708,7 +711,7 @@ mod content {
         ) -> Result<Self::SerializeTupleStruct, E> {
             Ok(SerializeTupleStruct {
                 name,
-                fields: Vec::with_capacity(len),
+                fields: Vec::with_capacity(size_hint::cautious::<Content>(Some(len))),
                 error: PhantomData,
             })
         }
@@ -724,14 +727,14 @@ mod content {
                 name,
                 variant_index,
                 variant,
-                fields: Vec::with_capacity(len),
+                fields: Vec::with_capacity(size_hint::cautious::<Content>(Some(len))),
                 error: PhantomData,
             })
         }
 
         fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, E> {
             Ok(SerializeMap {
-                entries: Vec::with_capacity(len.unwrap_or(0)),
+                entries: Vec::with_capacity(size_hint::cautious::<(Content, Content)>(len)),
                 key: None,
                 error: PhantomData,
             })
@@ -744,7 +747,9 @@ mod content {
         ) -> Result<Self::SerializeStruct, E> {
             Ok(SerializeStruct {
                 name,
-                fields: Vec::with_capacity(len),
+                fields: Vec::with_capacity(
+                    size_hint::cautious::<(&'static str, Content)>(Some(len)),
+                ),
                 error: PhantomData,
             })
         }
@@ -760,7 +765,9 @@ mod content {
                 name,
                 variant_index,
                 variant,
-                fields: Vec::with_capacity(len),
+                fields: Vec::with_capacity(
+                    size_hint::cautious::<(&'static str, Content)>(Some(len)),
+                ),
                 error: PhantomData,
             })
         }
