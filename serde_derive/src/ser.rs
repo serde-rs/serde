@@ -30,7 +30,6 @@ pub fn expand_derive_serialize(input: &mut syn::DeriveInput) -> syn::Result<Toke
         let vis = &input.vis;
         let used = pretend::pretend_used(&cont, params.is_packed);
         quote! {
-            #[automatically_derived]
             #allow_deprecated
             impl #impl_generics #ident #ty_generics #where_clause {
                 #vis fn serialize<__S>(__self: &#remote #ty_generics, __serializer: __S) -> _serde::#private::Result<__S::Ok, __S::Error>

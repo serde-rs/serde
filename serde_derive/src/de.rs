@@ -44,7 +44,6 @@ pub fn expand_derive_deserialize(input: &mut syn::DeriveInput) -> syn::Result<To
         let vis = &input.vis;
         let used = pretend::pretend_used(&cont, params.is_packed);
         quote! {
-            #[automatically_derived]
             #allow_deprecated
             impl #de_impl_generics #ident #ty_generics #where_clause {
                 #vis fn deserialize<__D>(__deserializer: __D) -> _serde::#private::Result<#remote #ty_generics, __D::Error>
