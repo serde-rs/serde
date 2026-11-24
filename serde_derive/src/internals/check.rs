@@ -294,57 +294,91 @@ fn check_variant_skip_attrs(cx: &Ctxt, cont: &Container) {
     }
 }
 
-// The tag of an internally-tagged struct variant must not be the same as either
-// one of its fields, as this would result in duplicate keys in the serialized
-// output and/or ambiguity in the to-be-deserialized input.
+// The tag of an internally-tagged enum variant or named struct must not be the
+// same as either one of its fields, as this would result in duplicate keys in
+// the serialized output and/or ambiguity in the to-be-deserialized input.
 fn check_internal_tag_field_name_conflict(cx: &Ctxt, cont: &Container) {
-    let variants = match &cont.data {
-        Data::Enum(variants) => variants,
-        Data::Struct(_, _) => return,
-    };
-
     let tag = match cont.attrs.tag() {
         TagType::Internal { tag } => tag.as_str(),
         TagType::External | TagType::Adjacent { .. } | TagType::None => return,
     };
 
-    let diagnose_conflict = || {
-        cx.error_spanned_by(
-            cont.original,
-            format!("variant field name `{}` conflicts with internal tag", tag),
-        );
-    };
-
-    for variant in variants {
-        match variant.style {
-            Style::Struct => {
-                if variant.attrs.untagged() {
-                    continue;
-                }
-                for field in &variant.fields {
-                    let check_ser =
-                        !(field.attrs.skip_serializing() || variant.attrs.skip_serializing());
-                    let check_de =
-                        !(field.attrs.skip_deserializing() || variant.attrs.skip_deserializing());
-                    let name = field.attrs.name();
-                    let ser_name = name.serialize_name();
-
-                    if check_ser && ser_name.value == tag {
-                        diagnose_conflict();
-                        return;
-                    }
-
-                    for de_name in field.attrs.aliases() {
-                        if check_de && de_name.value == tag {
-                            diagnose_conflict();
-                            return;
+    match &cont.data {
+        Data::Enum(variants) => {
+            for variant in variants {
+                match variant.style {
+                    Style::Struct => {
+                        if variant.attrs.untagged() {
+                            continue;
+                        }
+                        for field in &variant.fields {
+                            // Flattened fields do not appear under their own
+                            // name in the serialized form.
+                            if field.attrs.flatten() {
+                                continue;
+                            }
+                            let check_ser = !(field.attrs.skip_serializing()
+                                || variant.attrs.skip_serializing());
+                            let check_de = !(field.attrs.skip_deserializing()
+                                || variant.attrs.skip_deserializing());
+                            if field_conflicts_with_internal_tag(field, tag, check_ser, check_de) {
+                                cx.error_spanned_by(
+                                    cont.original,
+                                    format!(
+                                        "variant field name `{}` conflicts with internal tag",
+                                        tag
+                                    ),
+                                );
+                                return;
+                            }
                         }
                     }
+                    Style::Unit | Style::Newtype | Style::Tuple => {}
                 }
             }
-            Style::Unit | Style::Newtype | Style::Tuple => {}
+        }
+        Data::Struct(Style::Struct, fields) => {
+            for field in fields {
+                // Flattened fields do not appear under their own name in the
+                // serialized form (e.g. tag = "data" with #[serde(flatten)] data).
+                if field.attrs.flatten() {
+                    continue;
+                }
+                let check_ser = !field.attrs.skip_serializing();
+                let check_de = !field.attrs.skip_deserializing();
+                if field_conflicts_with_internal_tag(field, tag, check_ser, check_de) {
+                    cx.error_spanned_by(
+                        cont.original,
+                        format!("field name `{}` conflicts with internal tag", tag),
+                    );
+                    return;
+                }
+            }
+        }
+        Data::Struct(Style::Unit | Style::Newtype | Style::Tuple, _) => {}
+    }
+}
+
+fn field_conflicts_with_internal_tag(
+    field: &Field,
+    tag: &str,
+    check_ser: bool,
+    check_de: bool,
+) -> bool {
+    let name = field.attrs.name();
+    let ser_name = name.serialize_name();
+
+    if check_ser && ser_name.value == tag {
+        return true;
+    }
+
+    for de_name in field.attrs.aliases() {
+        if check_de && de_name.value == tag {
+            return true;
         }
     }
+
+    false
 }
 
 // In the case of adjacently-tagged enums, the type and the contents tag must
