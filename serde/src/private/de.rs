@@ -212,6 +212,7 @@ mod content {
 
     use crate::lib::*;
 
+    use crate::de::value::MapAccessDeserializer;
     use crate::de::{
         self, Deserialize, DeserializeSeed, Deserializer, EnumAccess, Expected, IgnoredAny,
         MapAccess, SeqAccess, Unexpected, Visitor,
@@ -512,9 +513,7 @@ mod content {
     }
 
     /// This is the type of the map keys in an internally tagged enum.
-    ///
-    /// Not public API.
-    pub enum TagOrContent<'de> {
+    enum TagOrContent<'de> {
         Tag,
         Content(Content<'de>),
     }
@@ -834,9 +833,9 @@ mod content {
     #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
     impl<'de, T> Visitor<'de> for TaggedContentVisitor<T>
     where
-        T: Deserialize<'de>,
+        T: Deserialize<'de> + DeserializeSeed<'de>,
     {
-        type Value = (T, Content<'de>);
+        type Value = T::Value;
 
         fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
             fmt.write_str(self.expecting)
@@ -846,42 +845,63 @@ mod content {
         where
             S: SeqAccess<'de>,
         {
-            let tag = match tri!(seq.next_element()) {
+            let tag: T = match tri!(seq.next_element()) {
                 Some(tag) => tag,
                 None => {
                     return Err(de::Error::missing_field(self.tag_name));
                 }
             };
-            let rest = de::value::SeqAccessDeserializer::new(seq);
-            Ok((tag, tri!(ContentVisitor::new().deserialize(rest))))
+            tag.deserialize(de::value::SeqAccessDeserializer::new(seq))
         }
 
         fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
         where
             M: MapAccess<'de>,
         {
-            let mut tag = None;
-            let mut vec = Vec::<(Content, Content)>::with_capacity(size_hint::cautious::<(
-                Content,
-                Content,
-            )>(map.size_hint()));
-            while let Some(k) = tri!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
-                match k {
-                    TagOrContent::Tag => {
-                        if tag.is_some() {
-                            return Err(de::Error::duplicate_field(self.tag_name));
+            // Read the first field. If it is a tag, immediately deserialize the typed data.
+            // Otherwise, we collect everything until we find the tag, and then deserialize
+            // using ContentDeserializer.
+            match tri!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name))) {
+                Some(TagOrContent::Tag) => {
+                    let tag: T = tri!(map.next_value());
+                    tag.deserialize(MapAccessDeserializer::new(map))
+                }
+                Some(TagOrContent::Content(key)) => {
+                    let mut tag = None::<T>;
+                    let mut vec = Vec::<(Content, Content)>::with_capacity(size_hint::cautious::<(
+                        Content,
+                        Content,
+                    )>(
+                        map.size_hint()
+                    ));
+
+                    let v = tri!(map.next_value_seed(ContentVisitor::new()));
+                    vec.push((key, v));
+
+                    while let Some(k) =
+                        tri!(map.next_key_seed(TagOrContentVisitor::new(self.tag_name)))
+                    {
+                        match k {
+                            TagOrContent::Tag => {
+                                if tag.is_some() {
+                                    return Err(de::Error::duplicate_field(self.tag_name));
+                                }
+                                tag = Some(tri!(map.next_value()));
+                            }
+                            TagOrContent::Content(k) => {
+                                let v = tri!(map.next_value_seed(ContentVisitor::new()));
+                                vec.push((k, v));
+                            }
                         }
-                        tag = Some(tri!(map.next_value()));
                     }
-                    TagOrContent::Content(k) => {
-                        let v = tri!(map.next_value_seed(ContentVisitor::new()));
-                        vec.push((k, v));
+                    match tag {
+                        None => Err(de::Error::missing_field(self.tag_name)),
+                        Some(tag) => {
+                            tag.deserialize(ContentDeserializer::<M::Error>::new(Content::Map(vec)))
+                        }
                     }
                 }
-            }
-            match tag {
                 None => Err(de::Error::missing_field(self.tag_name)),
-                Some(tag) => Ok((tag, Content::Map(vec))),
             }
         }
     }
@@ -1584,6 +1604,8 @@ mod content {
         }
     }
 
+    /// Number of elements still expected in a sequence. Does not include already
+    /// read elements.
     struct ExpectedInSeq(usize);
 
     #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
@@ -2980,11 +3002,18 @@ mod content {
             )
         }
 
-        fn visit_seq<S>(self, _: S) -> Result<(), S::Error>
+        fn visit_seq<S>(self, mut seq: S) -> Result<(), S::Error>
         where
             S: SeqAccess<'de>,
         {
-            Ok(())
+            match seq.next_element() {
+                Ok(Some(IgnoredAny)) => Err(de::Error::invalid_length(
+                    1 + seq.size_hint().unwrap_or(0),
+                    &ExpectedInSeq(0),
+                )),
+                Ok(None) => Ok(()),
+                Err(err) => Err(err),
+            }
         }
 
         fn visit_map<M>(self, mut access: M) -> Result<(), M::Error>
