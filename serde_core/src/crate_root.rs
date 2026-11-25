@@ -51,9 +51,18 @@ macro_rules! crate_root {
             #[cfg(all(feature = "rc", feature = "std"))]
             pub use std::rc::{Rc, Weak as RcWeak};
 
-            #[cfg(all(feature = "rc", feature = "alloc", not(feature = "std")))]
+            #[cfg(all(
+                feature = "rc",
+                feature = "alloc",
+                not(feature = "std"),
+                any(no_target_has_atomic, target_has_atomic = "ptr")
+            ))]
             pub use alloc::sync::{Arc, Weak as ArcWeak};
-            #[cfg(all(feature = "rc", feature = "std"))]
+            #[cfg(all(
+                feature = "rc",
+                feature = "std",
+                any(no_target_has_atomic, target_has_atomic = "ptr")
+            ))]
             pub use std::sync::{Arc, Weak as ArcWeak};
 
             #[cfg(all(feature = "alloc", not(feature = "std")))]

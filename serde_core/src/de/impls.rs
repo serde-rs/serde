@@ -2000,7 +2000,11 @@ where
 #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
 #[cfg_attr(
     docsrs,
-    doc(cfg(all(feature = "rc", any(feature = "std", feature = "alloc"))))
+    doc(cfg(all(
+        feature = "rc",
+        any(feature = "std", feature = "alloc"),
+        target_has_atomic = "ptr"
+    )))
 )]
 impl<'de, T> Deserialize<'de> for RcWeak<T>
 where
@@ -2019,7 +2023,11 @@ where
 /// `Weak<T>` has a reference count of 0 and cannot be upgraded.
 ///
 /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
-#[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
+#[cfg(all(
+    feature = "rc",
+    any(feature = "std", feature = "alloc"),
+    any(no_target_has_atomic, target_has_atomic = "ptr")
+))]
 #[cfg_attr(
     docsrs,
     doc(cfg(all(feature = "rc", any(feature = "std", feature = "alloc"))))
@@ -2069,7 +2077,14 @@ box_forwarded_impl! {
     ///
     /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
     #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(
+            feature = "rc",
+            any(feature = "std", feature = "alloc"),
+            target_has_atomic = "ptr"
+        )))
+    )]
     Rc
 }
 
@@ -2081,7 +2096,11 @@ box_forwarded_impl! {
     /// will end up with a strong count of 1.
     ///
     /// [`"rc"`]: https://serde.rs/feature-flags.html#-features-rc
-    #[cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))]
+    #[cfg(all(
+        feature = "rc",
+        any(feature = "std", feature = "alloc"),
+        any(no_target_has_atomic, target_has_atomic = "ptr")
+    ))]
     #[cfg_attr(docsrs, doc(cfg(all(feature = "rc", any(feature = "std", feature = "alloc")))))]
     Arc
 }
