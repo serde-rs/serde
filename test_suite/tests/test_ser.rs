@@ -815,7 +815,6 @@ fn test_net_socketaddr_compact() {
     );
 }
 
-#[cfg(feature = "unstable")]
 #[test]
 fn test_never_result() {
     assert_ser_tokens(

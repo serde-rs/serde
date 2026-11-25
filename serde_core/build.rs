@@ -39,6 +39,7 @@ fn main() {
         println!("cargo:rustc-check-cfg=cfg(no_std_atomic)");
         println!("cargo:rustc-check-cfg=cfg(no_std_atomic64)");
         println!("cargo:rustc-check-cfg=cfg(no_target_has_atomic)");
+        println!("cargo:rustc-check-cfg=cfg(no_never_type)");
     }
 
     let target = env::var("TARGET").unwrap();
@@ -98,6 +99,12 @@ fn main() {
     // https://blog.rust-lang.org/2024/09/05/Rust-1.81.0.html#coreerrorerror
     if minor < 81 {
         println!("cargo:rustc-cfg=no_core_error");
+    }
+
+    // Support for the never type stabilized in 1.100.
+    // https://blog.rust-lang.org/2026/11/12/Rust-1.100.0/#never-type
+    if minor < 100 {
+        println!("cargo:rustc-cfg=no_never_type");
     }
 }
 

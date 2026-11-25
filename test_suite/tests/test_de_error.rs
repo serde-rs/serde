@@ -1552,7 +1552,6 @@ fn test_cstr_internal_null_end() {
     );
 }
 
-#[cfg(feature = "unstable")]
 #[test]
 fn test_never_type() {
     assert_de_tokens_error::<!>(&[], "cannot deserialize `!`");

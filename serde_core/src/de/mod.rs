@@ -91,7 +91,7 @@
 //!    - RangeInclusive\<T\>
 //!    - Bound\<T\>
 //!    - num::NonZero*
-//!    - `!` *(unstable)*
+//!    - `!`
 //!  - **Net types**:
 //!    - IpAddr
 //!    - Ipv4Addr

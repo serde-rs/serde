@@ -346,8 +346,7 @@ impl Serialize for () {
     }
 }
 
-#[cfg(feature = "unstable")]
-#[cfg_attr(docsrs, doc(cfg(feature = "unstable")))]
+#[cfg(not(no_never_type))]
 impl Serialize for ! {
     fn serialize<S>(&self, _serializer: S) -> Result<S::Ok, S::Error>
     where
