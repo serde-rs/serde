@@ -196,15 +196,13 @@ impl<E> Debug for UnitDeserializer<E> {
 ////////////////////////////////////////////////////////////////////////////////
 
 /// A deserializer that cannot be instantiated.
-#[cfg(feature = "unstable")]
-#[cfg_attr(docsrs, doc(cfg(feature = "unstable")))]
+#[cfg(not(no_never_type))]
 pub struct NeverDeserializer<E> {
     never: !,
     marker: PhantomData<E>,
 }
 
-#[cfg(feature = "unstable")]
-#[cfg_attr(docsrs, doc(cfg(feature = "unstable")))]
+#[cfg(not(no_never_type))]
 impl<'de, E> IntoDeserializer<'de, E> for !
 where
     E: de::Error,
@@ -216,7 +214,7 @@ where
     }
 }
 
-#[cfg(feature = "unstable")]
+#[cfg(not(no_never_type))]
 impl<'de, E> de::Deserializer<'de> for NeverDeserializer<E>
 where
     E: de::Error,
@@ -237,7 +235,7 @@ where
     }
 }
 
-#[cfg(feature = "unstable")]
+#[cfg(not(no_never_type))]
 impl<'de, E> IntoDeserializer<'de, E> for NeverDeserializer<E>
 where
     E: de::Error,

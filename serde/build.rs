@@ -43,6 +43,7 @@ fn main() {
         println!("cargo:rustc-check-cfg=cfg(no_std_atomic)");
         println!("cargo:rustc-check-cfg=cfg(no_std_atomic64)");
         println!("cargo:rustc-check-cfg=cfg(no_target_has_atomic)");
+        println!("cargo:rustc-check-cfg=cfg(no_never_type)");
     }
 
     // Current minimum supported version of serde_derive crate is Rust 1.71.
@@ -54,6 +55,12 @@ fn main() {
     // https://blog.rust-lang.org/2024/05/02/Rust-1.78.0.html#diagnostic-attributes
     if minor < 78 {
         println!("cargo:rustc-cfg=no_diagnostic_namespace");
+    }
+
+    // Support for the never type stabilized in 1.100.
+    // https://blog.rust-lang.org/2026/11/12/Rust-1.100.0/#never-type
+    if minor < 100 {
+        println!("cargo:rustc-cfg=no_never_type");
     }
 }
 

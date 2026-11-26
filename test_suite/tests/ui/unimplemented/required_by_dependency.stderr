@@ -14,6 +14,7 @@ help: the trait `serde_core::ser::Serialize` is not implemented for `MyStruct`
   = note: for local types consider adding `#[derive(serde::Serialize)]` to your `MyStruct` type
   = note: for types from other crates check whether the crate offers a `serde` feature flag
   = help: the following other types implement trait `serde_core::ser::Serialize`:
+            !
             &'a T
             &'a mut T
             `(T₁, T₂, …, Tₙ)` up to tuples of arity 16
@@ -21,7 +22,6 @@ help: the trait `serde_core::ser::Serialize` is not implemented for `MyStruct`
             Arguments<'a>
             Atomic<bool>
             Atomic<i16>
-            Atomic<i32>
           and $N others
 note: required by a bound in `assert_ser_tokens`
  --> $CARGO/serde_test-$VERSION/src/assert.rs
@@ -47,6 +47,7 @@ help: the trait `serde_core::de::Deserialize<'_>` is not implemented for `MyStru
   = note: for local types consider adding `#[derive(serde::Deserialize)]` to your `MyStruct` type
   = note: for types from other crates check whether the crate offers a `serde` feature flag
   = help: the following other types implement trait `serde_core::de::Deserialize<'de>`:
+            !
             &'a Path
             &'a [u8]
             &'a str
@@ -54,7 +55,6 @@ help: the trait `serde_core::de::Deserialize<'_>` is not implemented for `MyStru
             Arc<T>
             Atomic<bool>
             Atomic<i16>
-            Atomic<i32>
           and $N others
 note: required by a bound in `assert_de_tokens`
  --> $CARGO/serde_test-$VERSION/src/assert.rs
