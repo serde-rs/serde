@@ -34,6 +34,7 @@ fn main() {
         println!("cargo:rustc-check-cfg=cfg(no_core_error)");
         println!("cargo:rustc-check-cfg=cfg(no_core_net)");
         println!("cargo:rustc-check-cfg=cfg(no_core_num_saturating)");
+        println!("cargo:rustc-check-cfg=cfg(no_core_range)");
         println!("cargo:rustc-check-cfg=cfg(no_diagnostic_namespace)");
         println!("cargo:rustc-check-cfg=cfg(no_serde_derive)");
         println!("cargo:rustc-check-cfg=cfg(no_std_atomic)");
@@ -98,6 +99,12 @@ fn main() {
     // https://blog.rust-lang.org/2024/09/05/Rust-1.81.0.html#coreerrorerror
     if minor < 81 {
         println!("cargo:rustc-cfg=no_core_error");
+    }
+
+    // The new range types became available in 1.96
+    // https://blog.rust-lang.org/2026/05/28/Rust-1.96.0/#new-range-types
+    if minor < 96 {
+        println!("cargo:rustc-cfg=no_core_range");
     }
 }
 

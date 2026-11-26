@@ -22,7 +22,7 @@ macro_rules! crate_root {
             pub use self::core::fmt::{self, Debug, Display, Write as FmtWrite};
             pub use self::core::marker::PhantomData;
             pub use self::core::num::Wrapping;
-            pub use self::core::ops::{Bound, Range, RangeFrom, RangeInclusive, RangeTo};
+            pub use self::core::ops::{self, Bound};
             pub use self::core::result;
             pub use self::core::time::Duration;
 
@@ -117,6 +117,9 @@ macro_rules! crate_root {
 
             #[cfg(not(no_core_num_saturating))]
             pub use self::core::num::Saturating;
+
+            #[cfg(not(no_core_range))]
+            pub use self::core::range;
         }
 
         // None of this crate's error handling needs the `From::from` error conversion

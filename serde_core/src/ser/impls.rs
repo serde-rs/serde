@@ -244,7 +244,7 @@ seq_impl! {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-impl<Idx> Serialize for Range<Idx>
+impl<Idx> Serialize for ops::Range<Idx>
 where
     Idx: Serialize,
 {
@@ -262,7 +262,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-impl<Idx> Serialize for RangeFrom<Idx>
+impl<Idx> Serialize for ops::RangeFrom<Idx>
 where
     Idx: Serialize,
 {
@@ -279,7 +279,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-impl<Idx> Serialize for RangeInclusive<Idx>
+impl<Idx> Serialize for ops::RangeInclusive<Idx>
 where
     Idx: Serialize,
 {
@@ -297,7 +297,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-impl<Idx> Serialize for RangeTo<Idx>
+impl<Idx> Serialize for ops::RangeTo<Idx>
 where
     Idx: Serialize,
 {
@@ -308,6 +308,80 @@ where
         use super::SerializeStruct;
         let mut state = tri!(serializer.serialize_struct("RangeTo", 1));
         tri!(state.serialize_field("end", &self.end));
+        state.end()
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(not(no_core_range))]
+impl<Idx> Serialize for range::Range<Idx>
+where
+    Idx: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use super::SerializeStruct;
+        let mut state = tri!(serializer.serialize_struct("Range", 2));
+        tri!(state.serialize_field("start", &self.start));
+        tri!(state.serialize_field("end", &self.end));
+        state.end()
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(not(no_core_range))]
+impl<Idx> Serialize for range::RangeFrom<Idx>
+where
+    Idx: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use super::SerializeStruct;
+        let mut state = tri!(serializer.serialize_struct("RangeFrom", 1));
+        tri!(state.serialize_field("start", &self.start));
+        state.end()
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(not(no_core_range))]
+impl<Idx> Serialize for range::RangeInclusive<Idx>
+where
+    Idx: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use super::SerializeStruct;
+        let mut state = tri!(serializer.serialize_struct("RangeInclusive", 2));
+        tri!(state.serialize_field("start", &self.start));
+        tri!(state.serialize_field("last", &self.last));
+        state.end()
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(not(no_core_range))]
+impl<Idx> Serialize for range::RangeToInclusive<Idx>
+where
+    Idx: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use super::SerializeStruct;
+        let mut state = tri!(serializer.serialize_struct("RangeToInclusive", 1));
+        tri!(state.serialize_field("last", &self.last));
         state.end()
     }
 }
