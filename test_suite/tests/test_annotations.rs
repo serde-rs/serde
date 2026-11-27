@@ -1413,6 +1413,80 @@ fn test_deserialize_with_enum() {
     );
 }
 
+#[derive(Debug, PartialEq, Deserialize)]
+struct OptionWithDeserializeWith {
+    #[serde(deserialize_with = "deserialize_option_i32")]
+    field: Option<i32>,
+}
+
+fn deserialize_option_i32<'de, D>(deserializer: D) -> Result<Option<i32>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Option::<i32>::deserialize(deserializer)
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+struct NonOptionWithDeserializeWith {
+    #[serde(deserialize_with = "deserialize_i32")]
+    field: i32,
+}
+
+fn deserialize_i32<'de, D>(deserializer: D) -> Result<i32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    i32::deserialize(deserializer)
+}
+
+#[test]
+fn test_option_with_deserialize_with_missing() {
+    // An `Option` field with `deserialize_with` and no explicit `default`
+    // deserializes a missing field to `None`, just like an `Option` field
+    // without `deserialize_with`.
+    assert_de_tokens(
+        &OptionWithDeserializeWith { field: None },
+        &[
+            Token::Struct {
+                name: "OptionWithDeserializeWith",
+                len: 0,
+            },
+            Token::StructEnd,
+        ],
+    );
+
+    // A present field still goes through the custom function.
+    assert_de_tokens(
+        &OptionWithDeserializeWith { field: Some(1) },
+        &[
+            Token::Struct {
+                name: "OptionWithDeserializeWith",
+                len: 1,
+            },
+            Token::Str("field"),
+            Token::Some,
+            Token::I32(1),
+            Token::StructEnd,
+        ],
+    );
+}
+
+#[test]
+fn test_non_option_with_deserialize_with_missing_errors() {
+    // A non-`Option` field with `deserialize_with` and no `default` still
+    // fails on a missing field.
+    assert_de_tokens_error::<NonOptionWithDeserializeWith>(
+        &[
+            Token::Struct {
+                name: "NonOptionWithDeserializeWith",
+                len: 0,
+            },
+            Token::StructEnd,
+        ],
+        "missing field `field`",
+    );
+}
+
 #[test]
 fn test_missing_renamed_field_struct() {
     assert_de_tokens_error::<RenameStruct>(
