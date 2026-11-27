@@ -1,0 +1,12 @@
+error: untagged enums can contain only one unit variant. Use #[serde(skip_deserializing)] if you really want several unit variants
+ --> tests/ui/enum-representation/untagged-with-muliple-units.rs:8:5
+  |
+8 |     Unit2,
+  |     ^^^^^
+
+error: untagged enums can contain only one unit variant. Use #[serde(skip_deserializing)] if you really want several unit variants
+  --> tests/ui/enum-representation/untagged-with-muliple-units.rs:10:5
+   |
+10 | /     #[serde(skip_serializing)]
+11 | |     Unit3,
+   | |_________^
