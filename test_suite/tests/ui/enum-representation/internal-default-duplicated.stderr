@@ -1,0 +1,6 @@
+error: #[serde(default)] already defined at variant V1
+ --> tests/ui/enum-representation/internal-default-duplicated.rs:8:5
+  |
+8 | /     #[serde(default)]
+9 | |     V2 { f: u8 },
+  | |________________^
