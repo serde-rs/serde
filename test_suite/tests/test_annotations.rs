@@ -15,7 +15,7 @@ use serde::ser::{Serialize, Serializer};
 use serde_derive::{Deserialize, Serialize};
 use serde_test::{
     assert_de_tokens, assert_de_tokens_error, assert_ser_tokens, assert_ser_tokens_error,
-    assert_tokens, Token,
+    assert_tokens, Configure, Readable, Token,
 };
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
@@ -1593,7 +1593,7 @@ fn test_collect_other() {
     let mut extra = HashMap::new();
     extra.insert("c".into(), 3);
     assert_tokens(
-        &CollectOther { a: 1, b: 2, extra },
+        &CollectOther { a: 1, b: 2, extra }.readable(),
         &[
             Token::Map { len: None },
             Token::Str("a"),
@@ -1621,7 +1621,7 @@ fn test_partially_untagged_enum() {
 
     let data = Lambda(0, Box::new(App(Box::new(Var(0)), Box::new(Var(0)))));
     assert_tokens(
-        &data,
+        &data.readable(),
         &[
             Token::TupleVariant {
                 name: "Exp",
@@ -1660,13 +1660,12 @@ fn test_partially_untagged_enum_generic() {
         type Assoc2 = bool;
     }
 
-    type MyE = E<(), bool, u32>;
     use E::*;
 
-    assert_tokens::<MyE>(&B(true), &[Token::Bool(true)]);
+    assert_tokens(&B::<(), bool, u32>(true).readable(), &[Token::Bool(true)]);
 
-    assert_tokens::<MyE>(
-        &A(5),
+    assert_tokens(
+        &A::<(), bool, u32>(5).readable(),
         &[
             Token::NewtypeVariant {
                 name: "E",
@@ -1679,7 +1678,7 @@ fn test_partially_untagged_enum_generic() {
 
 #[test]
 fn test_partially_untagged_enum_desugared() {
-    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    #[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
     enum Test {
         A(u32, u32),
         B(u32),
@@ -1720,9 +1719,9 @@ fn test_partially_untagged_enum_desugared() {
     }
 
     fn assert_tokens_desugared(value: Test, tokens: &[Token]) {
-        assert_tokens(&value, tokens);
+        assert_tokens(&value.clone().readable(), tokens);
         let desugared: TestUntagged = value.into();
-        assert_tokens(&desugared, tokens);
+        assert_tokens(&desugared.readable(), tokens);
     }
 
     assert_tokens_desugared(
@@ -1777,7 +1776,7 @@ fn test_partially_untagged_internally_tagged_enum() {
     let data = Data::A;
 
     assert_de_tokens(
-        &data,
+        &data.readable(),
         &[
             Token::Map { len: None },
             Token::Str("t"),
@@ -1788,7 +1787,7 @@ fn test_partially_untagged_internally_tagged_enum() {
 
     let data = Data::Var(42);
 
-    assert_de_tokens(&data, &[Token::U32(42)]);
+    assert_de_tokens(&data.readable(), &[Token::U32(42)]);
 
     // TODO test error output
 }
@@ -1983,7 +1982,8 @@ mod flatten {
                 },
                 second: Second { f: 3 },
                 z: 4,
-            },
+            }
+            .readable(),
             &[
                 Token::Map { len: None },
                 Token::Str("y"),
@@ -2021,7 +2021,8 @@ mod flatten {
                 },
                 second: Second { f: 3 },
                 z: 4,
-            },
+            }
+            .readable(),
             &[
                 Token::Map { len: None },
                 Token::Str("y"),
@@ -2080,7 +2081,8 @@ mod flatten {
                     second.insert("x".to_owned(), "X".to_owned());
                     second
                 },
-            },
+            }
+            .readable(),
             &[
                 Token::Map { len: None },
                 Token::Str("x"),
@@ -2105,7 +2107,8 @@ mod flatten {
             &Outer {
                 outer: "foo".into(),
                 inner: "bar".into(),
-            },
+            }
+            .readable(),
             &[
                 Token::Map { len: None },
                 Token::Str("outer"),
@@ -2113,7 +2116,7 @@ mod flatten {
             ],
             "can only flatten structs and maps (got a string)",
         );
-        assert_de_tokens_error::<Outer>(
+        assert_de_tokens_error::<Readable<Outer>>(
             &[
                 Token::Map { len: None },
                 Token::Str("outer"),
@@ -2141,7 +2144,7 @@ mod flatten {
             foo: HashMap<String, u32>,
         }
 
-        assert_de_tokens_error::<Outer>(
+        assert_de_tokens_error::<Readable<Outer>>(
             &[
                 Token::Struct {
                     name: "Outer",
@@ -2181,7 +2184,8 @@ mod flatten {
                 name: "peter".into(),
                 age: 3,
                 mapping,
-            },
+            }
+            .readable(),
             &[
                 Token::Map { len: None },
                 Token::Str("name"),
@@ -2218,7 +2222,7 @@ mod flatten {
         let mut owned_map = HashMap::new();
         owned_map.insert("x".to_string(), 42u32);
         assert_tokens(
-            &A { t: owned_map },
+            &A { t: owned_map }.readable(),
             &[
                 Token::Map { len: None },
                 Token::Str("x"),
@@ -2232,7 +2236,8 @@ mod flatten {
         assert_ser_tokens(
             &B {
                 t: borrowed_map.clone(),
-            },
+            }
+            .readable(),
             &[
                 Token::Map { len: None },
                 Token::BorrowedStr("x"),
@@ -2242,7 +2247,7 @@ mod flatten {
         );
 
         assert_de_tokens(
-            &B { t: borrowed_map },
+            &B { t: borrowed_map }.readable(),
             &[
                 Token::Map { len: None },
                 Token::BorrowedStr("x"),
@@ -2256,7 +2261,8 @@ mod flatten {
         assert_ser_tokens(
             &C {
                 t: borrowed_map.clone(),
-            },
+            }
+            .readable(),
             &[
                 Token::Map { len: None },
                 Token::Seq { len: Some(1) },
@@ -2268,7 +2274,7 @@ mod flatten {
         );
 
         assert_de_tokens(
-            &C { t: borrowed_map },
+            &C { t: borrowed_map }.readable(),
             &[
                 Token::Map { len: None },
                 Token::BorrowedBytes(b"x"),
@@ -2297,7 +2303,7 @@ mod flatten {
         }
 
         assert_tokens(
-            &Outer::Tuple(1.2, 3),
+            &Outer::Tuple(1.2, 3).readable(),
             &[
                 Token::TupleVariant {
                     name: "Outer",
@@ -2312,7 +2318,8 @@ mod flatten {
         assert_tokens(
             &Outer::Flatten {
                 nested: Nested { a: 1, b: 2 },
-            },
+            }
+            .readable(),
             &[
                 Token::NewtypeVariant {
                     name: "Outer",
@@ -2352,7 +2359,8 @@ mod flatten {
             &Outer {
                 inner1: Some(Inner1 { inner1: 1 }),
                 inner2: Some(Inner2 { inner2: 2 }),
-            },
+            }
+            .readable(),
             &[
                 Token::Map { len: None },
                 Token::Str("inner1"),
@@ -2367,7 +2375,8 @@ mod flatten {
             &Outer {
                 inner1: Some(Inner1 { inner1: 1 }),
                 inner2: None,
-            },
+            }
+            .readable(),
             &[
                 Token::Map { len: None },
                 Token::Str("inner1"),
@@ -2380,7 +2389,8 @@ mod flatten {
             &Outer {
                 inner1: None,
                 inner2: Some(Inner2 { inner2: 2 }),
-            },
+            }
+            .readable(),
             &[
                 Token::Map { len: None },
                 Token::Str("inner2"),
@@ -2393,7 +2403,8 @@ mod flatten {
             &Outer {
                 inner1: None,
                 inner2: None,
-            },
+            }
+            .readable(),
             &[Token::Map { len: None }, Token::MapEnd],
         );
     }
@@ -2407,12 +2418,12 @@ mod flatten {
         }
 
         assert_de_tokens(
-            &Outer { inner: IgnoredAny },
+            &Outer { inner: IgnoredAny }.readable(),
             &[Token::Map { len: None }, Token::MapEnd],
         );
 
         assert_de_tokens(
-            &Outer { inner: IgnoredAny },
+            &Outer { inner: IgnoredAny }.readable(),
             &[
                 Token::Struct {
                     name: "DoNotMatter",
@@ -2474,7 +2485,7 @@ mod flatten {
         };
 
         assert_de_tokens(
-            &s,
+            &s.readable(),
             &[
                 Token::Map { len: None },
                 Token::Str("inner"),
@@ -2501,7 +2512,8 @@ mod flatten {
                     a4: 4,
                 },
                 b: 7,
-            },
+            }
+            .readable(),
             &[
                 Token::Struct {
                     name: "Outer",
@@ -2527,7 +2539,8 @@ mod flatten {
                     a4: 4,
                 },
                 b: 7,
-            },
+            }
+            .readable(),
             &[
                 Token::Struct {
                     name: "Outer",
@@ -2562,7 +2575,8 @@ mod flatten {
                 &Response {
                     data: (),
                     status: 0,
-                },
+                }
+                .readable(),
                 &[
                     Token::Map { len: None },
                     Token::Str("status"),
@@ -2588,7 +2602,8 @@ mod flatten {
                 &Response {
                     data: Unit,
                     status: 0,
-                },
+                }
+                .readable(),
                 &[
                     Token::Map { len: None },
                     Token::Str("status"),
@@ -2628,7 +2643,7 @@ mod flatten {
                 };
 
                 assert_tokens(
-                    &data,
+                    &data.readable(),
                     &[
                         Token::NewtypeVariant {
                             name: "Data",
@@ -2644,7 +2659,7 @@ mod flatten {
                 );
             }
 
-            #[derive(Debug, PartialEq, Serialize, Deserialize)]
+            #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
             struct Flatten {
                 #[serde(flatten)]
                 data: Enum,
@@ -2653,7 +2668,7 @@ mod flatten {
                 extra: HashMap<String, String>,
             }
 
-            #[derive(Debug, PartialEq, Serialize, Deserialize)]
+            #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
             enum Enum {
                 Unit,
                 Newtype(HashMap<String, String>),
@@ -2668,7 +2683,7 @@ mod flatten {
                     extra: HashMap::from_iter([("extra_key".into(), "extra value".into())]),
                 };
                 assert_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // data
@@ -2681,7 +2696,7 @@ mod flatten {
                     ],
                 );
                 assert_de_tokens(
-                    &value,
+                    &value.readable(),
                     &[
                         Token::Map { len: None },
                         // extra
@@ -2702,7 +2717,7 @@ mod flatten {
                     extra: HashMap::from_iter([("extra_key".into(), "extra value".into())]),
                 };
                 assert_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // data
@@ -2718,7 +2733,7 @@ mod flatten {
                     ],
                 );
                 assert_de_tokens(
-                    &value,
+                    &value.readable(),
                     &[
                         Token::Map { len: None },
                         // extra
@@ -2745,7 +2760,7 @@ mod flatten {
                     extra: HashMap::from_iter([("extra_key".into(), "extra value".into())]),
                 };
                 assert_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // data
@@ -2761,7 +2776,7 @@ mod flatten {
                     ],
                 );
                 assert_de_tokens(
-                    &value,
+                    &value.readable(),
                     &[
                         Token::Map { len: None },
                         // extra
@@ -2791,7 +2806,7 @@ mod flatten {
                     extra: HashMap::from_iter([("extra_key".into(), "extra value".into())]),
                 };
                 assert_de_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // data
@@ -2807,7 +2822,7 @@ mod flatten {
                     ],
                 );
                 assert_de_tokens(
-                    &value,
+                    &value.readable(),
                     &[
                         Token::Map { len: None },
                         // extra
@@ -2837,7 +2852,7 @@ mod flatten {
                     extra: HashMap::from_iter([("extra_key".into(), "extra value".into())]),
                 };
                 assert_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // data
@@ -2858,7 +2873,7 @@ mod flatten {
                     ],
                 );
                 assert_de_tokens(
-                    &value,
+                    &value.readable(),
                     &[
                         Token::Map { len: None },
                         // extra
@@ -2884,7 +2899,7 @@ mod flatten {
         mod adjacently_tagged {
             use super::*;
 
-            #[derive(Debug, PartialEq, Serialize, Deserialize)]
+            #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
             struct Flatten {
                 outer: u32,
 
@@ -2892,10 +2907,10 @@ mod flatten {
                 data: NewtypeWrapper,
             }
 
-            #[derive(Debug, PartialEq, Serialize, Deserialize)]
+            #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
             struct NewtypeWrapper(pub Enum);
 
-            #[derive(Debug, PartialEq, Serialize, Deserialize)]
+            #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
             #[serde(tag = "tag", content = "content")]
             enum Enum {
                 Unit,
@@ -2903,7 +2918,7 @@ mod flatten {
                 Struct { index: u32, value: u32 },
             }
 
-            #[derive(Debug, PartialEq, Serialize, Deserialize)]
+            #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
             struct NewtypeVariant {
                 value: u32,
             }
@@ -2916,7 +2931,7 @@ mod flatten {
                 };
                 // Field order: outer, [tag]
                 assert_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // outer
@@ -2934,7 +2949,7 @@ mod flatten {
                 );
                 // Field order: [tag], outer
                 assert_de_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // tag
@@ -2952,7 +2967,7 @@ mod flatten {
                 );
                 // Field order: outer, [tag, content]
                 assert_de_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // outer
@@ -2972,7 +2987,7 @@ mod flatten {
                 );
                 // Field order: outer, [content, tag]
                 assert_de_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // outer
@@ -2992,7 +3007,7 @@ mod flatten {
                 );
                 // Field order: [tag, content], outer
                 assert_de_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // tag
@@ -3012,7 +3027,7 @@ mod flatten {
                 );
                 // Field order: [content, tag], outer
                 assert_de_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // content
@@ -3032,7 +3047,7 @@ mod flatten {
                 );
                 // Field order: [tag], outer, [content]
                 assert_de_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // tag
@@ -3052,7 +3067,7 @@ mod flatten {
                 );
                 // Field order: [content], outer, [tag]
                 assert_de_tokens(
-                    &value,
+                    &value.readable(),
                     &[
                         Token::Map { len: None },
                         // content
@@ -3080,7 +3095,7 @@ mod flatten {
                 };
                 // Field order: outer, [tag, content]
                 assert_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // outer
@@ -3106,7 +3121,7 @@ mod flatten {
                 );
                 // Field order: outer, [content, tag]
                 assert_de_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // outer
@@ -3132,7 +3147,7 @@ mod flatten {
                 );
                 // Field order: [tag, content], outer
                 assert_de_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // tag
@@ -3158,7 +3173,7 @@ mod flatten {
                 );
                 // Field order: [content, tag], outer
                 assert_de_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // content
@@ -3184,7 +3199,7 @@ mod flatten {
                 );
                 // Field order: [tag], outer, [content]
                 assert_de_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // tag
@@ -3210,7 +3225,7 @@ mod flatten {
                 );
                 // Field order: [content], outer, [tag]
                 assert_de_tokens(
-                    &value,
+                    &value.readable(),
                     &[
                         Token::Map { len: None },
                         // content
@@ -3247,7 +3262,7 @@ mod flatten {
                 };
                 // Field order: outer, [tag, content]
                 assert_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // outer
@@ -3275,7 +3290,7 @@ mod flatten {
                 );
                 // Field order: outer, [content, tag]
                 assert_de_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // outer
@@ -3303,7 +3318,7 @@ mod flatten {
                 );
                 // Field order: [tag, content], outer
                 assert_de_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // tag
@@ -3331,7 +3346,7 @@ mod flatten {
                 );
                 // Field order: [content, tag], outer
                 assert_de_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // content
@@ -3359,7 +3374,7 @@ mod flatten {
                 );
                 // Field order: [tag], outer, [content]
                 assert_de_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // tag
@@ -3387,7 +3402,7 @@ mod flatten {
                 );
                 // Field order: [content], outer, [tag]
                 assert_de_tokens(
-                    &value,
+                    &value.readable(),
                     &[
                         Token::Map { len: None },
                         // content
@@ -3421,7 +3436,7 @@ mod flatten {
 
             #[test]
             fn structs() {
-                #[derive(Debug, PartialEq, Serialize, Deserialize)]
+                #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
                 struct Flatten {
                     #[serde(flatten)]
                     x: X,
@@ -3429,14 +3444,14 @@ mod flatten {
                     y: Y,
                 }
 
-                #[derive(Debug, PartialEq, Serialize, Deserialize)]
+                #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
                 #[serde(tag = "typeX")]
                 enum X {
                     A { a: i32 },
                     B { b: i32 },
                 }
 
-                #[derive(Debug, PartialEq, Serialize, Deserialize)]
+                #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
                 #[serde(tag = "typeY")]
                 enum Y {
                     C { c: i32 },
@@ -3448,7 +3463,7 @@ mod flatten {
                     y: Y::D { d: 2 },
                 };
                 assert_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // x
@@ -3465,7 +3480,7 @@ mod flatten {
                     ],
                 );
                 assert_de_tokens(
-                    &value,
+                    &value.readable(),
                     &[
                         Token::Map { len: None },
                         // y
@@ -3485,7 +3500,7 @@ mod flatten {
 
             #[test]
             fn unit_enum_with_unknown_fields() {
-                #[derive(Debug, PartialEq, Serialize, Deserialize)]
+                #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
                 struct Flatten {
                     #[serde(flatten)]
                     x: X,
@@ -3493,13 +3508,13 @@ mod flatten {
                     y: Y,
                 }
 
-                #[derive(Debug, PartialEq, Serialize, Deserialize)]
+                #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
                 #[serde(tag = "typeX")]
                 enum X {
                     A,
                 }
 
-                #[derive(Debug, PartialEq, Serialize, Deserialize)]
+                #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
                 #[serde(tag = "typeY")]
                 enum Y {
                     B { c: u32 },
@@ -3510,7 +3525,7 @@ mod flatten {
                     y: Y::B { c: 0 },
                 };
                 assert_tokens(
-                    &value,
+                    &value.clone().readable(),
                     &[
                         Token::Map { len: None },
                         // x
@@ -3525,7 +3540,7 @@ mod flatten {
                     ],
                 );
                 assert_de_tokens(
-                    &value,
+                    &value.readable(),
                     &[
                         Token::Map { len: None },
                         // y
@@ -3562,7 +3577,8 @@ mod flatten {
                 assert_tokens(
                     &Flatten {
                         data: Enum::Struct { a: 0 },
-                    },
+                    }
+                    .readable(),
                     &[
                         Token::Map { len: None },
                         Token::Str("a"),

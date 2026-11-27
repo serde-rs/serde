@@ -51,10 +51,11 @@ pub(super) fn deserialize(
 
         #variants_stmt
 
+        let __is_human_readable = _serde::Deserializer::is_human_readable(&__deserializer);
         let (__tag, __content) = _serde::Deserializer::deserialize_any(
             __deserializer,
             _serde::#private::de::TaggedContentVisitor::<__Field>::new(#tag, #expecting))?;
-        let __deserializer = _serde::#private::de::ContentDeserializer::<__D::Error>::new(__content);
+        let __deserializer = _serde::#private::de::ContentDeserializer::<__D::Error>::new(__content, __is_human_readable);
 
         match __tag {
             #(#variant_arms)*

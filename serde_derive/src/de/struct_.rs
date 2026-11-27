@@ -108,10 +108,11 @@ pub(super) fn deserialize(
             impl #de_impl_generics _serde::de::DeserializeSeed<#delife> for __Visitor #de_ty_generics #where_clause {
                 type Value = #this_type #ty_generics;
 
-                fn deserialize<__D>(self, __deserializer: __D) -> _serde::#private::Result<Self::Value, __D::Error>
+                fn deserialize<__D>(mut self, __deserializer: __D) -> _serde::#private::Result<Self::Value, __D::Error>
                 where
                     __D: _serde::Deserializer<#delife>,
                 {
+                    self.__is_human_readable = _serde::Deserializer::is_human_readable(&__deserializer);
                     _serde::Deserializer::deserialize_map(__deserializer, self)
                 }
             }
@@ -130,14 +131,25 @@ pub(super) fn deserialize(
         })
     };
 
-    let visitor_expr = quote! {
-        __Visitor {
-            marker: _serde::#private::PhantomData::<#this_type #ty_generics>,
-            lifetime: _serde::#private::PhantomData,
+    let visitor_expr = if has_flatten {
+        quote! {
+            __Visitor {
+                marker: _serde::#private::PhantomData::<#this_type #ty_generics>,
+                lifetime: _serde::#private::PhantomData,
+                __is_human_readable: __is_human_readable,
+            }
+        }
+    } else {
+        quote! {
+            __Visitor {
+                marker: _serde::#private::PhantomData::<#this_type #ty_generics>,
+                lifetime: _serde::#private::PhantomData,
+            }
         }
     };
     let dispatch = match form {
         StructForm::Struct if has_flatten => quote! {
+            let __is_human_readable = _serde::Deserializer::is_human_readable(&__deserializer);
             _serde::Deserializer::deserialize_map(__deserializer, #visitor_expr)
         },
         StructForm::Struct => {
@@ -146,18 +158,43 @@ pub(super) fn deserialize(
                 _serde::Deserializer::deserialize_struct(__deserializer, #type_name, FIELDS, #visitor_expr)
             }
         }
-        StructForm::ExternallyTagged(_) if has_flatten => quote! {
-            _serde::de::VariantAccess::newtype_variant_seed(__variant, #visitor_expr)
-        },
+        StructForm::ExternallyTagged(_) if has_flatten => {
+            // __is_human_readable is not available here; it will be set in
+            // DeserializeSeed::deserialize before visit_map is called.
+            let visitor_expr_default = quote! {
+                __Visitor {
+                    marker: _serde::#private::PhantomData::<#this_type #ty_generics>,
+                    lifetime: _serde::#private::PhantomData,
+                    __is_human_readable: true,
+                }
+            };
+            quote! {
+                _serde::de::VariantAccess::newtype_variant_seed(__variant, #visitor_expr_default)
+            }
+        }
         StructForm::ExternallyTagged(_) => quote! {
             _serde::de::VariantAccess::struct_variant(__variant, FIELDS, #visitor_expr)
         },
+        StructForm::InternallyTagged(_) if has_flatten => quote! {
+            let __is_human_readable = _serde::Deserializer::is_human_readable(&__deserializer);
+            _serde::Deserializer::deserialize_any(__deserializer, #visitor_expr)
+        },
         StructForm::InternallyTagged(_) => quote! {
+            _serde::Deserializer::deserialize_any(__deserializer, #visitor_expr)
+        },
+        StructForm::Untagged(_) if has_flatten => quote! {
+            let __is_human_readable = _serde::Deserializer::is_human_readable(&__deserializer);
             _serde::Deserializer::deserialize_any(__deserializer, #visitor_expr)
         },
         StructForm::Untagged(_) => quote! {
             _serde::Deserializer::deserialize_any(__deserializer, #visitor_expr)
         },
+    };
+
+    let is_human_readable_field = if has_flatten {
+        Some(quote! { __is_human_readable: bool, })
+    } else {
+        None
     };
 
     quote_block! {
@@ -167,6 +204,7 @@ pub(super) fn deserialize(
         struct __Visitor #de_impl_generics #where_clause {
             marker: _serde::#private::PhantomData<#this_type #ty_generics>,
             lifetime: _serde::#private::PhantomData<&#delife ()>,
+            #is_human_readable_field
         }
 
         #[automatically_derived]
@@ -224,6 +262,7 @@ fn deserialize_map(
     // Collect contents for flatten fields into a buffer
     let let_collect = if has_flatten {
         Some(quote! {
+            let __is_human_readable = self.__is_human_readable;
             let mut __collect = _serde::#private::Vec::<_serde::#private::Option<(
                 _serde::#private::de::Content,
                 _serde::#private::de::Content
@@ -340,7 +379,8 @@ fn deserialize_map(
                 let #name: #field_ty = #func(
                     _serde::#private::de::FlatMapDeserializer(
                         &mut __collect,
-                        _serde::#private::PhantomData))?;
+                        _serde::#private::PhantomData,
+                        __is_human_readable))?;
             }
         });
 

@@ -9,7 +9,9 @@
 mod bytes;
 
 use serde_derive::{Deserialize, Serialize};
-use serde_test::{assert_de_tokens, assert_de_tokens_error, assert_tokens, Token};
+use serde_test::{
+    assert_de_tokens, assert_de_tokens_error, assert_tokens, Configure, Readable, Token,
+};
 use std::collections::BTreeMap;
 
 #[test]
@@ -26,7 +28,7 @@ fn complex() {
     }
 
     assert_tokens(
-        &Untagged::A { a: 1 },
+        &Untagged::A { a: 1 }.readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -39,7 +41,7 @@ fn complex() {
     );
 
     assert_tokens(
-        &Untagged::B { b: 2 },
+        &Untagged::B { b: 2 }.readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -53,14 +55,14 @@ fn complex() {
 
     // Serializes to unit, deserializes from either depending on format's
     // preference.
-    assert_tokens(&Untagged::C, &[Token::Unit]);
-    assert_de_tokens(&Untagged::C, &[Token::None]);
+    assert_tokens(&Untagged::C.readable(), &[Token::Unit]);
+    assert_de_tokens(&Untagged::C.readable(), &[Token::None]);
 
-    assert_tokens(&Untagged::D(4), &[Token::U8(4)]);
-    assert_tokens(&Untagged::E("e".to_owned()), &[Token::Str("e")]);
+    assert_tokens(&Untagged::D(4).readable(), &[Token::U8(4)]);
+    assert_tokens(&Untagged::E("e".to_owned()).readable(), &[Token::Str("e")]);
 
     assert_tokens(
-        &Untagged::F(1, 2),
+        &Untagged::F(1, 2).readable(),
         &[
             Token::Tuple { len: 2 },
             Token::U8(1),
@@ -69,12 +71,12 @@ fn complex() {
         ],
     );
 
-    assert_de_tokens_error::<Untagged>(
+    assert_de_tokens_error::<Readable<Untagged>>(
         &[Token::Tuple { len: 1 }, Token::U8(1), Token::TupleEnd],
         "data did not match any variant of untagged enum Untagged",
     );
 
-    assert_de_tokens_error::<Untagged>(
+    assert_de_tokens_error::<Readable<Untagged>>(
         &[
             Token::Tuple { len: 3 },
             Token::U8(1),
@@ -99,7 +101,7 @@ fn newtype_unit_and_empty_map() {
     }
 
     assert_tokens(
-        &Message::Map(BTreeMap::new()),
+        &Message::Map(BTreeMap::new()).readable(),
         &[Token::Map { len: Some(0) }, Token::MapEnd],
     );
 }
@@ -117,11 +119,9 @@ fn newtype_struct() {
         Null,
     }
 
-    let value = E::Newtype(NewtypeStruct(5));
-
     // Content::Newtype case
     assert_tokens(
-        &value,
+        &E::Newtype(NewtypeStruct(5)).readable(),
         &[
             Token::NewtypeStruct {
                 name: "NewtypeStruct",
@@ -131,7 +131,7 @@ fn newtype_struct() {
     );
 
     // _ case
-    assert_de_tokens(&value, &[Token::U32(5)]);
+    assert_de_tokens(&E::Newtype(NewtypeStruct(5)).readable(), &[Token::U32(5)]);
 }
 
 mod newtype_enum {
@@ -157,7 +157,7 @@ mod newtype_enum {
     #[test]
     fn unit() {
         assert_tokens(
-            &Outer::Inner(Inner::Unit),
+            &Outer::Inner(Inner::Unit).readable(),
             &[Token::UnitVariant {
                 name: "Inner",
                 variant: "Unit",
@@ -169,7 +169,7 @@ mod newtype_enum {
     #[test]
     fn newtype() {
         assert_tokens(
-            &Outer::Inner(Inner::Newtype(1)),
+            &Outer::Inner(Inner::Newtype(1)).readable(),
             &[
                 Token::NewtypeVariant {
                     name: "Inner",
@@ -184,7 +184,7 @@ mod newtype_enum {
     #[test]
     fn tuple0() {
         assert_tokens(
-            &Outer::Inner(Inner::Tuple0()),
+            &Outer::Inner(Inner::Tuple0()).readable(),
             &[
                 Token::TupleVariant {
                     name: "Inner",
@@ -200,7 +200,7 @@ mod newtype_enum {
     #[test]
     fn tuple2() {
         assert_tokens(
-            &Outer::Inner(Inner::Tuple2(1, 1)),
+            &Outer::Inner(Inner::Tuple2(1, 1)).readable(),
             &[
                 Token::TupleVariant {
                     name: "Inner",
@@ -219,7 +219,7 @@ mod newtype_enum {
     #[test]
     fn struct_from_map() {
         assert_tokens(
-            &Outer::Inner(Inner::Struct { f: 1 }),
+            &Outer::Inner(Inner::Struct { f: 1 }).readable(),
             &[
                 Token::StructVariant {
                     name: "Inner",
@@ -238,7 +238,7 @@ mod newtype_enum {
     #[test]
     fn struct_from_seq() {
         assert_de_tokens(
-            &Outer::Inner(Inner::Struct { f: 1 }),
+            &Outer::Inner(Inner::Struct { f: 1 }).readable(),
             &[
                 Token::Map { len: Some(1) },
                 // tag
@@ -258,7 +258,7 @@ mod newtype_enum {
     #[test]
     fn empty_struct_from_map() {
         assert_de_tokens(
-            &Outer::Inner(Inner::EmptyStruct {}),
+            &Outer::Inner(Inner::EmptyStruct {}).readable(),
             &[
                 Token::Map { len: Some(1) },
                 // tag
@@ -277,7 +277,7 @@ mod newtype_enum {
     #[test]
     fn empty_struct_from_seq() {
         assert_de_tokens(
-            &Outer::Inner(Inner::EmptyStruct {}),
+            &Outer::Inner(Inner::EmptyStruct {}).readable(),
             &[
                 Token::Map { len: Some(1) },
                 // tag
@@ -305,7 +305,7 @@ mod with_optional_field {
     #[test]
     fn some() {
         assert_tokens(
-            &Enum::Struct { optional: Some(42) },
+            &Enum::Struct { optional: Some(42) }.readable(),
             &[
                 Token::Struct {
                     name: "Enum",
@@ -322,7 +322,7 @@ mod with_optional_field {
     #[test]
     fn some_without_marker() {
         assert_de_tokens(
-            &Enum::Struct { optional: Some(42) },
+            &Enum::Struct { optional: Some(42) }.readable(),
             &[
                 Token::Struct {
                     name: "Enum",
@@ -338,7 +338,7 @@ mod with_optional_field {
     #[test]
     fn none() {
         assert_tokens(
-            &Enum::Struct { optional: None },
+            &Enum::Struct { optional: None }.readable(),
             &[
                 Token::Struct {
                     name: "Enum",
@@ -354,7 +354,7 @@ mod with_optional_field {
     #[test]
     fn unit() {
         assert_de_tokens(
-            &Enum::Struct { optional: None },
+            &Enum::Struct { optional: None }.readable(),
             &[
                 Token::Map { len: None },
                 Token::Str("optional"),
@@ -382,7 +382,8 @@ fn string_and_bytes() {
     assert_de_tokens(
         &Untagged::String {
             string: "\0".to_owned(),
-        },
+        }
+        .readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -397,7 +398,8 @@ fn string_and_bytes() {
     assert_de_tokens(
         &Untagged::String {
             string: "\0".to_owned(),
-        },
+        }
+        .readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -412,7 +414,8 @@ fn string_and_bytes() {
     assert_de_tokens(
         &Untagged::String {
             string: "\0".to_owned(),
-        },
+        }
+        .readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -427,7 +430,8 @@ fn string_and_bytes() {
     assert_de_tokens(
         &Untagged::String {
             string: "\0".to_owned(),
-        },
+        }
+        .readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -440,7 +444,7 @@ fn string_and_bytes() {
     );
 
     assert_de_tokens(
-        &Untagged::Bytes { bytes: vec![0] },
+        &Untagged::Bytes { bytes: vec![0] }.readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -453,7 +457,7 @@ fn string_and_bytes() {
     );
 
     assert_de_tokens(
-        &Untagged::Bytes { bytes: vec![0] },
+        &Untagged::Bytes { bytes: vec![0] }.readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -466,7 +470,7 @@ fn string_and_bytes() {
     );
 
     assert_de_tokens(
-        &Untagged::Bytes { bytes: vec![0] },
+        &Untagged::Bytes { bytes: vec![0] }.readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -479,7 +483,7 @@ fn string_and_bytes() {
     );
 
     assert_de_tokens(
-        &Untagged::Bytes { bytes: vec![0] },
+        &Untagged::Bytes { bytes: vec![0] }.readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -492,7 +496,7 @@ fn string_and_bytes() {
     );
 
     assert_de_tokens(
-        &Untagged::Bytes { bytes: vec![0] },
+        &Untagged::Bytes { bytes: vec![0] }.readable(),
         &[
             Token::Struct {
                 name: "Untagged",
@@ -530,7 +534,7 @@ fn contains_flatten() {
     };
 
     assert_tokens(
-        &data,
+        &data.readable(),
         &[
             Token::Map { len: None },
             Token::Str("a"),
@@ -560,7 +564,8 @@ fn contains_flatten_with_integer_key() {
                 map.insert(100, "BTreeMap".to_owned());
                 map
             },
-        },
+        }
+        .readable(),
         &[
             Token::Map { len: None },
             Token::U64(100),
@@ -579,5 +584,5 @@ fn expecting_message() {
         Untagged,
     }
 
-    assert_de_tokens_error::<Enum>(&[Token::Str("Untagged")], "something strange...");
+    assert_de_tokens_error::<Readable<Enum>>(&[Token::Str("Untagged")], "something strange...");
 }
