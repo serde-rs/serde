@@ -1,0 +1,11 @@
+error: a field may have only one of: #[serde(default)], #[serde(default = "...")], or #[serde(default_expr = ...)]
+ --> tests/ui/default-expr/conflict.rs:5:13
+  |
+5 |     #[serde(default, default_expr = 1)]
+  |             ^^^^^^^
+
+error: a field may have only one of: #[serde(default)], #[serde(default = "...")], or #[serde(default_expr = ...)]
+ --> tests/ui/default-expr/conflict.rs:5:22
+  |
+5 |     #[serde(default, default_expr = 1)]
+  |                      ^^^^^^^^^^^^
