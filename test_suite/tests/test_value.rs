@@ -1,9 +1,9 @@
 #![allow(clippy::derive_partial_eq_without_eq, clippy::similar_names)]
 
-use serde::de::value::{self, MapAccessDeserializer};
-use serde::de::{Deserialize, Deserializer, IntoDeserializer, MapAccess, Visitor};
+use serde::de::value;
+use serde::de::{Deserialize, Deserializer, IntoDeserializer, Visitor};
 use serde_derive::Deserialize;
-use serde_test::{assert_de_tokens, Token};
+use serde_test::{assert_de_tokens, assert_de_tokens_error, Token};
 use std::fmt;
 
 #[test]
@@ -37,14 +37,20 @@ fn test_integer128() {
     assert_eq!(1i128, i128::deserialize(de_i128).unwrap());
 }
 
-#[test]
-fn test_map_access_to_enum() {
+mod access_to_enum {
+    use super::*;
+    use serde::de::value::{MapAccessDeserializer, SeqAccessDeserializer};
+    use serde::de::{MapAccess, SeqAccess};
+
     #[derive(PartialEq, Debug)]
-    struct Potential(PotentialKind);
+    struct UseAccess(Enum);
 
     #[derive(PartialEq, Debug, Deserialize)]
-    enum PotentialKind {
-        Airebo(Airebo),
+    enum Enum {
+        Unit,
+        Newtype(Airebo),
+        Tuple(String, f64),
+        Struct { lj_sigma: f64 },
     }
 
     #[derive(PartialEq, Debug, Deserialize)]
@@ -52,44 +58,257 @@ fn test_map_access_to_enum() {
         lj_sigma: f64,
     }
 
-    impl<'de> Deserialize<'de> for Potential {
+    impl<'de> Deserialize<'de> for UseAccess {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
             D: Deserializer<'de>,
         {
-            struct PotentialVisitor;
+            struct UseAccessVisitor;
 
-            impl<'de> Visitor<'de> for PotentialVisitor {
-                type Value = Potential;
+            impl<'de> Visitor<'de> for UseAccessVisitor {
+                type Value = UseAccess;
 
                 fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                    formatter.write_str("a map")
+                    formatter.write_str("a seq or a map")
+                }
+
+                fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error>
+                where
+                    A: SeqAccess<'de>,
+                {
+                    Deserialize::deserialize(SeqAccessDeserializer::new(seq)).map(UseAccess)
                 }
 
                 fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
                 where
                     A: MapAccess<'de>,
                 {
-                    Deserialize::deserialize(MapAccessDeserializer::new(map)).map(Potential)
+                    Deserialize::deserialize(MapAccessDeserializer::new(map)).map(UseAccess)
                 }
             }
 
-            deserializer.deserialize_any(PotentialVisitor)
+            deserializer.deserialize_any(UseAccessVisitor)
         }
     }
 
-    let expected = Potential(PotentialKind::Airebo(Airebo { lj_sigma: 14.0 }));
+    /// Because [`serde_test::de::Deserializer`] handles all tokens [`Token::Seq`],
+    /// [`Token::Tuple`] and [`Token::TupleStruct`] the same, we test only
+    /// `Token::Seq` tokens here.
+    mod seq {
+        use super::*;
 
-    assert_de_tokens(
-        &expected,
-        &[
-            Token::Map { len: Some(1) },
-            Token::Str("Airebo"),
-            Token::Map { len: Some(1) },
-            Token::Str("lj_sigma"),
-            Token::F64(14.0),
-            Token::MapEnd,
-            Token::MapEnd,
-        ],
-    );
+        #[test]
+        fn unit() {
+            assert_de_tokens(
+                &UseAccess(Enum::Unit),
+                &[
+                    Token::Seq { len: Some(2) },
+                    Token::Str("Unit"), // tag
+                    Token::Unit,        // content
+                    Token::SeqEnd,
+                ],
+            );
+
+            assert_de_tokens(
+                &UseAccess(Enum::Unit),
+                &[
+                    Token::Seq { len: Some(1) },
+                    Token::Str("Unit"), // tag
+                    Token::SeqEnd,
+                ],
+            );
+        }
+
+        #[test]
+        fn newtype() {
+            assert_de_tokens(
+                &UseAccess(Enum::Newtype(Airebo { lj_sigma: 14.0 })),
+                &[
+                    Token::Seq { len: Some(2) },
+                    Token::Str("Newtype"),       // tag
+                    Token::Map { len: Some(1) }, // content
+                    Token::Str("lj_sigma"),
+                    Token::F64(14.0),
+                    Token::MapEnd,
+                    Token::SeqEnd,
+                ],
+            );
+
+            assert_de_tokens_error::<UseAccess>(
+                &[
+                    Token::Seq { len: Some(1) },
+                    Token::Str("Newtype"), // tag
+                    Token::SeqEnd,
+                ],
+                "invalid length 1, expected content of newtype variant",
+            );
+        }
+
+        #[test]
+        fn tuple() {
+            assert_de_tokens(
+                &UseAccess(Enum::Tuple("lj_sigma".to_string(), 14.0)),
+                &[
+                    Token::Seq { len: Some(2) },
+                    Token::Str("Tuple"),         // tag
+                    Token::Seq { len: Some(2) }, // content
+                    Token::Str("lj_sigma"),
+                    Token::F64(14.0),
+                    Token::SeqEnd,
+                    Token::SeqEnd,
+                ],
+            );
+
+            assert_de_tokens_error::<UseAccess>(
+                &[
+                    Token::Seq { len: Some(1) },
+                    Token::Str("Tuple"), // tag
+                    Token::SeqEnd,
+                ],
+                "invalid length 1, expected content of tuple variant",
+            );
+        }
+
+        #[test]
+        fn struct_() {
+            assert_de_tokens(
+                &UseAccess(Enum::Struct { lj_sigma: 14.0 }),
+                &[
+                    Token::Seq { len: Some(2) },
+                    Token::Str("Struct"),        // tag
+                    Token::Map { len: Some(1) }, // content
+                    Token::Str("lj_sigma"),
+                    Token::F64(14.0),
+                    Token::MapEnd,
+                    Token::SeqEnd,
+                ],
+            );
+
+            assert_de_tokens_error::<UseAccess>(
+                &[
+                    Token::Seq { len: Some(1) },
+                    Token::Str("Struct"), // tag
+                    Token::SeqEnd,
+                ],
+                "invalid length 1, expected content of struct variant",
+            );
+        }
+
+        #[test]
+        fn wrong_tag() {
+            assert_de_tokens_error::<UseAccess>(
+                &[
+                    Token::Seq { len: Some(2) },
+                    Token::Str("AnotherTag"),    // tag
+                    Token::Map { len: Some(1) }, // content
+                    // Tokens that could follow, but assert_de_tokens_error do not want them
+                    // Token::Str("lj_sigma"),
+                    // Token::F64(14.0),
+                    // Token::MapEnd,
+                    // Token::SeqEnd,
+                ],
+                "unknown variant `AnotherTag`, expected one of `Unit`, `Newtype`, `Tuple`, `Struct`",
+            );
+        }
+
+        #[test]
+        fn empty_seq() {
+            assert_de_tokens_error::<UseAccess>(
+                &[Token::Seq { len: Some(0) }, Token::SeqEnd],
+                "invalid length 0, expected enum tag",
+            );
+        }
+    }
+
+    /// Because [`serde_test::de::Deserializer`] handles both tokens [`Token::Map`]
+    /// and [`Token::Struct`] the same, we test only `Token::Map` tokens here.
+    mod map {
+        use super::*;
+
+        #[test]
+        fn unit() {
+            assert_de_tokens(
+                &UseAccess(Enum::Unit),
+                &[
+                    Token::Map { len: Some(1) },
+                    Token::Str("Unit"),
+                    Token::Unit,
+                    Token::MapEnd,
+                ],
+            );
+        }
+
+        #[test]
+        fn newtype() {
+            assert_de_tokens(
+                &UseAccess(Enum::Newtype(Airebo { lj_sigma: 14.0 })),
+                &[
+                    Token::Map { len: Some(1) },
+                    Token::Str("Newtype"),
+                    Token::Map { len: Some(1) },
+                    Token::Str("lj_sigma"),
+                    Token::F64(14.0),
+                    Token::MapEnd,
+                    Token::MapEnd,
+                ],
+            );
+        }
+
+        #[test]
+        fn tuple() {
+            assert_de_tokens(
+                &UseAccess(Enum::Tuple("lj_sigma".to_string(), 14.0)),
+                &[
+                    Token::Map { len: Some(1) },
+                    Token::Str("Tuple"),
+                    Token::Seq { len: Some(2) },
+                    Token::Str("lj_sigma"),
+                    Token::F64(14.0),
+                    Token::SeqEnd,
+                    Token::MapEnd,
+                ],
+            );
+        }
+
+        #[test]
+        fn struct_() {
+            assert_de_tokens(
+                &UseAccess(Enum::Struct { lj_sigma: 14.0 }),
+                &[
+                    Token::Map { len: Some(1) },
+                    Token::Str("Struct"),
+                    Token::Map { len: Some(1) },
+                    Token::Str("lj_sigma"),
+                    Token::F64(14.0),
+                    Token::MapEnd,
+                    Token::MapEnd,
+                ],
+            );
+        }
+
+        #[test]
+        fn wrong_tag() {
+            assert_de_tokens_error::<UseAccess>(
+                &[
+                    Token::Map { len: Some(1) },
+                    Token::Str("AnotherTag"),
+                    Token::Map { len: Some(1) },
+                    // Tokens that could follow, but assert_de_tokens_error do not want them
+                    // Token::Str("lj_sigma"),
+                    // Token::F64(14.0),
+                    // Token::MapEnd,
+                    // Token::MapEnd,
+                ],
+                "unknown variant `AnotherTag`, expected one of `Unit`, `Newtype`, `Tuple`, `Struct`",
+            );
+        }
+
+        #[test]
+        fn empty_map() {
+            assert_de_tokens_error::<UseAccess>(
+                &[Token::Map { len: Some(0) }, Token::MapEnd],
+                "invalid length 0, expected enum",
+            );
+        }
+    }
 }
