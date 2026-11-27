@@ -1,6 +1,6 @@
 use crate::lib::*;
 
-use crate::de::value::{BorrowedBytesDeserializer, BytesDeserializer};
+use crate::de::value::{BorrowedBytesDeserializer, BytesDeserializer, U64Deserializer};
 use crate::de::{
     Deserialize, DeserializeSeed, Deserializer, EnumAccess, Error, IntoDeserializer, VariantAccess,
     Visitor,
@@ -3452,13 +3452,16 @@ pub struct AdjacentlyTaggedEnumVariantSeed<F> {
     pub fields_enum: PhantomData<F>,
 }
 
-pub struct AdjacentlyTaggedEnumVariantVisitor<F> {
-    enum_name: &'static str,
-    fields_enum: PhantomData<F>,
-}
-
+// Although we may forward all methods to corresponding methods of `F`, but because
+// this is not public API struct and `F` is always the `__Fields` type from serde
+// derive which visitor implements only
+// - visit_u64
+// - visit_str
+// - visit_bytes
+//
+// we forward only those methods.
 #[cfg_attr(not(no_diagnostic_namespace), diagnostic::do_not_recommend)]
-impl<'de, F> Visitor<'de> for AdjacentlyTaggedEnumVariantVisitor<F>
+impl<'de, F> Visitor<'de> for AdjacentlyTaggedEnumVariantSeed<F>
 where
     F: Deserialize<'de>,
 {
@@ -3466,6 +3469,33 @@ where
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         write!(formatter, "variant of enum {}", self.enum_name)
+    }
+
+    #[inline]
+    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        F::deserialize(U64Deserializer::new(value))
+    }
+
+    #[inline]
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        F::deserialize(StrDeserializer {
+            value,
+            marker: PhantomData,
+        })
+    }
+
+    #[inline]
+    fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        F::deserialize(BytesDeserializer::new(value))
     }
 
     fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
@@ -3492,10 +3522,7 @@ where
         deserializer.deserialize_enum(
             self.enum_name,
             self.variants,
-            AdjacentlyTaggedEnumVariantVisitor {
-                enum_name: self.enum_name,
-                fields_enum: PhantomData,
-            },
+            self,
         )
     }
 }
