@@ -25,6 +25,7 @@ macro_rules! crate_root {
             pub use self::core::ops::{Bound, Range, RangeFrom, RangeInclusive, RangeTo};
             pub use self::core::result;
             pub use self::core::time::Duration;
+            pub use self::core::mem::needs_drop;
 
             #[cfg(all(feature = "alloc", not(feature = "std")))]
             pub use alloc::borrow::{Cow, ToOwned};
