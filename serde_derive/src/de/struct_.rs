@@ -5,7 +5,7 @@ use crate::de::{
 };
 #[cfg(feature = "deserialize_in_place")]
 use crate::de::{deserialize_seq_in_place, place_lifetime};
-use crate::fragment::{Expr, Fragment, Match, Stmts};
+use crate::fragment::{Expr, Fragment, Stmts};
 use crate::internals::ast::Field;
 use crate::internals::attr;
 use crate::private;
@@ -310,19 +310,50 @@ fn deserialize_map(
         }
     };
 
+    // Fill in each missing field while every field is still a whole `Option`.
+    // Moving the values out one at a time, with a fallible step between two
+    // moves, would give every early return a different set of locals to drop:
+    // rustc then threads one drop flag per field through every return path, and
+    // LLVM's time grows with the cube of the number of fields.
     let extract_values = fields_names
         .iter()
         .filter(|&&(field, _)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
         .map(|(field, name)| {
-            let missing_expr = Match(expr_is_missing(field, cattrs));
-
-            quote! {
-                let #name = match #name {
-                    _serde::#private::Some(#name) => #name,
-                    _serde::#private::None => #missing_expr
-                };
+            let missing_expr = expr_is_missing(field, cattrs);
+            // If missing_expr unconditionally returns an error, don't try
+            // to assign its value to the field.
+            if field.attrs.default().is_none()
+                && cattrs.default().is_none()
+                && field.attrs.deserialize_with().is_some()
+            {
+                let missing_expr = Stmts(missing_expr);
+                quote! {
+                    if _serde::#private::Option::is_none(&#name) {
+                        #missing_expr;
+                    }
+                }
+            } else {
+                let field_ty = field.ty;
+                let missing_expr = Expr(missing_expr);
+                quote! {
+                    if _serde::#private::Option::is_none(&#name) {
+                        let __missing: #field_ty = #missing_expr;
+                        #name = _serde::#private::Some(__missing);
+                    }
+                }
             }
         });
+
+    let value_names: Vec<_> = fields_names
+        .iter()
+        .filter(|&&(field, _)| !field.attrs.skip_deserializing() && !field.attrs.flatten())
+        .map(|(_, name)| name)
+        .collect();
+    // Every field is `Some` once `extract_values` has run: take them all out
+    // at once, in a single match that cannot fail.
+    let value_patterns = value_names
+        .iter()
+        .map(|name| quote!(_serde::#private::Some(#name)));
 
     let extract_collected = fields_names
         .iter()
@@ -410,11 +441,17 @@ fn deserialize_map(
 
         #(#extract_values)*
 
-        #(#extract_collected)*
+        #[allow(unreachable_patterns)]
+        match (#(#value_names,)*) {
+            (#(#value_patterns,)*) => {
+                #(#extract_collected)*
 
-        #collected_deny_unknown_fields
+                #collected_deny_unknown_fields
 
-        _serde::#private::Ok(#result)
+                _serde::#private::Ok(#result)
+            }
+            _ => _serde::#private::unreachable!(),
+        }
     }
 }
 
