@@ -33,3 +33,19 @@ error[E0308]: `match` arms have incompatible types
 ...
 14 |         #[serde(default = "main")]
    |                           ^^^^^^ expected `i8`, found `()`
+
+error[E0308]: mismatched types
+  --> tests/ui/default-attribute/incorrect_type_enum_externally_tagged.rs:11:27
+   |
+11 |         #[serde(default = "main")]
+   |                           ^^^^^^ expected `u8`, found `()`
+12 |         f1: u8,
+   |             -- expected due to this
+
+error[E0308]: mismatched types
+  --> tests/ui/default-attribute/incorrect_type_enum_externally_tagged.rs:14:27
+   |
+14 |         #[serde(default = "main")]
+   |                           ^^^^^^ expected `i8`, found `()`
+15 |         f3: i8,
+   |             -- expected due to this

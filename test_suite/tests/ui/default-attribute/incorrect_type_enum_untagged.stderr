@@ -10,26 +10,18 @@ error[E0308]: `match` arms have incompatible types
 10 |     Tuple(u8, #[serde(default = "main")] i8),
    |                                 ^^^^^^ expected `i8`, found `()`
 
-error[E0308]: `match` arms have incompatible types
+error[E0308]: mismatched types
   --> tests/ui/default-attribute/incorrect_type_enum_untagged.rs:12:27
    |
- 5 | #[derive(Deserialize)]
-   |          -----------
-   |          |
-   |          this is found to be of type `u8`
-   |          `match` arms have incompatible types
-...
 12 |         #[serde(default = "main")]
    |                           ^^^^^^ expected `u8`, found `()`
+13 |         f1: u8,
+   |             -- expected due to this
 
-error[E0308]: `match` arms have incompatible types
+error[E0308]: mismatched types
   --> tests/ui/default-attribute/incorrect_type_enum_untagged.rs:15:27
    |
- 5 | #[derive(Deserialize)]
-   |          -----------
-   |          |
-   |          this is found to be of type `i8`
-   |          `match` arms have incompatible types
-...
 15 |         #[serde(default = "main")]
    |                           ^^^^^^ expected `i8`, found `()`
+16 |         f3: i8,
+   |             -- expected due to this

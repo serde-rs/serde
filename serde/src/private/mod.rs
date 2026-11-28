@@ -11,6 +11,7 @@ pub use crate::lib::marker::PhantomData;
 pub use crate::lib::option::Option::{self, None, Some};
 pub use crate::lib::ptr;
 pub use crate::lib::result::Result::{self, Err, Ok};
+pub use core::unreachable;
 
 pub use crate::serde_core_private::string::from_utf8_lossy;
 
